@@ -21,6 +21,11 @@ This document outlines the temporary restrictions applied to the site before pub
   - *Message (ES):* "¡Los pedidos en línea estarán disponibles pronto! 🥖 Visítanos en 6101 Park Ave, West New York, NJ para hacer tu pedido."
 - [ ] **Form Disabling**: Ensure the checkout confirmation modal cannot be reached.
 
+### 1.3 Authentication / Portal Lockdown
+- [ ] **Hide Header Login**: Comment out or set `display: none` on the "Sign In" button in the main navigation.
+- [ ] **Hide Footer Portals**: Hide the "Portals" / "For the Team" section in the footer.
+- [ ] **Disable Auth Toggling**: Stop `auth-state.js` from showing the user dropdown or login button until public launch.
+
 ---
 
 ## 🔓 Phase 2: Restoration (Post-Launch)
@@ -36,6 +41,11 @@ This document outlines the temporary restrictions applied to the site before pub
 2. **Update Labels**: Set `cartI18n` strings back to "Checkout" and "Pagar".
 3. **Integration Point**: This is where the Stripe/Square checkout redirect or the Supabase `orders` table insertion logic will be fully enabled.
 
+### 2.3 Restoring Authentication & Portals
+1. **Show Header Login**: Restore visibility of the "Sign In" button in the header.
+2. **Restore Footer Links**: Un-hide the "Portals" / "For the Team" footer section.
+3. **Re-enable Auth Logic**: Re-activate the full `auth-state.js` logic to handle user sessions and profile menus.
+
 ---
 
 ## 📝 Check-off Table (Current Task)
@@ -45,3 +55,5 @@ This document outlines the temporary restrictions applied to the site before pub
 - [x] Modify `menu.html` `_openChat()` logic
 - [x] Modify `index.html` `openChat()` logic
 - [x] Update button attributes in both files
+- [ ] Hide Header Login & Footer Portals
+- [ ] Disable Auth Logic intervention
