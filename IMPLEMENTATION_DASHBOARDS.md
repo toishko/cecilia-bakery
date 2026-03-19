@@ -19,7 +19,7 @@ This document outlines the step-by-step execution plan for upgrading Cecilia Bak
 ## 🎯 Phase 1: Global Authentication State & Navigation
 *Goal: Ensure the public site (`index.html`, `menu.html`, etc.) knows when a user is logged in, replacing the "Log In" button with a User Profile / Sign Out menu.*
 
-- [ ] **1.1 Create `auth-state.js`**
+- [x] **1.1 Create `auth-state.js`**
   - Create a new global script that imports `supabase` from `supabase-client.js`.
   - Use `supabase.auth.onAuthStateChange()` to listen for logins/logouts.
 - [ ] **1.2 Update the Main Navigation Bar**
