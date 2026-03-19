@@ -44,3 +44,23 @@
     - [ ] `data-es="<i data-lucide='home' class='icon'></i> Inicio"`
     - [ ] Inner HTML to `<i data-lucide='home' class='icon'></i> Home`.
   - [ ] Point the `href` attribute to `index.html` so it reliably takes customers back to the storefront instead of a non-existent dashboard.
+
+- [ ] **8. Distinct Desktop "Sign Out" Styling**
+  - [ ] Style the desktop "Sign Out" button as a transparent "ghost" or outline button, keeping the solid background color reserved exclusively for the primary CTA.
+
+- [ ] **9. Header Scroll Effect (Glassmorphism)**
+  - [ ] Add a subtle background blur (`backdrop-filter: blur(10px)`) and a very faint bottom border or shadow to the header *only* when the user scrolls down from the top.
+
+- [ ] **10. Active Page State Indication**
+  - [ ] Add an "active" class to the navigation links that highlights the current page (e.g., a subtle underline or a slightly bolder, distinct font color for "Menu" when the user is on `menu.html`). Apply this to both desktop and mobile navigation.
+
+- [ ] **11. Transition Animations**
+  - [ ] Add a soft CSS `transition` to the `body` and main containers (e.g., `transition: background-color 0.3s ease, color 0.3s ease`) so switching between light and dark modes feels smooth instead of snapping abruptly.
+  - [ ] Add a subtle rotation or fade animation to the sun/moon icon when toggled.
+
+- [ ] **12. Mobile Drawer UX Refinements**
+  - [ ] Add a semi-transparent dark overlay behind the mobile menu when it's open. Clicking the overlay should easily close the menu.
+  - [ ] Ensure the mobile menu automatically closes when a user clicks a link that keeps them on the same page (in case of anchor links) or when navigating.
+
+- [ ] **13. Focus States for Accessibility**
+  - [ ] Add a modern `:focus-visible` style (like a soft ring perfectly matching your brand color) to all header buttons, including the hamburger icon, toggles, and navigation links.
