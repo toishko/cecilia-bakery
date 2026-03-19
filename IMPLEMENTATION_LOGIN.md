@@ -11,7 +11,7 @@ This document outlines the step-by-step implementation plan for the Split Portal
 
 ---
 
-## Phase 1: Planning and Setup (Completed)
+## Phase 1: Planning and Setup ✅ (Completed)
 
 - [x] **Define User Roles**: Four distinct roles identified: Customer, Partner, Driver, and Admin.
 - [x] **Choose an Authentication Provider**: **Supabase** (Provides PostgreSQL Database + Auth + Role Management).
@@ -28,25 +28,25 @@ This document outlines the step-by-step implementation plan for the Split Portal
 
 ---
 
-## Phase 2: Building the Public UI (HTML & CSS)
+## Phase 2: Building the Public UI (HTML & CSS) ✅ (Completed)
 *(Note: All login pages will use the centralized, premium dark-card layout designed for the Partner Portal, and all will include the English/Spanish and Light/Dark mode toggles in the top right.)*
 
-- [ ] **Build Customer Login/Signup Page (`/login.html`)**
-    - [ ] Add Input fields: Name, Email, Password, and Phone Number (Optional).
-    - [ ] Implement the premium centralized card layout and top-right toggles.
-- [ ] **Build Partner Portal Page (`/partner-login.html`)**
-    - [ ] Add Input fields: Business Name, Contact Name, Email, Password, and Phone Number (Required).
-    - [ ] Create an "Apply for Account" state vs "Log In" state.
-    - [ ] Implement the premium centralized card layout and top-right toggles.
-- [ ] **Build Driver Portal Page (`/driver-login.html`)**
-    - [ ] Add Input fields: Name, Email, Password, and Phone Number (Required).
-    - [ ] Change title to "Driver Login".
-    - [ ] Implement the premium centralized card layout and top-right toggles.
-- [ ] **Build Admin Login Page (`/admin-login.html`)**
-    - [ ] Add Input fields: Email and Password only.
-    - [ ] Change title to "Admin".
-    - [ ] Replace the layout monogram with the actual bakery logo.
-    - [ ] Implement the premium centralized card layout and top-right toggles.
+- [x] **Build Customer Login/Signup Page (`/login.html`)**
+    - [x] Add Input fields: Name, Email, Password, and Phone Number (Optional).
+    - [x] Implement the premium centralized card layout and top-right toggles.
+- [x] **Build Partner Portal Page (`/partner-login.html`)**
+    - [x] Add Input fields: Business Name, Contact Name, Email, Password, and Phone Number (Required).
+    - [x] Create an "Apply for Account" state vs "Log In" state.
+    - [x] Implement the premium centralized card layout and top-right toggles.
+- [x] **Build Driver Portal Page (`/driver-login.html`)**
+    - [x] Add Input fields: Name, Email, Password, and Phone Number (Required).
+    - [x] Change title to "Driver Login".
+    - [x] Implement the premium centralized card layout and top-right toggles.
+- [x] **Build Admin Login Page (`/admin-login.html`)**
+    - [x] Add Input fields: Email and Password only.
+    - [x] Change title to "Admin".
+    - [x] Replace the layout monogram with the actual bakery logo.
+    - [x] Implement the premium centralized card layout and top-right toggles.
 
 ---
 
