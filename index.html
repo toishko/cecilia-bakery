@@ -3986,10 +3986,10 @@
       const icon = document.getElementById('theme-icon');
       const label = document.getElementById('theme-label');
       if (t === 'dark') {
-        icon.innerHTML = `<i data-lucide='sun' class='icon'></i>`; if (typeof lucide !== 'undefined') lucide.createIcons();
+        if (icon) { icon.innerHTML = `<i data-lucide='sun' class='icon'></i>`; if (typeof lucide !== 'undefined') lucide.createIcons(); }
         if (label) label.textContent = i18n[lang].themeLight;
       } else {
-        icon.innerHTML = `<i data-lucide='moon' class='icon'></i>`; if (typeof lucide !== 'undefined') lucide.createIcons();
+        if (icon) { icon.innerHTML = `<i data-lucide='moon' class='icon'></i>`; if (typeof lucide !== 'undefined') lucide.createIcons(); }
         if (label) label.textContent = i18n[lang].themeDark;
       }
       try { localStorage.setItem(THEME_KEY, t); } catch (e) { }
@@ -4018,8 +4018,10 @@
       lang = l;
       try { localStorage.setItem('lang', l); } catch (e) { }
       document.documentElement.lang = l;
-      document.getElementById('btn-en').classList.toggle('active', l === 'en');
-      document.getElementById('btn-es').classList.toggle('active', l === 'es');
+      const btnEn = document.getElementById('btn-en');
+      const btnEs = document.getElementById('btn-es');
+      if (btnEn) btnEn.classList.toggle('active', l === 'en');
+      if (btnEs) btnEs.classList.toggle('active', l === 'es');
       const mbEn = document.getElementById('mob-btn-en');
       const mbEs = document.getElementById('mob-btn-es');
       if (mbEn) mbEn.classList.toggle('active', l === 'en');
