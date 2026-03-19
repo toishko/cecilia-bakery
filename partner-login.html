@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wholesale Portal | Cecilia Bakery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="auth-theme.css">
+    <script src="auth-i18n.js"></script>
+</head>
+<body>
+    <div class="bg-blob"></div>
+
+    <div class="top-controls">
+        <a href="index.html" class="back-nav">
+            <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            <span id="back-text" data-en="Return to Bakery" data-es="Regresar a la Panadería">Return to Bakery</span>
+        </a>
+        <div class="nav-controls">
+            <button class="lang-btn active" id="btn-en" onclick="setAuthLang('en')">EN</button>
+            <span class="ctrl-divider">/</span>
+            <button class="lang-btn" id="btn-es" onclick="setAuthLang('es')">ES</button>
+            <span class="ctrl-divider" style="margin-left:2px">·</span>
+            <button class="theme-btn" id="theme-toggle" onclick="toggleAuthTheme()">
+                <span id="theme-icon">🌙</span><span id="theme-label">Dark</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="auth-wrapper">
+        <div class="auth-card" id="authCard">
+            <div class="auth-header">
+                <span class="auth-label" data-en="Wholesale Portal" data-es="Portal de Mayoreo">Wholesale Portal</span>
+                <h1 class="auth-title hide-on-signup" data-en="Partner Login" data-es="Ingreso para Socios">Partner Login</h1>
+                <h1 class="auth-title show-on-signup" data-en="Apply for Wholesale" data-es="Aplicar para Mayoreo">Apply for Wholesale</h1>
+                <p class="auth-subtitle hide-on-signup" data-en="Access your bulk ordering history and invoices" data-es="Accede a tu historial de pedidos e ingresos">Access your bulk ordering history and invoices</p>
+                <p class="auth-subtitle show-on-signup" data-en="Partner with us to bring Cecilia to your customers" data-es="Asóciate para llevar Cecilia a tus clientes">Partner with us to bring Cecilia to your customers</p>
+            </div>
+
+            <form id="partnerAuthForm">
+                <div class="input-group show-on-signup">
+                    <label class="input-label" data-en="Business Name" data-es="Nombre del Negocio">Business Name</label>
+                    <input type="text" class="input-field" data-en="E.g. The Daily Coffee Co." data-es="Ej. The Daily Coffee Co." placeholder="E.g. The Daily Coffee Co." />
+                </div>
+                
+                <div class="split-row show-on-signup">
+                    <div class="input-group">
+                        <label class="input-label" data-en="Contact Name" data-es="Nombre de Contacto">Contact Name</label>
+                        <input type="text" class="input-field" data-en="Full Name" data-es="Nombre Completo" placeholder="Full Name" />
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label" data-en="Phone Number" data-es="Teléfono (Requerido)">Phone Number</label>
+                        <input type="tel" class="input-field" data-en="(Required)" data-es="(Requerido)" placeholder="(Required)" />
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label" data-en="Corporate Email" data-es="Correo Electrónico">Corporate Email</label>
+                    <input type="email" class="input-field" data-en="vendor@business.com" data-es="vendor@negocio.com" placeholder="vendor@business.com" required />
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label" data-en="Password" data-es="Contraseña">Password</label>
+                    <input type="password" class="input-field" data-en="••••••••" data-es="••••••••" placeholder="••••••••" required />
+                </div>
+
+                <button type="submit" class="btn-submit hide-on-signup" data-en="Access Portal" data-es="Acceder al Portal">Access Portal</button>
+                <button type="submit" class="btn-submit show-on-signup" data-en="Submit Application" data-es="Enviar Solicitud">Submit Application</button>
+            </form>
+
+            <div class="auth-switch hide-on-signup">
+                <span data-en="Want to sell our pastries?" data-es="¿Deseas vender nuestros productos?">Want to sell our pastries?</span>
+                <a href="#" id="toggleSignup" data-en="Apply here" data-es="Aplica aquí">Apply here</a>
+            </div>
+            <div class="auth-switch show-on-signup">
+                <span data-en="Already an approved partner?" data-es="¿Ya eres un socio verificado?">Already an approved partner?</span>
+                <a href="#" id="toggleLogin" data-en="Log in" data-es="Iniciar sesión">Log in</a>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="partner-auth.js"></script>
+</body>
+</html>

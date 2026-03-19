@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Driver Login | Cecilia Bakery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="auth-theme.css">
+    <script src="auth-i18n.js"></script>
+</head>
+<body>
+    <div class="bg-blob"></div>
+
+    <div class="top-controls">
+        <a href="index.html" class="back-nav">
+            <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            <span id="back-text" data-en="Return to Bakery" data-es="Regresar a la Panadería">Return to Bakery</span>
+        </a>
+        <div class="nav-controls">
+            <button class="lang-btn active" id="btn-en" onclick="setAuthLang('en')">EN</button>
+            <span class="ctrl-divider">/</span>
+            <button class="lang-btn" id="btn-es" onclick="setAuthLang('es')">ES</button>
+            <span class="ctrl-divider" style="margin-left:2px">·</span>
+            <button class="theme-btn" id="theme-toggle" onclick="toggleAuthTheme()">
+                <span id="theme-icon">🌙</span><span id="theme-label">Dark</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="auth-wrapper">
+        <div class="auth-card" id="authCard">
+            <div class="auth-header">
+                <span class="auth-label" style="color: var(--blue);" data-en="Delivery Fleet" data-es="Flota de Entrega">Delivery Fleet</span>
+                <h1 class="auth-title hide-on-signup" data-en="Driver Login" data-es="Ingreso de Conductor">Driver Login</h1>
+                <h1 class="auth-title show-on-signup" data-en="Driver Registration" data-es="Registro de Conductor">Driver Registration</h1>
+                <p class="auth-subtitle hide-on-signup" data-en="Manage your active delivery routes" data-es="Gestiona tus rutas activas">Manage your active delivery routes</p>
+                <p class="auth-subtitle show-on-signup" data-en="Create a driver account for dispatch" data-es="Crea una cuenta para la logística">Create a driver account for dispatch</p>
+            </div>
+
+            <form id="driverAuthForm">
+                <div class="input-group show-on-signup">
+                    <label class="input-label" data-en="Full Name" data-es="Nombre Completo">Full Name</label>
+                    <input type="text" class="input-field" data-en="E.g. John Doe" data-es="Ej. Juan Pérez" placeholder="E.g. John Doe" />
+                </div>
+
+                <div class="input-group show-on-signup">
+                    <label class="input-label" data-en="Phone Number" data-es="Teléfono">Phone Number</label>
+                    <input type="tel" class="input-field" data-en="(Required)" data-es="(Requerido)" placeholder="(Required)" />
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label" data-en="Email Address" data-es="Correo Electrónico">Email Address</label>
+                    <input type="email" class="input-field" data-en="driver@email.com" data-es="conductor@email.com" placeholder="driver@email.com" required />
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label" data-en="Password" data-es="Contraseña">Password</label>
+                    <input type="password" class="input-field" data-en="••••••••" data-es="••••••••" placeholder="••••••••" required />
+                </div>
+
+                <button type="submit" class="btn-submit hide-on-signup" style="background: var(--blue); color: #fff;" data-en="Access Dispatch" data-es="Acceder a Rutas">Access Dispatch</button>
+                <button type="submit" class="btn-submit show-on-signup" style="background: var(--blue); color: #fff;" data-en="Register Driver" data-es="Registrar">Register Driver</button>
+            </form>
+
+            <div class="auth-switch hide-on-signup">
+                <span data-en="New Driver?" data-es="¿Nuevo Conductor?">New Driver?</span>
+                <a href="#" id="toggleSignup" style="color: var(--blue); border-color: var(--blue);" data-en="Sign up here" data-es="Regístrate aquí">Sign up here</a>
+            </div>
+            <div class="auth-switch show-on-signup">
+                <span data-en="Already registered?" data-es="¿Ya estás registrado?">Already registered?</span>
+                <a href="#" id="toggleLogin" style="color: var(--blue); border-color: var(--blue);" data-en="Log in" data-es="Iniciar Sesión">Log in</a>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="driver-auth.js"></script>
+</body>
+</html>
