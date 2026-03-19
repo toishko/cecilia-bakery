@@ -1428,7 +1428,40 @@
       align-items: center;
       font-size: .76rem;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 15px;
+    }
+
+    .toisko-credit {
+      opacity: 0.7;
+      font-weight: 300;
+      letter-spacing: 0.03em;
+      transition: opacity 0.3s ease;
+    }
+
+    .toisko-credit:hover {
+      opacity: 1;
+    }
+
+    .toisko-credit a {
+      color: inherit;
+      text-decoration: none;
+      font-weight: 500;
+      position: relative;
+    }
+
+    .toisko-credit a::after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 1px;
+      bottom: -2px;
+      left: 0;
+      background-color: currentColor;
+      transition: width 0.3s ease;
+    }
+
+    .toisko-credit a:hover::after {
+      width: 100%;
     }
 
     .flag-row {
@@ -3779,6 +3812,7 @@
       <span data-en="© 2025 Cecilia Bakery. All rights reserved."
         data-es="© 2025 Cecilia Bakery. Todos los derechos reservados.">© 2025 Cecilia Bakery. All rights
         reserved.</span>
+      <span class="toisko-credit" data-en='Digital Experience by <a href="https://systems.toisko.com" target="_blank" rel="noopener">Toisko Systems</a>' data-es='Experiencia Digital por <a href="https://systems.toisko.com" target="_blank" rel="noopener">Toisko Systems</a>'>Digital Experience by <a href="https://systems.toisko.com" target="_blank" rel="noopener">Toisko Systems</a></span>
       <div class="flag-row">
         <div class="flag-bar"><span></span><span></span><span></span></div>
         <span data-en="Made with love 🇩🇴" data-es="Hecho con amor 🇩🇴">Made with love 🇩🇴</span>
