@@ -48,8 +48,10 @@ function toggleAuthTheme() {
     
     const icon = document.getElementById('theme-icon');
     const label = document.getElementById('theme-label');
-    if (icon && label) {
+    if (icon) {
         icon.innerHTML = newTheme === 'dark' ? `<i data-lucide='sun' class='icon'></i>` : `<i data-lucide='moon' class='icon'></i>`; if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    if (label) {
         label.textContent = newTheme === 'dark' ? i18nAuth[currentLang].themeLight : i18nAuth[currentLang].themeDark;
     }
 }

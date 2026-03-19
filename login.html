@@ -17,12 +17,13 @@
             <span id="back-text" data-en="Return to Bakery" data-es="Regresar a la Panadería">Return to Bakery</span>
         </a>
         <div class="nav-controls">
-            <button class="lang-btn active" id="btn-en" onclick="setAuthLang('en')">EN</button>
-            <span class="ctrl-divider">/</span>
-            <button class="lang-btn" id="btn-es" onclick="setAuthLang('es')">ES</button>
+            <div style="display: flex; align-items: center; gap: 0;">
+                <button class="lang-btn active" id="btn-en" onclick="setAuthLang('en')">EN</button>
+                <button class="lang-btn" id="btn-es" onclick="setAuthLang('es')">ES</button>
+            </div>
             <span class="ctrl-divider" style="margin-left:2px">·</span>
             <button class="theme-btn" id="theme-toggle" onclick="toggleAuthTheme()">
-                <span id="theme-icon"><i data-lucide='moon' class='icon'></i></span><span id="theme-label">Dark</span>
+                <span id="theme-icon"><i data-lucide='moon' class='icon'></i></span>
             </button>
         </div>
     </div>

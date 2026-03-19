@@ -5,11 +5,11 @@
   - [x] Adjust the theme logic so that if `localStorage.getItem('theme')` is null, it explicitly sets the theme to `'light'` (e.g., `document.documentElement.setAttribute('data-theme', 'light')`) without falling back to `window.matchMedia('(prefers-color-scheme: dark)')`.
   - [x] Save `'light'` into localStorage on the first visit to finalize the state.
 
-- [ ] **2. Header Control Buttons Sizing and Spacing**
-  - [ ] Modify `<style>` blocks in `index.html`, `menu.html`, and `login.html`.
-  - [ ] Standardize `.lang-btn` and `.theme-btn` classes: give them identical padding, uniform width, and text wrapping preventions so they form matching bounding boxes.
-  - [ ] Modify `.theme-btn` to solely rely on the Lucide icon (`moon`/`sun`) by removing the "Dark"/"Light" text (or give both buttons equal fixed dimensions like `width: 32px; height: 32px;`).
-  - [ ] Increase the `gap` property in the `.nav-controls` and `.mobile-drawer-controls` containers so the buttons don't look cluttered (e.g., bump gap from `5px` to `12px`).
+- [x] **2. Header Control Buttons Sizing and Spacing**
+  - [x] Modify `<style>` blocks in `index.html`, `menu.html`, and `login.html`.
+  - [x] Standardize `.lang-btn` and `.theme-btn` classes: give them identical padding, uniform width, and text wrapping preventions so they form matching bounding boxes.
+  - [x] Modify `.theme-btn` to solely rely on the Lucide icon (`moon`/`sun`) by removing the "Dark"/"Light" text (or give both buttons equal fixed dimensions like `width: 32px; height: 32px;`).
+  - [x] Increase the `gap` property in the `.nav-controls` and `.mobile-drawer-controls` containers so the buttons don't look cluttered (e.g., bump gap from `5px` to `12px`).
 
 - [ ] **3. "Order Now" Specificity in Mobile Dropdown**
   - [ ] In `index.html`, locate the `.mobile-drawer-links` list.

@@ -349,7 +349,7 @@
     .nav-controls {
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 12px;
       flex-shrink: 0;
     }
 
@@ -360,7 +360,12 @@
       font-weight: 600;
       letter-spacing: .08em;
       text-transform: uppercase;
-      padding: 5px 10px;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       border-radius: 2px;
       border: 1.5px solid var(--lang-border);
       background: transparent;
@@ -368,6 +373,7 @@
       transition: var(--transition);
       color: var(--lang-text);
       line-height: 1;
+      flex-shrink: 0;
     }
 
     .lang-btn.active {
@@ -376,7 +382,6 @@
       color: #fff;
     }
 
-    .lang-btn:not(.active):hover,
     .theme-btn:hover {
       border-color: var(--red);
       color: var(--red);
@@ -387,16 +392,6 @@
       font-size: .7rem;
       font-weight: 300;
       user-select: none;
-    }
-
-    .theme-btn {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: .68rem;
-      letter-spacing: 0;
-      text-transform: none;
-      font-weight: 400;
     }
 
     /* ════════════════════════════════════════
@@ -3292,9 +3287,7 @@
         display: none;
       }
 
-      .theme-btn span:last-child {
-        display: none;
-      }
+
     }
 
 
@@ -3395,13 +3388,13 @@
       </ul>
       <div class="nav-sep"></div>
       <div class="nav-controls">
-        <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
-        <span class="ctrl-divider">/</span>
-        <button class="lang-btn" id="btn-es" onclick="setLang('es')">ES</button>
+        <div style="display: flex; align-items: center; gap: 0;">
+          <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
+          <button class="lang-btn" id="btn-es" onclick="setLang('es')">ES</button>
+        </div>
         <span class="ctrl-divider" style="margin-left:2px">·</span>
         <button class="theme-btn" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
           <span id="theme-icon"><i data-lucide='moon' class='icon'></i></span>
-          <span id="theme-label">Dark</span>
         </button>
       </div>
       <button class="hamburger" id="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">
@@ -3438,6 +3431,16 @@
       <li><a href="#experience" onclick="closeMobileMenu()" class="nav-cta" data-en="Order Now" data-es="Ordenar">Order
           Now</a></li>
     </ul>
+    <div class="mobile-drawer-controls">
+      <div style="display: flex; align-items: center; gap: 0;">
+        <button class="lang-btn active" id="mob-btn-en" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" id="mob-btn-es" onclick="setLang('es')">ES</button>
+      </div>
+      <span class="ctrl-divider" style="margin: 0 2px">·</span>
+      <button class="theme-btn" id="mob-theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
+        <span id="mob-theme-icon"><i data-lucide='moon' class='icon'></i></span>
+      </button>
+    </div>
   </div>
 
   <!-- ── HERO ── -->
@@ -3981,10 +3984,10 @@
       const label = document.getElementById('theme-label');
       if (t === 'dark') {
         icon.innerHTML = `<i data-lucide='sun' class='icon'></i>`; if (typeof lucide !== 'undefined') lucide.createIcons();
-        label.textContent = i18n[lang].themeLight;
+        if (label) label.textContent = i18n[lang].themeLight;
       } else {
         icon.innerHTML = `<i data-lucide='moon' class='icon'></i>`; if (typeof lucide !== 'undefined') lucide.createIcons();
-        label.textContent = i18n[lang].themeDark;
+        if (label) label.textContent = i18n[lang].themeDark;
       }
       try { localStorage.setItem(THEME_KEY, t); } catch (e) { }
       const mobIcon = document.getElementById('mob-theme-icon');
@@ -4014,6 +4017,10 @@
       document.documentElement.lang = l;
       document.getElementById('btn-en').classList.toggle('active', l === 'en');
       document.getElementById('btn-es').classList.toggle('active', l === 'es');
+      const mbEn = document.getElementById('mob-btn-en');
+      const mbEs = document.getElementById('mob-btn-es');
+      if (mbEn) mbEn.classList.toggle('active', l === 'en');
+      if (mbEs) mbEs.classList.toggle('active', l === 'es');
 
       document.querySelectorAll('[data-en]').forEach(el => {
         const val = el.getAttribute('data-' + l);
@@ -4034,8 +4041,10 @@
       document.getElementById('chat-input').placeholder = i18n[l].inputPlaceholder;
 
       /* Sync theme button label */
-      document.getElementById('theme-label').textContent =
-        theme === 'dark' ? i18n[l].themeLight : i18n[l].themeDark;
+      const tLabel = document.getElementById('theme-label');
+      if (tLabel) {
+        tLabel.textContent = theme === 'dark' ? i18n[l].themeLight : i18n[l].themeDark;
+      }
       // Always update drawer title regardless of open state
       const drawerTitle = document.querySelector('.cart-drawer-title');
       if (drawerTitle) drawerTitle.innerHTML = cartI18n[l].drawerTitle;
