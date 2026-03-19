@@ -1411,7 +1411,7 @@ select.cart-form-input option { background:#002D62; color:#fff; }
       ← <span data-en="Back to Home" data-es="Volver al Inicio">Back to Home</span>
     </a>
     <!-- Auth Toggle -->
-    <div id="nav-login-btn" style="display: none;">
+    <div id="nav-login-btn">
       <a href="login.html" class="nav-back" data-en="Log In" data-es="Iniciar Sesión">Log In</a>
     </div>
     <div id="nav-user-menu" style="display: none; position: relative;" onmouseenter="document.getElementById('nav-user-dropdown').style.display='block'" onmouseleave="document.getElementById('nav-user-dropdown').style.display='none'">
@@ -1458,7 +1458,7 @@ select.cart-form-input option { background:#002D62; color:#fff; }
     <li><a href="#piezas"      onclick="closeMobileMenu()" data-en="<i data-lucide='cake-slice' class='icon'></i> Slices" data-es="<i data-lucide='cake-slice' class='icon'></i> Piezas"><i data-lucide='cake-slice' class='icon'></i> Slices</a></li>
     <li><a href="#basos"       onclick="closeMobileMenu()" data-en="<i data-lucide='cup-soda' class='icon'></i> Cups" data-es="<i data-lucide='cup-soda' class='icon'></i> Basos"><i data-lucide='cup-soda' class='icon'></i> Cups</a></li>
     <!-- Mobile Auth Links -->
-    <li id="mobile-login-btn" style="display: none;"><a href="login.html" onclick="closeMobileMenu()" data-en="<i data-lucide='key' class='icon'></i> Log In" data-es="<i data-lucide='key' class='icon'></i> Iniciar Sesión"><i data-lucide='key' class='icon'></i> Log In</a></li>
+    <li id="mobile-login-btn"><a href="login.html" onclick="closeMobileMenu()" data-en="<i data-lucide='key' class='icon'></i> Log In" data-es="<i data-lucide='key' class='icon'></i> Iniciar Sesión"><i data-lucide='key' class='icon'></i> Log In</a></li>
     <li id="mobile-user-menu" style="display:none;"><a href="login.html" onclick="closeMobileMenu()" data-en="<i data-lucide='user' class='icon'></i> Dashboard" data-es="<i data-lucide='user' class='icon'></i> Menu Principal"><i data-lucide='user' class='icon'></i> Dashboard</a></li>
     <li id="mobile-signout-menu" style="display:none;"><a href="#" id="mobile-sign-out-btn" style="color:var(--red);" onclick="closeMobileMenu()" data-en="<i data-lucide='log-out' class='icon'></i> Sign Out" data-es="<i data-lucide='log-out' class='icon'></i> Cerrar Sesión"><i data-lucide='log-out' class='icon'></i> Sign Out</a></li>
   </ul>
@@ -1487,7 +1487,7 @@ select.cart-form-input option { background:#002D62; color:#fff; }
     <p class="custom-hero-sub" id="custom-hero-sub"></p>
   </div>
   <button class="custom-hero-cta" onclick="openChat()"
-    data-en="Order a Custom Cake (Coming Soon)" data-es="Ordena tu Bizcocho (Próximamente)">Order a Custom Cake (Coming Soon)</button>
+    data-en="Order a Custom Cake" data-es="Ordena tu Bizcocho">Order a Custom Cake</button>
 </div>
 
 <!-- STICKY CATEGORY NAV -->
@@ -1815,7 +1815,7 @@ select.cart-form-input option { background:#002D62; color:#fff; }
   <p class="custom-bottom-text">
     <span data-en="Looking for something custom?" data-es="¿Buscas algo personalizado?">Looking for something custom?</span>
     <span class="custom-bottom-divider">·</span>
-    <button class="custom-bottom-cta" onclick="openChat()" data-en="Order a Custom Cake → (Coming Soon)" data-es="Ordena tu Bizcocho → (Próximamente)">Order a Custom Cake → (Coming Soon)</button>
+    <button class="custom-bottom-cta" onclick="openChat()" data-en="Order a Custom Cake →" data-es="Ordena tu Bizcocho →">Order a Custom Cake →</button>
   </p>
 </div>
 
@@ -1863,7 +1863,7 @@ select.cart-form-input option { background:#002D62; color:#fff; }
 </footer>
 
 <!-- FAB -->
-<button class="chat-fab" onclick="openChat()" aria-label="Chat with us" title="Chat & Order (Coming Soon)"><i data-lucide='message-circle' class='icon'></i></button>
+<button class="chat-fab" onclick="openChat()" aria-label="Chat with us" title="Chat & Order"><i data-lucide='message-circle' class='icon'></i></button>
 
 <!-- CHAT -->
 <div class="chat-overlay" id="chat-overlay" onclick="closeChatOutside(event)">
@@ -2091,21 +2091,22 @@ Bakery: Founded by Cecilia, owner Alejandro Dominguez. 6101 Park Ave, West New Y
 Be warm and conversational. Keep replies concise. For custom orders collect: occasion, size, custom message, name, and contact number. Summarize the order at the end.`;
 
 function openChat() {
-  Swal.fire({
-    title: lang === 'es' ? '¡Próximamente!' : 'Coming Soon!',
-    text: lang === 'es' 
-      ? '¡Nuestro Asistente de Chat se está horneando!Por ahora, llámanos al (201) 869-7633 o visítanos en la tienda.' 
-      : 'Our Chat Assistant is currently being baked!For now, please call us at (201) 869-7633 or visit our store.',
-    icon: 'info',
-    confirmButtonText: 'OK',
-    confirmButtonColor: '#C8102E'
-  });
+  pendingItem = null;
+  _openChat(i18n[lang].chatGreeting, i18n[lang].quickReplies);
 }
 function openChatWith(item) {
-  openChat();
+  pendingItem = item;
+  _openChat(i18n[lang].chatItemGreeting(item), null);
 }
 function _openChat(greeting, quickReplies) {
-  // Disabled
+  document.getElementById('chat-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  if(!chatInitialized) {
+    chatInitialized = true;
+    addBotMsg(greeting);
+    if(quickReplies) showQR(quickReplies);
+  }
+  setTimeout(()=>document.getElementById('chat-input').focus(),200);
 }
 function closeChat() {
   document.getElementById('chat-overlay').classList.remove('open');
@@ -2698,7 +2699,7 @@ const cartI18n = {
     empty:          'Your cart is empty.',
     emptySub:       'Browse the menu and add something delicious.',
     countLabel:     (n) => `${n} item${n !== 1 ? 's' : ''}`,
-    checkout:       'Checkout (Coming Soon)',
+    checkout:       'Checkout',
     browseMenu:          'Browse the Menu →',
     clearTitle:          'Clear your cart?',
     clearSub:            "All items will be removed. This can't be undone.",
@@ -2740,7 +2741,7 @@ const cartI18n = {
     empty:          'Tu carrito está vacío.',
     emptySub:       'Explora el menú y agrega algo delicioso.',
     countLabel:     (n) => `${n} artículo${n !== 1 ? 's' : ''}`,
-    checkout:       'Pagar (Próximamente)',
+    checkout:       'Pagar',
     browseMenu:          'Ver el Menú →',
     clearTitle:          '¿Vaciar tu carrito?',
     clearSub:            'Todos los artículos serán eliminados. Esto no se puede deshacer.',
@@ -3282,15 +3283,25 @@ function confirmATC() {
 }
 
 function cartCheckout() {
-  Swal.fire({
-    title: lang === 'es' ? '¡Próximamente!' : 'Coming Soon!',
-    text: lang === 'es' 
-      ? '¡Los pedidos en línea estarán disponibles pronto!Por ahora, visítanos en 6101 Park Ave, West New York, NJ para hacer tu pedido.' 
-      : 'Online ordering is coming soon!In the meantime, please visit us at 6101 Park Ave, West New York, NJ to place your order.',
-    icon: 'info',
-    confirmButtonText: 'OK',
-    confirmButtonColor: '#C8102E'
-  });
+  const t = cartI18n[lang];
+  const name   = (document.getElementById('cart-name')?.value || '').trim();
+  const phone  = (document.getElementById('cart-phone')?.value || '').trim();
+  const errEl  = document.getElementById('cart-form-error');
+
+  // Validate first
+  if (!name)  { if(errEl) errEl.textContent = t.errName;  return; }
+  if (!phone) { if(errEl) errEl.textContent = t.errPhone; return; }
+  if (errEl)  errEl.textContent = '';
+
+  // Show confirmation before placing order
+  const itemCount = cartTotal();
+  showConfirm(
+    t.checkoutConfirmTitle || 'Ready to place your order?',
+    t.checkoutConfirmSub   || `${itemCount} item${itemCount !== 1 ? 's' : ''} · Pickup by ${name}`,
+    t.checkoutConfirmOk    || 'Yes, Place Order',
+    t.checkoutConfirmCancel|| 'Go Back',
+    _placeOrder
+  );
 }
 
 function _placeOrder() {

@@ -3381,7 +3381,7 @@
         <li><a href="#story" data-en="Our Story" data-es="Historia">Our Story</a></li>
         <li><a href="menu.html" data-en="Menu" data-es="Menú">Menu</a></li>
         <li><a href="#wholesale" data-en="Wholesale" data-es="Mayoreo">Wholesale</a></li>
-        <li id="nav-login-btn" style="display: none;"><a href="login.html" data-en="Log In" data-es="Iniciar Sesión">Log In</a></li>
+        <li id="nav-login-btn"><a href="login.html" data-en="Log In" data-es="Iniciar Sesión">Log In</a></li>
         <li id="nav-user-menu" style="display: none; position: relative;" onmouseenter="document.getElementById('nav-user-dropdown').style.display='block'" onmouseleave="document.getElementById('nav-user-dropdown').style.display='none'">
           <a href="#" id="nav-user-greeting" style="cursor: pointer;">Profile ▼</a>
           <div id="nav-user-dropdown" style="display: none; position: absolute; top: 100%; right: 0; background: var(--bg-card); border: 1px solid var(--bd); padding: 12px; border-radius: var(--r); box-shadow: var(--shadow-card); min-width: 140px; z-index: 1000;">
@@ -3426,7 +3426,7 @@
       <li><a href="#story" onclick="closeMobileMenu()" data-en="<i data-lucide='message-circle' class='icon'></i> Our Story" data-es="<i data-lucide='message-circle' class='icon'></i> Historia"><i data-lucide='message-circle' class='icon'></i> Our Story</a></li>
       <li><a href="menu.html" onclick="closeMobileMenu()" data-en="<i data-lucide='book-open' class='icon'></i> Menu" data-es="<i data-lucide='book-open' class='icon'></i> Menú"><i data-lucide='book-open' class='icon'></i> Menu</a></li>
       <li><a href="#wholesale" onclick="closeMobileMenu()" data-en="<i data-lucide='store' class='icon'></i> Wholesale" data-es="<i data-lucide='store' class='icon'></i> Mayoreo"><i data-lucide='store' class='icon'></i> Wholesale</a></li>
-      <li id="mobile-login-btn" style="display: none;"><a href="login.html" onclick="closeMobileMenu()" data-en="<i data-lucide='key' class='icon'></i> Log In" data-es="<i data-lucide='key' class='icon'></i> Iniciar Sesión"><i data-lucide='key' class='icon'></i> Log In</a></li>
+      <li id="mobile-login-btn"><a href="login.html" onclick="closeMobileMenu()" data-en="<i data-lucide='key' class='icon'></i> Log In" data-es="<i data-lucide='key' class='icon'></i> Iniciar Sesión"><i data-lucide='key' class='icon'></i> Log In</a></li>
       <li id="mobile-user-menu" style="display: none;">
         <a href="#" id="mobile-profile-link" onclick="closeMobileMenu()" data-en="<i data-lucide='user' class='icon'></i> Dashboard" data-es="<i data-lucide='user' class='icon'></i> Menu Principal"><i data-lucide='user' class='icon'></i> Dashboard</a>
       </li>
@@ -3457,8 +3457,8 @@
 
     <div class="hero-actions">
       <a href="menu.html" class="btn btn-red" data-en="See the Menu" data-es="Ver el Menú">See the Menu</a>
-      <button class="btn btn-ghost" onclick="openChat()" data-en="Custom Cake Order (Coming Soon)"
-        data-es="Ordenar un Bizcocho (Próximamente)">Custom Cake Order (Coming Soon)</button>
+      <button class="btn btn-ghost" onclick="openChat()" data-en="Custom Cake Order"
+        data-es="Ordenar un Bizcocho">Custom Cake Order</button>
     </div>
 
     <div class="hero-scroll">
@@ -3789,8 +3789,8 @@
         Place a custom order, chat with us directly, or call — we're here for you.
       </p>
       <div class="exp-actions">
-        <button class="btn btn-white" onclick="openChat()" data-en="<i data-lucide='message-circle' class='icon'></i> Chat & Order Now (Coming Soon)"
-          data-es="<i data-lucide='message-circle' class='icon'></i> Chatea y Ordena (Próximamente)"><i data-lucide='message-circle' class='icon'></i> Chat & Order Now (Coming Soon)</button>
+        <button class="btn btn-white" onclick="openChat()" data-en="<i data-lucide='message-circle' class='icon'></i> Chat & Order Now"
+          data-es="<i data-lucide='message-circle' class='icon'></i> Chatea y Ordena"><i data-lucide='message-circle' class='icon'></i> Chat & Order Now</button>
         <a href="tel:+12018697633" class="btn btn-outline-white"><i data-lucide='phone' class='icon'></i> (201) 869-7633</a>
       </div>
     </div>
@@ -3832,7 +3832,7 @@
             8:30am – 6:00pm</span>
         </address>
       </div>
-      <div class="footer-col" style="display: none;">
+      <div class="footer-col">
         <h4 data-en="Portals" data-es="Portales">Portals</h4>
         <a href="partner-login.html" data-en="Partner Portal" data-es="Portal de Socios">Partner Portal</a>
         <a href="driver-login.html" data-en="Driver Access" data-es="Acceso Conductores">Driver Access</a>
@@ -3850,7 +3850,7 @@
   </footer>
 
   <!-- FAB -->
-  <button class="chat-fab" onclick="openChat()" aria-label="Chat with us" title="Chat & Order (Coming Soon)">
+  <button class="chat-fab" onclick="openChat()" aria-label="Chat with us" title="Chat & Order">
     <i data-lucide='message-circle' class='icon'></i><div class="fab-badge">1</div>
   </button>
 
@@ -4093,15 +4093,8 @@ Bakery info: Founded by Cecilia, owner is Alejandro Dominguez. 6101 Park Ave, We
 Be warm and conversational. Keep replies concise. For custom orders collect: occasion, cake type, flavor, size, custom message, name, and contact number. Summarize the order at the end.`;
 
     function openChat() {
-      Swal.fire({
-        title: lang === 'es' ? '¡Próximamente!' : 'Coming Soon!',
-        text: lang === 'es' 
-          ? '¡Nuestro Asistente de Chat se está horneando!Por ahora, llámanos al (201) 869-7633 o visítanos en la tienda.' 
-          : 'Our Chat Assistant is currently being baked!For now, please call us at (201) 869-7633 or visit our store.',
-        icon: 'info',
-        confirmButtonText: 'OK',
-        confirmButtonColor: '#C8102E'
-      });
+      document.getElementById('chat-overlay').classList.add('open');
+      document.body.style.overflow = 'hidden';
       const badge = document.querySelector('.fab-badge');
       if (badge) badge.remove();
     }

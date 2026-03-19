@@ -2,8 +2,6 @@ import { supabase } from './supabase-client.js';
 
 // Global function to update UI based on session
 export async function updateAuthUI(session) {
-    // DISABLED FOR LOCKDOWN
-    return;
     const loginBtn = document.getElementById('nav-login-btn');
     const userMenu = document.getElementById('nav-user-menu');
     const userGreeting = document.getElementById('nav-user-greeting');

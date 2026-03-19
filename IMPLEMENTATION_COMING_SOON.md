@@ -48,7 +48,7 @@ This document outlines the temporary restrictions applied to the site before pub
 
 ---
 
-## 📝 Check-off Table (Current Task)
+## 📝 Phase 1: Lockdown Check-off Table (Completed)
 
 - [x] Modify `menu.html` Translations (Checkout Coming Soon)
 - [x] Modify `menu.html` `cartCheckout()` logic
@@ -57,3 +57,25 @@ This document outlines the temporary restrictions applied to the site before pub
 - [x] Update button attributes in both files
 - [x] Hide Header Login & Footer Portals
 - [x] Disable Auth Logic intervention
+
+---
+
+## 📝 Phase 2: Restoration Check-off Table (Current Task)
+
+**Restoring the Chatbot**
+- [x] Revert `menu.html` `_openChat()` logic (Remove SweetAlert, restore chat overlay toggle)
+- [x] Revert `index.html` `openChat()` logic (Remove SweetAlert, restore chat overlay toggle)
+- [x] Clean button attributes in both files (Remove `(Coming Soon)` / `(Próximamente)` from `data-en` and `data-es`)
+- [x] Remove "Coming Soon" hover hints from the FAB (Floating Action Button)
+- [x] Verify Supabase/Edge function connection for the AI bot
+
+**Restoring Checkout & Payments**
+- [x] Revert `menu.html` `cartI18n` Translations (Set back to "Checkout" and "Pagar")
+- [x] Revert `menu.html` `cartCheckout()` logic (Restore `showConfirm(...)` and `_placeOrder`)
+- [ ] Enable Stripe/Square checkout redirect or Supabase `orders` table insertion logic
+
+**Restoring Authentication & Portals**
+- [x] Un-hide Header Login (Remove `display: none` from "Sign In" button in main navigation)
+- [x] Un-hide Footer Portals (Remove `display: none` from "Portals" / "For the Team" section)
+- [x] Re-enable Auth Logic in `auth-state.js` to handle user sessions and profile menus
+
