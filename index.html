@@ -10,6 +10,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
     rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
     /* ════════════════════════════════════════
    DESIGN TOKENS — full theme architecture
@@ -3392,8 +3393,8 @@
 
     <div class="hero-actions">
       <a href="menu.html" class="btn btn-red" data-en="See the Menu" data-es="Ver el Menú">See the Menu</a>
-      <button class="btn btn-ghost" onclick="openChat()" data-en="Custom Cake Order"
-        data-es="Ordenar un Bizcocho">Custom Cake Order</button>
+      <button class="btn btn-ghost" onclick="openChat()" data-en="Custom Cake Order (Coming Soon)"
+        data-es="Ordenar un Bizcocho (Próximamente)">Custom Cake Order (Coming Soon)</button>
     </div>
 
     <div class="hero-scroll">
@@ -3724,8 +3725,8 @@
         Place a custom order, chat with us directly, or call — we're here for you.
       </p>
       <div class="exp-actions">
-        <button class="btn btn-white" onclick="openChat()" data-en="💬 Chat &amp; Order Now"
-          data-es="💬 Chatea y Ordena">💬 Chat &amp; Order Now</button>
+        <button class="btn btn-white" onclick="openChat()" data-en="💬 Chat & Order Now (Coming Soon)"
+          data-es="💬 Chatea y Ordena (Próximamente)">💬 Chat & Order Now (Coming Soon)</button>
         <a href="tel:+12018697633" class="btn btn-outline-white">📞 (201) 869-7633</a>
       </div>
     </div>
@@ -4025,16 +4026,17 @@ Bakery info: Founded by Cecilia, owner is Alejandro Dominguez. 6101 Park Ave, We
 Be warm and conversational. Keep replies concise. For custom orders collect: occasion, cake type, flavor, size, custom message, name, and contact number. Summarize the order at the end.`;
 
     function openChat() {
-      document.getElementById('chat-overlay').classList.add('open');
-      document.body.style.overflow = 'hidden';
+      Swal.fire({
+        title: lang === 'es' ? '¡Próximamente!' : 'Coming Soon!',
+        text: lang === 'es' 
+          ? '¡Nuestro Asistente de Chat se está horneando! 🧁 Por ahora, llámanos al (201) 869-7633 o visítanos en la tienda.' 
+          : 'Our Chat Assistant is currently being baked! 🧁 For now, please call us at (201) 869-7633 or visit our store.',
+        icon: 'info',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#C8102E'
+      });
       const badge = document.querySelector('.fab-badge');
       if (badge) badge.remove();
-      if (!chatInitialized) {
-        chatInitialized = true;
-        addBotMsg(i18n[lang].chatGreeting);
-        showQR(i18n[lang].quickReplies);
-      }
-      setTimeout(() => document.getElementById('chat-input').focus(), 200);
     }
     function closeChat() {
       document.getElementById('chat-overlay').classList.remove('open');

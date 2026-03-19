@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
 
 /* ════════════════════════════════════════
@@ -1451,7 +1452,7 @@ select.cart-form-input option { background:#002D62; color:#fff; }
     <p class="custom-hero-sub" id="custom-hero-sub"></p>
   </div>
   <button class="custom-hero-cta" onclick="openChat()"
-    data-en="🎂 Order a Custom Cake" data-es="🎂 Ordena tu Bizcocho">🎂 Order a Custom Cake</button>
+    data-en="🎂 Order a Custom Cake (Coming Soon)" data-es="🎂 Ordena tu Bizcocho (Próximamente)">🎂 Order a Custom Cake (Coming Soon)</button>
 </div>
 
 <!-- STICKY CATEGORY NAV -->
@@ -1779,7 +1780,7 @@ select.cart-form-input option { background:#002D62; color:#fff; }
   <p class="custom-bottom-text">
     <span data-en="Looking for something custom?" data-es="¿Buscas algo personalizado?">Looking for something custom?</span>
     <span class="custom-bottom-divider">·</span>
-    <button class="custom-bottom-cta" onclick="openChat()" data-en="Order a Custom Cake →" data-es="Ordena tu Bizcocho →">Order a Custom Cake →</button>
+    <button class="custom-bottom-cta" onclick="openChat()" data-en="Order a Custom Cake → (Coming Soon)" data-es="Ordena tu Bizcocho → (Próximamente)">Order a Custom Cake → (Coming Soon)</button>
   </p>
 </div>
 
@@ -2055,22 +2056,21 @@ Bakery: Founded by Cecilia, owner Alejandro Dominguez. 6101 Park Ave, West New Y
 Be warm and conversational. Keep replies concise. For custom orders collect: occasion, size, custom message, name, and contact number. Summarize the order at the end.`;
 
 function openChat() {
-  pendingItem = null;
-  _openChat(i18n[lang].chatGreeting, i18n[lang].quickReplies);
+  Swal.fire({
+    title: lang === 'es' ? '¡Próximamente!' : 'Coming Soon!',
+    text: lang === 'es' 
+      ? '¡Nuestro Asistente de Chat se está horneando! 🧁 Por ahora, llámanos al (201) 869-7633 o visítanos en la tienda.' 
+      : 'Our Chat Assistant is currently being baked! 🧁 For now, please call us at (201) 869-7633 or visit our store.',
+    icon: 'info',
+    confirmButtonText: 'OK',
+    confirmButtonColor: '#C8102E'
+  });
 }
 function openChatWith(item) {
-  pendingItem = item;
-  _openChat(i18n[lang].chatItemGreeting(item), null);
+  openChat();
 }
 function _openChat(greeting, quickReplies) {
-  document.getElementById('chat-overlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-  if(!chatInitialized) {
-    chatInitialized = true;
-    addBotMsg(greeting);
-    if(quickReplies) showQR(quickReplies);
-  }
-  setTimeout(()=>document.getElementById('chat-input').focus(),200);
+  // Disabled
 }
 function closeChat() {
   document.getElementById('chat-overlay').classList.remove('open');
@@ -2647,7 +2647,7 @@ const cartI18n = {
     empty:          'Your cart is empty.',
     emptySub:       'Browse the menu and add something delicious.',
     countLabel:     (n) => `${n} item${n !== 1 ? 's' : ''}`,
-    checkout:       'Checkout',
+    checkout:       'Checkout (Coming Soon)',
     browseMenu:          'Browse the Menu →',
     clearTitle:          'Clear your cart?',
     clearSub:            "All items will be removed. This can't be undone.",
@@ -2689,7 +2689,7 @@ const cartI18n = {
     empty:          'Tu carrito está vacío.',
     emptySub:       'Explora el menú y agrega algo delicioso.',
     countLabel:     (n) => `${n} artículo${n !== 1 ? 's' : ''}`,
-    checkout:       'Pagar',
+    checkout:       'Pagar (Próximamente)',
     browseMenu:          'Ver el Menú →',
     clearTitle:          '¿Vaciar tu carrito?',
     clearSub:            'Todos los artículos serán eliminados. Esto no se puede deshacer.',
@@ -3231,25 +3231,15 @@ function confirmATC() {
 }
 
 function cartCheckout() {
-  const t = cartI18n[lang];
-  const name   = (document.getElementById('cart-name')?.value || '').trim();
-  const phone  = (document.getElementById('cart-phone')?.value || '').trim();
-  const errEl  = document.getElementById('cart-form-error');
-
-  // Validate first
-  if (!name)  { if(errEl) errEl.textContent = t.errName;  return; }
-  if (!phone) { if(errEl) errEl.textContent = t.errPhone; return; }
-  if (errEl)  errEl.textContent = '';
-
-  // Show confirmation before placing order
-  const itemCount = cartTotal();
-  showConfirm(
-    t.checkoutConfirmTitle || 'Ready to place your order?',
-    t.checkoutConfirmSub   || `${itemCount} item${itemCount !== 1 ? 's' : ''} · Pickup by ${name}`,
-    t.checkoutConfirmOk    || 'Yes, Place Order',
-    t.checkoutConfirmCancel|| 'Go Back',
-    _placeOrder
-  );
+  Swal.fire({
+    title: lang === 'es' ? '¡Próximamente!' : 'Coming Soon!',
+    text: lang === 'es' 
+      ? '¡Los pedidos en línea estarán disponibles pronto! 🥖 Por ahora, visítanos en 6101 Park Ave, West New York, NJ para hacer tu pedido.' 
+      : 'Online ordering is coming soon! 🥖 In the meantime, please visit us at 6101 Park Ave, West New York, NJ to place your order.',
+    icon: 'info',
+    confirmButtonText: 'OK',
+    confirmButtonColor: '#C8102E'
+  });
 }
 
 function _placeOrder() {
