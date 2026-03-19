@@ -17,9 +17,9 @@
   - [x] Change the translation properties: `data-en="<i data-lucide='cake' class='icon'></i> Order a Custom Cake"` and `data-es="<i data-lucide='cake' class='icon'></i> Ordenar un Bizcocho"`.
   - [x] Update the inner text to reflect the English default: `<i data-lucide='cake' class='icon'></i> Order a Custom Cake`.
 
-- [ ] **4. Sign Out Button Position in Mobile Dropdown**
-  - [ ] In `index.html`, `menu.html`, and `login.html`, edit the `.mobile-drawer-links` unordered list.
-  - [ ] Move the `<li id="mobile-signout-menu">` node to be the absolute last child of the `<ul>`. (Currently, it sits *before* the CTA).
+- [x] **4. Sign Out Button Position in Mobile Dropdown**
+  - [x] In `index.html`, `menu.html`, and `login.html`, edit the `.mobile-drawer-links` unordered list.
+  - [x] Move the `<li id="mobile-signout-menu">` node to be the absolute last child of the `<ul>`. (Currently, it sits *before* the CTA).
 
 - [ ] **5. Remove Category Jump Links from Menu Page Mobile Dropdown**
   - [ ] Open `menu.html` and find the `<ul class="mobile-drawer-links">`.
