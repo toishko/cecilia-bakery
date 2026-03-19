@@ -12,6 +12,7 @@ let currentLang = 'en';
 
 function setAuthLang(l) {
     currentLang = l;
+    try { localStorage.setItem('lang', l); } catch(e) {}
     document.documentElement.lang = l;
     const btnEn = document.getElementById('btn-en');
     const btnEs = document.getElementById('btn-es');
@@ -65,7 +66,13 @@ window.addEventListener('DOMContentLoaded', () => {
     const icon = document.getElementById('theme-icon');
     if (icon) icon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
     
-    setAuthLang('en');
+    /* Restore saved language preference */
+    let initialLang = 'en';
+    try {
+        const savedLang = localStorage.getItem('lang');
+        if (savedLang && (savedLang === 'en' || savedLang === 'es')) initialLang = savedLang;
+    } catch(e) {}
+    setAuthLang(initialLang);
 
     // Attach Toggle UI for Login/Signup if elements exist
     const authCard = document.getElementById('authCard');

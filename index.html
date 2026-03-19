@@ -2047,6 +2047,7 @@ window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').addEventL
 ══════════════════════════════ */
 function setLang(l) {
   lang = l;
+  try { localStorage.setItem('lang', l); } catch(e) {}
   document.documentElement.lang = l;
   document.getElementById('btn-en').classList.toggle('active', l === 'en');
   document.getElementById('btn-es').classList.toggle('active', l === 'es');
@@ -3124,6 +3125,11 @@ function _placeOrder() {
 document.addEventListener('DOMContentLoaded', () => {
   loadCart();
   updateBadge();
+  /* Restore saved language preference */
+  try {
+    const savedLang = localStorage.getItem('lang');
+    if (savedLang && (savedLang === 'en' || savedLang === 'es')) setLang(savedLang);
+  } catch(e) {}
 });
 
 </script>
