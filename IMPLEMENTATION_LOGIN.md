@@ -64,22 +64,25 @@ This document outlines the step-by-step implementation plan for the Split Portal
 
 ---
 
-## Phase 3a: Database Schema Setup (Supabase SQL Editor)
-*(Run these SQL scripts once in the Supabase Dashboard → SQL Editor before writing any JavaScript.)*
+## Phase 3a: Database Schema Setup ✅ (Completed)
 
-- [ ] **Create the `profiles` table**: Stores every user's role and shared identity info. Links to Supabase's built-in `auth.users` table via `id` (UUID).
+- [x] **Create the `profiles` table**: Stores every user's role and shared identity info. Links to Supabase's built-in `auth.users` table via `id` (UUID).
     - Columns: `id` (uuid, PK, FK → auth.users), `role` (text: `'customer'`, `'partner'`, `'driver'`, `'admin'`), `full_name` (text), `phone` (text), `created_at` (timestamptz).
-- [ ] **Create the `partner_details` table**: Stores wholesale-specific data for partner accounts.
+- [x] **Create the `partner_details` table**: Stores wholesale-specific data for partner accounts.
     - Columns: `id` (uuid, PK, FK → profiles), `business_name` (text), `contact_name` (text), `status` (text: `'pending'`, `'approved'`, `'rejected'`), `applied_at` (timestamptz).
-- [ ] **Create the `orders` table** *(stub for future use)*: A placeholder table for tracking customer and driver orders.
+- [x] **Create the `orders` table** *(stub for future use)*: A placeholder table for tracking customer and driver orders.
     - Columns: `id` (uuid, PK), `user_id` (uuid, FK → profiles), `role` (text), `status` (text), `created_at` (timestamptz).
-- [ ] **Enable Row Level Security (RLS)** on all tables so that users can only read and write their own rows.
-- [ ] **Create RLS Policies**:
-    - `profiles`: Users can only SELECT and UPDATE their own row (`auth.uid() = id`).
-    - `partner_details`: Partners can only SELECT their own row; INSERT allowed on signup.
+- [x] **Enable Row Level Security (RLS)** on all tables so that users can only read and write their own rows.
+- [x] **Create RLS Policies**:
+    - `profiles`: Users can SELECT, INSERT, and UPDATE their own row (`auth.uid() = id`).
+    - `partner_details`: Partners can SELECT their own row; INSERT allowed on signup.
     - `orders`: Users can only SELECT their own orders.
-- [ ] **Create a `handle_new_user` trigger function**: A PostgreSQL function that automatically inserts a blank row into `profiles` whenever a new user is created in `auth.users`, preventing orphaned auth accounts.
-- [ ] **Manually create the Admin account** in the Supabase Dashboard → Authentication → Users (email + password). Then run a SQL UPDATE to set that user's `role` to `'admin'` in the `profiles` table.
+- [x] **Create a `handle_new_user` trigger function**: `on_auth_user_created` is live — auto-inserts a blank profile row on every new signup.
+- [ ] **Manually create the Admin account** in the Supabase Dashboard → Authentication → Users (email + password). Then run a SQL UPDATE to set that user's `role` to `'admin'` in the `profiles` table. *(Do this after Phase 3b is coded.)*
+
+> 📝 **Future notes from schema review:**
+> - The `orders.role` column mirrors `profiles.role` — consider dropping it later and joining to `profiles` directly to avoid data duplication.
+> - Admin-level RLS policies (so admins can read/manage all records) will be needed in Phase 4 when the Admin Dashboard is built — will use a custom JWT claim check.
 
 ---
 
