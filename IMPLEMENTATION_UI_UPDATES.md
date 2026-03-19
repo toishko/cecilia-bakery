@@ -21,29 +21,29 @@
   - [x] In `index.html`, `menu.html`, and `login.html`, edit the `.mobile-drawer-links` unordered list.
   - [x] Move the `<li id="mobile-signout-menu">` node to be the absolute last child of the `<ul>`. (Currently, it sits *before* the CTA).
 
-- [ ] **5. Remove Category Jump Links from Menu Page Mobile Dropdown**
-  - [ ] Open `menu.html` and find the `<ul class="mobile-drawer-links">`.
-  - [ ] Remove the `<li>` items that link to in-page categories (e.g., `#cakes`, `#pastries`, `#drinks`).
-  - [ ] Keep only the essential global navigation links (Menu, Wholesale, Log In, User Dashboard/Home, Sign Out).
+- [x] **5. Remove Category Jump Links from Menu Page Mobile Dropdown**
+  - [x] Open `menu.html` and find the `<ul class="mobile-drawer-links">`.
+  - [x] Remove the `<li>` items that link to in-page categories (e.g., `#cakes`, `#pastries`, `#drinks`).
+  - [x] Keep only the essential global navigation links (Menu, Wholesale, Log In, User Dashboard/Home, Sign Out).
 
-- [ ] **6. Consistent Hamburger Dropdown on Customer Login**
-  - [ ] Inspect `login.html` and locate the `.mobile-drawer` and `.mobile-drawer-links`.
-  - [ ] Copy or align the structure to exactly match the simplified global mobile drawer in `index.html` and `menu.html`. Ensure it contains:
-    - [ ] Our Story (or Home link)
-    - [ ] Menu
-    - [ ] Wholesale
-    - [ ] Log In (hidden when auth)
-    - [ ] Home (hidden when unauth)
-    - [ ] Order CTA
-    - [ ] Sign Out (at the very bottom)
+- [x] **6. Consistent Hamburger Dropdown on Customer Login**
+  - [x] Inspect `login.html` and locate the `.mobile-drawer` and `.mobile-drawer-links`.
+  - [x] Copy or align the structure to exactly match the simplified global mobile drawer in `index.html` and `menu.html`. Ensure it contains:
+    - [x] Our Story (or Home link)
+    - [x] Menu
+    - [x] Wholesale
+    - [x] Log In (hidden when auth)
+    - [x] Home (hidden when unauth)
+    - [x] Order CTA
+    - [x] Sign Out (at the very bottom)
 
-- [ ] **7. Change "Dashboard" to "Home" in Mobile Header**
-  - [ ] In `index.html`, `menu.html`, and `login.html`, find the `<li id="mobile-user-menu">` inside the mobile drawer.
-  - [ ] Change the anchor tag (`#mobile-profile-link`) text and properties:
-    - [ ] `data-en="<i data-lucide='home' class='icon'></i> Home"`
-    - [ ] `data-es="<i data-lucide='home' class='icon'></i> Inicio"`
-    - [ ] Inner HTML to `<i data-lucide='home' class='icon'></i> Home`.
-  - [ ] Point the `href` attribute to `index.html` so it reliably takes customers back to the storefront instead of a non-existent dashboard.
+- [x] **7. Change "Dashboard" to "Home" in Mobile Header**
+  - [x] In `index.html`, `menu.html`, and `login.html`, find the `<li id="mobile-user-menu">` inside the mobile drawer.
+  - [x] Change the anchor tag (`#mobile-profile-link`) text and properties:
+    - [x] `data-en="<i data-lucide='home' class='icon'></i> Home"`
+    - [x] `data-es="<i data-lucide='home' class='icon'></i> Inicio"`
+    - [x] Inner HTML to `<i data-lucide='home' class='icon'></i> Home`.
+  - [x] Point the `href` attribute to `index.html` so it reliably takes customers back to the storefront instead of a non-existent dashboard.
 
 - [ ] **8. Distinct Desktop "Sign Out" Styling**
   - [ ] Style the desktop "Sign Out" button as a transparent "ghost" or outline button, keeping the solid background color reserved exclusively for the primary CTA.
