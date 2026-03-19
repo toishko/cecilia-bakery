@@ -20,8 +20,26 @@ export async function updateAuthUI(session) {
         if (mobileSignoutMenu) mobileSignoutMenu.style.display = 'block';
         
         if (userGreeting) {
-            const name = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
-            userGreeting.innerHTML = `${name} ▼`;
+            try {
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('name, role')
+                    .eq('id', session.user.id)
+                    .single();
+                
+                const displayName = profile?.name || session.user.user_metadata?.full_name || session.user.email.split('@')[0];
+                const shortName = displayName.length > 12 ? displayName.substring(0, 12) + '...' : displayName;
+                userGreeting.innerHTML = `Hi, ${shortName} ▼`;
+                
+                // Store role if needed for routing
+                if (profile?.role) {
+                    sessionStorage.setItem('userRole', profile.role);
+                }
+            } catch (err) {
+                const fallbackName = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
+                const shortName = fallbackName.length > 12 ? fallbackName.substring(0, 12) + '...' : fallbackName;
+                userGreeting.innerHTML = `Hi, ${shortName} ▼`;
+            }
         }
     } else {
         // User is signed out
