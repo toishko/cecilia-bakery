@@ -1,9 +1,9 @@
 # UI Updates Implementation Plan
 
-- [ ] **1. Default Light Theme**
-  - [ ] Update `index.html`, `menu.html`, `login.html`, and other relevant pages where the theme initialization script runs.
-  - [ ] Adjust the theme logic so that if `localStorage.getItem('theme')` is null, it explicitly sets the theme to `'light'` (e.g., `document.documentElement.setAttribute('data-theme', 'light')`) without falling back to `window.matchMedia('(prefers-color-scheme: dark)')`.
-  - [ ] Save `'light'` into localStorage on the first visit to finalize the state.
+- [x] **1. Default Light Theme**
+  - [x] Update `index.html`, `menu.html`, `login.html`, and other relevant pages where the theme initialization script runs.
+  - [x] Adjust the theme logic so that if `localStorage.getItem('theme')` is null, it explicitly sets the theme to `'light'` (e.g., `document.documentElement.setAttribute('data-theme', 'light')`) without falling back to `window.matchMedia('(prefers-color-scheme: dark)')`.
+  - [x] Save `'light'` into localStorage on the first visit to finalize the state.
 
 - [ ] **2. Header Control Buttons Sizing and Spacing**
   - [ ] Modify `<style>` blocks in `index.html`, `menu.html`, and `login.html`.

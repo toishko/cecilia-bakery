@@ -56,10 +56,14 @@ function toggleAuthTheme() {
 
 // Load default preferences
 window.addEventListener('DOMContentLoaded', () => {
-    let savedTheme = 'dark'; // Force dark mode by default for auth portals per requirements
+    let savedTheme = 'light';
     try { 
         const _saved = localStorage.getItem('theme');
-        if(_saved) savedTheme = _saved;
+        if(_saved) {
+            savedTheme = _saved;
+        } else {
+            localStorage.setItem('theme', 'light');
+        }
     } catch(e){}
     document.documentElement.setAttribute('data-theme', savedTheme);
     
