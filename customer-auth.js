@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            showFeedback('✅ Account created! Check your email to confirm, then log in.');
+            showFeedback('Account created! Check your email to confirm, then log in.');
             authCard.classList.remove('is-signup');
             setLoading(activeBtn, false);
 

@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <style>
 
 /* ════════════════════════════════════════
@@ -70,6 +71,16 @@ body {
   background:var(--bg); color:var(--tx);
   overflow-x:hidden;
   transition:background .3s, color .3s;
+}
+
+/* Lucide SVG icon baseline sizing */
+i.icon[data-lucide], i.icon > svg, .icon svg {
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: -0.2em;
+  stroke-width: 1.75;
+  flex-shrink: 0;
 }
 
 /* ── BACKGROUND ── */
@@ -1417,7 +1428,7 @@ select.cart-form-input option { background:#002D62; color:#fff; }
       <button class="lang-btn" id="btn-es" onclick="setLang('es')">ES</button>
       <span class="ctrl-divider" style="margin-left:2px">·</span>
       <button class="theme-btn" id="theme-toggle" onclick="toggleTheme()">
-        <span id="theme-icon">🌙</span>
+        <span id="theme-icon"><i data-lucide='moon' class='icon'></i></span>
         <span id="theme-label">Dark</span>
       </button>
     </div>
@@ -1441,15 +1452,15 @@ select.cart-form-input option { background:#002D62; color:#fff; }
 <div class="mobile-drawer" id="mobile-drawer">
   <ul class="mobile-drawer-links">
     <li><a href="index.html" onclick="closeMobileMenu()" data-en="← Back to Home" data-es="← Volver al Inicio">← Back to Home</a></li>
-    <li><a href="#tres-leches" onclick="closeMobileMenu()" data-en="⭐ Tres Leches" data-es="⭐ Tres Leches">⭐ Tres Leches</a></li>
-    <li><a href="#birthday"    onclick="closeMobileMenu()" data-en="🎂 Birthday Cakes" data-es="🎂 Cumpleaños">🎂 Birthday Cakes</a></li>
-    <li><a href="#square"      onclick="closeMobileMenu()" data-en="⬛ Square Cakes" data-es="⬛ Cuadrados">⬛ Square Cakes</a></li>
-    <li><a href="#piezas"      onclick="closeMobileMenu()" data-en="🍰 Slices" data-es="🍰 Piezas">🍰 Slices</a></li>
-    <li><a href="#basos"       onclick="closeMobileMenu()" data-en="🥤 Cups" data-es="🥤 Basos">🥤 Cups</a></li>
+    <li><a href="#tres-leches" onclick="closeMobileMenu()" data-en="<i data-lucide='star' class='icon'></i> Tres Leches" data-es="<i data-lucide='star' class='icon'></i> Tres Leches"><i data-lucide='star' class='icon'></i> Tres Leches</a></li>
+    <li><a href="#birthday"    onclick="closeMobileMenu()" data-en="<i data-lucide='cake' class='icon'></i> Birthday Cakes" data-es="<i data-lucide='cake' class='icon'></i> Cumpleaños"><i data-lucide='cake' class='icon'></i> Birthday Cakes</a></li>
+    <li><a href="#square"      onclick="closeMobileMenu()" data-en="<i data-lucide='square' class='icon'></i> Square Cakes" data-es="<i data-lucide='square' class='icon'></i> Cuadrados"><i data-lucide='square' class='icon'></i> Square Cakes</a></li>
+    <li><a href="#piezas"      onclick="closeMobileMenu()" data-en="<i data-lucide='cake-slice' class='icon'></i> Slices" data-es="<i data-lucide='cake-slice' class='icon'></i> Piezas"><i data-lucide='cake-slice' class='icon'></i> Slices</a></li>
+    <li><a href="#basos"       onclick="closeMobileMenu()" data-en="<i data-lucide='cup-soda' class='icon'></i> Cups" data-es="<i data-lucide='cup-soda' class='icon'></i> Basos"><i data-lucide='cup-soda' class='icon'></i> Cups</a></li>
     <!-- Mobile Auth Links -->
-    <li id="mobile-login-btn" style="display: none;"><a href="login.html" onclick="closeMobileMenu()" data-en="🔑 Log In" data-es="🔑 Iniciar Sesión">🔑 Log In</a></li>
-    <li id="mobile-user-menu" style="display:none;"><a href="login.html" onclick="closeMobileMenu()" data-en="👤 Dashboard" data-es="👤 Menu Principal">👤 Dashboard</a></li>
-    <li id="mobile-signout-menu" style="display:none;"><a href="#" id="mobile-sign-out-btn" style="color:var(--red);" onclick="closeMobileMenu()" data-en="🚪 Sign Out" data-es="🚪 Cerrar Sesión">🚪 Sign Out</a></li>
+    <li id="mobile-login-btn" style="display: none;"><a href="login.html" onclick="closeMobileMenu()" data-en="<i data-lucide='key' class='icon'></i> Log In" data-es="<i data-lucide='key' class='icon'></i> Iniciar Sesión"><i data-lucide='key' class='icon'></i> Log In</a></li>
+    <li id="mobile-user-menu" style="display:none;"><a href="login.html" onclick="closeMobileMenu()" data-en="<i data-lucide='user' class='icon'></i> Dashboard" data-es="<i data-lucide='user' class='icon'></i> Menu Principal"><i data-lucide='user' class='icon'></i> Dashboard</a></li>
+    <li id="mobile-signout-menu" style="display:none;"><a href="#" id="mobile-sign-out-btn" style="color:var(--red);" onclick="closeMobileMenu()" data-en="<i data-lucide='log-out' class='icon'></i> Sign Out" data-es="<i data-lucide='log-out' class='icon'></i> Cerrar Sesión"><i data-lucide='log-out' class='icon'></i> Sign Out</a></li>
   </ul>
 </div>
 
@@ -1476,22 +1487,22 @@ select.cart-form-input option { background:#002D62; color:#fff; }
     <p class="custom-hero-sub" id="custom-hero-sub"></p>
   </div>
   <button class="custom-hero-cta" onclick="openChat()"
-    data-en="🎂 Order a Custom Cake (Coming Soon)" data-es="🎂 Ordena tu Bizcocho (Próximamente)">🎂 Order a Custom Cake (Coming Soon)</button>
+    data-en="Order a Custom Cake (Coming Soon)" data-es="Ordena tu Bizcocho (Próximamente)">Order a Custom Cake (Coming Soon)</button>
 </div>
 
 <!-- STICKY CATEGORY NAV -->
 <div class="cat-nav-wrap" id="cat-nav-wrap">
   <span class="cat-nav-hint" id="cat-nav-hint">›</span>
   <nav class="cat-nav" id="cat-nav" aria-label="Menu categories">
-    <a href="#tres-leches" class="cat-nav-link active" data-en="⭐ Tres Leches" data-es="⭐ Tres Leches">⭐ Tres Leches</a>
+    <a href="#tres-leches" class="cat-nav-link active" data-en="<i data-lucide='star' class='icon'></i> Tres Leches" data-es="<i data-lucide='star' class='icon'></i> Tres Leches"><i data-lucide='star' class='icon'></i> Tres Leches</a>
     <span class="cat-nav-divider">·</span>
-    <a href="#birthday"    class="cat-nav-link" data-en="🎂 Birthday Cakes" data-es="🎂 Cumpleaños">🎂 Birthday Cakes</a>
+    <a href="#birthday"    class="cat-nav-link" data-en="<i data-lucide='cake' class='icon'></i> Birthday Cakes" data-es="<i data-lucide='cake' class='icon'></i> Cumpleaños"><i data-lucide='cake' class='icon'></i> Birthday Cakes</a>
     <span class="cat-nav-divider">·</span>
-    <a href="#square"      class="cat-nav-link" data-en="⬛ Square Cakes" data-es="⬛ Cuadrados">⬛ Square Cakes</a>
+    <a href="#square"      class="cat-nav-link" data-en="<i data-lucide='square' class='icon'></i> Square Cakes" data-es="<i data-lucide='square' class='icon'></i> Cuadrados"><i data-lucide='square' class='icon'></i> Square Cakes</a>
     <span class="cat-nav-divider">·</span>
-    <a href="#piezas"      class="cat-nav-link" data-en="🍰 Slices" data-es="🍰 Piezas">🍰 Slices</a>
+    <a href="#piezas"      class="cat-nav-link" data-en="<i data-lucide='cake-slice' class='icon'></i> Slices" data-es="<i data-lucide='cake-slice' class='icon'></i> Piezas"><i data-lucide='cake-slice' class='icon'></i> Slices</a>
     <span class="cat-nav-divider">·</span>
-    <a href="#basos"       class="cat-nav-link" data-en="🥤 Cups" data-es="🥤 Basos">🥤 Cups</a>
+    <a href="#basos"       class="cat-nav-link" data-en="<i data-lucide='cup-soda' class='icon'></i> Cups" data-es="<i data-lucide='cup-soda' class='icon'></i> Basos"><i data-lucide='cup-soda' class='icon'></i> Cups</a>
     <button class="cat-nav-order" onclick="openChat()"
       data-en="Custom Cake →" data-es="Bizcocho Personalizado →">Custom Cake →</button>
   </nav>
@@ -1515,12 +1526,12 @@ select.cart-form-input option { background:#002D62; color:#fff; }
   </div>
   <div class="product-grid">
     <div class="product-card featured reveal">
-      <div class="pc-tag" data-en="⭐ The Original" data-es="⭐ El Original">⭐ The Original</div>
+      <div class="pc-tag" data-en="<i data-lucide='star' class='icon'></i> The Original" data-es="<i data-lucide='star' class='icon'></i> El Original"><i data-lucide='star' class='icon'></i> The Original</div>
       <div class="pc-name">Tres Leches</div>
       <p class="pc-desc" data-en="Soaked in three milks — whole milk, evaporated, and condensed. Impossibly moist, perfectly sweet. This is the one that defines us." data-es="Empapado en tres leches — entera, evaporada y condensada. Increíblemente húmedo, perfectamente dulce. Este es el que nos define.">Soaked in three milks — whole milk, evaporated, and condensed. Impossibly moist, perfectly sweet. This is the one that defines us.</p>
             <div class="pc-footer">
         <div class="pc-footer-badge-row"><span class="pc-badge" data-en="The Classic" data-es="El Clásico">The Classic</span></div>
-        <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger" onclick="openATC('Tres Leches','⭐ The Original')" data-en="Add to Cart" data-es="Agregar">Add to Cart</button></div>
+        <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger" onclick="openATC('Tres Leches','The Original')" data-en="Add to Cart" data-es="Agregar">Add to Cart</button></div>
       </div>
     </div>
     <div class="product-card reveal d1">
@@ -1795,7 +1806,7 @@ select.cart-form-input option { background:#002D62; color:#fff; }
   </div>
   <div class="custom-banner-cta">
     <button class="btn-white-solid" onclick="openChat()"
-      data-en="💬 Chat &amp; Order" data-es="💬 Chatea y Ordena">💬 Chat &amp; Order</button>
+      data-en="<i data-lucide='message-circle' class='icon'></i> Chat &amp; Order" data-es="<i data-lucide='message-circle' class='icon'></i> Chatea y Ordena"><i data-lucide='message-circle' class='icon'></i> Chat &amp; Order</button>
   </div>
 </div>
 
@@ -1852,14 +1863,14 @@ select.cart-form-input option { background:#002D62; color:#fff; }
 </footer>
 
 <!-- FAB -->
-<button class="chat-fab" onclick="openChat()" aria-label="Chat with us" title="Chat & Order (Coming Soon)">💬</button>
+<button class="chat-fab" onclick="openChat()" aria-label="Chat with us" title="Chat & Order (Coming Soon)"><i data-lucide='message-circle' class='icon'></i></button>
 
 <!-- CHAT -->
 <div class="chat-overlay" id="chat-overlay" onclick="closeChatOutside(event)">
   <div class="chat-window">
     <div class="chat-header">
       <div class="chat-header-left">
-        <div class="chat-avatar">🎂</div>
+        <div class="chat-avatar"></div>
         <div>
           <div class="chat-name">Cecilia Bakery</div>
           <div class="chat-status"><span class="status-dot"></span><span id="chat-status-text">Online — ready to help</span></div>
@@ -1869,7 +1880,7 @@ select.cart-form-input option { background:#002D62; color:#fff; }
     </div>
     <div class="call-banner">
       <span id="call-banner-text">Prefer to speak with someone?</span>
-      <a href="tel:+12018697633">📞 (201) 869-7633</a>
+      <a href="tel:+12018697633"><i data-lucide='phone' class='icon'></i> (201) 869-7633</a>
     </div>
     <div class="chat-body" id="chat-body"></div>
     <div class="quick-replies" id="quick-replies"></div>
@@ -1877,7 +1888,7 @@ select.cart-form-input option { background:#002D62; color:#fff; }
       <textarea class="chat-input" id="chat-input" rows="1"
         placeholder="Type your message…"
         onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-      <button class="chat-send" onclick="sendMessage()">➤</button>
+      <button class="chat-send" onclick="sendMessage()"><i data-lucide='send' class='icon'></i></button>
     </div>
   </div>
 </div>
@@ -1893,25 +1904,25 @@ let pendingItem = null;
 /* ══ I18N ══ */
 const i18n = {
   en: {
-    chatGreeting:    "Hi! 👋 Welcome to Cecilia Bakery. I'm Ceci — what can I help you with today?",
-    chatItemGreeting:n => `Hi! 👋 I'd love to help you order a ${n}. What's the occasion, and what size are you thinking?`,
+    chatGreeting:    "Hi! Welcome to Cecilia Bakery. I'm Ceci — what can I help you with today?",
+    chatItemGreeting:n => `Hi! I'd love to help you order a ${n}. What's the occasion, and what size are you thinking?`,
     chatStatus:      "Online — ready to help",
     callBanner:      "Prefer to speak with someone?",
     inputPlaceholder:"Type your message…",
     quickReplies:    ['Order a custom cake','Ask about sizing','Pickup & hours','Wholesale info'],
-    chatFallback:    "Sorry, something went wrong. Please call us at (201) 869-7633! 🎂",
-    chatOffline:     "I'm having trouble connecting. Please call us at (201) 869-7633 — we'd love to help! 🎂",
+    chatFallback:    "Sorry, something went wrong. Please call us at (201) 869-7633!",
+    chatOffline:     "I'm having trouble connecting. Please call us at (201) 869-7633 — we'd love to help!",
     themeDark:"Dark", themeLight:"Light",
   },
   es: {
-    chatGreeting:    "¡Hola! 👋 Bienvenido a Cecilia Bakery. Soy Ceci — ¿en qué te puedo ayudar hoy?",
-    chatItemGreeting:n => `¡Hola! 👋 Con mucho gusto te ayudo a ordenar un ${n}. ¿Cuál es la ocasión y qué tamaño tienes en mente?`,
+    chatGreeting:    "¡Hola! Bienvenido a Cecilia Bakery. Soy Ceci — ¿en qué te puedo ayudar hoy?",
+    chatItemGreeting:n => `¡Hola! Con mucho gusto te ayudo a ordenar un ${n}. ¿Cuál es la ocasión y qué tamaño tienes en mente?`,
     chatStatus:      "En línea — lista para ayudar",
     callBanner:      "¿Prefieres hablar con alguien?",
     inputPlaceholder:"Escribe tu mensaje…",
     quickReplies:    ['Ordenar un bizcocho personalizado','Preguntar sobre tamaños','Horario y recogida','Info de mayoreo'],
-    chatFallback:    "Lo siento, algo salió mal. ¡Por favor llámanos al (201) 869-7633! 🎂",
-    chatOffline:     "Tengo problemas para conectarme. Por favor llama al (201) 869-7633 — ¡con gusto te ayudamos! 🎂",
+    chatFallback:    "Lo siento, algo salió mal. ¡Por favor llámanos al (201) 869-7633!",
+    chatOffline:     "Tengo problemas para conectarme. Por favor llama al (201) 869-7633 — ¡con gusto te ayudamos!",
     themeDark:"Oscuro", themeLight:"Claro",
   }
 };
@@ -1924,12 +1935,12 @@ function applyTheme(t) {
   // Force repaint on page-hero to fix mobile Safari background caching
   const hero = document.querySelector('.page-hero');
   if (hero) { hero.style.display = 'none'; hero.offsetHeight; hero.style.display = ''; }
-  document.getElementById('theme-icon').textContent  = t === 'dark' ? '☀️' : '🌙';
+  document.getElementById('theme-icon').innerHTML = t === 'dark' ? `<i data-lucide='sun' class='icon'></i>` : `<i data-lucide='moon' class='icon'></i>`; if (typeof lucide !== 'undefined') lucide.createIcons();
   document.getElementById('theme-label').textContent = t === 'dark' ? i18n[lang].themeLight : i18n[lang].themeDark;
   try { localStorage.setItem(THEME_KEY, t); } catch(e){}
   const mobIcon = document.getElementById('mob-theme-icon');
   const mobLabel = document.getElementById('mob-theme-label');
-  if (mobIcon) mobIcon.textContent = t === 'dark' ? '☀️' : '🌙';
+  if (mobIcon) if(mobIcon){ mobIcon.innerHTML = t === 'dark' ? `<i data-lucide='sun' class='icon'></i>` : `<i data-lucide='moon' class='icon'></i>`; if (typeof lucide !== 'undefined') lucide.createIcons(); }
   if (mobLabel) mobLabel.textContent = t === 'dark' ? i18n[lang].themeLight : i18n[lang].themeDark;
 }
 function toggleTheme() { applyTheme(theme === 'light' ? 'dark' : 'light'); }
@@ -1953,9 +1964,9 @@ function setLang(l) {
   document.querySelectorAll('[data-en]').forEach(el => {
     const val = el.getAttribute('data-'+l);
     if(!val) return;
-    if(val.includes('<')) el.innerHTML = val;
-    else el.textContent = val;
+    el.innerHTML = val;
   });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
   document.getElementById('chat-status-text').textContent   = i18n[l].chatStatus;
   document.getElementById('call-banner-text').textContent   = i18n[l].callBanner;
   document.getElementById('chat-input').placeholder         = i18n[l].inputPlaceholder;
@@ -2083,8 +2094,8 @@ function openChat() {
   Swal.fire({
     title: lang === 'es' ? '¡Próximamente!' : 'Coming Soon!',
     text: lang === 'es' 
-      ? '¡Nuestro Asistente de Chat se está horneando! 🧁 Por ahora, llámanos al (201) 869-7633 o visítanos en la tienda.' 
-      : 'Our Chat Assistant is currently being baked! 🧁 For now, please call us at (201) 869-7633 or visit our store.',
+      ? '¡Nuestro Asistente de Chat se está horneando!Por ahora, llámanos al (201) 869-7633 o visítanos en la tienda.' 
+      : 'Our Chat Assistant is currently being baked!For now, please call us at (201) 869-7633 or visit our store.',
     icon: 'info',
     confirmButtonText: 'OK',
     confirmButtonColor: '#C8102E'
@@ -2429,7 +2440,7 @@ function setSeasonalCTAs() {
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         <span id="cart-clear-label">Clear Cart</span>
       </button>
-      <button class="cart-close" onclick="closeCart()">✕</button>
+      <button class="cart-close" onclick="closeCart()"><i data-lucide='x' class='icon'></i></button>
     </div>
   </div>
   <div class="cart-items" id="cart-items"></div>
@@ -2480,7 +2491,7 @@ function setSeasonalCTAs() {
 <!-- ══ CONFIRM MODAL ══ -->
 <div class="confirm-overlay" id="confirm-overlay" onclick="if(event.target===this)closeConfirm()">
   <div class="confirm-modal">
-    <div class="confirm-icon">🗑️</div>
+    <div class="confirm-icon"><i data-lucide='trash' class='icon'></i></div>
     <div class="confirm-title" id="confirm-title">Clear your cart?</div>
     <p class="confirm-sub" id="confirm-sub">All items will be removed. This can't be undone.</p>
     <div class="confirm-actions">
@@ -2499,7 +2510,7 @@ function setSeasonalCTAs() {
         <div class="atc-modal-name" id="atc-name"></div>
         <div class="atc-modal-price" id="atc-modal-price"></div>
       </div>
-      <button class="atc-close" onclick="closeATC()">✕</button>
+      <button class="atc-close" onclick="closeATC()"><i data-lucide='x' class='icon'></i></button>
     </div>
 
     <!-- Image Gallery -->
@@ -2714,7 +2725,7 @@ const cartI18n = {
     errName:        'Please enter your name.',
     errPhone:       'Please enter your phone number.',
     whatsappMsg:    (name, phone, pickup, summary, note) => [
-      `Hi! I'd like to place an order 🎂`,
+      `Hi! I'd like to place an order`,
       `Name: ${name}`,
       `Phone: ${phone}`,
       pickup ? `Pickup Date: ${pickup}` : '',
@@ -2756,7 +2767,7 @@ const cartI18n = {
     errName:        'Por favor ingresa tu nombre.',
     errPhone:       'Por favor ingresa tu número de teléfono.',
     whatsappMsg:    (name, phone, pickup, summary, note) => [
-      `¡Hola! Me gustaría hacer un pedido 🎂`,
+      `¡Hola! Me gustaría hacer un pedido`,
       `Nombre: ${name}`,
       `Teléfono: ${phone}`,
       pickup ? `Fecha de Recogida: ${pickup}` : '',
@@ -2857,7 +2868,7 @@ function renderCartDrawer() {
   if (!cart.length) {
     el.innerHTML = `
       <div class="cart-empty">
-        <div class="cart-empty-icon">🎂</div>
+        <div class="cart-empty-icon"></div>
         <p>${t.empty}<br>${t.emptySub}</p>
         <button class="cart-empty-btn" onclick="closeCart(); if(!window.location.href.includes('menu')) window.location.href='menu.html';">${t.browseMenu}</button>
       </div>`;
@@ -3231,7 +3242,7 @@ function closeMobileMenu() {
 function showToast(msg) {
   const toast = document.getElementById('cart-toast');
   if (!toast) return;
-  toast.textContent = msg;
+  toast.innerHTML = msg; if (typeof lucide !== 'undefined') lucide.createIcons();
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2500);
 }
@@ -3258,7 +3269,7 @@ function confirmATC() {
   updateBadge();
   closeATC();
   const toastName = lang === 'es' ? (prod.es.name || prod.en.name) : prod.en.name;
-  const toastMsg = lang === 'es' ? `🎂 ${toastName} agregado al carrito` : `🎂 ${toastName} added to cart`;
+  const toastMsg = lang === 'es' ? `${toastName} agregado al carrito` : `${toastName} added to cart`;
   showToast(toastMsg);
 
   // Bounce the cart icon
@@ -3274,8 +3285,8 @@ function cartCheckout() {
   Swal.fire({
     title: lang === 'es' ? '¡Próximamente!' : 'Coming Soon!',
     text: lang === 'es' 
-      ? '¡Los pedidos en línea estarán disponibles pronto! 🥖 Por ahora, visítanos en 6101 Park Ave, West New York, NJ para hacer tu pedido.' 
-      : 'Online ordering is coming soon! 🥖 In the meantime, please visit us at 6101 Park Ave, West New York, NJ to place your order.',
+      ? '¡Los pedidos en línea estarán disponibles pronto!Por ahora, visítanos en 6101 Park Ave, West New York, NJ para hacer tu pedido.' 
+      : 'Online ordering is coming soon!In the meantime, please visit us at 6101 Park Ave, West New York, NJ to place your order.',
     icon: 'info',
     confirmButtonText: 'OK',
     confirmButtonColor: '#C8102E'
@@ -3334,5 +3345,6 @@ document.addEventListener('DOMContentLoaded', () => {
 <script type="module" src="./auth-state.js"></script>
   <script type="module" src="./analytics.js"></script>
   <script type="module" src="./speed-insights.js"></script>
+  <script>if(typeof lucide !== 'undefined') lucide.createIcons();</script>
 </body>
 </html>

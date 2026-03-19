@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!profile || profile.role !== 'admin') {
             await supabase.auth.signOut();
-            showFeedback('⛔ Access Denied. This portal is restricted to administrators.', true);
+            showFeedback('Access Denied. This portal is restricted to administrators.', true);
             setLoading(submitBtn, false);
             return;
         }

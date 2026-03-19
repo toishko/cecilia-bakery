@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            showFeedback('✅ Application submitted! We\'ll review and contact you soon.');
+            showFeedback('Application submitted! We\'ll review and contact you soon.');
             setLoading(activeBtn, false);
 
         } else {

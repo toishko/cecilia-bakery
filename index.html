@@ -11,6 +11,7 @@
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
     rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <style>
     /* ════════════════════════════════════════
    DESIGN TOKENS — full theme architecture
@@ -72,6 +73,16 @@
 
       --r: 3px;
       --transition: color .25s ease, background .25s ease, border-color .25s ease;
+    }
+
+    /* Lucide SVG icon baseline sizing */
+    i.icon[data-lucide], i.icon > svg, .icon svg {
+      display: inline-block;
+      width: 1.1em;
+      height: 1.1em;
+      vertical-align: -0.2em;
+      stroke-width: 1.75;
+      flex-shrink: 0;
     }
 
     /* ── DARK TOKENS ── */
@@ -1019,8 +1030,17 @@
     }
 
     .cat-emoji {
-      font-size: 1.8rem;
-      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.2rem;
+      height: 2.2rem;
+      color: var(--red);
+    }
+    .cat-emoji svg {
+      width: 1.8rem;
+      height: 1.8rem;
+      stroke-width: 1.5;
     }
 
     .cat-count {
@@ -1249,8 +1269,15 @@
     }
 
     .partner-icon {
-      font-size: 1.5rem;
       margin-bottom: 12px;
+      color: var(--red);
+      display: flex;
+      align-items: center;
+    }
+    .partner-icon svg {
+      width: 1.6rem;
+      height: 1.6rem;
+      stroke-width: 1.5;
     }
 
     .partner-type {
@@ -3368,7 +3395,7 @@
         <button class="lang-btn" id="btn-es" onclick="setLang('es')">ES</button>
         <span class="ctrl-divider" style="margin-left:2px">·</span>
         <button class="theme-btn" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
-          <span id="theme-icon">🌙</span>
+          <span id="theme-icon"><i data-lucide='moon' class='icon'></i></span>
           <span id="theme-label">Dark</span>
         </button>
       </div>
@@ -3393,15 +3420,15 @@
   <div class="mobile-drawer-overlay" id="mobile-drawer-overlay" onclick="closeMobileMenu()"></div>
   <div class="mobile-drawer" id="mobile-drawer">
     <ul class="mobile-drawer-links">
-      <li><a href="#story" onclick="closeMobileMenu()" data-en="Our Story" data-es="Historia">Our Story</a></li>
-      <li><a href="menu.html" onclick="closeMobileMenu()" data-en="Menu" data-es="Menú">Menu</a></li>
-      <li><a href="#wholesale" onclick="closeMobileMenu()" data-en="Wholesale" data-es="Mayoreo">Wholesale</a></li>
-      <li id="mobile-login-btn" style="display: none;"><a href="login.html" onclick="closeMobileMenu()" data-en="Log In" data-es="Iniciar Sesión">Log In</a></li>
+      <li><a href="#story" onclick="closeMobileMenu()" data-en="<i data-lucide='message-circle' class='icon'></i> Our Story" data-es="<i data-lucide='message-circle' class='icon'></i> Historia"><i data-lucide='message-circle' class='icon'></i> Our Story</a></li>
+      <li><a href="menu.html" onclick="closeMobileMenu()" data-en="<i data-lucide='book-open' class='icon'></i> Menu" data-es="<i data-lucide='book-open' class='icon'></i> Menú"><i data-lucide='book-open' class='icon'></i> Menu</a></li>
+      <li><a href="#wholesale" onclick="closeMobileMenu()" data-en="<i data-lucide='store' class='icon'></i> Wholesale" data-es="<i data-lucide='store' class='icon'></i> Mayoreo"><i data-lucide='store' class='icon'></i> Wholesale</a></li>
+      <li id="mobile-login-btn" style="display: none;"><a href="login.html" onclick="closeMobileMenu()" data-en="<i data-lucide='key' class='icon'></i> Log In" data-es="<i data-lucide='key' class='icon'></i> Iniciar Sesión"><i data-lucide='key' class='icon'></i> Log In</a></li>
       <li id="mobile-user-menu" style="display: none;">
-        <a href="#" id="mobile-profile-link" onclick="closeMobileMenu()" data-en="Dashboard" data-es="Menu Principal">Dashboard</a>
+        <a href="#" id="mobile-profile-link" onclick="closeMobileMenu()" data-en="<i data-lucide='user' class='icon'></i> Dashboard" data-es="<i data-lucide='user' class='icon'></i> Menu Principal"><i data-lucide='user' class='icon'></i> Dashboard</a>
       </li>
       <li id="mobile-signout-menu" style="display: none;">
-        <a href="#" id="mobile-sign-out-btn" style="color: var(--red);" onclick="closeMobileMenu()" data-en="Sign Out" data-es="Cerrar Sesión">Sign Out</a>
+        <a href="#" id="mobile-sign-out-btn" style="color: var(--red);" onclick="closeMobileMenu()" data-en="<i data-lucide='log-out' class='icon'></i> Sign Out" data-es="<i data-lucide='log-out' class='icon'></i> Cerrar Sesión"><i data-lucide='log-out' class='icon'></i> Sign Out</a>
       </li>
       <li><a href="#experience" onclick="closeMobileMenu()" class="nav-cta" data-en="Order Now" data-es="Ordenar">Order
           Now</a></li>
@@ -3475,7 +3502,7 @@
   <!-- ── CUSTOM CAKE TICKER ── -->
   <div class="ticker ticker-custom" aria-label="Custom cakes available">
     <div class="ticker-inner">
-      <span class="ti">🎂 <span data-en="Custom Cakes Available" data-es="Bizcochos Personalizados Disponibles">Custom
+      <span class="ti"><span data-en="Custom Cakes Available" data-es="Bizcochos Personalizados Disponibles">Custom
           Cakes Available</span><span class="ti-dot"> ·</span></span>
       <span class="ti"><span data-en="Any Size, Any Flavor" data-es="Cualquier Tamaño, Cualquier Sabor">Any Size, Any
           Flavor</span><span class="ti-dot"> ·</span></span>
@@ -3488,7 +3515,7 @@
       <span class="ti"><span data-en="Your Message, Your Design" data-es="Tu Mensaje, Tu Diseño">Your Message, Your
           Design</span><span class="ti-dot"> ·</span></span>
       <!-- duplicate for seamless loop -->
-      <span class="ti">🎂 <span data-en="Custom Cakes Available" data-es="Bizcochos Personalizados Disponibles">Custom
+      <span class="ti"><span data-en="Custom Cakes Available" data-es="Bizcochos Personalizados Disponibles">Custom
           Cakes Available</span><span class="ti-dot"> ·</span></span>
       <span class="ti"><span data-en="Any Size, Any Flavor" data-es="Cualquier Tamaño, Cualquier Sabor">Any Size, Any
           Flavor</span><span class="ti-dot"> ·</span></span>
@@ -3580,7 +3607,7 @@
       <!-- Tres Leches — featured, spans 2 cols -->
       <a href="menu.html#tres-leches" class="cat-card cat-featured reveal">
         <div class="cat-card-top">
-          <span class="cat-emoji">⭐</span>
+          <span class="cat-emoji"><i data-lucide='star' class='icon'></i></span>
           <span class="cat-count" data-en="5 flavors" data-es="5 sabores">5 flavors</span>
         </div>
         <div class="cat-card-bottom">
@@ -3598,7 +3625,7 @@
       <!-- Birthday Cakes -->
       <a href="menu.html#birthday" class="cat-card reveal d1">
         <div class="cat-card-top">
-          <span class="cat-emoji">🎂</span>
+          <span class="cat-emoji"><i data-lucide="cake" class="icon"></i></span>
           <span class="cat-count" data-en="5 flavors · 2 sizes" data-es="5 sabores · 2 tamaños">5 flavors · 2
             sizes</span>
         </div>
@@ -3616,7 +3643,7 @@
       <!-- Square Cakes -->
       <a href="menu.html#square" class="cat-card reveal d2">
         <div class="cat-card-top">
-          <span class="cat-emoji">⬛</span>
+          <span class="cat-emoji"><i data-lucide="square" class="icon"></i></span>
           <span class="cat-count" data-en="4 options" data-es="4 opciones">4 options</span>
         </div>
         <div class="cat-card-bottom">
@@ -3633,7 +3660,7 @@
       <!-- Piezas -->
       <a href="menu.html#piezas" class="cat-card reveal d1">
         <div class="cat-card-top">
-          <span class="cat-emoji">🍰</span>
+          <span class="cat-emoji"><i data-lucide='cake-slice' class='icon'></i></span>
           <span class="cat-count" data-en="11 options" data-es="11 opciones">11 options</span>
         </div>
         <div class="cat-card-bottom">
@@ -3650,7 +3677,7 @@
       <!-- Basos -->
       <a href="menu.html#basos" class="cat-card reveal d2">
         <div class="cat-card-top">
-          <span class="cat-emoji">🥤</span>
+          <span class="cat-emoji"><i data-lucide='cup-soda' class='icon'></i></span>
           <span class="cat-count" data-en="3 flavors" data-es="3 sabores">3 flavors</span>
         </div>
         <div class="cat-card-bottom">
@@ -3713,28 +3740,28 @@
       </div>
       <div class="ws-grid reveal d2">
         <div class="partner">
-          <div class="partner-icon">🏪</div>
+          <div class="partner-icon"><i data-lucide='store' class='icon'></i></div>
           <div class="partner-type" data-en="Supermarkets" data-es="Supermercados">Supermarkets</div>
           <p data-en="Consistent delivery, reliable supply, packaging that moves off the shelf."
             data-es="Entrega consistente, suministro confiable, empaque que se vende solo.">Consistent delivery,
             reliable supply, packaging that moves off the shelf.</p>
         </div>
         <div class="partner">
-          <div class="partner-icon">🍽️</div>
+          <div class="partner-icon"><i data-lucide='utensils' class='icon'></i></div>
           <div class="partner-type" data-en="Restaurants" data-es="Restaurantes">Restaurants</div>
           <p data-en="Bulk and custom orders for dessert programs and special events."
             data-es="Pedidos a granel y personalizados para programas de postres y eventos.">Bulk and custom orders for
             dessert programs and special events.</p>
         </div>
         <div class="partner">
-          <div class="partner-icon">🛒</div>
+          <div class="partner-icon"><i data-lucide='shopping-cart' class='icon'></i></div>
           <div class="partner-type" data-en="Grocery Stores" data-es="Colmados &amp; Bodegas">Grocery Stores</div>
           <p data-en="Neighborhood stores that want authentic Dominican flavor on their shelves."
             data-es="Tiendas del vecindario que quieren sabor dominicano auténtico en sus anaqueles.">Neighborhood
             stores that want authentic Dominican flavor on their shelves.</p>
         </div>
         <div class="partner">
-          <div class="partner-icon">🎉</div>
+          <div class="partner-icon"><i data-lucide='party-popper' class='icon'></i></div>
           <div class="partner-type" data-en="Events &amp; Catering" data-es="Eventos &amp; Catering">Events &amp;
             Catering</div>
           <p data-en="Quinceañeras, birthdays, corporate — we bring the cake."
@@ -3759,9 +3786,9 @@
         Place a custom order, chat with us directly, or call — we're here for you.
       </p>
       <div class="exp-actions">
-        <button class="btn btn-white" onclick="openChat()" data-en="💬 Chat & Order Now (Coming Soon)"
-          data-es="💬 Chatea y Ordena (Próximamente)">💬 Chat & Order Now (Coming Soon)</button>
-        <a href="tel:+12018697633" class="btn btn-outline-white">📞 (201) 869-7633</a>
+        <button class="btn btn-white" onclick="openChat()" data-en="<i data-lucide='message-circle' class='icon'></i> Chat & Order Now (Coming Soon)"
+          data-es="<i data-lucide='message-circle' class='icon'></i> Chatea y Ordena (Próximamente)"><i data-lucide='message-circle' class='icon'></i> Chat & Order Now (Coming Soon)</button>
+        <a href="tel:+12018697633" class="btn btn-outline-white"><i data-lucide='phone' class='icon'></i> (201) 869-7633</a>
       </div>
     </div>
   </section>
@@ -3821,7 +3848,7 @@
 
   <!-- FAB -->
   <button class="chat-fab" onclick="openChat()" aria-label="Chat with us" title="Chat & Order (Coming Soon)">
-    💬<div class="fab-badge">1</div>
+    <i data-lucide='message-circle' class='icon'></i><div class="fab-badge">1</div>
   </button>
 
   <!-- CHAT -->
@@ -3829,7 +3856,7 @@
     <div class="chat-window">
       <div class="chat-header">
         <div class="chat-header-left">
-          <div class="chat-avatar">🎂</div>
+          <div class="chat-avatar"></div>
           <div>
             <div class="chat-name">Cecilia Bakery</div>
             <div class="chat-status">
@@ -3842,14 +3869,14 @@
       </div>
       <div class="call-banner">
         <span id="call-banner-text">Prefer to speak with someone?</span>
-        <a href="tel:+12018697633">📞 (201) 869-7633</a>
+        <a href="tel:+12018697633"><i data-lucide='phone' class='icon'></i> (201) 869-7633</a>
       </div>
       <div class="chat-body" id="chat-body"></div>
       <div class="quick-replies" id="quick-replies"></div>
       <div class="chat-footer">
         <textarea class="chat-input" id="chat-input" rows="1" placeholder="Type your message…"
           onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-        <button class="chat-send" onclick="sendMessage()">➤</button>
+        <button class="chat-send" onclick="sendMessage()"><i data-lucide='send' class='icon'></i></button>
       </div>
     </div>
   </div>
@@ -3911,24 +3938,24 @@
     ══════════════════════════════ */
     const i18n = {
       en: {
-        chatGreeting: "Hi! 👋 Welcome to Cecilia Bakery. I'm Ceci — what can I help you with today?",
+        chatGreeting: "Hi! Welcome to Cecilia Bakery. I'm Ceci — what can I help you with today?",
         chatStatus: "Online — ready to help",
         callBanner: "Prefer to speak with someone?",
         inputPlaceholder: "Type your message…",
         quickReplies: ['Order a custom cake', 'See our menu', 'Wholesale info', 'Hours & location'],
-        chatFallback: "Sorry, something went wrong. Please call us at (201) 869-7633! 🎂",
-        chatOffline: "I'm having trouble connecting. Please call us at (201) 869-7633 — we'd love to help! 🎂",
+        chatFallback: "Sorry, something went wrong. Please call us at (201) 869-7633!",
+        chatOffline: "I'm having trouble connecting. Please call us at (201) 869-7633 — we'd love to help!",
         themeDark: "Dark",
         themeLight: "Light",
       },
       es: {
-        chatGreeting: "¡Hola! 👋 Bienvenido a Cecilia Bakery. Soy Ceci — ¿en qué te puedo ayudar hoy?",
+        chatGreeting: "¡Hola! Bienvenido a Cecilia Bakery. Soy Ceci — ¿en qué te puedo ayudar hoy?",
         chatStatus: "En línea — lista para ayudar",
         callBanner: "¿Prefieres hablar con alguien?",
         inputPlaceholder: "Escribe tu mensaje…",
         quickReplies: ['Ordenar un bizcocho', 'Ver el menú', 'Info de mayoreo', 'Horario y ubicación'],
-        chatFallback: "Lo siento, algo salió mal. ¡Por favor llámanos al (201) 869-7633! 🎂",
-        chatOffline: "Tengo problemas para conectarme. Por favor llama al (201) 869-7633 — ¡con gusto te ayudamos! 🎂",
+        chatFallback: "Lo siento, algo salió mal. ¡Por favor llámanos al (201) 869-7633!",
+        chatOffline: "Tengo problemas para conectarme. Por favor llama al (201) 869-7633 — ¡con gusto te ayudamos!",
         themeDark: "Oscuro",
         themeLight: "Claro",
       }
@@ -3948,16 +3975,16 @@
       const icon = document.getElementById('theme-icon');
       const label = document.getElementById('theme-label');
       if (t === 'dark') {
-        icon.textContent = '☀️';
+        icon.innerHTML = `<i data-lucide='sun' class='icon'></i>`; if (typeof lucide !== 'undefined') lucide.createIcons();
         label.textContent = i18n[lang].themeLight;
       } else {
-        icon.textContent = '🌙';
+        icon.innerHTML = `<i data-lucide='moon' class='icon'></i>`; if (typeof lucide !== 'undefined') lucide.createIcons();
         label.textContent = i18n[lang].themeDark;
       }
       try { localStorage.setItem(THEME_KEY, t); } catch (e) { }
       const mobIcon = document.getElementById('mob-theme-icon');
       const mobLabel = document.getElementById('mob-theme-label');
-      if (mobIcon) mobIcon.textContent = t === 'dark' ? '☀️' : '🌙';
+      if (mobIcon) { mobIcon.innerHTML = t === 'dark' ? `<i data-lucide='sun' class='icon'></i>` : `<i data-lucide='moon' class='icon'></i>`; if (typeof lucide !== 'undefined') lucide.createIcons(); }
       if (mobLabel) mobLabel.textContent = t === 'dark' ? i18n[lang].themeLight : i18n[lang].themeDark;
     }
 
@@ -3994,9 +4021,9 @@
       document.querySelectorAll('[data-en]').forEach(el => {
         const val = el.getAttribute('data-' + l);
         if (!val) return;
-        if (val.includes('<')) el.innerHTML = val;
-        else el.textContent = val;
+        el.innerHTML = val;
       });
+      if (typeof lucide !== 'undefined') lucide.createIcons();
 
       /* Reset hero phrase rotation for new language */
       clearInterval(heroPhraseTimer);
@@ -4066,8 +4093,8 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       Swal.fire({
         title: lang === 'es' ? '¡Próximamente!' : 'Coming Soon!',
         text: lang === 'es' 
-          ? '¡Nuestro Asistente de Chat se está horneando! 🧁 Por ahora, llámanos al (201) 869-7633 o visítanos en la tienda.' 
-          : 'Our Chat Assistant is currently being baked! 🧁 For now, please call us at (201) 869-7633 or visit our store.',
+          ? '¡Nuestro Asistente de Chat se está horneando!Por ahora, llámanos al (201) 869-7633 o visítanos en la tienda.' 
+          : 'Our Chat Assistant is currently being baked!For now, please call us at (201) 869-7633 or visit our store.',
         icon: 'info',
         confirmButtonText: 'OK',
         confirmButtonColor: '#C8102E'
@@ -4168,7 +4195,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
           </svg>
           <span id="cart-clear-label">Clear Cart</span>
         </button>
-        <button class="cart-close" onclick="closeCart()">✕</button>
+        <button class="cart-close" onclick="closeCart()"><i data-lucide='x' class='icon'></i></button>
       </div>
     </div>
     <div class="cart-items" id="cart-items"></div>
@@ -4220,7 +4247,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
   <!-- ══ CONFIRM MODAL ══ -->
   <div class="confirm-overlay" id="confirm-overlay" onclick="if(event.target===this)closeConfirm()">
     <div class="confirm-modal">
-      <div class="confirm-icon">🗑️</div>
+      <div class="confirm-icon"><i data-lucide='trash' class='icon'></i></div>
       <div class="confirm-title" id="confirm-title">Clear your cart?</div>
       <p class="confirm-sub" id="confirm-sub">All items will be removed. This can't be undone.</p>
       <div class="confirm-actions">
@@ -4239,7 +4266,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
           <div class="atc-modal-name" id="atc-name"></div>
           <div class="atc-modal-price" id="atc-modal-price"></div>
         </div>
-        <button class="atc-close" onclick="closeATC()">✕</button>
+        <button class="atc-close" onclick="closeATC()"><i data-lucide='x' class='icon'></i></button>
       </div>
 
       <!-- Image Gallery -->
@@ -4454,7 +4481,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         errName: 'Please enter your name.',
         errPhone: 'Please enter your phone number.',
         whatsappMsg: (name, phone, pickup, summary, note) => [
-          `Hi! I'd like to place an order 🎂`,
+          `Hi! I'd like to place an order`,
           `Name: ${name}`,
           `Phone: ${phone}`,
           pickup ? `Pickup Date: ${pickup}` : '',
@@ -4496,7 +4523,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         errName: 'Por favor ingresa tu nombre.',
         errPhone: 'Por favor ingresa tu número de teléfono.',
         whatsappMsg: (name, phone, pickup, summary, note) => [
-          `¡Hola! Me gustaría hacer un pedido 🎂`,
+          `¡Hola! Me gustaría hacer un pedido`,
           `Nombre: ${name}`,
           `Teléfono: ${phone}`,
           pickup ? `Fecha de Recogida: ${pickup}` : '',
@@ -4597,7 +4624,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       if (!cart.length) {
         el.innerHTML = `
       <div class="cart-empty">
-        <div class="cart-empty-icon">🎂</div>
+        <div class="cart-empty-icon"></div>
         <p>${t.empty}<br>${t.emptySub}</p>
         <button class="cart-empty-btn" onclick="closeCart(); if(!window.location.href.includes('menu')) window.location.href='menu.html';">${t.browseMenu}</button>
       </div>`;
@@ -4970,7 +4997,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
     function showToast(msg) {
       const toast = document.getElementById('cart-toast');
       if (!toast) return;
-      toast.textContent = msg;
+      toast.innerHTML = msg; if (typeof lucide !== 'undefined') lucide.createIcons();
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 2500);
     }
@@ -4997,7 +5024,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       updateBadge();
       closeATC();
       const toastName = lang === 'es' ? (prod.es.name || prod.en.name) : prod.en.name;
-      const toastMsg = lang === 'es' ? `🎂 ${toastName} agregado al carrito` : `🎂 ${toastName} added to cart`;
+      const toastMsg = lang === 'es' ? `${toastName} agregado al carrito` : `${toastName} added to cart`;
       showToast(toastMsg);
 
       // Bounce the cart icon
@@ -5083,6 +5110,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
   <script type="module" src="./auth-state.js"></script>
   <script type="module" src="./analytics.js"></script>
   <script type="module" src="./speed-insights.js"></script>
+  <script>if(typeof lucide !== 'undefined') lucide.createIcons();</script>
 </body>
 
 </html>

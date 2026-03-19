@@ -26,7 +26,7 @@ function setAuthLang(l) {
         if(!val) return;
         if(val.includes('<') || el.tagName === 'A' || el.tagName === 'BUTTON') el.innerHTML = val;
         else if (el.tagName === 'INPUT' && el.type !== 'submit') el.placeholder = val;
-        else el.textContent = val;
+        else el.innerHTML = val; if (typeof lucide !== 'undefined') lucide.createIcons();
     });
 
     const themeLabel = document.getElementById('theme-label');
@@ -49,7 +49,7 @@ function toggleAuthTheme() {
     const icon = document.getElementById('theme-icon');
     const label = document.getElementById('theme-label');
     if (icon && label) {
-        icon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        icon.innerHTML = newTheme === 'dark' ? `<i data-lucide='sun' class='icon'></i>` : `<i data-lucide='moon' class='icon'></i>`; if (typeof lucide !== 'undefined') lucide.createIcons();
         label.textContent = newTheme === 'dark' ? i18nAuth[currentLang].themeLight : i18nAuth[currentLang].themeDark;
     }
 }
@@ -64,7 +64,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.documentElement.setAttribute('data-theme', savedTheme);
     
     const icon = document.getElementById('theme-icon');
-    if (icon) icon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    if (icon) icon.innerHTML = savedTheme === 'dark' ? `<i data-lucide='sun' class='icon'></i>` : `<i data-lucide='moon' class='icon'></i>`; if (typeof lucide !== 'undefined') lucide.createIcons();
     
     /* Restore saved language preference */
     let initialLang = 'en';

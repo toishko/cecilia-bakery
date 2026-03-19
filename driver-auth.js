@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            showFeedback('✅ Driver account created! Check your email to confirm, then log in.');
+            showFeedback('Driver account created! Check your email to confirm, then log in.');
             authCard.classList.remove('is-signup');
             setLoading(activeBtn, false);
 
