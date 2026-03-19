@@ -28,7 +28,7 @@ export async function updateAuthUI(session) {
                     .single();
                 
                 const displayName = profile?.name || session.user.user_metadata?.full_name || session.user.email.split('@')[0];
-                userGreeting.innerHTML = `hi, ${displayName} ▼`;
+                userGreeting.innerHTML = `hi, ${displayName}`;
                 
                 // Store role if needed for routing
                 if (profile?.role) {
@@ -36,7 +36,7 @@ export async function updateAuthUI(session) {
                 }
             } catch (err) {
                 const fallbackName = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
-                userGreeting.innerHTML = `hi, ${fallbackName} ▼`;
+                userGreeting.innerHTML = `hi, ${fallbackName}`;
             }
         }
     } else {

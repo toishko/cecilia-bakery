@@ -3269,15 +3269,8 @@
         alt="Cecilia Bakery" class="nav-logo-img" />
     </a>
     <div class="nav-right">
-      <div id="nav-user-menu" style="display: none; position: relative;"
-        onmouseenter="document.getElementById('nav-user-dropdown').style.display='block'"
-        onmouseleave="document.getElementById('nav-user-dropdown').style.display='none'">
-        <a href="#" id="nav-user-greeting" class="nav-back" style="cursor: pointer; background: transparent; color: var(--fg); padding: 8px;">Profile ▼</a>
-        <div id="nav-user-dropdown"
-          style="display: none; position: absolute; top: 100%; right: 0; background: var(--bg-card); border: 1px solid var(--bd); padding: 12px; border-radius: var(--r); box-shadow: var(--shadow-card); min-width: 140px; z-index: 1000;">
-          <a href="index.html" id="nav-profile-link" style="display: block; margin-bottom: 12px; font-size: 0.9rem;"
-            data-en="Home" data-es="Inicio">Home</a>
-        </div>
+      <div id="nav-user-menu" style="display: none; align-items: center; margin-right: 1rem;">
+        <span id="nav-user-greeting" style="font-weight: 500; font-size: 1rem; color: var(--fg);">Profile</span>
       </div>
       <button class="cart-nav-btn" onclick="openCart()" aria-label="View cart">
         <span class="cart-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff"
