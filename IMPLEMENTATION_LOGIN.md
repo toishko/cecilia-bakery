@@ -11,6 +11,20 @@ This document outlines the step-by-step implementation plan for the Split Portal
 
 ---
 
+## Phase 0: Environment Security ✅ (Completed)
+
+- [x] **Create `.env` file** in the project root: Stores the Supabase Project URL and Anon Key as environment variables. This file **never** gets committed to GitHub.
+    - Variable names must be prefixed with `VITE_` so Vite can expose them to the browser safely.
+    - `VITE_SUPABASE_URL=https://your-project.supabase.co`
+    - `VITE_SUPABASE_ANON_KEY=your-anon-key-here`
+- [x] **Create `.gitignore` file** in the project root: Ensures `.env` (and other sensitive/unnecessary files) are never pushed to GitHub.
+    - Must include: `.env`, `.env.local`, `node_modules/`, `dist/`
+- [x] **Verify `.env` is ignored**: Run `git status` and confirmed `.env` does not appear as a tracked or staged file.
+- [x] **Removed `node_modules/` from Git tracking**: Ran `git rm -r --cached node_modules/` so previously tracked dependency files are de-indexed.
+- [ ] **`supabase-client.js` will use `import.meta.env`**: When this file is created in Phase 3b, it will read keys from `import.meta.env.VITE_SUPABASE_URL` and `import.meta.env.VITE_SUPABASE_ANON_KEY` — never hardcoded strings.
+
+---
+
 ## Phase 1: Planning and Setup ✅ (Completed)
 
 - [x] **Define User Roles**: Four distinct roles identified: Customer, Partner, Driver, and Admin.
@@ -50,13 +64,48 @@ This document outlines the step-by-step implementation plan for the Split Portal
 
 ---
 
-## Phase 3: Implementing Authentication Logic (JavaScript)
+## Phase 3a: Database Schema Setup (Supabase SQL Editor)
+*(Run these SQL scripts once in the Supabase Dashboard → SQL Editor before writing any JavaScript.)*
 
-- [ ] **Initialize Supabase**: Connect the Vite project to the Supabase backend using the `supabase-js` client.
-- [ ] **Handle Customer Login & Signup**: Add javascript to authenticate the user, append the 'customer' role into the database profile, and redirect to the homepage.
-- [ ] **Handle Partner Login & Signup**: Add javascript to authenticate the user, append the 'partner' role, store Business variables, and redirect to `/partner-dashboard.html`.
-- [ ] **Handle Driver Login & Signup**: Add javascript to authenticate the user, append the 'driver' role, and redirect to `/bulk-orders.html`.
-- [ ] **Handle Admin Login**: Add javascript to authenticate the existing admin user, verify the 'admin' role, and redirect to `/admin-dashboard.html`.
+- [ ] **Create the `profiles` table**: Stores every user's role and shared identity info. Links to Supabase's built-in `auth.users` table via `id` (UUID).
+    - Columns: `id` (uuid, PK, FK → auth.users), `role` (text: `'customer'`, `'partner'`, `'driver'`, `'admin'`), `full_name` (text), `phone` (text), `created_at` (timestamptz).
+- [ ] **Create the `partner_details` table**: Stores wholesale-specific data for partner accounts.
+    - Columns: `id` (uuid, PK, FK → profiles), `business_name` (text), `contact_name` (text), `status` (text: `'pending'`, `'approved'`, `'rejected'`), `applied_at` (timestamptz).
+- [ ] **Create the `orders` table** *(stub for future use)*: A placeholder table for tracking customer and driver orders.
+    - Columns: `id` (uuid, PK), `user_id` (uuid, FK → profiles), `role` (text), `status` (text), `created_at` (timestamptz).
+- [ ] **Enable Row Level Security (RLS)** on all tables so that users can only read and write their own rows.
+- [ ] **Create RLS Policies**:
+    - `profiles`: Users can only SELECT and UPDATE their own row (`auth.uid() = id`).
+    - `partner_details`: Partners can only SELECT their own row; INSERT allowed on signup.
+    - `orders`: Users can only SELECT their own orders.
+- [ ] **Create a `handle_new_user` trigger function**: A PostgreSQL function that automatically inserts a blank row into `profiles` whenever a new user is created in `auth.users`, preventing orphaned auth accounts.
+- [ ] **Manually create the Admin account** in the Supabase Dashboard → Authentication → Users (email + password). Then run a SQL UPDATE to set that user's `role` to `'admin'` in the `profiles` table.
+
+---
+
+## Phase 3b: Implementing Authentication Logic (JavaScript)
+
+- [ ] **Create `supabase-client.js`**: A single shared module that initializes the Supabase client with the Project URL and Anon Key. All other auth scripts import from this one file.
+- [ ] **Handle Customer Login & Signup (`customer-auth.js`)**:
+    - [ ] On signup: call `supabase.auth.signUp()`, then upsert `role: 'customer'` and `full_name` + optional `phone` into `profiles`.
+    - [ ] On login: call `supabase.auth.signInWithPassword()`, verify session exists, redirect to `index.html`.
+    - [ ] Display inline error/success feedback messages on the form (no page reloads).
+    - [ ] Link `customer-auth.js` into `login.html`.
+- [ ] **Handle Partner Login & Signup (`partner-auth.js`)**:
+    - [ ] On signup ("Apply"): call `supabase.auth.signUp()`, upsert `role: 'partner'` into `profiles`, insert a `partner_details` row with `business_name`, `contact_name`, `phone`, and `status: 'pending'`.
+    - [ ] On login: call `supabase.auth.signInWithPassword()`, verify role is `'partner'`, redirect to `partner-dashboard.html`.
+    - [ ] Display inline error/success feedback messages on the form.
+    - [ ] Link `partner-auth.js` into `partner-login.html`.
+- [ ] **Handle Driver Login & Signup (`driver-auth.js`)**:
+    - [ ] On signup: call `supabase.auth.signUp()`, upsert `role: 'driver'` and `full_name` + required `phone` into `profiles`.
+    - [ ] On login: call `supabase.auth.signInWithPassword()`, verify role is `'driver'`, redirect to `bulk-orders.html`.
+    - [ ] Display inline error/success feedback messages on the form.
+    - [ ] Link `driver-auth.js` into `driver-login.html`.
+- [ ] **Handle Admin Login (`admin-auth.js`)**:
+    - [ ] On login: call `supabase.auth.signInWithPassword()`, fetch the user's profile, verify `role === 'admin'` — if not, immediately sign out and show an "Access Denied" error.
+    - [ ] On success: redirect to `admin-dashboard.html`.
+    - [ ] Display inline error/success feedback messages on the form.
+    - [ ] Link `admin-auth.js` into `admin-login.html`.
 
 ---
 

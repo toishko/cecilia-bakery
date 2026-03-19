@@ -1,0 +1,17 @@
+# Environment variables — NEVER commit these
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Vite build output
+dist/
+
+# macOS system files
+.DS_Store
+
+# Editor directories
+.vscode/
+.idea/
