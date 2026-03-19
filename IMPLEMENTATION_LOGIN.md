@@ -29,18 +29,24 @@ This document outlines the step-by-step implementation plan for the Split Portal
 ---
 
 ## Phase 2: Building the Public UI (HTML & CSS)
+*(Note: All login pages will use the centralized, premium dark-card layout designed for the Partner Portal, and all will include the English/Spanish and Light/Dark mode toggles in the top right.)*
 
 - [ ] **Build Customer Login/Signup Page (`/login.html`)**
     - [ ] Add Input fields: Name, Email, Password, and Phone Number (Optional).
-    - [ ] Create simple HTML structure matching the main brand guidelines.
+    - [ ] Implement the premium centralized card layout and top-right toggles.
 - [ ] **Build Partner Portal Page (`/partner-login.html`)**
     - [ ] Add Input fields: Business Name, Contact Name, Email, Password, and Phone Number (Required).
     - [ ] Create an "Apply for Account" state vs "Log In" state.
+    - [ ] Implement the premium centralized card layout and top-right toggles.
 - [ ] **Build Driver Portal Page (`/driver-login.html`)**
     - [ ] Add Input fields: Name, Email, Password, and Phone Number (Required).
+    - [ ] Change title to "Driver Login".
+    - [ ] Implement the premium centralized card layout and top-right toggles.
 - [ ] **Build Admin Login Page (`/admin-login.html`)**
     - [ ] Add Input fields: Email and Password only.
-    - [ ] Create a very simple, secure-looking HTML structure with no registration link.
+    - [ ] Change title to "Admin".
+    - [ ] Replace the layout monogram with the actual bakery logo.
+    - [ ] Implement the premium centralized card layout and top-right toggles.
 
 ---
 
