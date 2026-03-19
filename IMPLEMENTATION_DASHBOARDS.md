@@ -22,10 +22,10 @@ This document outlines the step-by-step execution plan for upgrading Cecilia Bak
 - [x] **1.1 Create `auth-state.js`**
   - Create a new global script that imports `supabase` from `supabase-client.js`.
   - Use `supabase.auth.onAuthStateChange()` to listen for logins/logouts.
-- [ ] **1.2 Update the Main Navigation Bar**
+- [x] **1.2 Update the Main Navigation Bar**
   - Add a hidden "User Dropdown" element to `index.html` and `menu.html`.
   - Write logic in `auth-state.js` to swap visibility between the "Log In" button and the User Dropdown.
-- [ ] **1.3 Implement Sign Out Functionality**
+- [x] **1.3 Implement Sign Out Functionality**
   - Attach a `supabase.auth.signOut()` click listener to the "Sign Out" button.
   - Redirect users back to the homepage upon logging out.
 - [ ] **1.4 Fetch & Display Basic Profile Data**

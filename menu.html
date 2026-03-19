@@ -1374,6 +1374,17 @@ select.cart-form-input option { background:#002D62; color:#fff; }
     <a href="index.html" class="nav-back">
       ← <span data-en="Back to Home" data-es="Volver al Inicio">Back to Home</span>
     </a>
+    <!-- Auth Toggle -->
+    <div id="nav-login-btn">
+      <a href="login.html" class="nav-back" data-en="Log In" data-es="Iniciar Sesión">Log In</a>
+    </div>
+    <div id="nav-user-menu" style="display: none; position: relative;" onmouseenter="document.getElementById('nav-user-dropdown').style.display='block'" onmouseleave="document.getElementById('nav-user-dropdown').style.display='none'">
+      <a href="#" id="nav-user-greeting" class="nav-back" style="cursor: pointer;">Profile ▼</a>
+      <div id="nav-user-dropdown" style="display: none; position: absolute; top: 100%; right: 0; background: var(--bg-card); border: 1px solid var(--bd); padding: 12px; border-radius: var(--r); box-shadow: var(--shadow-card); min-width: 140px; z-index: 1000;">
+        <a href="login.html" id="nav-profile-link" style="display: block; margin-bottom: 12px; font-size: 0.9rem;" data-en="Dashboard" data-es="Menu Principal">Dashboard</a>
+        <a href="#" id="nav-sign-out-btn" style="display: block; color: var(--red); font-size: 0.9rem;" data-en="Sign Out" data-es="Cerrar Sesión">Sign Out</a>
+      </div>
+    </div>
     <div class="nav-sep"></div>
     <div class="nav-controls">
       <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
@@ -1410,6 +1421,10 @@ select.cart-form-input option { background:#002D62; color:#fff; }
     <li><a href="#square"      onclick="closeMobileMenu()" data-en="⬛ Square Cakes" data-es="⬛ Cuadrados">⬛ Square Cakes</a></li>
     <li><a href="#piezas"      onclick="closeMobileMenu()" data-en="🍰 Slices" data-es="🍰 Piezas">🍰 Slices</a></li>
     <li><a href="#basos"       onclick="closeMobileMenu()" data-en="🥤 Cups" data-es="🥤 Basos">🥤 Cups</a></li>
+    <!-- Mobile Auth Links -->
+    <li id="mobile-login-btn"><a href="login.html" onclick="closeMobileMenu()" data-en="🔑 Log In" data-es="🔑 Iniciar Sesión">🔑 Log In</a></li>
+    <li id="mobile-user-menu" style="display:none;"><a href="login.html" onclick="closeMobileMenu()" data-en="👤 Dashboard" data-es="👤 Menu Principal">👤 Dashboard</a></li>
+    <li id="mobile-signout-menu" style="display:none;"><a href="#" id="mobile-sign-out-btn" style="color:var(--red);" onclick="closeMobileMenu()" data-en="🚪 Sign Out" data-es="🚪 Cerrar Sesión">🚪 Sign Out</a></li>
   </ul>
 </div>
 
