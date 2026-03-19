@@ -11,11 +11,11 @@
   - [x] Modify `.theme-btn` to solely rely on the Lucide icon (`moon`/`sun`) by removing the "Dark"/"Light" text (or give both buttons equal fixed dimensions like `width: 32px; height: 32px;`).
   - [x] Increase the `gap` property in the `.nav-controls` and `.mobile-drawer-controls` containers so the buttons don't look cluttered (e.g., bump gap from `5px` to `12px`).
 
-- [ ] **3. "Order Now" Specificity in Mobile Dropdown**
-  - [ ] In `index.html`, locate the `.mobile-drawer-links` list.
-  - [ ] Find the list item with `class="nav-cta"` inside the dropdown.
-  - [ ] Change the translation properties: `data-en="<i data-lucide='cake' class='icon'></i> Order a Custom Cake"` and `data-es="<i data-lucide='cake' class='icon'></i> Ordenar un Bizcocho"`.
-  - [ ] Update the inner text to reflect the English default: `<i data-lucide='cake' class='icon'></i> Order a Custom Cake`.
+- [x] **3. "Order Now" Specificity in Mobile Dropdown**
+  - [x] In `index.html`, locate the `.mobile-drawer-links` list.
+  - [x] Find the list item with `class="nav-cta"` inside the dropdown.
+  - [x] Change the translation properties: `data-en="<i data-lucide='cake' class='icon'></i> Order a Custom Cake"` and `data-es="<i data-lucide='cake' class='icon'></i> Ordenar un Bizcocho"`.
+  - [x] Update the inner text to reflect the English default: `<i data-lucide='cake' class='icon'></i> Order a Custom Cake`.
 
 - [ ] **4. Sign Out Button Position in Mobile Dropdown**
   - [ ] In `index.html`, `menu.html`, and `login.html`, edit the `.mobile-drawer-links` unordered list.
