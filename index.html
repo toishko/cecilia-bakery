@@ -3318,7 +3318,7 @@
         <li><a href="#story" data-en="Our Story" data-es="Historia">Our Story</a></li>
         <li><a href="menu.html" data-en="Menu" data-es="Menú">Menu</a></li>
         <li><a href="#wholesale" data-en="Wholesale" data-es="Mayoreo">Wholesale</a></li>
-        <li id="nav-login-btn"><a href="login.html" data-en="Log In" data-es="Iniciar Sesión">Log In</a></li>
+        <li id="nav-login-btn" style="display: none;"><a href="login.html" data-en="Log In" data-es="Iniciar Sesión">Log In</a></li>
         <li id="nav-user-menu" style="display: none; position: relative;" onmouseenter="document.getElementById('nav-user-dropdown').style.display='block'" onmouseleave="document.getElementById('nav-user-dropdown').style.display='none'">
           <a href="#" id="nav-user-greeting" style="cursor: pointer;">Profile ▼</a>
           <div id="nav-user-dropdown" style="display: none; position: absolute; top: 100%; right: 0; background: var(--bg-card); border: 1px solid var(--bd); padding: 12px; border-radius: var(--r); box-shadow: var(--shadow-card); min-width: 140px; z-index: 1000;">
@@ -3363,7 +3363,7 @@
       <li><a href="#story" onclick="closeMobileMenu()" data-en="Our Story" data-es="Historia">Our Story</a></li>
       <li><a href="menu.html" onclick="closeMobileMenu()" data-en="Menu" data-es="Menú">Menu</a></li>
       <li><a href="#wholesale" onclick="closeMobileMenu()" data-en="Wholesale" data-es="Mayoreo">Wholesale</a></li>
-      <li id="mobile-login-btn"><a href="login.html" onclick="closeMobileMenu()" data-en="Log In" data-es="Iniciar Sesión">Log In</a></li>
+      <li id="mobile-login-btn" style="display: none;"><a href="login.html" onclick="closeMobileMenu()" data-en="Log In" data-es="Iniciar Sesión">Log In</a></li>
       <li id="mobile-user-menu" style="display: none;">
         <a href="#" id="mobile-profile-link" onclick="closeMobileMenu()" data-en="Dashboard" data-es="Menu Principal">Dashboard</a>
       </li>
@@ -3769,7 +3769,7 @@
             8:30am – 6:00pm</span>
         </address>
       </div>
-      <div class="footer-col">
+      <div class="footer-col" style="display: none;">
         <h4 data-en="Portals" data-es="Portales">Portals</h4>
         <a href="partner-login.html" data-en="Partner Portal" data-es="Portal de Socios">Partner Portal</a>
         <a href="driver-login.html" data-en="Driver Access" data-es="Acceso Conductores">Driver Access</a>
@@ -3787,7 +3787,7 @@
   </footer>
 
   <!-- FAB -->
-  <button class="chat-fab" onclick="openChat()" aria-label="Chat with us">
+  <button class="chat-fab" onclick="openChat()" aria-label="Chat with us" title="Chat & Order (Coming Soon)">
     💬<div class="fab-badge">1</div>
   </button>
 

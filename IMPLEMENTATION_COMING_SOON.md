@@ -8,23 +8,23 @@ This document outlines the temporary restrictions applied to the site before pub
 *Goal: Prevent users from triggering half-finished features (Chat & Checkout) while maintaining a premium feel.*
 
 ### 1.1 Chatbot Intervention
-- [ ] **UI Update**: Append `(Coming Soon)` to `data-en` and `(Próximamente)` to `data-es` for all "Custom Cake Order" and "Chat & Order" buttons in `index.html` and `menu.html`.
-- [ ] **Logic Intercept**: Modify the `_openChat()` function to trigger a `swal` (SweetAlert) popup instead of opening the chat overlay. 
+- [x] **UI Update**: Append `(Coming Soon)` to `data-en` and `(Próximamente)` to `data-es` for all "Custom Cake Order" and "Chat & Order" buttons in `index.html` and `menu.html`.
+- [x] **Logic Intercept**: Modify the `_openChat()` function to trigger a `swal` (SweetAlert) popup instead of opening the chat overlay. 
   - *Message (EN):* "Our Chat Assistant is currently being baked! 🧁 For now, please call us at (201) 869-7633 or visit our store."
   - *Message (ES):* "¡Nuestro Asistente de Chat se está horneando! 🧁 Por ahora, llámanos al (201) 869-7633 o visítanos en la tienda."
-- [ ] **FAB Lockdown**: Add a "Coming Soon" hover hint to the floating chat icon.
+- [x] **FAB Lockdown**: Add a "Coming Soon" hover hint to the floating chat icon.
 
 ### 1.2 Checkout Intervention
-- [ ] **Button Update**: Update `cartI18n` in `menu.html` to change "Checkout" label to "Checkout (Coming Soon)".
-- [ ] **Logic Intercept**: Modify `cartCheckout()` in `menu.html` to intercept the process.
+- [x] **Button Update**: Update `cartI18n` in `menu.html` to change "Checkout" label to "Checkout (Coming Soon)".
+- [x] **Logic Intercept**: Modify `cartCheckout()` in `menu.html` to intercept the process.
   - *Message (EN):* "Online ordering is coming soon! 🥖 Please visit us at 6101 Park Ave, West New York, NJ to place your order."
   - *Message (ES):* "¡Los pedidos en línea estarán disponibles pronto! 🥖 Visítanos en 6101 Park Ave, West New York, NJ para hacer tu pedido."
-- [ ] **Form Disabling**: Ensure the checkout confirmation modal cannot be reached.
+- [x] **Form Disabling**: Ensure the checkout confirmation modal cannot be reached.
 
 ### 1.3 Authentication / Portal Lockdown
-- [ ] **Hide Header Login**: Comment out or set `display: none` on the "Sign In" button in the main navigation.
-- [ ] **Hide Footer Portals**: Hide the "Portals" / "For the Team" section in the footer.
-- [ ] **Disable Auth Toggling**: Stop `auth-state.js` from showing the user dropdown or login button until public launch.
+- [x] **Hide Header Login**: Comment out or set `display: none` on the "Sign In" button in the main navigation.
+- [x] **Hide Footer Portals**: Hide the "Portals" / "For the Team" section in the footer.
+- [x] **Disable Auth Toggling**: Stop `auth-state.js` from showing the user dropdown or login button until public launch.
 
 ---
 
@@ -55,5 +55,5 @@ This document outlines the temporary restrictions applied to the site before pub
 - [x] Modify `menu.html` `_openChat()` logic
 - [x] Modify `index.html` `openChat()` logic
 - [x] Update button attributes in both files
-- [ ] Hide Header Login & Footer Portals
-- [ ] Disable Auth Logic intervention
+- [x] Hide Header Login & Footer Portals
+- [x] Disable Auth Logic intervention

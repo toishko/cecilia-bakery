@@ -1376,7 +1376,7 @@ select.cart-form-input option { background:#002D62; color:#fff; }
       ← <span data-en="Back to Home" data-es="Volver al Inicio">Back to Home</span>
     </a>
     <!-- Auth Toggle -->
-    <div id="nav-login-btn">
+    <div id="nav-login-btn" style="display: none;">
       <a href="login.html" class="nav-back" data-en="Log In" data-es="Iniciar Sesión">Log In</a>
     </div>
     <div id="nav-user-menu" style="display: none; position: relative;" onmouseenter="document.getElementById('nav-user-dropdown').style.display='block'" onmouseleave="document.getElementById('nav-user-dropdown').style.display='none'">
@@ -1423,7 +1423,7 @@ select.cart-form-input option { background:#002D62; color:#fff; }
     <li><a href="#piezas"      onclick="closeMobileMenu()" data-en="🍰 Slices" data-es="🍰 Piezas">🍰 Slices</a></li>
     <li><a href="#basos"       onclick="closeMobileMenu()" data-en="🥤 Cups" data-es="🥤 Basos">🥤 Cups</a></li>
     <!-- Mobile Auth Links -->
-    <li id="mobile-login-btn"><a href="login.html" onclick="closeMobileMenu()" data-en="🔑 Log In" data-es="🔑 Iniciar Sesión">🔑 Log In</a></li>
+    <li id="mobile-login-btn" style="display: none;"><a href="login.html" onclick="closeMobileMenu()" data-en="🔑 Log In" data-es="🔑 Iniciar Sesión">🔑 Log In</a></li>
     <li id="mobile-user-menu" style="display:none;"><a href="login.html" onclick="closeMobileMenu()" data-en="👤 Dashboard" data-es="👤 Menu Principal">👤 Dashboard</a></li>
     <li id="mobile-signout-menu" style="display:none;"><a href="#" id="mobile-sign-out-btn" style="color:var(--red);" onclick="closeMobileMenu()" data-en="🚪 Sign Out" data-es="🚪 Cerrar Sesión">🚪 Sign Out</a></li>
   </ul>
@@ -1828,7 +1828,7 @@ select.cart-form-input option { background:#002D62; color:#fff; }
 </footer>
 
 <!-- FAB -->
-<button class="chat-fab" onclick="openChat()" aria-label="Chat with us">💬</button>
+<button class="chat-fab" onclick="openChat()" aria-label="Chat with us" title="Chat & Order (Coming Soon)">💬</button>
 
 <!-- CHAT -->
 <div class="chat-overlay" id="chat-overlay" onclick="closeChatOutside(event)">
