@@ -54,6 +54,7 @@ body {
 }
 .lang-btn.active { background: var(--red); border-color: var(--red); color: #fff; }
 .lang-btn:not(.active):hover, .theme-btn:hover { border-color: var(--red); color: var(--red); }
+.theme-btn:active { transform: scale(0.85) rotate(15deg); }
 .ctrl-divider { color: var(--bd); font-size: .7rem; font-weight: 300; user-select: none; margin: 0; }
 
 /* Auth Container */
@@ -132,11 +133,18 @@ body {
 .mobile-drawer-links { list-style: none; margin: 0; padding: 0; }
 .mobile-drawer-links li { border-bottom: 1px solid var(--bd); }
 .mobile-drawer-links a { display: block; padding: 16px 0; font-size: 1.1rem; font-weight: 500; color: var(--tx); text-decoration: none; letter-spacing: .02em; transition: color .2s; }
-.mobile-drawer-links a:hover { color: var(--red); }
+.mobile-drawer-links a:hover, .mobile-drawer-links a.active { color: var(--red); }
+.mobile-drawer-links a.active { font-weight: 700; text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 2px; }
 .mobile-drawer-links a.nav-cta { color: var(--red); }
 .mobile-drawer-controls { display: flex; align-items: center; gap: 12px; padding-top: 20px; flex-wrap: wrap; }
-.mobile-drawer-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .3); z-index: 499; opacity: 0; pointer-events: none; transition: opacity .3s; }
+.mobile-drawer-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .5); z-index: 499; opacity: 0; pointer-events: none; transition: opacity .3s; }
 .mobile-drawer-overlay.open { opacity: 1; pointer-events: all; }
+
+a:focus-visible, button:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
 
 @media(max-width:900px) {
   .hamburger { display: flex; }
