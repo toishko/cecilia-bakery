@@ -2328,11 +2328,18 @@ let customBannerIndex = 0;
 let customBottomIndex = 0;
 let twBannerTimer = null;
 let twBottomTimer = null;
+let activeBannerTW = null; // tracking active setInterval
+let activeBottomTW = null; // tracking active setInterval
 
 function typewrite(el, text, speed, onDone) {
   el.textContent = '';
   let i = 0;
   const interval = setInterval(() => {
+    if (!text[i]) {
+       clearInterval(interval);
+       if (onDone) onDone();
+       return;
+    }
     el.textContent += text[i++];
     if (i >= text.length) {
       clearInterval(interval);
@@ -2347,8 +2354,13 @@ function setSeasonalCTAs() {
   const msgs = seasonalMessages[lang];
   const monthData = msgs[month];
 
+  // Stop everything currently running
   clearTimeout(twBannerTimer);
   clearTimeout(twBottomTimer);
+  clearInterval(activeBannerTW);
+  clearInterval(activeBottomTW);
+  
+  // Reset indices
   customBannerIndex = 0;
   customBottomIndex = 0;
 
@@ -2362,7 +2374,9 @@ function setSeasonalCTAs() {
 
     if (heroH) {
       heroH.style.opacity = '1';
-      typewrite(heroH, phrase.headline, 38, () => {
+      // Clear previous if any
+      clearInterval(activeBannerTW);
+      activeBannerTW = typewrite(heroH, phrase.headline, 38, () => {
         if (heroS) {
           heroS.style.opacity = '0';
           setTimeout(() => {
@@ -2386,7 +2400,9 @@ function setSeasonalCTAs() {
 
     if (bottomSpan) {
       bottomSpan.style.opacity = '1';
-      typewrite(bottomSpan, phrase.headline, 58, () => {
+      // Clear previous if any
+      clearInterval(activeBottomTW);
+      activeBottomTW = typewrite(bottomSpan, phrase.headline, 58, () => {
         twBottomTimer = setTimeout(runBottom, 8000);
       });
     }
@@ -3309,8 +3325,8 @@ document.addEventListener('DOMContentLoaded', () => {
   updateBadge();
   /* Restore saved language preference */
   try {
-    const savedLang = localStorage.getItem('lang');
-    if (savedLang && (savedLang === 'en' || savedLang === 'es')) setLang(savedLang);
+    const savedLang = localStorage.getItem('lang') || 'en';
+    setLang(savedLang);
   } catch(e) {}
 });
 

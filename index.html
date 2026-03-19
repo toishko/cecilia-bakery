@@ -3875,6 +3875,7 @@
     };
     let heroPhraseIndex = 0;
     let heroPhraseTimer = null;
+    let heroPhraseTimeout = null;
 
     function startHeroRotation() {
       const el = document.querySelector('.hero-rotating-phrase');
@@ -3885,7 +3886,8 @@
       heroPhraseTimer = setInterval(() => {
         el.classList.remove('fade-in');
         el.classList.add('fade-out');
-        setTimeout(() => {
+        clearTimeout(heroPhraseTimeout);
+        heroPhraseTimeout = setTimeout(() => {
           heroPhraseIndex = (heroPhraseIndex + 1) % heroPhrases[lang].length;
           el.innerHTML = heroPhrases[lang][heroPhraseIndex];
           el.classList.remove('fade-out');
@@ -3998,6 +4000,7 @@
 
       /* Reset hero phrase rotation for new language */
       clearInterval(heroPhraseTimer);
+      clearTimeout(heroPhraseTimeout);
       heroPhraseIndex = 0;
       startHeroRotation();
 
@@ -5071,8 +5074,8 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       updateBadge();
       /* Restore saved language preference */
       try {
-        const savedLang = localStorage.getItem('lang');
-        if (savedLang && (savedLang === 'en' || savedLang === 'es')) setLang(savedLang);
+        const savedLang = localStorage.getItem('lang') || 'en';
+        setLang(savedLang);
       } catch (e) { }
     });
 
