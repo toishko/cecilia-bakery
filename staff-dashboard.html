@@ -297,6 +297,8 @@
                     <p style="color: var(--tx-muted); margin-bottom: 24px; font-size: 0.95rem; line-height: 1.5;" data-en="Update your administrator password below." data-es="Actualice su contraseña de administrador a continuación.">Update your administrator password below.</p>
                     
                     <form id="settings-form" style="display: flex; flex-direction: column; gap: 16px;">
+                        <input type="password" id="settings-current-pwd" class="input-field" placeholder="Enter current password" required />
+                        <hr style="border: 0; border-top: 1px solid var(--bd); margin: 8px 0;" />
                         <input type="password" id="settings-new-pwd" class="input-field" placeholder="Enter new password (min 6 chars)" minlength="6" required />
                         <input type="password" id="settings-conf-pwd" class="input-field" placeholder="Confirm new password" minlength="6" required />
                         <button type="submit" class="btn-submit" id="settings-btn" data-en="Update Password" data-es="Actualizar Contraseña" style="margin-top: 8px;">Update Password</button>

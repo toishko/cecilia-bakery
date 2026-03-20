@@ -1,6 +1,22 @@
 /* dashboard.css - Premium layout for Cecilia Bakery Dashboards */
 
 /* Override auth-theme flex centering for dashboards */
+:root {
+    --role-admin-tx: #002D62;
+    --role-admin-bg: rgba(0, 45, 98, 0.15);
+    
+    --role-staff-tx: #002D62;
+    --role-staff-bg: rgba(0, 45, 98, 0.1);
+}
+
+[data-theme="dark"] {
+    --role-admin-tx: #82B1FF;
+    --role-admin-bg: rgba(130, 177, 255, 0.15);
+    
+    --role-staff-tx: #82B1FF;
+    --role-staff-bg: rgba(130, 177, 255, 0.1);
+}
+
 body {
     display: block;
     height: 100vh;

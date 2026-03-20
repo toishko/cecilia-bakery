@@ -116,6 +116,7 @@ function setupSettings() {
     if (settingsForm) {
         settingsForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const currentPwd = document.getElementById('settings-current-pwd').value;
             const pwd = document.getElementById('settings-new-pwd').value;
             const conf = document.getElementById('settings-conf-pwd').value;
             const msg = document.getElementById('settings-msg');
@@ -128,11 +129,24 @@ function setupSettings() {
             }
             
             btn.disabled = true;
-            btn.textContent = 'Updating...';
+            btn.textContent = 'Verifying...';
             
             try {
-                const { error } = await supabase.auth.updateUser({ password: pwd });
-                if (error) throw error;
+                // 1. Verify current password by attempting a signIn
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                if (userError || !user) throw new Error('Could not identify active user session.');
+                
+                const { error: signInError } = await supabase.auth.signInWithPassword({
+                    email: user.email,
+                    password: currentPwd
+                });
+                
+                if (signInError) throw new Error('Current password is incorrect.');
+                
+                // 2. Proceed with update
+                btn.textContent = 'Updating...';
+                const { error: updateError } = await supabase.auth.updateUser({ password: pwd });
+                if (updateError) throw updateError;
                 
                 msg.textContent = 'Password updated successfully!';
                 msg.style.color = 'green';
@@ -365,15 +379,15 @@ function renderUserTable(users) {
         const tr = document.createElement('tr');
         
         const roleColorMap = {
-            admin: '#002D62',
-            staff: '#002D62',
+            admin: 'var(--role-admin-tx)',
+            staff: 'var(--role-staff-tx)',
             partner: '#F2994A',
             driver: '#C8102E', 
             customer: '#6B5057' 
         };
         const roleBgMap = {
-            admin: 'rgba(0, 45, 98, 0.15)',
-            staff: 'rgba(0, 45, 98, 0.1)',
+            admin: 'var(--role-admin-bg)',
+            staff: 'var(--role-staff-bg)',
             partner: 'rgba(242, 153, 74, 0.15)',
             driver: 'rgba(200, 16, 46, 0.15)',
             customer: 'rgba(107, 80, 87, 0.15)'
