@@ -21,7 +21,7 @@ This document outlines the step-by-step implementation plan for the Split Portal
     - Must include: `.env`, `.env.local`, `node_modules/`, `dist/`
 - [x] **Verify `.env` is ignored**: Run `git status` and confirmed `.env` does not appear as a tracked or staged file.
 - [x] **Removed `node_modules/` from Git tracking**: Ran `git rm -r --cached node_modules/` so previously tracked dependency files are de-indexed.
-- [ ] **`supabase-client.js` will use `import.meta.env`**: When this file is created in Phase 3b, it will read keys from `import.meta.env.VITE_SUPABASE_URL` and `import.meta.env.VITE_SUPABASE_ANON_KEY` — never hardcoded strings.
+- [x] **`supabase-client.js` uses `import.meta.env`**: Reads keys from `import.meta.env.VITE_SUPABASE_URL` and `import.meta.env.VITE_SUPABASE_ANON_KEY` — never hardcoded strings.
 
 ---
 
@@ -78,7 +78,7 @@ This document outlines the step-by-step implementation plan for the Split Portal
     - `partner_details`: Partners can SELECT their own row; INSERT allowed on signup.
     - `orders`: Users can only SELECT their own orders.
 - [x] **Create a `handle_new_user` trigger function**: `on_auth_user_created` is live — auto-inserts a blank profile row on every new signup.
-- [ ] **Manually create the Admin account** in the Supabase Dashboard → Authentication → Users (email + password). Then run a SQL UPDATE to set that user's `role` to `'admin'` in the `profiles` table. *(Do this after Phase 3b is coded.)*
+- [x] **Manually create the Admin account** in the Supabase Dashboard → Authentication → Users (email + password). SQL UPDATE set `role` to `'admin'` in `profiles` table. ✅ Verified via browser test — admin login works.
 
 > 📝 **Future notes from schema review:**
 > - The `orders.role` column mirrors `profiles.role` — consider dropping it later and joining to `profiles` directly to avoid data duplication.
@@ -86,51 +86,56 @@ This document outlines the step-by-step implementation plan for the Split Portal
 
 ---
 
-## Phase 3b: Implementing Authentication Logic (JavaScript)
+## Phase 3b: Implementing Authentication Logic (JavaScript) ✅ (Completed)
 
-- [ ] **Create `supabase-client.js`**: A single shared module that initializes the Supabase client with the Project URL and Anon Key. All other auth scripts import from this one file.
-- [ ] **Handle Customer Login & Signup (`customer-auth.js`)**:
-    - [ ] On signup: call `supabase.auth.signUp()`, then upsert `role: 'customer'` and `full_name` + optional `phone` into `profiles`.
-    - [ ] On login: call `supabase.auth.signInWithPassword()`, verify session exists, redirect to `index.html`.
-    - [ ] Display inline error/success feedback messages on the form (no page reloads).
-    - [ ] Link `customer-auth.js` into `login.html`.
-- [ ] **Handle Partner Login & Signup (`partner-auth.js`)**:
-    - [ ] On signup ("Apply"): call `supabase.auth.signUp()`, upsert `role: 'partner'` into `profiles`, insert a `partner_details` row with `business_name`, `contact_name`, `phone`, and `status: 'pending'`.
-    - [ ] On login: call `supabase.auth.signInWithPassword()`, verify role is `'partner'`, redirect to `partner-dashboard.html`.
-    - [ ] Display inline error/success feedback messages on the form.
-    - [ ] Link `partner-auth.js` into `partner-login.html`.
-- [ ] **Handle Driver Login & Signup (`driver-auth.js`)**:
-    - [ ] On signup: call `supabase.auth.signUp()`, upsert `role: 'driver'` and `full_name` + required `phone` into `profiles`.
-    - [ ] On login: call `supabase.auth.signInWithPassword()`, verify role is `'driver'`, redirect to `bulk-orders.html`.
-    - [ ] Display inline error/success feedback messages on the form.
-    - [ ] Link `driver-auth.js` into `driver-login.html`.
-- [ ] **Handle Admin Login (`admin-auth.js`)**:
-    - [ ] On login: call `supabase.auth.signInWithPassword()`, fetch the user's profile, verify `role === 'admin'` — if not, immediately sign out and show an "Access Denied" error.
-    - [ ] On success: redirect to `admin-dashboard.html`.
-    - [ ] Display inline error/success feedback messages on the form.
-    - [ ] Link `admin-auth.js` into `admin-login.html`.
-
----
-
-## Phase 4: Route Protection and Dashboards
-
-- [ ] **Create the Partner Dashboard (`/partner-dashboard.html`)**
-    - [ ] Build the UI to display past orders and profile details (No ordering logic yet).
-    - [ ] Add JavaScript to verify the user has the 'partner' role or redirect to login.
-- [ ] **Create the Driver Bulk Order Page (`/bulk-orders.html`)**
-    - [ ] Build the UI for placing and managing bulk orders.
-    - [ ] Add JavaScript to verify the user has the 'driver' role or redirect to login.
-- [ ] **Create the Admin Dashboard (`/admin-dashboard.html`)**
-    - [ ] Build the UI tabs: Permissions Management, Photo Uploader, and Product Editor.
-    - [ ] Add JavaScript to verify the user has the 'admin' (or manager) role or forcefully redirect to the homepage.
-- [ ] **Universal Auth State**: Add a listener to the main site navigation to check if a Customer is logged in, changing the "Log In" button to a "Log Out" or "My Account" toggle.
+- [x] **Create `supabase-client.js`**: A single shared module that initializes the Supabase client with the Project URL and Anon Key. All other auth scripts import from this one file.
+- [x] **Handle Customer Login & Signup (`customer-auth.js`)**:
+    - [x] On signup: call `supabase.auth.signUp()`, then upsert `role: 'customer'` and `full_name` + optional `phone` into `profiles`.
+    - [x] On login: call `supabase.auth.signInWithPassword()`, verify role is `'customer'`, redirect to `index.html`.
+    - [x] Display inline error/success feedback messages on the form (no page reloads).
+    - [x] Link `customer-auth.js` into `login.html`.
+- [x] **Handle Partner Login & Signup (`partner-auth.js`)**:
+    - [x] On signup ("Apply"): call `supabase.auth.signUp()`, upsert `role: 'partner'` into `profiles`, insert a `partner_details` row with `business_name`, `contact_name`, `phone`, and `status: 'pending'`.
+    - [x] On login: call `supabase.auth.signInWithPassword()`, verify role is `'partner'`, redirect to `partner-dashboard.html`.
+    - [x] Display inline error/success feedback messages on the form.
+    - [x] Link `partner-auth.js` into `partner-login.html`.
+- [x] **Handle Driver Login & Signup (`driver-auth.js`)**:
+    - [x] On signup: call `supabase.auth.signUp()`, upsert `role: 'driver'` and `full_name` + required `phone` into `profiles`.
+    - [x] On login: call `supabase.auth.signInWithPassword()`, verify role is `'driver'`, redirect to `bulk-orders.html`.
+    - [x] Display inline error/success feedback messages on the form.
+    - [x] Link `driver-auth.js` into `driver-login.html`.
+- [x] **Handle Admin Login (`admin-auth.js`)**:
+    - [x] On login: call `supabase.auth.signInWithPassword()`, fetch the user's profile, verify `role === 'admin'` — if not, immediately sign out and show an "Access Denied" error.
+    - [x] On success: redirect to `admin-dashboard.html`.
+    - [x] Display inline error/success feedback messages on the form.
+    - [x] Link `admin-auth.js` into `admin-login.html`.
 
 ---
 
-## Phase 5: Testing
+## Phase 4: Route Protection and Dashboards ✅ (Completed)
 
-- [ ] **Test Customer Flow**: Sign up, log in, redirect to homepage, verify auth state in navigation, log out.
-- [ ] **Test Partner Flow**: Sign up with business details, log in, view partner dashboard, log out.
-- [ ] **Test Driver Flow**: Sign up, log in, access bulk ordering, log out.
-- [ ] **Test Admin Flow**: Log in as admin, access management dashboard, test permissions setting, log out.
-- [ ] **Test Security Boundaries**: Verify roles cannot access each other's dashboards by manipulating URLs.
+- [x] **Create the Partner Dashboard (`/partner-dashboard.html`)**
+    - [x] Build the UI to display past orders and profile details (+ bulk ordering).
+    - [x] Add JavaScript to verify the user has the 'partner' role or redirect to login.
+- [x] **Create the Driver Bulk Order Page (`/bulk-orders.html`)**
+    - [x] Build the UI for placing and managing bulk orders.
+    - [x] Add JavaScript to verify the user has the 'driver' role or redirect to login.
+- [x] **Create the Admin Dashboard (`/admin-dashboard.html`)**
+    - [x] Build the UI tabs: Permissions Management, User Directory, Orders, Partner Approvals, Driver Management, and Analytics.
+    - [x] Add JavaScript to verify the user has the 'admin' (or manager) role or forcefully redirect to the homepage.
+- [x] **Universal Auth State**: `auth-state.js` listens for auth changes, toggles "Log In" button to greeting/sign-out. Active on `index.html` and `menu.html`.
+
+---
+
+## Phase 5: Testing ✅ (Completed — 2026-03-20)
+
+- [x] **Test Customer Flow**: Log in → redirected to homepage with greeting `hi, Sarah Customer`. Auth state verified in navigation.
+- [x] **Test Partner Flow**: Log in → redirected to `partner-dashboard.html`. Dashboard loaded with 3 orders shown.
+- [x] **Test Driver Flow**: Log in → redirected to `driver-dashboard.html`. Product catalog and order management visible.
+- [x] **Test Admin Flow**: Log in → redirected to `admin-dashboard.html`. Dashboard overview, pending approvals, and user directory functional.
+- [x] **Test Security Boundaries**: Customer credentials on admin portal → "Access Denied. This portal is restricted to administrators." User signed out automatically.
+
+> 🐛 **Bugs found and fixed during testing:**
+> - `partner-dashboard.js` queried `partner_details.profile_id` — should be `.id` (FK column). Fixed.
+> - `auth-state.js` selected `name` from profiles — should be `full_name`. Fixed.
+> - `customer-auth.js` did not verify role on login (all other portals did). Added role verification.

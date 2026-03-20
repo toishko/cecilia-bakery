@@ -126,10 +126,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.removeItem('cecilia_customer_email');
             }
 
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
             if (error) {
                 showFeedback(error.message, true);
+                setLoading(activeBtn, false);
+                return;
+            }
+
+            // Verify the user actually has the customer role
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', data.user.id)
+                .single();
+
+            if (!profile || profile.role !== 'customer') {
+                await supabase.auth.signOut();
+                showFeedback('This account does not have customer access. Please use the correct portal.', true);
                 setLoading(activeBtn, false);
                 return;
             }

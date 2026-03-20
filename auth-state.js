@@ -21,11 +21,11 @@ export async function updateAuthUI(session) {
             try {
                 const { data: profile, error } = await supabase
                     .from('profiles')
-                    .select('name, role')
+                    .select('full_name, role')
                     .eq('id', session.user.id)
                     .single();
                 
-                const displayName = profile?.name || session.user.user_metadata?.full_name || session.user.email.split('@')[0];
+                const displayName = profile?.full_name || session.user.user_metadata?.full_name || session.user.email.split('@')[0];
                 userGreeting.innerHTML = `hi, ${displayName}`;
                 
                 // Store role if needed for routing

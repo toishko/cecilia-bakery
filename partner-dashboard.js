@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const { data: partnerData, error: partnerError } = await supabase
             .from('partner_details')
             .select('*')
-            .eq('profile_id', user.id)
+            .eq('id', user.id)
             .single();
 
         if (partnerError || !partnerData || partnerData.status !== 'approved') {
