@@ -70,6 +70,12 @@
                         <span data-en="Master Orders" data-es="Pedidos Maestros">Master Orders</span>
                     </a>
                 </li>
+                <li id="tab-driverorders">
+                    <a href="#driverorders" class="sidebar-link">
+                        <i data-lucide="truck" class="icon"></i>
+                        <span data-en="Driver Orders" data-es="Pedidos de Conductores">Driver Orders</span>
+                    </a>
+                </li>
                 <li id="tab-analytics">
                     <a href="#analytics" class="sidebar-link">
                         <i data-lucide="bar-chart-2" class="icon"></i>
@@ -248,6 +254,40 @@
                             <tr>
                                 <td colspan="5" style="text-align: center; color: var(--tx-muted);">Loading orders...</td>
                             </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ══════ DRIVER ORDERS ══════ -->
+            <section id="sec-driverorders" class="tab-pane">
+                <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;">
+                        <button class="badge filter-btn active-filter" data-driverorder="all">All</button>
+                        <button class="badge filter-btn" data-driverorder="pending">Pending</button>
+                        <button class="badge filter-btn" data-driverorder="approved">Approved</button>
+                        <button class="badge filter-btn" data-driverorder="in_progress">In Progress</button>
+                        <button class="badge filter-btn" data-driverorder="ready_for_pickup">Ready</button>
+                        <button class="badge filter-btn" data-driverorder="picked_up">Picked Up</button>
+                    </div>
+                    <button id="refresh-driver-orders-btn" style="background: transparent; border: 1px solid var(--bd); padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--tx); display: flex; align-items: center; gap: 6px; font-size: 0.85rem;">
+                        <i data-lucide="refresh-cw" class="icon" style="width: 14px; height: 14px;"></i> Refresh
+                    </button>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Driver</th>
+                                <th>Date</th>
+                                <th>Items</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="driver-orders-tbody">
+                            <tr><td colspan="6" style="text-align: center; color: var(--tx-muted); padding: 40px;">Loading driver orders...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -435,5 +475,22 @@
             </div>
         </div>
     </div>
+    <!-- DRIVER ORDER REVIEW MODAL -->
+    <div class="modal-overlay-bg" id="driver-order-modal-overlay" onclick="if(event.target === this) window.closeDriverOrderModal()">
+        <div class="modal-card" style="max-width: 600px; width: 95%;">
+            <div class="modal-header">
+                <div>
+                    <h3 id="driver-modal-order-id">Driver Order</h3>
+                    <span id="driver-modal-meta" style="font-size: 0.85rem; color: var(--tx-muted);"></span>
+                </div>
+                <button class="modal-close-btn" onclick="window.closeDriverOrderModal()" aria-label="Close Modal">
+                    <i data-lucide="x" class="icon" style="width: 24px; height: 24px;"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="driver-modal-body"></div>
+            <div class="modal-footer" id="driver-modal-footer"></div>
+        </div>
+    </div>
+
 </body>
 </html>

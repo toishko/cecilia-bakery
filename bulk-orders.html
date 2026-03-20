@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Driver Dispatch | Cecilia Bakery</title>
+    <title>Driver Portal | Cecilia Bakery</title>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
     
     <!-- Shared Auth/Base styling -->
@@ -18,98 +18,120 @@
     <script type="module" src="driver-dashboard.js"></script>
 
     <style>
-        /* Mobile-first card style for dispatch */
-        .dispatch-card {
+        /* Driver-specific styles */
+        .catalog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .catalog-item {
             background: var(--bg-card);
             border: 1px solid var(--bd);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            border-radius: 10px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 8px;
         }
-        .dispatch-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            border-bottom: 1px dashed var(--bd);
-            padding-bottom: 12px;
-            margin-bottom: 4px;
-        }
-        .dispatch-title {
+        .catalog-item-name {
             font-family: 'Cormorant Garamond', serif;
-            font-size: 1.3rem;
+            font-size: 1.15rem;
             font-weight: 600;
             color: var(--tx);
-            margin-bottom: 4px;
         }
-        .dispatch-id {
-            font-size: 0.8rem;
-            color: var(--tx-muted);
-        }
-        .dispatch-address {
-            font-size: 0.95rem;
-            color: var(--tx);
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-            text-decoration: none;
-            background: var(--bg-hover);
-            padding: 10px;
-            border-radius: 8px;
-            transition: background 0.2s;
-        }
-        .dispatch-address:hover {
-            background: rgba(0,0,0,0.05);
-        }
-        .dispatch-items {
+        .catalog-item-price {
             font-size: 0.9rem;
             color: var(--tx-muted);
-            background: var(--bg-body);
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid var(--bd);
+            font-weight: 500;
         }
-        .dispatch-items ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
+        .qty-row {
             display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .dispatch-items li {
-            display: flex;
-            justify-content: space-between;
-        }
-        .dispatch-actions {
-            display: flex;
-            gap: 12px;
-            margin-top: 8px;
-        }
-        .btn-dispatch {
-            flex: 1;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            transition: opacity 0.2s;
-            display: flex;
-            justify-content: center;
             align-items: center;
             gap: 8px;
+            margin-top: auto;
         }
-        .btn-pickup {
-            background: #F2994A;
-            color: #fff;
+        .qty-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: 1px solid var(--bd);
+            background: transparent;
+            cursor: pointer;
+            color: var(--tx);
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
         }
-        .btn-deliver {
-            background: #1B5E20;
-            color: #fff;
+        .qty-btn:hover { background: rgba(200,16,46,.08); }
+        .qty-input {
+            width: 48px;
+            text-align: center;
+            border: 1px solid var(--bd);
+            border-radius: 6px;
+            padding: 6px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            background: var(--bg-input);
+            color: var(--tx);
+        }
+        .custom-items-section {
+            background: var(--bg-card);
+            border: 1px solid var(--bd);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .custom-item-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .custom-item-row input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid var(--bd);
+            border-radius: 6px;
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-input);
+            color: var(--tx);
+        }
+        .custom-item-row .qty-input { flex: 0 0 60px; }
+        .remove-custom-btn {
+            background: none;
+            border: none;
+            color: var(--red);
+            cursor: pointer;
+            padding: 4px;
+        }
+        .order-summary-bar {
+            background: var(--bg-card);
+            border: 1px solid var(--bd);
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .order-summary-bar .total {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--tx);
+        }
+        .order-summary-bar .total small {
+            font-size: 0.8rem;
+            color: var(--tx-muted);
+            font-weight: 400;
+            font-family: 'Outfit', sans-serif;
+            display: block;
         }
     </style>
 </head>
@@ -125,7 +147,7 @@
             <div class="sidebar-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
                     <div class="sidebar-brand">Cecilia <span>Bakery</span></div>
-                    <div class="sidebar-role" data-en="Driver Dispatch" data-es="Despacho de Conductores">Driver Dispatch</div>
+                    <div class="sidebar-role" data-en="Driver Portal" data-es="Portal de Conductor">Driver Portal</div>
                 </div>
                 <button class="close-sidebar" id="close-sidebar-btn" aria-label="Close Menu">
                     <i data-lucide="x" class="icon" style="width: 20px; height: 20px;"></i>
@@ -134,15 +156,21 @@
 
             <ul class="sidebar-nav">
                 <li>
-                    <a href="#dispatch" class="sidebar-link active">
-                        <i data-lucide="truck" class="icon"></i>
-                        <span data-en="Active Routes" data-es="Rutas Activas">Active Routes</span>
+                    <a href="#order" class="sidebar-link active">
+                        <i data-lucide="shopping-cart" class="icon"></i>
+                        <span data-en="Place Order" data-es="Hacer Pedido">Place Order</span>
                     </a>
                 </li>
                 <li>
-                    <a href="#completed" class="sidebar-link">
-                        <i data-lucide="check-circle" class="icon"></i>
-                        <span data-en="Completed Today" data-es="Completados Hoy">Completed Today</span>
+                    <a href="#myorders" class="sidebar-link">
+                        <i data-lucide="clipboard-list" class="icon"></i>
+                        <span data-en="My Orders" data-es="Mis Pedidos">My Orders</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#account" class="sidebar-link">
+                        <i data-lucide="user" class="icon"></i>
+                        <span data-en="Account" data-es="Cuenta">Account</span>
                     </a>
                 </li>
             </ul>
@@ -160,14 +188,14 @@
         </aside>
 
         <!-- ── MAIN CONTENT ── -->
-        <main class="main-content" style="max-width: 800px; margin: 0 auto; padding-top: 16px;">
+        <main class="main-content">
             <div class="dashboard-top">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <button class="hamburger-sidebar" id="mobile-menu-btn" aria-label="Toggle Menu">
                         <i data-lucide="menu" class="icon"></i>
                     </button>
                     <div>
-                        <h1 class="page-title" data-en="Dispatch Hub" data-es="Centro de Despacho">Dispatch Hub</h1>
+                        <h1 class="page-title" data-en="Driver Portal" data-es="Portal de Conductor">Driver Portal</h1>
                     </div>
                 </div>
                 
@@ -183,46 +211,129 @@
                 </div>
             </div>
 
-            <!-- Active Routes -->
-            <section id="sec-dispatch" class="tab-pane active">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                    <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 500; color: var(--tx-muted);" data-en="Active Deliveries" data-es="Entregas Activas">Active Deliveries</h2>
-                    <button id="refresh-dispatch-btn" style="background: transparent; border: 1px solid var(--bd); padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--tx); display: flex; align-items: center; gap: 6px; font-size: 0.85rem;">
-                        <i data-lucide="refresh-cw" class="icon" style="width: 14px; height: 14px;"></i> Refresh
-                    </button>
+            <!-- ══════ PLACE ORDER TAB ══════ -->
+            <section id="sec-order" class="tab-pane active">
+                <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 500; color: var(--tx-muted); margin-bottom: 16px;" data-en="Product Catalog" data-es="Catálogo de Productos">Product Catalog</h2>
+                
+                <div class="catalog-grid" id="catalog-grid">
+                    <!-- Rendered by JS -->
                 </div>
 
-                <div id="dispatch-list">
-                    <div style="text-align: center; color: var(--tx-muted); padding: 40px;">Loading deliveries...</div>
+                <!-- Custom Items Section -->
+                <div class="custom-items-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="font-family: 'Outfit', sans-serif; font-size: 0.95rem; font-weight: 600; color: var(--tx);" data-en="Custom / Special Items" data-es="Artículos Especiales">Custom / Special Items</h3>
+                        <button id="add-custom-item-btn" style="background: transparent; border: 1px solid var(--bd); padding: 6px 14px; border-radius: 6px; cursor: pointer; color: var(--tx); display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-family: 'Outfit', sans-serif;">
+                            <i data-lucide="plus" class="icon" style="width: 14px; height: 14px;"></i> <span data-en="Add Item" data-es="Agregar">Add Item</span>
+                        </button>
+                    </div>
+                    <p style="font-size: 0.82rem; color: var(--tx-muted); margin-bottom: 12px;" data-en="Add items not in the catalog. Admin will set the price upon approval." data-es="Agregue artículos que no están en el catálogo. El admin establecerá el precio al aprobar.">Add items not in the catalog. Admin will set the price upon approval.</p>
+                    <div id="custom-items-list">
+                        <!-- Custom rows added by JS -->
+                    </div>
+                </div>
+
+                <!-- Order Notes -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; color: var(--tx-muted); margin-bottom: 8px;" data-en="Order Notes" data-es="Notas del Pedido">Order Notes</label>
+                    <textarea id="order-notes" class="input-field" style="resize: vertical; min-height: 80px; width: 100%;" placeholder="E.g., Need by Friday morning, extra packaging..."></textarea>
+                </div>
+
+                <!-- Summary Bar -->
+                <div class="order-summary-bar">
+                    <div class="total">
+                        <small data-en="Estimated Total (custom items pending pricing)" data-es="Total Estimado (artículos especiales pendientes de precio)">Estimated Total (custom items pending pricing)</small>
+                        <span id="order-total">$0.00</span>
+                    </div>
+                    <button class="btn-submit" id="submit-order-btn" style="width: auto; padding: 14px 32px; margin-top: 0;" data-en="Submit Order" data-es="Enviar Pedido">Submit Order</button>
                 </div>
             </section>
 
-            <!-- Completed Today -->
-            <section id="sec-completed" class="tab-pane">
-                <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 500; color: var(--tx-muted); margin-bottom: 16px;" data-en="Completed Today" data-es="Completados Hoy">Completed Today</h2>
-                <div id="completed-list">
-                     <div style="text-align: center; color: var(--tx-muted); padding: 40px;">No deliveries completed yet...</div>
+            <!-- ══════ MY ORDERS TAB ══════ -->
+            <section id="sec-myorders" class="tab-pane">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 500; color: var(--tx-muted);" data-en="My Orders" data-es="Mis Pedidos">My Orders</h2>
+                    <button id="refresh-orders-btn" style="background: transparent; border: 1px solid var(--bd); padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--tx); display: flex; align-items: center; gap: 6px; font-size: 0.85rem;">
+                        <i data-lucide="refresh-cw" class="icon" style="width: 14px; height: 14px;"></i> Refresh
+                    </button>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th data-en="Order" data-es="Pedido">Order</th>
+                                <th data-en="Date" data-es="Fecha">Date</th>
+                                <th data-en="Items" data-es="Artículos">Items</th>
+                                <th data-en="Total" data-es="Total">Total</th>
+                                <th data-en="Status" data-es="Estado">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="my-orders-tbody">
+                            <tr><td colspan="5" style="text-align: center; color: var(--tx-muted); padding: 40px;">Loading orders...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ══════ ACCOUNT TAB ══════ -->
+            <section id="sec-account" class="tab-pane">
+                <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 500; color: var(--tx-muted); margin-bottom: 16px;" data-en="Account Settings" data-es="Configuración de Cuenta">Account Settings</h2>
+                
+                <div class="widget" style="margin-bottom: 24px;">
+                    <h3 class="widget-title" data-en="Profile" data-es="Perfil">Profile</h3>
+                    <div style="display: grid; gap: 12px; margin-top: 12px;">
+                        <div>
+                            <label class="input-label" data-en="Full Name" data-es="Nombre Completo">Full Name</label>
+                            <input type="text" class="input-field" id="profile-name" placeholder="Your name" />
+                        </div>
+                        <div>
+                            <label class="input-label" data-en="Phone Number" data-es="Teléfono">Phone Number</label>
+                            <input type="tel" class="input-field" id="profile-phone" placeholder="(305) 555-0000" />
+                        </div>
+                        <div>
+                            <label class="input-label" data-en="Email" data-es="Correo">Email</label>
+                            <input type="email" class="input-field" id="profile-email" disabled />
+                        </div>
+                        <button class="btn-submit" id="save-profile-btn" style="width: auto; padding: 12px 24px; justify-self: start;" data-en="Save Changes" data-es="Guardar Cambios">Save Changes</button>
+                        <span id="profile-msg" style="font-size: 0.85rem;"></span>
+                    </div>
+                </div>
+
+                <div class="widget">
+                    <h3 class="widget-title" data-en="Change Password" data-es="Cambiar Contraseña">Change Password</h3>
+                    <form id="settings-form" style="display: grid; gap: 12px; margin-top: 12px;">
+                        <div>
+                            <label class="input-label" data-en="Current Password" data-es="Contraseña Actual">Current Password</label>
+                            <input type="password" class="input-field" id="settings-current-pwd" required />
+                        </div>
+                        <div>
+                            <label class="input-label" data-en="New Password" data-es="Nueva Contraseña">New Password</label>
+                            <input type="password" class="input-field" id="settings-new-pwd" required />
+                        </div>
+                        <div>
+                            <label class="input-label" data-en="Confirm New Password" data-es="Confirmar Contraseña">Confirm New Password</label>
+                            <input type="password" class="input-field" id="settings-conf-pwd" required />
+                        </div>
+                        <button type="submit" class="btn-submit" id="settings-btn" style="width: auto; padding: 12px 24px; justify-self: start;" data-en="Update Password" data-es="Actualizar Contraseña">Update Password</button>
+                        <span id="settings-msg" style="font-size: 0.85rem;"></span>
+                    </form>
                 </div>
             </section>
 
         </main>
     </div>
 
-    <!-- Notes Modal -->
-    <div class="modal-overlay-bg" id="notes-modal-overlay">
-        <div class="modal-card" style="max-width: 400px; width: 90%;">
+    <!-- Order Detail Modal -->
+    <div class="modal-overlay-bg" id="order-detail-modal-overlay">
+        <div class="modal-card" style="max-width: 540px; width: 90%;">
             <div class="modal-header">
-                <h3 data-en="Delivery Notes" data-es="Notas de Entrega">Delivery Notes</h3>
-                <button class="modal-close-btn" id="close-notes-btn" aria-label="Close Modal">
+                <h3 data-en="Order Details" data-es="Detalles del Pedido">Order Details</h3>
+                <button class="modal-close-btn" id="close-order-detail-btn" aria-label="Close Modal">
                     <i data-lucide="x" class="icon" style="width: 20px; height: 20px;"></i>
                 </button>
             </div>
-            <div class="modal-body">
-                <p style="font-size: 0.9rem; color: var(--tx-muted); margin-bottom: 12px;" data-en="Leave a note regarding this delivery." data-es="Deje una nota sobre esta entrega.">Leave a note regarding this delivery.</p>
-                <textarea id="delivery-note-input" class="input-field" style="resize: vertical; min-height: 100px;" placeholder="E.g., Left at back door, handed to receptionist..."></textarea>
-            </div>
-            <div class="modal-footer" style="padding-top: 16px; display: flex; justify-content: flex-end;">
-                <button class="btn-submit" id="submit-delivery-btn" data-en="Confirm Delivery" data-es="Confirmar Entrega">Confirm Delivery</button>
+            <div class="modal-body" id="order-detail-body">
+                <!-- Populated by JS -->
             </div>
         </div>
     </div>

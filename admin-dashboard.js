@@ -213,6 +213,8 @@ function setupTabs() {
                 fetchUserDirectory();
             } else if (targetId === 'orders') {
                 fetchMasterOrders();
+            } else if (targetId === 'driverorders') {
+                fetchDriverOrders();
             }
         });
     });
@@ -488,7 +490,8 @@ window.openUserModal = function(userId) {
             can_cancel_orders: false,
             can_approve_partners: false,
             can_manage_users: false,
-            can_view_analytics: false
+            can_view_analytics: false,
+            can_manage_driver_orders: false
         };
 
         permsGrid.innerHTML = `
@@ -509,6 +512,9 @@ window.openUserModal = function(userId) {
             </label>
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                 <input type="checkbox" id="modal_perm_analytics" ${perms.can_view_analytics ? 'checked' : ''} style="cursor: pointer;"> View Analytics
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="modal_perm_driver_orders" ${perms.can_manage_driver_orders ? 'checked' : ''} style="cursor: pointer;"> Manage Driver Orders
             </label>
         `;
 
@@ -565,7 +571,8 @@ window.saveStaffPermissionsModal = async function(userId, btnEl) {
         can_cancel_orders: document.getElementById('modal_perm_cancel').checked,
         can_approve_partners: document.getElementById('modal_perm_partners').checked,
         can_manage_users: document.getElementById('modal_perm_users').checked,
-        can_view_analytics: document.getElementById('modal_perm_analytics').checked
+        can_view_analytics: document.getElementById('modal_perm_analytics').checked,
+        can_manage_driver_orders: document.getElementById('modal_perm_driver_orders').checked
     };
 
     try {
@@ -1135,4 +1142,338 @@ window.closeOrderModal = function() {
 
 window.printOrder = function() {
     window.print();
+};
+
+// ══════════════════════════════════════════════════════════
+// DRIVER ORDER MANAGEMENT
+// ══════════════════════════════════════════════════════════
+let allDriverOrders = [];
+let driverOrderFilter = 'all';
+
+async function fetchDriverOrders() {
+    const tbody = document.getElementById('driver-orders-tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--tx-muted); padding: 40px;">Loading driver orders...</td></tr>';
+    
+    try {
+        const { data, error } = await supabase
+            .from('driver_orders')
+            .select(`
+                *,
+                profiles:driver_id ( full_name )
+            `)
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        allDriverOrders = data || [];
+        renderDriverOrders();
+        setupDriverOrderFilters();
+        
+    } catch (err) {
+        console.error('Error fetching driver orders:', err);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--red); padding: 40px;">Error loading driver orders.</td></tr>';
+    }
+}
+
+function setupDriverOrderFilters() {
+    const filterBtns = document.querySelectorAll('[data-driverorder]');
+    filterBtns.forEach(btn => {
+        btn.onclick = () => {
+            filterBtns.forEach(b => b.classList.remove('active-filter'));
+            btn.classList.add('active-filter');
+            driverOrderFilter = btn.getAttribute('data-driverorder');
+            renderDriverOrders();
+        };
+    });
+    
+    const refreshBtn = document.getElementById('refresh-driver-orders-btn');
+    if (refreshBtn) {
+        refreshBtn.onclick = () => {
+            refreshBtn.innerHTML = '<i data-lucide="refresh-cw" class="icon" style="width: 14px; height: 14px; animation: spin 1s linear infinite;"></i> Refreshing...';
+            fetchDriverOrders().then(() => {
+                refreshBtn.innerHTML = '<i data-lucide="refresh-cw" class="icon" style="width: 14px; height: 14px;"></i> Refresh';
+                if (window.lucide) window.lucide.createIcons();
+            });
+        };
+    }
+}
+
+function getDriverStatusStyle(status) {
+    const map = {
+        pending:           { color: '#F2994A', bg: 'rgba(242, 153, 74, 0.15)', label: 'Pending' },
+        approved:          { color: 'var(--icon-blue, #A6CEFF)', bg: 'rgba(166, 206, 255, 0.15)', label: 'Approved' },
+        in_progress:       { color: '#E2A93B', bg: 'rgba(226, 169, 59, 0.15)', label: 'In Progress' },
+        ready_for_pickup:  { color: '#1B5E20', bg: 'rgba(27, 94, 32, 0.15)', label: 'Ready for Pickup' },
+        picked_up:         { color: '#6B5057', bg: 'rgba(107, 80, 87, 0.15)', label: 'Picked Up' },
+        rejected:          { color: 'var(--red)', bg: 'rgba(200, 16, 46, 0.15)', label: 'Rejected' }
+    };
+    return map[status] || map.pending;
+}
+
+function renderDriverOrders() {
+    const tbody = document.getElementById('driver-orders-tbody');
+    if (!tbody) return;
+    
+    let filtered = allDriverOrders;
+    if (driverOrderFilter !== 'all') {
+        filtered = allDriverOrders.filter(o => o.status === driverOrderFilter);
+    }
+    
+    if (filtered.length === 0) {
+        tbody.innerHTML = `
+            <tr><td colspan="6" style="text-align: center; padding: 40px;">
+                <div style="display: flex; flex-direction: column; align-items: center; color: var(--tx-muted);">
+                    <i data-lucide="truck" class="icon" style="width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.4;"></i>
+                    <span style="font-weight: 500;">No driver orders found.</span>
+                </div>
+            </td></tr>`;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+    }
+    
+    tbody.innerHTML = '';
+    filtered.forEach(order => {
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.addEventListener('click', () => openDriverOrderModal(order));
+        
+        const shortId = order.id.split('-')[0].toUpperCase();
+        const profile = Array.isArray(order.profiles) ? order.profiles[0] : order.profiles;
+        const driverName = profile?.full_name || 'Unknown Driver';
+        const date = new Date(order.created_at).toLocaleDateString();
+        const { color, bg, label } = getDriverStatusStyle(order.status);
+        
+        const catalogCount = Array.isArray(order.items) ? order.items.reduce((s, i) => s + (i.quantity || 0), 0) : 0;
+        const customCount = Array.isArray(order.custom_items) ? order.custom_items.reduce((s, i) => s + (i.quantity || 0), 0) : 0;
+        const totalItems = catalogCount + customCount;
+        const hasCustom = customCount > 0;
+        
+        const total = parseFloat(order.total_amount) || 0;
+        
+        tr.innerHTML = `
+            <td><strong>#${shortId}</strong></td>
+            <td>${driverName}</td>
+            <td>${date}</td>
+            <td>${totalItems} items${hasCustom ? ' <em style="font-size: 0.75rem; color: var(--tx-muted);">(+custom)</em>' : ''}</td>
+            <td><strong>$${total.toFixed(2)}</strong></td>
+            <td><span class="badge" style="background: ${bg}; color: ${color}; border: 1px solid ${color};">${label}</span></td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    if (window.lucide) window.lucide.createIcons();
+}
+
+// ── Driver Order Review Modal ──
+let currentDriverOrder = null;
+
+function openDriverOrderModal(order) {
+    currentDriverOrder = order;
+    
+    const overlay = document.getElementById('driver-order-modal-overlay');
+    const titleEl = document.getElementById('driver-modal-order-id');
+    const metaEl = document.getElementById('driver-modal-meta');
+    const body = document.getElementById('driver-modal-body');
+    const footer = document.getElementById('driver-modal-footer');
+    if (!overlay || !body) return;
+    
+    const shortId = order.id.split('-')[0].toUpperCase();
+    const profile = Array.isArray(order.profiles) ? order.profiles[0] : order.profiles;
+    const driverName = profile?.full_name || 'Unknown Driver';
+    const date = new Date(order.created_at).toLocaleString();
+    const { color, bg, label } = getDriverStatusStyle(order.status);
+    
+    titleEl.textContent = `Order #${shortId}`;
+    metaEl.innerHTML = `${driverName} · ${date} · <span class="badge" style="background: ${bg}; color: ${color}; border: 1px solid ${color}; font-size: 0.65rem; padding: 2px 6px;">${label}</span>`;
+    
+    // Build items list
+    let html = '';
+    
+    if (Array.isArray(order.items) && order.items.length > 0) {
+        html += '<div style="margin-bottom: 16px;"><strong style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--tx-muted);">Catalog Items</strong>';
+        html += '<ul style="list-style: none; padding: 0; margin: 8px 0 0;">';
+        order.items.forEach(item => {
+            html += `<li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--bd);"><span>${item.name} × ${item.quantity}</span><span style="font-weight: 600;">$${(parseFloat(item.unit_price) * item.quantity).toFixed(2)}</span></li>`;
+        });
+        html += '</ul></div>';
+    }
+    
+    if (Array.isArray(order.custom_items) && order.custom_items.length > 0) {
+        html += '<div style="margin-bottom: 16px;"><strong style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--tx-muted);">Custom / Special Items</strong>';
+        html += '<ul style="list-style: none; padding: 0; margin: 8px 0 0;">';
+        order.custom_items.forEach((item, idx) => {
+            if (order.status === 'pending' && item.unit_price === null) {
+                html += `<li style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--bd);">
+                    <span>${item.name} × ${item.quantity}</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span style="font-size: 0.85rem; color: var(--tx-muted);">$</span>
+                        <input type="number" step="0.01" min="0" id="custom-price-${idx}" placeholder="Set price" style="width: 80px; padding: 4px 6px; border: 1px solid var(--bd); border-radius: 4px; font-family: 'Outfit', sans-serif; font-size: 0.9rem; background: var(--bg-input); color: var(--tx);">
+                    </div>
+                </li>`;
+            } else {
+                const price = item.unit_price !== null ? `$${(parseFloat(item.unit_price) * item.quantity).toFixed(2)}` : '<em style="color: var(--tx-muted);">TBD</em>';
+                html += `<li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--bd);"><span>${item.name} × ${item.quantity}</span><span style="font-weight: 600;">${price}</span></li>`;
+            }
+        });
+        html += '</ul></div>';
+    }
+    
+    if (order.notes) {
+        html += `<div style="background: var(--bg-body, var(--bg)); padding: 12px; border-radius: 8px; border: 1px solid var(--bd); margin-bottom: 12px;"><strong style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--tx-muted); display: block; margin-bottom: 4px;">Driver Notes</strong><span style="font-size: 0.9rem;">${order.notes}</span></div>`;
+    }
+    
+    // Admin notes input for pending orders
+    if (order.status === 'pending') {
+        html += `<div style="margin-bottom: 12px;"><label style="display: block; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; color: var(--tx-muted); margin-bottom: 6px;">Admin Notes (optional)</label><textarea id="driver-admin-notes" class="input-field" style="resize: vertical; min-height: 60px; width: 100%;" placeholder="Notes visible to the driver..."></textarea></div>`;
+    } else if (order.admin_notes) {
+        html += `<div style="background: var(--bg-body, var(--bg)); padding: 12px; border-radius: 8px; border: 1px solid var(--bd); margin-bottom: 12px;"><strong style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--tx-muted); display: block; margin-bottom: 4px;">Admin Notes</strong><span style="font-size: 0.9rem;">${order.admin_notes}</span></div>`;
+    }
+    
+    const total = parseFloat(order.total_amount) || 0;
+    html += `<div style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--bd);"><span style="font-size: 0.85rem; color: var(--tx-muted);">Total</span><span style="font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 700;">$${total.toFixed(2)}</span></div>`;
+    
+    body.innerHTML = html;
+    
+    // Build footer actions
+    if (order.status === 'pending') {
+        footer.innerHTML = `
+            <button class="btn-submit" style="background: transparent; border: 1px solid var(--red); color: var(--red); padding: 8px 16px; margin: 0; width: auto;" onclick="window.rejectDriverOrder('${order.id}')">Reject</button>
+            <button class="btn-submit" style="padding: 8px 24px; margin: 0; width: auto;" onclick="window.approveDriverOrder('${order.id}')">Approve Order</button>
+        `;
+    } else if (order.status === 'rejected' || order.status === 'picked_up') {
+        footer.innerHTML = '<span style="font-size: 0.85rem; color: var(--tx-muted);">No actions available</span>';
+    } else {
+        const nextStatus = getNextDriverStatus(order.status);
+        footer.innerHTML = `
+            <span style="font-size: 0.85rem; color: var(--tx-muted);">Advance to:</span>
+            <button class="btn-submit" style="padding: 8px 24px; margin: 0; width: auto;" onclick="window.advanceDriverOrder('${order.id}', '${nextStatus.key}')">${nextStatus.label}</button>
+        `;
+    }
+    
+    if (window.lucide) window.lucide.createIcons();
+    overlay.classList.add('open');
+}
+
+function getNextDriverStatus(current) {
+    const flow = {
+        approved: { key: 'in_progress', label: 'In Progress' },
+        in_progress: { key: 'ready_for_pickup', label: 'Ready for Pickup' },
+        ready_for_pickup: { key: 'picked_up', label: 'Picked Up' }
+    };
+    return flow[current] || { key: current, label: current };
+}
+
+window.closeDriverOrderModal = function() {
+    const overlay = document.getElementById('driver-order-modal-overlay');
+    if (overlay) overlay.classList.remove('open');
+    currentDriverOrder = null;
+};
+
+window.approveDriverOrder = async function(orderId) {
+    if (!currentDriverOrder) return;
+    
+    // Gather custom item prices
+    const customItems = [...(currentDriverOrder.custom_items || [])];
+    let allPriced = true;
+    
+    customItems.forEach((item, idx) => {
+        if (item.unit_price === null) {
+            const priceInput = document.getElementById(`custom-price-${idx}`);
+            const price = priceInput ? parseFloat(priceInput.value) : null;
+            if (!price || price <= 0) {
+                allPriced = false;
+            } else {
+                customItems[idx] = { ...item, unit_price: price };
+            }
+        }
+    });
+    
+    if (!allPriced) {
+        window.showDashboardToast('Please set a price for all custom items before approving.', 'warning');
+        return;
+    }
+    
+    // Calculate new total
+    let total = 0;
+    if (Array.isArray(currentDriverOrder.items)) {
+        currentDriverOrder.items.forEach(item => {
+            total += (parseFloat(item.unit_price) || 0) * (item.quantity || 0);
+        });
+    }
+    customItems.forEach(item => {
+        total += (parseFloat(item.unit_price) || 0) * (item.quantity || 0);
+    });
+    
+    const adminNotes = document.getElementById('driver-admin-notes')?.value || '';
+    
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        const { error } = await supabase
+            .from('driver_orders')
+            .update({
+                status: 'approved',
+                custom_items: customItems,
+                total_amount: total,
+                admin_notes: adminNotes || null,
+                approved_by: user.id,
+                approved_at: new Date().toISOString()
+            })
+            .eq('id', orderId);
+        
+        if (error) throw error;
+        
+        window.showDashboardToast('Driver order approved!', 'success');
+        window.closeDriverOrderModal();
+        fetchDriverOrders();
+        
+    } catch (err) {
+        console.error('Error approving driver order:', err);
+        window.showDashboardToast('Failed to approve order.', 'error');
+    }
+};
+
+window.rejectDriverOrder = async function(orderId) {
+    try {
+        const adminNotes = document.getElementById('driver-admin-notes')?.value || '';
+        
+        const { error } = await supabase
+            .from('driver_orders')
+            .update({
+                status: 'rejected',
+                admin_notes: adminNotes || 'Order rejected by admin.'
+            })
+            .eq('id', orderId);
+        
+        if (error) throw error;
+        
+        window.showDashboardToast('Driver order rejected.', 'warning');
+        window.closeDriverOrderModal();
+        fetchDriverOrders();
+        
+    } catch (err) {
+        console.error('Error rejecting driver order:', err);
+        window.showDashboardToast('Failed to reject order.', 'error');
+    }
+};
+
+window.advanceDriverOrder = async function(orderId, newStatus) {
+    try {
+        const { error } = await supabase
+            .from('driver_orders')
+            .update({ status: newStatus })
+            .eq('id', orderId);
+        
+        if (error) throw error;
+        
+        window.showDashboardToast(`Order advanced to ${newStatus.replace(/_/g, ' ')}!`, 'success');
+        window.closeDriverOrderModal();
+        fetchDriverOrders();
+        
+    } catch (err) {
+        console.error('Error advancing driver order:', err);
+        window.showDashboardToast('Failed to advance order status.', 'error');
+    }
 };
