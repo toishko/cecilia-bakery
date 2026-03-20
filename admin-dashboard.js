@@ -217,6 +217,8 @@ function setupTabs() {
                 fetchDriverOrders();
             } else if (targetId === 'driveraccounts') {
                 fetchDriverAccounts();
+            } else if (targetId === 'routeclients') {
+                fetchRouteClients();
             }
         });
     });
@@ -1693,6 +1695,117 @@ window.submitPayment = async function() {
         window.showDashboardToast('Failed to log payment.', 'error');
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = 'Log Payment'; }
+    }
+};
+
+// ══════════════════════════════════════════════════════════
+// ROUTE CLIENTS
+// ══════════════════════════════════════════════════════════
+let allRouteClients = [];
+let allDriversList = [];
+
+async function fetchRouteClients() {
+    const tbody = document.getElementById('route-clients-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--tx-muted); padding: 40px;">Loading route clients...</td></tr>';
+    
+    try {
+        const { data: clients, error: cErr } = await supabase
+            .from('driver_route_clients')
+            .select('*')
+            .order('business_name', { ascending: true });
+        if (cErr) throw cErr;
+        
+        const { data: drivers, error: dErr } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .eq('role', 'driver');
+        if (dErr) throw dErr;
+        
+        allRouteClients = clients || [];
+        allDriversList = drivers || [];
+        
+        // Populate driver filter
+        const filterSelect = document.getElementById('route-driver-filter');
+        if (filterSelect) {
+            const currentVal = filterSelect.value;
+            filterSelect.innerHTML = '<option value="all">All Drivers</option>';
+            allDriversList.forEach(d => {
+                filterSelect.innerHTML += `<option value="${d.id}">${d.full_name || 'Unknown'}</option>`;
+            });
+            filterSelect.value = currentVal || 'all';
+            filterSelect.onchange = () => renderRouteClients();
+        }
+        
+        renderRouteClients();
+        
+        const refreshBtn = document.getElementById('refresh-route-clients-btn');
+        if (refreshBtn) refreshBtn.onclick = () => fetchRouteClients();
+        
+    } catch (err) {
+        console.error('Error fetching route clients:', err);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--red); padding: 40px;">Error loading route clients.</td></tr>';
+    }
+}
+
+function renderRouteClients() {
+    const tbody = document.getElementById('route-clients-tbody');
+    if (!tbody) return;
+    
+    const filterVal = document.getElementById('route-driver-filter')?.value || 'all';
+    let filtered = allRouteClients;
+    if (filterVal !== 'all') {
+        filtered = allRouteClients.filter(c => c.driver_id === filterVal);
+    }
+    
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--tx-muted); padding: 40px;">No route clients found.</td></tr>';
+        return;
+    }
+    
+    const driverMap = {};
+    allDriversList.forEach(d => driverMap[d.id] = d.full_name || 'Unknown');
+    
+    tbody.innerHTML = '';
+    filtered.forEach(client => {
+        const tr = document.createElement('tr');
+        const mapsUrl = client.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(client.address)}` : null;
+        
+        // Build reassign dropdown
+        let reassignOpts = '';
+        allDriversList.forEach(d => {
+            reassignOpts += `<option value="${d.id}" ${d.id === client.driver_id ? 'selected' : ''}>${d.full_name || 'Unknown'}</option>`;
+        });
+        
+        tr.innerHTML = `
+            <td><strong>${client.business_name}</strong></td>
+            <td>${client.contact_name || '<span style="color:var(--tx-muted)">—</span>'}</td>
+            <td>${client.phone ? `<a href="tel:${client.phone}" style="color: var(--tx)">${client.phone}</a>` : '<span style="color:var(--tx-muted)">—</span>'}</td>
+            <td>${client.address ? (mapsUrl ? `<a href="${mapsUrl}" target="_blank" rel="noopener" style="color: var(--brand); text-decoration: underline; font-size: 0.85rem;">${client.address}</a>` : client.address) : '<span style="color:var(--tx-muted)">—</span>'}</td>
+            <td><strong>${driverMap[client.driver_id] || 'Unknown'}</strong></td>
+            <td><span class="badge" style="background: ${client.is_active ? 'rgba(27,94,32,0.15)' : 'rgba(200,16,46,0.15)'}; color: ${client.is_active ? '#1B5E20' : 'var(--red)'}; border: 1px solid ${client.is_active ? '#1B5E20' : 'var(--red)'}">${client.is_active ? 'Active' : 'Inactive'}</span></td>
+            <td><select class="input-field" style="padding:4px 6px;font-size:0.8rem;min-width:120px;margin:0;cursor:pointer" onchange="window.reassignClient('${client.id}', this.value)">${reassignOpts}</select></td>
+        `;
+        
+        tbody.appendChild(tr);
+    });
+}
+
+window.reassignClient = async function(clientId, newDriverId) {
+    try {
+        const { error } = await supabase
+            .from('driver_route_clients')
+            .update({ driver_id: newDriverId })
+            .eq('id', clientId);
+        
+        if (error) throw error;
+        
+        const driverName = allDriversList.find(d => d.id === newDriverId)?.full_name || 'Unknown';
+        window.showDashboardToast(`Client reassigned to ${driverName}!`, 'success');
+        fetchRouteClients();
+    } catch (err) {
+        console.error('Error reassigning client:', err);
+        window.showDashboardToast('Failed to reassign client.', 'error');
     }
 };
 

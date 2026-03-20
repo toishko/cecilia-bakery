@@ -82,6 +82,12 @@
                         <span data-en="Driver Accounts" data-es="Cuentas de Conductores">Driver Accounts</span>
                     </a>
                 </li>
+                <li id="tab-routeclients">
+                    <a href="#routeclients" class="sidebar-link">
+                        <i data-lucide="map" class="icon"></i>
+                        <span data-en="Route Clients" data-es="Clientes de Ruta">Route Clients</span>
+                    </a>
+                </li>
                 <li id="tab-analytics">
                     <a href="#analytics" class="sidebar-link">
                         <i data-lucide="bar-chart-2" class="icon"></i>
@@ -325,6 +331,42 @@
                         </thead>
                         <tbody id="driver-accounts-tbody">
                             <tr><td colspan="7" style="text-align: center; color: var(--tx-muted); padding: 40px;">Loading driver accounts...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ══════ ROUTE CLIENTS ══════ -->
+            <section id="sec-routeclients" class="tab-pane">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+                    <div>
+                        <h2 style="font-size: 1.5rem; font-family: 'Cormorant Garamond', serif; color: var(--tx);">Route Clients</h2>
+                        <p style="color: var(--tx-muted); margin-top: 4px; font-size: 0.9rem;">All businesses serviced by drivers.</p>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <select id="route-driver-filter" class="input-field" style="min-width: 160px; margin: 0; cursor: pointer;">
+                            <option value="all">All Drivers</option>
+                        </select>
+                        <button id="refresh-route-clients-btn" style="background: transparent; border: 1px solid var(--bd); padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--tx); display: flex; align-items: center; gap: 6px; font-size: 0.85rem;">
+                            <i data-lucide="refresh-cw" class="icon" style="width: 14px; height: 14px;"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Business</th>
+                                <th>Contact</th>
+                                <th>Phone</th>
+                                <th>Address</th>
+                                <th>Driver</th>
+                                <th>Status</th>
+                                <th>Reassign</th>
+                            </tr>
+                        </thead>
+                        <tbody id="route-clients-tbody">
+                            <tr><td colspan="7" style="text-align: center; color: var(--tx-muted); padding: 40px;">Loading route clients...</td></tr>
                         </tbody>
                     </table>
                 </div>

@@ -128,6 +128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (!window.staffPermissions.can_manage_driver_payments) {
             document.getElementById('tab-driveraccounts')?.remove();
+            document.getElementById('tab-routeclients')?.remove();
         }
         
         if (!hasAnyPermission) {
@@ -292,6 +293,8 @@ function setupTabs() {
                 fetchDriverOrders();
             } else if (targetId === 'driveraccounts') {
                 fetchDriverAccounts();
+            } else if (targetId === 'routeclients') {
+                fetchRouteClients();
             }
         });
     });
@@ -1555,4 +1558,70 @@ window.submitPayment = async function() {
     } catch (err) { console.error(err); window.showDashboardToast('Failed to log payment.', 'error'); }
     finally { if (btn) { btn.disabled = false; btn.textContent = 'Log Payment'; } }
 };
+
+// ══════════════════════════════════════════════════════════
+// ROUTE CLIENTS (Gated by can_manage_driver_payments)
+// ══════════════════════════════════════════════════════════
+let allRouteClients = [];
+let allDriversList = [];
+
+async function fetchRouteClients() {
+    if (!window.staffPermissions?.can_manage_driver_payments) return;
+    const tbody = document.getElementById('route-clients-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--tx-muted);padding:40px">Loading route clients...</td></tr>';
+    try {
+        const { data: clients, error: cErr } = await supabase.from('driver_route_clients').select('*').order('business_name', { ascending: true });
+        if (cErr) throw cErr;
+        const { data: drivers, error: dErr } = await supabase.from('profiles').select('id, full_name').eq('role', 'driver');
+        if (dErr) throw dErr;
+        allRouteClients = clients || []; allDriversList = drivers || [];
+        const filterSelect = document.getElementById('route-driver-filter');
+        if (filterSelect) {
+            const v = filterSelect.value;
+            filterSelect.innerHTML = '<option value="all">All Drivers</option>';
+            allDriversList.forEach(d => filterSelect.innerHTML += `<option value="${d.id}">${d.full_name||'Unknown'}</option>`);
+            filterSelect.value = v || 'all';
+            filterSelect.onchange = () => renderRouteClients();
+        }
+        renderRouteClients();
+        const rb = document.getElementById('refresh-route-clients-btn');
+        if (rb) rb.onclick = () => fetchRouteClients();
+    } catch (err) { console.error(err); tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--red);padding:40px">Error loading.</td></tr>'; }
+}
+
+function renderRouteClients() {
+    const tbody = document.getElementById('route-clients-tbody');
+    if (!tbody) return;
+    const fv = document.getElementById('route-driver-filter')?.value || 'all';
+    let filtered = fv !== 'all' ? allRouteClients.filter(c => c.driver_id === fv) : allRouteClients;
+    if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--tx-muted);padding:40px">No route clients found.</td></tr>'; return; }
+    const dm = {}; allDriversList.forEach(d => dm[d.id] = d.full_name || 'Unknown');
+    tbody.innerHTML = '';
+    filtered.forEach(c => {
+        const tr = document.createElement('tr');
+        const mu = c.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address)}` : null;
+        let opts = ''; allDriversList.forEach(d => opts += `<option value="${d.id}" ${d.id===c.driver_id?'selected':''}>${d.full_name||'Unknown'}</option>`);
+        tr.innerHTML = `
+            <td><strong>${c.business_name}</strong></td>
+            <td>${c.contact_name||'<span style="color:var(--tx-muted)">—</span>'}</td>
+            <td>${c.phone?`<a href="tel:${c.phone}" style="color:var(--tx)">${c.phone}</a>`:'<span style="color:var(--tx-muted)">—</span>'}</td>
+            <td>${c.address?(mu?`<a href="${mu}" target="_blank" rel="noopener" style="color:var(--brand);text-decoration:underline;font-size:0.85rem">${c.address}</a>`:c.address):'<span style="color:var(--tx-muted)">—</span>'}</td>
+            <td><strong>${dm[c.driver_id]||'Unknown'}</strong></td>
+            <td><span class="badge" style="background:${c.is_active?'rgba(27,94,32,0.15)':'rgba(200,16,46,0.15)'};color:${c.is_active?'#1B5E20':'var(--red)'};border:1px solid ${c.is_active?'#1B5E20':'var(--red)'}">${c.is_active?'Active':'Inactive'}</span></td>
+            <td><select class="input-field" style="padding:4px 6px;font-size:0.8rem;min-width:120px;margin:0;cursor:pointer" onchange="window.reassignClient('${c.id}',this.value)">${opts}</select></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+window.reassignClient = async function(cid, did) {
+    try {
+        const { error } = await supabase.from('driver_route_clients').update({ driver_id: did }).eq('id', cid);
+        if (error) throw error;
+        window.showDashboardToast(`Client reassigned to ${allDriversList.find(d=>d.id===did)?.full_name||'driver'}!`, 'success');
+        fetchRouteClients();
+    } catch (err) { console.error(err); window.showDashboardToast('Failed to reassign.', 'error'); }
+};
+
 

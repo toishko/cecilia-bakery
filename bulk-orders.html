@@ -168,6 +168,12 @@
                     </a>
                 </li>
                 <li>
+                    <a href="#myroute" class="sidebar-link">
+                        <i data-lucide="map-pin" class="icon"></i>
+                        <span data-en="My Route" data-es="Mi Ruta">My Route</span>
+                    </a>
+                </li>
+                <li>
                     <a href="#account" class="sidebar-link">
                         <i data-lucide="user" class="icon"></i>
                         <span data-en="Account" data-es="Cuenta">Account</span>
@@ -275,6 +281,22 @@
                 </div>
             </section>
 
+            <!-- ══════ MY ROUTE TAB ══════ -->
+            <section id="sec-myroute" class="tab-pane">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+                    <div>
+                        <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; color: var(--tx);" data-en="My Route Clients" data-es="Clientes de Mi Ruta">My Route Clients</h2>
+                        <p style="color: var(--tx-muted); font-size: 0.9rem; margin-top: 4px;" data-en="Restaurants, groceries, and supermarkets you service" data-es="Restaurantes, tiendas y supermercados que atiende">Restaurants, groceries, and supermarkets you service</p>
+                    </div>
+                    <button class="btn-submit" id="add-client-btn" style="width: auto; padding: 10px 20px; margin: 0; display: flex; align-items: center; gap: 6px;">
+                        <i data-lucide="plus" class="icon" style="width: 16px; height: 16px;"></i> <span data-en="Add Client" data-es="Agregar Cliente">Add Client</span>
+                    </button>
+                </div>
+                <div id="route-clients-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+                    <p style="color: var(--tx-muted); text-align: center; padding: 40px; grid-column: 1 / -1;">Loading clients...</p>
+                </div>
+            </section>
+
             <!-- ══════ ACCOUNT TAB ══════ -->
             <section id="sec-account" class="tab-pane">
                 <!-- Balance Summary -->
@@ -370,6 +392,46 @@
             </div>
             <div class="modal-body" id="order-detail-body">
                 <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD/EDIT CLIENT MODAL -->
+    <div class="modal-overlay-bg" id="client-modal-overlay" onclick="if(event.target === this) window.closeClientModal()">
+        <div class="modal-card" style="max-width: 480px; width: 90%;">
+            <div class="modal-header">
+                <h3 id="client-modal-title" data-en="Add Client" data-es="Agregar Cliente">Add Client</h3>
+                <button class="modal-close-btn" onclick="window.closeClientModal()" aria-label="Close">
+                    <i data-lucide="x" class="icon" style="width: 24px; height: 24px;"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="client-edit-id" value="" />
+                <div style="display: grid; gap: 14px;">
+                    <div>
+                        <label class="input-label" data-en="Business Name *" data-es="Nombre del Negocio *">Business Name *</label>
+                        <input type="text" class="input-field" id="client-business" placeholder="e.g. La Rosa Restaurant" required />
+                    </div>
+                    <div>
+                        <label class="input-label" data-en="Contact Name" data-es="Nombre del Contacto">Contact Name</label>
+                        <input type="text" class="input-field" id="client-contact" placeholder="e.g. Maria Lopez" />
+                    </div>
+                    <div>
+                        <label class="input-label" data-en="Phone" data-es="Teléfono">Phone</label>
+                        <input type="tel" class="input-field" id="client-phone" placeholder="(305) 555-0000" />
+                    </div>
+                    <div>
+                        <label class="input-label" data-en="Address" data-es="Dirección">Address</label>
+                        <input type="text" class="input-field" id="client-address" placeholder="123 Main St, Miami, FL" />
+                    </div>
+                    <div>
+                        <label class="input-label" data-en="Notes" data-es="Notas">Notes</label>
+                        <textarea class="input-field" id="client-notes" style="resize: vertical; min-height: 50px;" placeholder="Special instructions..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-submit" id="save-client-btn" style="width: auto; padding: 10px 24px; margin: 0;" onclick="window.saveClient()">Save Client</button>
             </div>
         </div>
     </div>

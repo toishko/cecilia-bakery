@@ -90,6 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         fetchMyOrders();
         fetchInvoices();
+        fetchRouteClients();
 
     } catch (err) {
         console.error('Error during driver verification:', err);
@@ -559,6 +560,8 @@ function setupTabs() {
                 fetchMyOrders();
             } else if (targetId === 'account') {
                 fetchInvoices();
+            } else if (targetId === 'myroute') {
+                fetchRouteClients();
             }
         });
     });
@@ -715,3 +718,183 @@ async function fetchInvoices() {
     }
 }
 
+// ══════════════════════════════════════════════════════════
+// MY ROUTE — CLIENT MANAGEMENT
+// ══════════════════════════════════════════════════════════
+let routeClients = [];
+
+async function fetchRouteClients() {
+    const grid = document.getElementById('route-clients-grid');
+    if (!grid) return;
+    grid.innerHTML = '<p style="color: var(--tx-muted); text-align: center; padding: 40px; grid-column: 1 / -1;">Loading clients...</p>';
+    
+    try {
+        const { data, error } = await supabase
+            .from('driver_route_clients')
+            .select('*')
+            .eq('driver_id', currentUser.id)
+            .order('business_name', { ascending: true });
+        
+        if (error) throw error;
+        routeClients = data || [];
+        renderRouteClients();
+    } catch (err) {
+        console.error('Error fetching route clients:', err);
+        grid.innerHTML = '<p style="color: var(--red); text-align: center; padding: 40px; grid-column: 1 / -1;">Error loading clients.</p>';
+    }
+    
+    // Setup Add Client button
+    const addBtn = document.getElementById('add-client-btn');
+    if (addBtn) addBtn.onclick = () => openClientModal();
+}
+
+function renderRouteClients() {
+    const grid = document.getElementById('route-clients-grid');
+    if (!grid) return;
+    
+    const active = routeClients.filter(c => c.is_active);
+    const inactive = routeClients.filter(c => !c.is_active);
+    
+    if (routeClients.length === 0) {
+        grid.innerHTML = `<div style="text-align: center; padding: 40px; grid-column: 1 / -1; color: var(--tx-muted);"><i data-lucide="map-pin" class="icon" style="width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.3;"></i><p style="margin-bottom: 8px;">No route clients yet.</p><p style="font-size: 0.85rem;">Add your restaurants, groceries, and supermarkets to keep track of your route.</p></div>`;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+    }
+    
+    grid.innerHTML = '';
+    active.forEach(client => grid.appendChild(createClientCard(client)));
+    
+    if (inactive.length > 0) {
+        const separator = document.createElement('div');
+        separator.style.cssText = 'grid-column: 1 / -1; border-top: 1px solid var(--bd); padding-top: 12px; margin-top: 8px;';
+        separator.innerHTML = '<span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--tx-muted);">Inactive Clients</span>';
+        grid.appendChild(separator);
+        inactive.forEach(client => grid.appendChild(createClientCard(client)));
+    }
+    
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function createClientCard(client) {
+    const card = document.createElement('div');
+    card.className = 'widget';
+    card.style.cssText = `position: relative; ${!client.is_active ? 'opacity: 0.5;' : ''}`;
+    
+    const mapsUrl = client.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(client.address)}` : null;
+    
+    card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <h3 style="font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; font-weight: 600; color: var(--tx);">${client.business_name}</h3>
+                ${client.contact_name ? `<p style="font-size: 0.85rem; color: var(--tx-muted); margin-top: 2px;"><i data-lucide="user" class="icon" style="width:12px;height:12px;display:inline;vertical-align:-1px"></i> ${client.contact_name}</p>` : ''}
+            </div>
+            <div style="display: flex; gap: 6px;">
+                <button onclick="window.openClientModal('${client.id}')" style="background:transparent;border:1px solid var(--bd);border-radius:6px;padding:4px 8px;cursor:pointer;color:var(--tx);font-size:0.75rem" title="Edit">
+                    <i data-lucide="pencil" class="icon" style="width:14px;height:14px"></i>
+                </button>
+                ${client.is_active ? `<button onclick="window.toggleClientActive('${client.id}', false)" style="background:transparent;border:1px solid var(--bd);border-radius:6px;padding:4px 8px;cursor:pointer;color:var(--tx-muted);font-size:0.75rem" title="Deactivate"><i data-lucide="pause" class="icon" style="width:14px;height:14px"></i></button>` : `<button onclick="window.toggleClientActive('${client.id}', true)" style="background:transparent;border:1px solid var(--bd);border-radius:6px;padding:4px 8px;cursor:pointer;color:#1B5E20;font-size:0.75rem" title="Reactivate"><i data-lucide="play" class="icon" style="width:14px;height:14px"></i></button>`}
+            </div>
+        </div>
+        ${client.phone ? `<p style="margin-top: 8px; font-size: 0.9rem;"><i data-lucide="phone" class="icon" style="width:12px;height:12px;display:inline;vertical-align:-1px"></i> <a href="tel:${client.phone}" style="color: var(--tx); text-decoration: none;">${client.phone}</a></p>` : ''}
+        ${client.address ? `<p style="margin-top: 4px; font-size: 0.9rem;"><i data-lucide="map-pin" class="icon" style="width:12px;height:12px;display:inline;vertical-align:-1px"></i> ${mapsUrl ? `<a href="${mapsUrl}" target="_blank" rel="noopener" style="color: var(--brand); text-decoration: underline;">${client.address}</a>` : client.address}</p>` : ''}
+        ${client.notes ? `<p style="margin-top: 6px; font-size: 0.8rem; color: var(--tx-muted); font-style: italic;">${client.notes}</p>` : ''}
+    `;
+    
+    return card;
+}
+
+function openClientModal(clientId) {
+    const overlay = document.getElementById('client-modal-overlay');
+    const title = document.getElementById('client-modal-title');
+    const idField = document.getElementById('client-edit-id');
+    const businessInput = document.getElementById('client-business');
+    const contactInput = document.getElementById('client-contact');
+    const phoneInput = document.getElementById('client-phone');
+    const addressInput = document.getElementById('client-address');
+    const notesInput = document.getElementById('client-notes');
+    
+    if (clientId) {
+        const client = routeClients.find(c => c.id === clientId);
+        if (client) {
+            title.textContent = 'Edit Client';
+            idField.value = client.id;
+            businessInput.value = client.business_name || '';
+            contactInput.value = client.contact_name || '';
+            phoneInput.value = client.phone || '';
+            addressInput.value = client.address || '';
+            notesInput.value = client.notes || '';
+        }
+    } else {
+        title.textContent = 'Add Client';
+        idField.value = '';
+        businessInput.value = '';
+        contactInput.value = '';
+        phoneInput.value = '';
+        addressInput.value = '';
+        notesInput.value = '';
+    }
+    
+    if (overlay) overlay.classList.add('open');
+    if (window.lucide) window.lucide.createIcons();
+}
+window.openClientModal = openClientModal;
+
+window.closeClientModal = function() {
+    document.getElementById('client-modal-overlay')?.classList.remove('open');
+};
+
+window.saveClient = async function() {
+    const id = document.getElementById('client-edit-id')?.value;
+    const business = document.getElementById('client-business')?.value?.trim();
+    const contact = document.getElementById('client-contact')?.value?.trim();
+    const phone = document.getElementById('client-phone')?.value?.trim();
+    const address = document.getElementById('client-address')?.value?.trim();
+    const notes = document.getElementById('client-notes')?.value?.trim();
+    const btn = document.getElementById('save-client-btn');
+    
+    if (!business) { showToast('Business name is required.', 'warning'); return; }
+    
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+    
+    const payload = {
+        business_name: business,
+        contact_name: contact || null,
+        phone: phone || null,
+        address: address || null,
+        notes: notes || null
+    };
+    
+    try {
+        if (id) {
+            // Update existing
+            const { error } = await supabase.from('driver_route_clients').update(payload).eq('id', id);
+            if (error) throw error;
+            showToast('Client updated!', 'success');
+        } else {
+            // Insert new
+            payload.driver_id = currentUser.id;
+            const { error } = await supabase.from('driver_route_clients').insert(payload);
+            if (error) throw error;
+            showToast('Client added!', 'success');
+        }
+        window.closeClientModal();
+        fetchRouteClients();
+    } catch (err) {
+        console.error('Error saving client:', err);
+        showToast('Failed to save client.', 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Save Client'; }
+    }
+};
+
+window.toggleClientActive = async function(clientId, active) {
+    try {
+        const { error } = await supabase.from('driver_route_clients').update({ is_active: active }).eq('id', clientId);
+        if (error) throw error;
+        showToast(active ? 'Client reactivated!' : 'Client deactivated.', 'success');
+        fetchRouteClients();
+    } catch (err) {
+        console.error('Error toggling client:', err);
+        showToast('Failed to update client.', 'error');
+    }
+};
