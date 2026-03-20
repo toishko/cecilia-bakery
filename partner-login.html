@@ -6,6 +6,7 @@
     <title>Wholesale Portal | Cecilia Bakery</title>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="auth-theme.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="auth-i18n.js"></script>
 </head>
 <body>
@@ -25,7 +26,38 @@
             <button class="theme-btn" id="theme-toggle" onclick="toggleAuthTheme()">
                 <span id="theme-icon"><i data-lucide='moon' class='icon'></i></span>
             </button>
+            <button class="hamburger" id="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">
+              <span></span><span></span><span></span>
+            </button>
         </div>
+    </div>
+
+    <!-- ── MOBILE DRAWER ── -->
+    <div class="mobile-drawer-overlay" id="mobile-drawer-overlay" onclick="closeMobileMenu()"></div>
+    <div class="mobile-drawer" id="mobile-drawer">
+      <ul class="mobile-drawer-links">
+        <li><a href="index.html" onclick="closeMobileMenu()" data-en="<i data-lucide='home' class='icon'></i> Home" data-es="<i data-lucide='home' class='icon'></i> Inicio"><i data-lucide='home' class='icon'></i> Home</a></li>
+        <li><a href="menu.html" onclick="closeMobileMenu()" data-en="<i data-lucide='book-open' class='icon'></i> Menu" data-es="<i data-lucide='book-open' class='icon'></i> Menú"><i data-lucide='book-open' class='icon'></i> Menu</a></li>
+        <li><a href="index.html#story" onclick="closeMobileMenu()" data-en="<i data-lucide='heart' class='icon'></i> Our Story" data-es="<i data-lucide='heart' class='icon'></i> Nuestra Historia"><i data-lucide='heart' class='icon'></i> Our Story</a></li>
+        <li><a href="index.html#wholesale" onclick="closeMobileMenu()" data-en="<i data-lucide='store' class='icon'></i> Wholesale" data-es="<i data-lucide='store' class='icon'></i> Mayoreo"><i data-lucide='store' class='icon'></i> Wholesale</a></li>
+        <li id="mobile-user-menu" style="display: none;">
+          <a href="index.html" id="mobile-profile-link" onclick="closeMobileMenu()" data-en="<i data-lucide='home' class='icon'></i> Home" data-es="<i data-lucide='home' class='icon'></i> Inicio"><i data-lucide='home' class='icon'></i> Home</a>
+        </li>
+        <li><a href="index.html#experience" onclick="closeMobileMenu()" class="nav-cta" data-en="<i data-lucide='cake' class='icon'></i> Order a Custom Cake" data-es="<i data-lucide='cake' class='icon'></i> Ordenar un Bizcocho"><i data-lucide='cake' class='icon'></i> Order a Custom Cake</a></li>
+        <li id="mobile-signout-menu" style="display: none;">
+          <a href="#" id="mobile-sign-out-btn" style="color: var(--red);" onclick="closeMobileMenu()" data-en="<i data-lucide='log-out' class='icon'></i> Sign Out" data-es="<i data-lucide='log-out' class='icon'></i> Cerrar Sesión"><i data-lucide='log-out' class='icon'></i> Sign Out</a>
+        </li>
+      </ul>
+      <div class="mobile-drawer-controls">
+        <div style="display: flex; align-items: center; gap: 0;">
+          <button class="lang-btn active" id="mob-btn-en" onclick="setAuthLang('en')">EN</button>
+          <button class="lang-btn" id="mob-btn-es" onclick="setAuthLang('es')">ES</button>
+        </div>
+        <span class="ctrl-divider" style="margin: 0 2px">·</span>
+        <button class="theme-btn" id="mob-theme-toggle" onclick="toggleAuthTheme()" aria-label="Toggle dark mode">
+          <span id="mob-theme-icon"><i data-lucide='moon' class='icon'></i></span>
+        </button>
+      </div>
     </div>
 
     <div class="auth-wrapper">
@@ -82,5 +114,17 @@
     <script type="module" src="partner-auth.js"></script>
     <script type="module" src="./analytics.js"></script>
     <script type="module" src="./speed-insights.js"></script>
+    <script>
+      function toggleMobileMenu() {
+        document.getElementById('mobile-drawer').classList.toggle('open');
+        document.getElementById('mobile-drawer-overlay').classList.toggle('open');
+        document.getElementById('hamburger-btn').classList.toggle('open');
+      }
+      function closeMobileMenu() {
+        document.getElementById('mobile-drawer').classList.remove('open');
+        document.getElementById('mobile-drawer-overlay').classList.remove('open');
+        document.getElementById('hamburger-btn').classList.remove('open');
+      }
+    </script>
 </body>
 </html>

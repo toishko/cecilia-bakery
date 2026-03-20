@@ -37,7 +37,7 @@ body {
 
 /* Back Nav and Top Controls */
 .top-controls {
-    position: absolute; top: 32px; left: 52px; right: 52px; display: flex; justify-content: space-between; align-items: center; z-index: 100;
+    position: absolute; top: 32px; left: 52px; right: 52px; display: flex; justify-content: space-between; align-items: center; z-index: 501;
 }
 .back-nav {
     text-decoration: none; display: flex; align-items: center; gap: 10px; font-size: 0.8rem;
@@ -119,7 +119,7 @@ body {
 }
 
 /* Hamburger Menu & Drawer */
-.hamburger { display: none; flex-direction: column; justify-content: center; gap: 5px; background: none; border: none; cursor: pointer; padding: 6px; width: 36px; height: 36px; }
+.hamburger { display: flex; flex-direction: column; justify-content: center; gap: 5px; background: none; border: none; cursor: pointer; padding: 6px; width: 36px; height: 36px; }
 .hamburger span { display: block; height: 2px; border-radius: 2px; background: var(--tx); transition: transform .3s, opacity .3s, width .3s; }
 .hamburger span:nth-child(1) { width: 22px; }
 .hamburger span:nth-child(2) { width: 16px; }
@@ -128,7 +128,7 @@ body {
 .hamburger.open span:nth-child(2) { opacity: 0; width: 0; }
 .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); width: 22px; }
 
-.mobile-drawer { position: fixed; top: 0; left: 0; right: 0; background: var(--bg-card); z-index: 500; padding: 80px 28px 32px; transform: translateY(-100%); transition: transform .35s cubic-bezier(.4, 0, .2, 1), visibility 0s .35s; box-shadow: 0 8px 32px rgba(0, 0, 0, .15); display: flex; flex-direction: column; gap: 0; visibility: hidden; }
+.mobile-drawer { position: fixed; top: 0; left: 0; right: 0; background: var(--bg-card); z-index: 500; padding: 100px 28px 32px; transform: translateY(-100%); transition: transform .35s cubic-bezier(.4, 0, .2, 1), visibility 0s .35s; box-shadow: 0 8px 32px rgba(0, 0, 0, .15); display: flex; flex-direction: column; gap: 0; visibility: hidden; }
 .mobile-drawer.open { transform: translateY(0); visibility: visible; transition: transform .35s cubic-bezier(.4, 0, .2, 1), visibility 0s 0s; }
 .mobile-drawer-links { list-style: none; margin: 0; padding: 0; }
 .mobile-drawer-links li { border-bottom: 1px solid var(--bd); }
@@ -146,6 +146,4 @@ a:focus-visible, button:focus-visible {
   border-radius: 4px;
 }
 
-@media(max-width:900px) {
-  .hamburger { display: flex; }
-}
+

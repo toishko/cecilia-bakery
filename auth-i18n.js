@@ -47,10 +47,15 @@ function toggleAuthTheme() {
     try { localStorage.setItem('theme', newTheme); } catch(e){}
     
     const icon = document.getElementById('theme-icon');
+    const mobIcon = document.getElementById('mob-theme-icon');
     const label = document.getElementById('theme-label');
-    if (icon) {
-        icon.innerHTML = newTheme === 'dark' ? `<i data-lucide='sun' class='icon'></i>` : `<i data-lucide='moon' class='icon'></i>`; if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
+    
+    const iconHTML = newTheme === 'dark' ? `<i data-lucide='sun' class='icon'></i>` : `<i data-lucide='moon' class='icon'></i>`;
+    
+    if (icon) icon.innerHTML = iconHTML;
+    if (mobIcon) mobIcon.innerHTML = iconHTML;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    
     if (label) {
         label.textContent = newTheme === 'dark' ? i18nAuth[currentLang].themeLight : i18nAuth[currentLang].themeDark;
     }
@@ -70,7 +75,12 @@ window.addEventListener('DOMContentLoaded', () => {
     document.documentElement.setAttribute('data-theme', savedTheme);
     
     const icon = document.getElementById('theme-icon');
-    if (icon) icon.innerHTML = savedTheme === 'dark' ? `<i data-lucide='sun' class='icon'></i>` : `<i data-lucide='moon' class='icon'></i>`; if (typeof lucide !== 'undefined') lucide.createIcons();
+    const mobIcon = document.getElementById('mob-theme-icon');
+    const iconHTML = savedTheme === 'dark' ? `<i data-lucide='sun' class='icon'></i>` : `<i data-lucide='moon' class='icon'></i>`;
+    
+    if (icon) icon.innerHTML = iconHTML;
+    if (mobIcon) mobIcon.innerHTML = iconHTML;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     
     /* Restore saved language preference */
     let initialLang = 'en';
