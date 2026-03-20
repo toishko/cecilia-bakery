@@ -61,16 +61,16 @@ This document outlines the step-by-step execution plan for upgrading Cecilia Bak
 ## 🤝 Phase 3: Wholesale Hub — `partner-dashboard.html`
 *Goal: Build the secure interface for approved Partners to place bulk pastry orders.*
 
-- [ ] **3.1 Protected Route Wrapper**
+- [x] **3.1 Protected Route Wrapper**
   - Create `partner-dashboard.js`. Verify the session is a `partner` AND `partner_details.status = 'approved'`.
-- [ ] **3.2 Profile & Preferences Management**
+- [x] **3.2 Profile & Preferences Management**
   - Provide a section for partners to update their own contact information or delivery address in the `partner_details` table securely.
-- [ ] **3.3 Bulk Order Form UI**
+- [x] **3.3 Bulk Order Form UI**
   - Create an interface to select pastry flats/trays (e.g., Tres Leches 1/2 Sheet, Guava flat) with quantity stepping.
   - Calculate totals dynamically using JavaScript.
-- [ ] **3.4 Submit Order Logic**
+- [x] **3.4 Submit Order Logic**
   - Upon submission, insert a new record into the `orders` table (linked to the partner's `profile_id`).
-- [ ] **3.5 Order Status Tracker & Invoices**
+- [x] **3.5 Order Status Tracker & Invoices**
   - Fetch the partner's previous orders from the `orders` table.
   - Render them visually with status badges (Pending, Baking, Out for Delivery, Completed).
   - Include an option to print orders or download simple receipts/invoices for accounting.
@@ -80,13 +80,13 @@ This document outlines the step-by-step execution plan for upgrading Cecilia Bak
 ## 🚗 Phase 4: Delivery Dispatch — `bulk-orders.html` (Driver Dashboard)
 *Goal: Build the task-list interface for drivers to process deliveries.*
 
-- [ ] **4.1 Protected Route Wrapper**
+- [x] **4.1 Protected Route Wrapper**
   - Create `driver-dashboard.js`. Verify the session role is `driver`. Kick others out.
-- [ ] **4.2 Active Dispatch List**
+- [x] **4.2 Active Dispatch List**
   - Fetch all records from the `orders` table where `delivery_status = 'pending'` or `'out_for_delivery'`.
   - Render each order as a "card" displaying the Partner Name, Address, and Order Details.
   - Format the Partner Address as a clickable external link (e.g., Google Maps `href`) for easy navigation.
-- [ ] **4.3 Status Update & Proof Controls**
+- [x] **4.3 Status Update & Proof Controls**
   - Add buttons to each card: "Mark as Picked Up" and "Mark as Delivered".
   - Add an input field/modal for drivers to leave delivery notes (e.g., "Left at back door") when marking as delivered.
   - Wire buttons to run updates against the `orders` table.
@@ -96,12 +96,12 @@ This document outlines the step-by-step execution plan for upgrading Cecilia Bak
 ## 👤 Phase 5: Customer Profile — `customer-dashboard.html`
 *Goal: Build a simple space for regular Retail Customers to view their history and saved details.*
 
-- [ ] **5.1 Protected Route Wrapper**
+- [x] **5.1 Protected Route Wrapper**
   - Create `customer-dashboard.js`. Verify the session role is `customer`.
-- [ ] **5.2 Profile & Account Settings**
+- [x] **5.2 Profile & Account Settings**
   - Display the customer's phone number, email, and joined date.
   - Include input fields for users to change their password or update profile information.
-- [ ] **5.3 Retail Active & Past Order Tracker**
+- [x] **5.3 Retail Active & Past Order Tracker**
   - Add a minimalist table fetching from the `orders` table for this specific user.
   - Clearly distinguish between active, currently-baking orders and historical, completed past orders.
 

@@ -197,12 +197,11 @@
                                 <th data-en="Role" data-es="Rol">Role</th>
                                 <th data-en="Phone" data-es="Teléfono">Phone</th>
                                 <th data-en="Joined" data-es="Ingresó">Joined</th>
-                                <th data-en="Actions" data-es="Acciones">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="users-tbody">
                             <tr>
-                                <td colspan="5" style="text-align: center; color: var(--tx-muted);">Loading users...</td>
+                                <td colspan="4" style="text-align: center; color: var(--tx-muted);">Loading users...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -339,6 +338,45 @@
             });
         }
     </script>
+
+    <!-- USER DETAIL MODAL -->
+    <div class="modal-overlay-bg" id="user-modal-overlay" onclick="if(event.target === this) closeUserModal()">
+        <div class="modal-card" id="user-detail-modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <div>
+                    <h3 id="modal-user-name">User Name</h3>
+                    <span id="modal-user-joined" style="font-size: 0.85rem; color: var(--tx-muted);">Joined: --/--/----</span>
+                </div>
+                <button class="modal-close-btn" onclick="closeUserModal()" aria-label="Close Modal">
+                    <i data-lucide="x" class="icon" style="width: 24px; height: 24px;"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 0.85rem; color: var(--tx-muted); margin-bottom: 4px; text-transform: uppercase;">Phone Number</div>
+                    <div id="modal-user-phone" style="font-weight: 500;">---</div>
+                </div>
+
+                <div style="margin-bottom: 20px; padding: 16px; background: var(--bg-hover); border: 1px solid var(--bd); border-radius: 8px;">
+                    <div style="font-size: 0.85rem; color: var(--tx-muted); margin-bottom: 8px; text-transform: uppercase; font-weight: 600;">System Role</div>
+                    <div id="modal-user-role-container">
+                        <!-- Role select or static badge injected here -->
+                    </div>
+                </div>
+
+                <div id="modal-user-permissions-container" style="display: none; padding: 16px; border: 1px solid var(--bd); border-radius: 8px;">
+                    <div style="font-size: 0.85rem; color: var(--tx); margin-bottom: 12px; font-weight: 600;">Staff Permissions Configuration</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; font-size: 0.8rem;" id="modal-user-permissions-grid">
+                        <!-- Checkboxes injected here -->
+                    </div>
+                    <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+                        <button class="btn-submit" id="modal-save-perms-btn" style="padding: 6px 16px; font-size: 0.75rem; margin: 0; width: auto;" onclick="">Save Permissions</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- ORDER DETAIL MODAL -->
     <div class="modal-overlay-bg" id="order-modal-overlay" onclick="if(event.target === this) closeOrderModal()">

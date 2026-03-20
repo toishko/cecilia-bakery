@@ -45,26 +45,26 @@
             </div>
 
             <!-- Navigation Links -->
-            <ul class="sidebar-nav">
+            <ul class="sidebar-nav" id="sidebar-nav-list">
                 <li>
                     <a href="#overview" class="sidebar-link active">
                         <i data-lucide="layout-dashboard" class="icon"></i>
                         <span data-en="Overview" data-es="Resumen">Overview</span>
                     </a>
                 </li>
-                <li>
+                <li id="tab-users">
                     <a href="#users" class="sidebar-link">
                         <i data-lucide="users" class="icon"></i>
                         <span data-en="User Directory" data-es="Directorio de Usuarios">User Directory</span>
                     </a>
                 </li>
-                <li>
+                <li id="tab-partners">
                     <a href="#partners" class="sidebar-link">
                         <i data-lucide="store" class="icon"></i>
                         <span data-en="Partner Approvals" data-es="Aprobaciones de Socios">Partner Approvals</span>
                     </a>
                 </li>
-                <li>
+                <li id="tab-orders">
                     <a href="#orders" class="sidebar-link">
                         <i data-lucide="shopping-bag" class="icon"></i>
                         <span data-en="Master Orders" data-es="Pedidos Maestros">Master Orders</span>
@@ -128,18 +128,24 @@
             
             <section id="sec-overview" class="tab-pane active">
                 <!-- Content Area (Phase 2.3 Widgets Placeholder) -->
-                <div class="widget-grid">
-                    <div class="widget-card">
+                <div id="awaiting-permissions-state" style="display: none; text-align: center; padding: 60px 20px; background: var(--bg-card); border: 1px solid var(--bd); border-radius: 12px; margin-top: 20px;">
+                    <i data-lucide="lock" class="icon" style="width: 48px; height: 48px; opacity: 0.5; margin-bottom: 16px;"></i>
+                    <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 2rem; margin-bottom: 8px;">Awaiting Permissions</h2>
+                    <p style="color: var(--tx-muted); font-size: 1.1rem;">Your staff account is active, but an administrator hasn't assigned your permissions yet.<br>Please contact your admin to get started.</p>
+                </div>
+
+                <div class="widget-grid" id="main-widget-grid">
+                    <div class="widget-card" id="widget-pending">
                         <div class="widget-icon"><i data-lucide="clock" class="icon"></i></div>
                         <div class="widget-title" data-en="Pending Approvals" data-es="Aprobaciones Pendientes">Pending Approvals</div>
                         <div class="widget-value" id="overview-pending-val">0</div>
                     </div>
-                    <div class="widget-card">
+                    <div class="widget-card" id="widget-orders">
                         <div class="widget-icon"><i data-lucide="shopping-cart" class="icon"></i></div>
                         <div class="widget-title" data-en="Orders Today" data-es="Pedidos Hoy">Orders Today</div>
                         <div class="widget-value" id="overview-orders-val">0</div>
                     </div>
-                    <div class="widget-card">
+                    <div class="widget-card" id="widget-users">
                         <div class="widget-icon"><i data-lucide="users" class="icon"></i></div>
                         <div class="widget-title" data-en="Active Users" data-es="Usuarios Activos">Active Users</div>
                         <div class="widget-value" id="overview-users-val">0</div>
@@ -198,12 +204,11 @@
                                 <th data-en="Role" data-es="Rol">Role</th>
                                 <th data-en="Phone" data-es="Teléfono">Phone</th>
                                 <th data-en="Joined" data-es="Ingresó">Joined</th>
-                                <th data-en="Actions" data-es="Acciones">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="users-tbody">
                             <tr>
-                                <td colspan="5" style="text-align: center; color: var(--tx-muted);">Loading users...</td>
+                                <td colspan="4" style="text-align: center; color: var(--tx-muted);">Loading users...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -340,6 +345,45 @@
             });
         }
     </script>
+
+    <!-- USER DETAIL MODAL -->
+    <div class="modal-overlay-bg" id="user-modal-overlay" onclick="if(event.target === this) closeUserModal()">
+        <div class="modal-card" id="user-detail-modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <div>
+                    <h3 id="modal-user-name">User Name</h3>
+                    <span id="modal-user-joined" style="font-size: 0.85rem; color: var(--tx-muted);">Joined: --/--/----</span>
+                </div>
+                <button class="modal-close-btn" onclick="closeUserModal()" aria-label="Close Modal">
+                    <i data-lucide="x" class="icon" style="width: 24px; height: 24px;"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 0.85rem; color: var(--tx-muted); margin-bottom: 4px; text-transform: uppercase;">Phone Number</div>
+                    <div id="modal-user-phone" style="font-weight: 500;">---</div>
+                </div>
+
+                <div style="margin-bottom: 20px; padding: 16px; background: var(--bg-hover); border: 1px solid var(--bd); border-radius: 8px;">
+                    <div style="font-size: 0.85rem; color: var(--tx-muted); margin-bottom: 8px; text-transform: uppercase; font-weight: 600;">System Role</div>
+                    <div id="modal-user-role-container">
+                        <!-- Role select or static badge injected here -->
+                    </div>
+                </div>
+
+                <div id="modal-user-permissions-container" style="display: none; padding: 16px; border: 1px solid var(--bd); border-radius: 8px;">
+                    <div style="font-size: 0.85rem; color: var(--tx); margin-bottom: 12px; font-weight: 600;">Staff Permissions Configuration</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; font-size: 0.8rem;" id="modal-user-permissions-grid">
+                        <!-- Checkboxes injected here -->
+                    </div>
+                    <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+                        <button class="btn-submit" id="modal-save-perms-btn" style="padding: 6px 16px; font-size: 0.75rem; margin: 0; width: auto;" onclick="">Save Permissions</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- ORDER DETAIL MODAL -->
     <div class="modal-overlay-bg" id="order-modal-overlay" onclick="if(event.target === this) closeOrderModal()">

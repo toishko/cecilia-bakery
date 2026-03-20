@@ -1,5 +1,39 @@
 import { supabase } from './supabase-client.js';
 
+window.showDashboardToast = function(message, type = 'error') {
+    let container = document.getElementById('dashboard-toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'dashboard-toast-container';
+        container.className = 'dashboard-toast-container';
+        document.body.appendChild(container);
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = `dashboard-toast ${type}`;
+    
+    let iconName = 'alert-circle';
+    if (type === 'success') iconName = 'check-circle';
+    if (type === 'warning') iconName = 'alert-triangle';
+
+    toast.innerHTML = `
+        <div class="toast-icon"><i data-lucide="${iconName}" style="width: 20px; height: 20px;"></i></div>
+        <div class="toast-content">${message}</div>
+    `;
+    
+    container.appendChild(toast);
+    if (window.lucide) window.lucide.createIcons();
+    
+    // Trigger slide-in animation
+    setTimeout(() => toast.classList.add('show'), 10);
+    
+    // Auto-remove
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 400); // 400ms CSS animation match
+    }, 4000);
+}
+
 // Run check on load, safely wait for hydration
 document.addEventListener('DOMContentLoaded', async () => {
     // Hide body initially to prevent Flash of Unauthenticated Content (FOUC)
@@ -231,7 +265,7 @@ window.approvePartner = async function(partnerId, btnEl) {
 
     } catch (err) {
         console.error('Error approving partner:', err);
-        alert('Failed to approve partner. Check console.');
+        window.showDashboardToast('Failed to approve partner. Check console.', 'error');
         btnEl.disabled = false;
         btnEl.textContent = 'Approve Partner';
         btnEl.style.opacity = '1';
@@ -376,126 +410,125 @@ function renderUserTable(users) {
 
         const joinDate = new Date(user.created_at).toLocaleDateString();
 
+        tr.innerHTML = `
+            <td>
+                <button class="order-id-link" onclick="window.openUserModal('${user.id}')" title="View User Details" style="padding:0; margin:0; font-size:1rem; font-weight:600;">${user.full_name || 'Anonymous'}</button>
+            </td>
+            <td>
+                <span style="display: inline-block; background: ${bg}; color: ${color}; border: 1px solid ${color}; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
+                    ${safeRole}
+                </span>
+            </td>
+            <td>${user.phone || 'N/A'}</td>
+            <td>${joinDate}</td>
+        `;
+        tbody.appendChild(tr);
+
+    });
+    
+    if (window.lucide) window.lucide.createIcons();
+}
+
+window.openUserModal = function(userId) {
+    const user = allUsersCache.find(u => u.id === userId);
+    if (!user) return;
+
+    document.getElementById('modal-user-name').textContent = user.full_name || 'Anonymous';
+    document.getElementById('modal-user-joined').textContent = 'Joined: ' + new Date(user.created_at).toLocaleDateString();
+    document.getElementById('modal-user-phone').textContent = user.phone || 'N/A';
+
+    const safeRole = user.role || 'customer';
+    const roleContainer = document.getElementById('modal-user-role-container');
+    
+    const roleColorMap = {
+        admin: 'var(--role-admin-tx)',
+        staff: 'var(--role-staff-tx)',
+        partner: '#F2994A',
+        driver: '#C8102E', 
+        customer: '#6B5057' 
+    };
+    const roleBgMap = {
+        admin: 'var(--role-admin-bg)',
+        staff: 'var(--role-staff-bg)',
+        partner: 'rgba(242, 153, 74, 0.15)',
+        driver: 'rgba(200, 16, 46, 0.15)',
+        customer: 'rgba(107, 80, 87, 0.15)'
+    };
+    const color = roleColorMap[safeRole] || 'var(--tx)';
+    const bg = roleBgMap[safeRole] || 'transparent';
+
+    if (safeRole === 'admin') {
+        roleContainer.innerHTML = `
+            <span style="display: inline-block; background: ${bg}; color: ${color}; border: 1px solid ${color}; padding: 4px 12px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">
+                ${safeRole}
+            </span>`;
+    } else {
         const roleOptions = ['customer', 'partner', 'driver', 'staff', 'admin'];
-        const selectHtml = `
+        roleContainer.innerHTML = `
             <select 
-                class="role-select"
+                class="role-select input-field"
                 data-original-role="${safeRole}"
-                style="background: ${bg}; color: ${color}; border: 1px dashed ${color}; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; outline: none; cursor: pointer; text-transform: uppercase;"
-                onchange="window.changeUserRole('${user.id}', this.value, this)"
+                style="margin: 0; background: ${bg}; color: ${color}; border: 1px dashed ${color}; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; cursor: pointer; max-width: 200px;"
+                onchange="window.changeUserRoleModal('${user.id}', this.value, this)"
             >
                 ${roleOptions.map(r => `<option value="${r}" ${safeRole === r ? 'selected' : ''} style="color: initial; background: initial;">${r.toUpperCase()}</option>`).join('')}
             </select>
         `;
+    }
 
-        tr.innerHTML = `
-            <td><strong>${user.full_name || 'Anonymous'}</strong></td>
-            <td>${selectHtml}</td>
-            <td>${user.phone || 'N/A'}</td>
-            <td>${joinDate}</td>
-            <td>
-                ${safeRole === 'staff' ? `<button class="btn-submit" style="padding: 4px 12px; font-size: 0.7rem; margin: 0; width: auto; background: transparent; border: 1px solid var(--bd); color: var(--tx);" onclick="window.togglePermissionsRow('${user.id}')">Permissions</button>` : '<span style="color:var(--tx-muted); font-size:0.75rem;">—</span>'}
-            </td>
+    const permsContainer = document.getElementById('modal-user-permissions-container');
+    const permsGrid = document.getElementById('modal-user-permissions-grid');
+    const saveBtn = document.getElementById('modal-save-perms-btn');
+
+    if (safeRole === 'staff') {
+        permsContainer.style.display = 'block';
+        const perms = user.staff_permissions || {
+            can_view_orders: false,
+            can_advance_orders: false,
+            can_cancel_orders: false,
+            can_approve_partners: false,
+            can_manage_users: false,
+            can_view_analytics: false
+        };
+
+        permsGrid.innerHTML = `
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="modal_perm_orders" ${perms.can_view_orders ? 'checked' : ''} style="cursor: pointer;"> View Orders
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="modal_perm_adv" ${perms.can_advance_orders ? 'checked' : ''} style="cursor: pointer;"> Advance Orders
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="modal_perm_cancel" ${perms.can_cancel_orders ? 'checked' : ''} style="cursor: pointer;"> Cancel Orders
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="modal_perm_partners" ${perms.can_approve_partners ? 'checked' : ''} style="cursor: pointer;"> Approve Partners
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="modal_perm_users" ${perms.can_manage_users ? 'checked' : ''} style="cursor: pointer;"> Manage Users
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="modal_perm_analytics" ${perms.can_view_analytics ? 'checked' : ''} style="cursor: pointer;"> View Analytics
+            </label>
         `;
-        tbody.appendChild(tr);
 
-        if (safeRole === 'staff') {
-            const permTr = document.createElement('tr');
-            permTr.id = `perm-row-${user.id}`;
-            permTr.style.display = 'none';
-            permTr.style.background = 'var(--bg-hover)';
-            
-            const perms = user.staff_permissions || {
-                can_view_orders: true,
-                can_advance_orders: true,
-                can_cancel_orders: false,
-                can_approve_partners: false,
-                can_manage_users: false,
-                can_view_analytics: false
-            };
-
-            permTr.innerHTML = `
-                <td colspan="5" style="padding: 16px 24px; border-bottom: 2px solid var(--bd);">
-                    <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 12px;">Staff Permissions for ${user.full_name || 'Anonymous'}</div>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; font-size: 0.8rem;">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="perm_orders_${user.id}" ${perms.can_view_orders ? 'checked' : ''} style="cursor: pointer;"> View Orders
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="perm_adv_${user.id}" ${perms.can_advance_orders ? 'checked' : ''} style="cursor: pointer;"> Advance Orders
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="perm_cancel_${user.id}" ${perms.can_cancel_orders ? 'checked' : ''} style="cursor: pointer;"> Cancel Orders
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="perm_partners_${user.id}" ${perms.can_approve_partners ? 'checked' : ''} style="cursor: pointer;"> Approve Partners
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="perm_users_${user.id}" ${perms.can_manage_users ? 'checked' : ''} style="cursor: pointer;"> Manage Users
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="perm_analytics_${user.id}" ${perms.can_view_analytics ? 'checked' : ''} style="cursor: pointer;"> View Analytics
-                        </label>
-                    </div>
-                    <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
-                        <button class="btn-submit" style="padding: 6px 16px; font-size: 0.75rem; margin: 0; width: auto;" onclick="window.saveStaffPermissions('${user.id}', this)">Save Permissions</button>
-                    </div>
-                </td>
-            `;
-            tbody.appendChild(permTr);
-        }
-    });
-}
-
-window.togglePermissionsRow = function(userId) {
-    const row = document.getElementById(`perm-row-${userId}`);
-    if (row) {
-        row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+        saveBtn.onclick = () => window.saveStaffPermissionsModal(user.id, saveBtn);
+    } else {
+        permsContainer.style.display = 'none';
+        permsGrid.innerHTML = '';
+        saveBtn.onclick = null;
     }
+
+    const overlay = document.getElementById('user-modal-overlay');
+    if (overlay) overlay.classList.add('open');
 }
 
-window.saveStaffPermissions = async function(userId, btnEl) {
-    btnEl.innerHTML = 'Saving...';
-    btnEl.style.opacity = '0.7';
-
-    const perms = {
-        can_view_orders: document.getElementById(`perm_orders_${userId}`).checked,
-        can_advance_orders: document.getElementById(`perm_adv_${userId}`).checked,
-        can_cancel_orders: document.getElementById(`perm_cancel_${userId}`).checked,
-        can_approve_partners: document.getElementById(`perm_partners_${userId}`).checked,
-        can_manage_users: document.getElementById(`perm_users_${userId}`).checked,
-        can_view_analytics: document.getElementById(`perm_analytics_${userId}`).checked
-    };
-
-    try {
-        const { error } = await supabase
-            .from('profiles')
-            .update({ staff_permissions: perms })
-            .eq('id', userId);
-
-        if (error) throw error;
-        
-        btnEl.innerHTML = 'Saved!';
-        setTimeout(() => {
-            btnEl.innerHTML = 'Save Permissions';
-            btnEl.style.opacity = '1';
-        }, 2000);
-        
-        // Update cache silently
-        const cachedUser = allUsersCache.find(u => u.id === userId);
-        if (cachedUser) cachedUser.staff_permissions = perms;
-        
-    } catch (err) {
-        console.error('Error updating permissions', err);
-        btnEl.innerHTML = 'Error';
-        setTimeout(() => {
-            btnEl.innerHTML = 'Save Permissions';
-            btnEl.style.opacity = '1';
-        }, 2000);
-    }
+window.closeUserModal = function() {
+    const overlay = document.getElementById('user-modal-overlay');
+    if (overlay) overlay.classList.remove('open');
 }
 
-window.changeUserRole = async function(userId, newRole, selectEl) {
+window.changeUserRoleModal = async function(userId, newRole, selectEl) {
     const originalRole = selectEl.dataset.originalRole;
     if (newRole === originalRole) return;
     
@@ -510,14 +543,56 @@ window.changeUserRole = async function(userId, newRole, selectEl) {
 
         if (error) throw error;
         
-        fetchUserDirectory(); // Triggers a clean refetch and visual rebuild (which correctly parses colors and expandable rows)
+        await fetchUserDirectory();
+        window.closeUserModal();
         
     } catch (err) {
         console.error('Failed to update role', err);
         selectEl.value = originalRole;
         selectEl.disabled = false;
         selectEl.style.opacity = '1';
-        alert('Failed to update role. Make sure RLS policies allow you.');
+        window.showDashboardToast('Failed to update role. Make sure RLS policies allow you.', 'error');
+    }
+}
+
+window.saveStaffPermissionsModal = async function(userId, btnEl) {
+    btnEl.innerHTML = 'Saving...';
+    btnEl.style.opacity = '0.7';
+
+    const perms = {
+        can_view_orders: document.getElementById('modal_perm_orders').checked,
+        can_advance_orders: document.getElementById('modal_perm_adv').checked,
+        can_cancel_orders: document.getElementById('modal_perm_cancel').checked,
+        can_approve_partners: document.getElementById('modal_perm_partners').checked,
+        can_manage_users: document.getElementById('modal_perm_users').checked,
+        can_view_analytics: document.getElementById('modal_perm_analytics').checked
+    };
+
+    try {
+        const { error } = await supabase
+            .from('profiles')
+            .update({ staff_permissions: perms })
+            .eq('id', userId);
+
+        if (error) throw error;
+        
+        btnEl.innerHTML = 'Saved!';
+        setTimeout(() => {
+            btnEl.innerHTML = 'Save Permissions';
+            btnEl.style.opacity = '1';
+            window.closeUserModal();
+        }, 1000);
+        
+        const cachedUser = allUsersCache.find(u => u.id === userId);
+        if (cachedUser) cachedUser.staff_permissions = perms;
+        
+    } catch (err) {
+        console.error('Error updating permissions', err);
+        btnEl.innerHTML = 'Error';
+        setTimeout(() => {
+            btnEl.innerHTML = 'Save Permissions';
+            btnEl.style.opacity = '1';
+        }, 2000);
     }
 }
 

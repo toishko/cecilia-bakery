@@ -8,7 +8,7 @@
 
 [data-theme="dark"] {
     --bg: #0E0507; --bg-card: #1E0D12; --bg-input: #12070A; --tx: #F2E8E4; --tx-muted: #BFA0A8; --tx-faint: #7A5560;
-    --bd: rgba(200,16,46,.35); --bd-input: rgba(200,16,46,.40); --shadow-card: 0 24px 80px rgba(0,0,0,.60);
+    --bd: rgba(200,16,46,.35); --bd-input: rgba(200,16,46,.40); --shadow-card: 0 24px 80px rgba(0,0,0,.60); --blue: #A6CEFF;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

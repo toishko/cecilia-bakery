@@ -7,14 +7,22 @@
     
     --role-staff-tx: #002D62;
     --role-staff-bg: rgba(0, 45, 98, 0.1);
+    
+    --role-baking-tx: #002D62;
+    --role-baking-bg: rgba(0, 45, 98, 0.15);
+    --icon-blue: #002D62;
 }
 
 [data-theme="dark"] {
-    --role-admin-tx: #82B1FF;
-    --role-admin-bg: rgba(130, 177, 255, 0.15);
+    --role-admin-tx: #A6CEFF;
+    --role-admin-bg: rgba(166, 206, 255, 0.15);
     
-    --role-staff-tx: #82B1FF;
-    --role-staff-bg: rgba(130, 177, 255, 0.1);
+    --role-staff-tx: #A6CEFF;
+    --role-staff-bg: rgba(166, 206, 255, 0.1);
+
+    --role-baking-tx: #A6CEFF;
+    --role-baking-bg: rgba(166, 206, 255, 0.15);
+    --icon-blue: #A6CEFF;
 }
 
 body {
@@ -71,7 +79,7 @@ body {
 }
 
 [data-theme="dark"] .sidebar-brand span {
-    color: #4A7AC8;
+    color: #A6CEFF;
 }
 
 .sidebar-role {
@@ -694,4 +702,67 @@ body {
 .order-id-link:hover {
     color: var(--red);
     border-bottom-color: rgba(200, 16, 46, 0.4);
+}
+
+/* Dashboard Toast Notifications */
+.dashboard-toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 9999;
+}
+
+.dashboard-toast {
+    background: var(--bg-card);
+    border: 1px solid var(--bd);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    color: var(--tx);
+    padding: 16px 20px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transform: translateX(120%);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    min-width: 300px;
+    max-width: 400px;
+}
+
+.dashboard-toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.dashboard-toast.error {
+    border-left: 4px solid #C8102E;
+}
+
+.dashboard-toast.success {
+    border-left: 4px solid #27ae60;
+}
+
+.dashboard-toast.warning {
+    border-left: 4px solid #F2994A;
+}
+
+.dashboard-toast .toast-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.dashboard-toast.error .toast-icon { color: #C8102E; }
+.dashboard-toast.success .toast-icon { color: #27ae60; }
+.dashboard-toast.warning .toast-icon { color: #F2994A; }
+
+.dashboard-toast .toast-content {
+    flex-grow: 1;
+    line-height: 1.4;
 }

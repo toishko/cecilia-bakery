@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Partner | Cecilia Bakery Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    
+    <!-- Shared Auth/Base styling -->
+    <link rel="stylesheet" href="auth-theme.css">
+    <!-- Premium Dashboard styling -->
+    <link rel="stylesheet" href="dashboard.css">
+    
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <!-- I18n translation functions -->
+    <script src="auth-i18n.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Route Protection -->
+    <script type="module" src="partner-dashboard.js"></script>
+</head>
+<body>
+    <!-- Animated background -->
+    <div class="bg-blob"></div>
+
+    <!-- MAIN DASHBOARD LAYOUT -->
+    <div class="dashboard-layout">
+        
+        <!-- Mobile Overlay -->
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <!-- ── SIDEBAR ── -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <!-- Branding -->
+                    <div class="sidebar-brand">Cecilia <span>Bakery</span></div>
+                    <div class="sidebar-role" data-en="Wholesale Hub" data-es="Centro Mayorista">Wholesale Hub</div>
+                </div>
+                <button class="close-sidebar" id="close-sidebar-btn" aria-label="Close Menu">
+                    <i data-lucide="x" class="icon" style="width: 20px; height: 20px;"></i>
+                </button>
+            </div>
+
+            <!-- Navigation Links -->
+            <ul class="sidebar-nav">
+                <li>
+                    <a href="#overview" class="sidebar-link active">
+                        <i data-lucide="layout-dashboard" class="icon"></i>
+                        <span data-en="Overview" data-es="Resumen">Overview</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#new-order" class="sidebar-link">
+                        <i data-lucide="shopping-cart" class="icon"></i>
+                        <span data-en="New Order" data-es="Nuevo Pedido">New Order</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#history" class="sidebar-link">
+                        <i data-lucide="clock" class="icon"></i>
+                        <span data-en="Order History" data-es="Historial de Pedidos">Order History</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#profile" class="sidebar-link">
+                        <i data-lucide="user" class="icon"></i>
+                        <span data-en="Profile Settings" data-es="Configuración de Perfil">Profile Settings</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Bottom Actions -->
+            <div class="sidebar-footer">
+                <a href="index.html" class="sidebar-link" style="color: var(--tx-muted);">
+                    <i data-lucide="home" class="icon"></i>
+                    <span data-en="Return to Bakery" data-es="Regresar a la Panadería">Return to Bakery</span>
+                </a>
+                <button class="sidebar-link" id="nav-sign-out-btn" style="background: none; border: none; width: 100%; text-align: left; cursor: pointer; margin-top: 8px;">
+                    <i data-lucide="log-out" class="icon" style="color: var(--red);"></i>
+                    <span style="color: var(--red);" data-en="Sign Out" data-es="Cerrar Sesión">Sign Out</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- ── MAIN CONTENT ── -->
+        <main class="main-content">
+            <!-- Header inline with controls -->
+            <div class="dashboard-top">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button class="hamburger-sidebar" id="mobile-menu-btn" aria-label="Toggle Menu">
+                        <i data-lucide="menu" class="icon"></i>
+                    </button>
+                    <div>
+                        <h1 class="page-title" data-en="Partner Dashboard" data-es="Panel de Socios">Partner Dashboard</h1>
+                        <p class="page-subtitle" data-en="Manage bulk orders and account details" data-es="Administre pedidos al por mayor y detalles de la cuenta">Manage bulk orders and account details</p>
+                    </div>
+                </div>
+                
+                <!-- Controls -->
+                <div class="dash-controls">
+                    <div style="display: flex; align-items: center; gap: 0;">
+                        <button class="lang-btn active" id="btn-en" onclick="setAuthLang('en')">EN</button>
+                        <button class="lang-btn" id="btn-es" onclick="setAuthLang('es')">ES</button>
+                    </div>
+                    <span class="ctrl-divider">·</span>
+                    <button class="theme-btn" id="theme-toggle" onclick="toggleAuthTheme()" aria-label="Toggle Theme">
+                        <span id="theme-icon"><i data-lucide='moon' class='icon'></i></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB CONTENT AREA -->
+            
+            <section id="sec-overview" class="tab-pane active">
+                <div class="widget-grid">
+                    <div class="widget-card">
+                        <div class="widget-icon"><i data-lucide="shopping-bag" class="icon"></i></div>
+                        <div class="widget-title" data-en="Total Orders" data-es="Pedidos Totales">Total Orders</div>
+                        <div class="widget-value" id="overview-total-orders">0</div>
+                    </div>
+                    <div class="widget-card">
+                        <div class="widget-icon"><i data-lucide="truck" class="icon"></i></div>
+                        <div class="widget-title" data-en="Active Deliveries" data-es="Entregas Activas">Active Deliveries</div>
+                        <div class="widget-value" id="overview-active-deliveries">0</div>
+                    </div>
+                    <div class="widget-card">
+                        <div class="widget-icon"><i data-lucide="dollar-sign" class="icon"></i></div>
+                        <div class="widget-title" data-en="Total Spent" data-es="Total Gastado">Total Spent</div>
+                        <div class="widget-value" id="overview-total-spent">$0.00</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 32px; background: var(--bg-card); border: 1px solid var(--bd); border-radius: 12px; padding: 24px;">
+                    <h3 style="font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; margin-bottom: 16px;" data-en="Recent Orders" data-es="Pedidos Recientes">Recent Orders</h3>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th data-en="Order ID" data-es="ID Pedido">Order ID</th>
+                                    <th data-en="Date" data-es="Fecha">Date</th>
+                                    <th data-en="Status" data-es="Estado">Status</th>
+                                    <th data-en="Total" data-es="Total">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="overview-recent-orders-tbody">
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: var(--tx-muted);">Loading recent orders...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Phase 3.3 & 3.4: Bulk Order Form -->
+            <section id="sec-new-order" class="tab-pane">
+                <div style="background: var(--bg-card); border: 1px solid var(--bd); border-radius: 12px; padding: 24px;">
+                    <h3 style="font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; margin-bottom: 8px;" data-en="Place a Bulk Order" data-es="Realizar un Pedido Mayorista">Place a Bulk Order</h3>
+                    <p style="color: var(--tx-muted); margin-bottom: 24px; font-size: 0.95rem;" data-en="Select the wholesale items and quantities you'd like to order." data-es="Seleccione los artículos al por mayor y las cantidades que desea pedir.">Select the wholesale items and quantities you'd like to order.</p>
+
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 24px;">
+                        <div>
+                            <table class="data-table" id="new-order-table">
+                                <thead>
+                                    <tr>
+                                        <th data-en="Item Description" data-es="Descripción del Artículo">Item Description</th>
+                                        <th data-en="Price" data-es="Precio">Price</th>
+                                        <th data-en="Quantity" data-es="Cantidad" style="text-align: center; width: 140px;">Quantity</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bulk-items-tbody">
+                                    <!-- Items will be injected here via JS -->
+                                </tbody>
+                            </table>
+                            
+                            <div style="display: flex; justify-content: flex-end; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--bd);">
+                                <div style="width: 300px;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span data-en="Subtotal" data-es="Subtotal">Subtotal</span>
+                                        <span id="order-subtotal">$0.00</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 16px; font-weight: 600; font-size: 1.2rem;">
+                                        <span data-en="Total" data-es="Total">Total</span>
+                                        <span id="order-total">$0.00</span>
+                                    </div>
+                                    <label style="display: block; margin-bottom: 16px;">
+                                        <span style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--tx-muted);" data-en="Delivery Notes / Special Requests" data-es="Notas de entrega / Solicitudes especiales">Delivery Notes / Special Requests</span>
+                                        <textarea id="order-notes" class="input-field" style="resize: vertical; min-height: 80px;" placeholder="Optional notes..."></textarea>
+                                    </label>
+                                    <button class="btn-submit" id="submit-order-btn" data-en="Submit Order" data-es="Enviar Pedido" style="width: 100%;">Submit Order</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Phase 3.5: Order History & Status -->
+            <section id="sec-history" class="tab-pane">
+                <div style="background: var(--bg-card); border: 1px solid var(--bd); border-radius: 12px; padding: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 style="font-family: 'Cormorant Garamond', serif; font-size: 1.5rem;" data-en="Order History" data-es="Historial de Pedidos">Order History</h3>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th data-en="Order ID" data-es="ID Pedido">Order ID</th>
+                                    <th data-en="Date" data-es="Fecha">Date</th>
+                                    <th data-en="Status" data-es="Estado">Status</th>
+                                    <th data-en="Items" data-es="Artículos">Items</th>
+                                    <th data-en="Total" data-es="Total">Total</th>
+                                    <th data-en="Invoice" data-es="Factura" style="text-align: center;">Invoice</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-tbody">
+                                <tr>
+                                    <td colspan="6" style="text-align: center; color: var(--tx-muted);">Loading past orders...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Phase 3.2: Profile & Preferences -->
+            <section id="sec-profile" class="tab-pane">
+                <div style="padding: 32px; max-width: 600px; margin: 0 auto; margin-top: 32px; border: 1px solid var(--bd); background: var(--bg-card); border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
+                    <h3 style="margin-bottom: 8px; font-family: 'Cormorant Garamond', serif; font-size: 1.5rem;" data-en="Business Profile" data-es="Perfil del Negocio">Business Profile</h3>
+                    <p style="color: var(--tx-muted); margin-bottom: 24px; font-size: 0.95rem; line-height: 1.5;" data-en="Update your business details and delivery address." data-es="Actualice los detalles de su negocio y la dirección de entrega.">Update your business details and delivery address.</p>
+                    
+                    <form id="profile-form" style="display: flex; flex-direction: column; gap: 16px;">
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--tx-muted);" data-en="Business Name" data-es="Nombre del Negocio">Business Name</label>
+                            <input type="text" id="profile-business-name" class="input-field" required />
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--tx-muted);" data-en="Contact Name" data-es="Nombre de Contacto">Contact Name</label>
+                            <input type="text" id="profile-contact-name" class="input-field" required />
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--tx-muted);" data-en="Phone Number" data-es="Número de Teléfono">Phone Number</label>
+                            <input type="tel" id="profile-phone" class="input-field" required />
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--tx-muted);" data-en="Delivery Address" data-es="Dirección de Entrega">Delivery Address</label>
+                            <textarea id="profile-address" class="input-field" style="resize: vertical; min-height: 80px;" required></textarea>
+                        </div>
+
+                        <button type="submit" class="btn-submit" id="profile-update-btn" data-en="Save Changes" data-es="Guardar Cambios" style="margin-top: 8px;">Save Changes</button>
+                        <div id="profile-msg" style="font-size: 0.85rem; text-align: center; font-weight: 500;"></div>
+                    </form>
+
+                    <h3 style="margin-top: 32px; margin-bottom: 8px; font-family: 'Cormorant Garamond', serif; font-size: 1.5rem;" data-en="Security" data-es="Seguridad">Security</h3>
+                    <hr style="border: 0; border-top: 1px solid var(--bd); margin: 8px 0 16px 0;" />
+                    <form id="settings-form" style="display: flex; flex-direction: column; gap: 16px;">
+                        <input type="password" id="settings-current-pwd" class="input-field" placeholder="Enter current password" required />
+                        <input type="password" id="settings-new-pwd" class="input-field" placeholder="Enter new password (min 6 chars)" minlength="6" required />
+                        <input type="password" id="settings-conf-pwd" class="input-field" placeholder="Confirm new password" minlength="6" required />
+                        <button type="submit" class="btn-submit" id="settings-btn" data-en="Update Password" data-es="Actualizar Contraseña" style="margin-top: 8px;">Update Password</button>
+                        <div id="settings-msg" style="font-size: 0.85rem; text-align: center; font-weight: 500;"></div>
+                    </form>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Initialize Lucide Icons & Mobile Menu -->
+    <script>
+        lucide.createIcons();
+
+        // ── Mobile Menu Toggle Logic ──
+        const mobileBtn = document.getElementById('mobile-menu-btn');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        const closeBtn = document.getElementById('close-sidebar-btn');
+        
+        function closeSidebar() {
+            if (sidebar) sidebar.classList.remove('open');
+            if (overlay) overlay.classList.remove('open');
+        }
+
+        if (mobileBtn && sidebar) {
+            mobileBtn.addEventListener('click', () => {
+                sidebar.classList.add('open');
+                if (overlay) overlay.classList.add('open');
+            });
+
+            if (overlay) overlay.addEventListener('click', closeSidebar);
+            if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+
+            // Close sidebar when a link is clicked
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                link.addEventListener('click', closeSidebar);
+            });
+        }
+    </script>
+</body>
+</html>
