@@ -53,7 +53,9 @@ body {
     border-radius: 2px; border: 1.5px solid var(--bd); background: transparent; cursor: pointer; transition: var(--transition); color: var(--tx-muted); line-height: 1;
 }
 .lang-btn.active { background: var(--red); border-color: var(--red); color: #fff; }
-.lang-btn:not(.active):hover, .theme-btn:hover { border-color: var(--red); color: var(--red); }
+.lang-btn:not(.active):hover { border-color: var(--red); color: var(--red); }
+.theme-btn { border: none !important; padding: 4px; }
+.theme-btn:hover { color: var(--red); }
 .theme-btn:active { transform: scale(0.85) rotate(15deg); }
 .ctrl-divider { color: var(--bd); font-size: .7rem; font-weight: 300; user-select: none; margin: 0; }
 
