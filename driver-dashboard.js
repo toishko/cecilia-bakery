@@ -852,7 +852,7 @@ window.saveClient = async function() {
     const notes = document.getElementById('client-notes')?.value?.trim();
     const btn = document.getElementById('save-client-btn');
     
-    if (!business) { showToast('Business name is required.', 'warning'); return; }
+    if (!business) { window.showDashboardToast('Business name is required.', 'warning'); return; }
     
     if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
     
@@ -869,19 +869,19 @@ window.saveClient = async function() {
             // Update existing
             const { error } = await supabase.from('driver_route_clients').update(payload).eq('id', id);
             if (error) throw error;
-            showToast('Client updated!', 'success');
+            window.showDashboardToast('Client updated!', 'success');
         } else {
             // Insert new
             payload.driver_id = currentUser.id;
             const { error } = await supabase.from('driver_route_clients').insert(payload);
             if (error) throw error;
-            showToast('Client added!', 'success');
+            window.showDashboardToast('Client added!', 'success');
         }
         window.closeClientModal();
         fetchRouteClients();
     } catch (err) {
         console.error('Error saving client:', err);
-        showToast('Failed to save client.', 'error');
+        window.showDashboardToast('Failed to save client.', 'error');
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = 'Save Client'; }
     }
@@ -891,10 +891,10 @@ window.toggleClientActive = async function(clientId, active) {
     try {
         const { error } = await supabase.from('driver_route_clients').update({ is_active: active }).eq('id', clientId);
         if (error) throw error;
-        showToast(active ? 'Client reactivated!' : 'Client deactivated.', 'success');
+        window.showDashboardToast(active ? 'Client reactivated!' : 'Client deactivated.', 'success');
         fetchRouteClients();
     } catch (err) {
         console.error('Error toggling client:', err);
-        showToast('Failed to update client.', 'error');
+        window.showDashboardToast('Failed to update client.', 'error');
     }
 };
