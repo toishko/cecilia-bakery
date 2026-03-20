@@ -277,6 +277,42 @@
 
             <!-- ══════ ACCOUNT TAB ══════ -->
             <section id="sec-account" class="tab-pane">
+                <!-- Balance Summary -->
+                <div class="widget" style="margin-bottom: 24px; background: linear-gradient(135deg, rgba(200,16,46,0.07), rgba(200,16,46,0.02)); border: 1px solid rgba(200,16,46,0.18);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                        <div>
+                            <div style="font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; color: var(--tx-muted); margin-bottom: 4px;" data-en="Outstanding Balance" data-es="Saldo Pendiente">Outstanding Balance</div>
+                            <div id="driver-balance" style="font-family: 'Cormorant Garamond', serif; font-size: 2.4rem; font-weight: 700; color: var(--tx);">$0.00</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.85rem; color: var(--tx-muted);" id="balance-detail">
+                                <span id="balance-invoices-count">0</span> unpaid invoices
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invoice List -->
+                <div class="widget" style="margin-bottom: 24px;">
+                    <h3 class="widget-title" data-en="My Invoices" data-es="Mis Facturas">My Invoices</h3>
+                    <div class="table-wrapper" style="margin-top: 12px;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th data-en="Order" data-es="Pedido">Order</th>
+                                    <th data-en="Date" data-es="Fecha">Date</th>
+                                    <th data-en="Total" data-es="Total">Total</th>
+                                    <th data-en="Paid" data-es="Pagado">Paid</th>
+                                    <th data-en="Status" data-es="Estado">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoices-tbody">
+                                <tr><td colspan="5" style="text-align: center; color: var(--tx-muted); padding: 30px;">Loading invoices...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 500; color: var(--tx-muted); margin-bottom: 16px;" data-en="Account Settings" data-es="Configuración de Cuenta">Account Settings</h2>
                 
                 <div class="widget" style="margin-bottom: 24px;">

@@ -89,6 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupOrderDetailModal();
         
         fetchMyOrders();
+        fetchInvoices();
 
     } catch (err) {
         console.error('Error during driver verification:', err);
@@ -556,6 +557,8 @@ function setupTabs() {
 
             if (targetId === 'myorders') {
                 fetchMyOrders();
+            } else if (targetId === 'account') {
+                fetchInvoices();
             }
         });
     });
@@ -591,3 +594,124 @@ function setupSignOut() {
         }
     });
 }
+
+// ══════════════════════════════════════════════════════════
+// INVOICES & BALANCE
+// ══════════════════════════════════════════════════════════
+async function fetchInvoices() {
+    const tbody = document.getElementById('invoices-tbody');
+    const balanceEl = document.getElementById('driver-balance');
+    const countEl = document.getElementById('balance-invoices-count');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--tx-muted); padding: 30px;">Loading invoices...</td></tr>';
+    
+    try {
+        // Fetch all picked_up (completed) orders as invoices
+        const { data: orders, error: ordersErr } = await supabase
+            .from('driver_orders')
+            .select('*')
+            .eq('driver_id', currentUser.id)
+            .eq('status', 'picked_up')
+            .order('created_at', { ascending: false });
+        
+        if (ordersErr) throw ordersErr;
+        
+        // Fetch all payments for this driver
+        const { data: payments, error: payErr } = await supabase
+            .from('driver_payments')
+            .select('*')
+            .eq('driver_id', currentUser.id)
+            .order('created_at', { ascending: false });
+        
+        if (payErr) throw payErr;
+        
+        // Map payments to orders
+        const paymentsByOrder = {};
+        (payments || []).forEach(p => {
+            if (!paymentsByOrder[p.driver_order_id]) paymentsByOrder[p.driver_order_id] = [];
+            paymentsByOrder[p.driver_order_id].push(p);
+        });
+        
+        if (!orders || orders.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 30px; color: var(--tx-muted);">No invoices yet. Complete an order to see invoices here.</td></tr>`;
+            if (balanceEl) balanceEl.textContent = '$0.00';
+            if (countEl) countEl.textContent = '0';
+            return;
+        }
+        
+        let totalOwed = 0;
+        let unpaidCount = 0;
+        
+        tbody.innerHTML = '';
+        orders.forEach(order => {
+            const total = parseFloat(order.total_amount) || 0;
+            const orderPayments = paymentsByOrder[order.id] || [];
+            const totalPaid = orderPayments.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+            const remaining = total - totalPaid;
+            
+            let statusLabel, statusColor, statusBg;
+            if (remaining <= 0) {
+                statusLabel = 'Paid';
+                statusColor = '#1B5E20';
+                statusBg = 'rgba(27, 94, 32, 0.15)';
+            } else if (totalPaid > 0) {
+                statusLabel = 'Partial';
+                statusColor = '#E2A93B';
+                statusBg = 'rgba(226, 169, 59, 0.15)';
+                totalOwed += remaining;
+                unpaidCount++;
+            } else {
+                statusLabel = 'Unpaid';
+                statusColor = 'var(--red)';
+                statusBg = 'rgba(200, 16, 46, 0.15)';
+                totalOwed += remaining;
+                unpaidCount++;
+            }
+            
+            const shortId = order.id.split('-')[0].toUpperCase();
+            const date = new Date(order.created_at).toLocaleDateString();
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>#${shortId}</strong></td>
+                <td>${date}</td>
+                <td>$${total.toFixed(2)}</td>
+                <td>$${totalPaid.toFixed(2)}</td>
+                <td><span class="badge" style="background: ${statusBg}; color: ${statusColor}; border: 1px solid ${statusColor};">${statusLabel}</span></td>
+            `;
+            
+            // Expandable payment details
+            if (orderPayments.length > 0) {
+                tr.style.cursor = 'pointer';
+                tr.addEventListener('click', () => {
+                    const existingDetail = tr.nextElementSibling;
+                    if (existingDetail && existingDetail.classList.contains('payment-detail-row')) {
+                        existingDetail.remove();
+                        return;
+                    }
+                    const detailRow = document.createElement('tr');
+                    detailRow.className = 'payment-detail-row';
+                    let detailHtml = '<td colspan="5" style="padding: 12px 16px; background: var(--bg-body, var(--bg)); font-size: 0.85rem;"><strong style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--tx-muted);">Payment History</strong><ul style="list-style: none; padding: 0; margin: 8px 0 0;">';
+                    orderPayments.forEach(p => {
+                        const pDate = new Date(p.created_at).toLocaleDateString();
+                        detailHtml += `<li style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--bd);"><span>${pDate} · ${p.method}</span><span style="font-weight: 600;">$${parseFloat(p.amount).toFixed(2)}</span></li>`;
+                    });
+                    detailHtml += '</ul></td>';
+                    detailRow.innerHTML = detailHtml;
+                    tr.after(detailRow);
+                });
+            }
+            
+            tbody.appendChild(tr);
+        });
+        
+        if (balanceEl) balanceEl.textContent = '$' + totalOwed.toFixed(2);
+        if (countEl) countEl.textContent = String(unpaidCount);
+        
+    } catch (err) {
+        console.error('Error fetching invoices:', err);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--red); padding: 30px;">Error loading invoices.</td></tr>';
+    }
+}
+

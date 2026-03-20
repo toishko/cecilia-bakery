@@ -215,6 +215,8 @@ function setupTabs() {
                 fetchMasterOrders();
             } else if (targetId === 'driverorders') {
                 fetchDriverOrders();
+            } else if (targetId === 'driveraccounts') {
+                fetchDriverAccounts();
             }
         });
     });
@@ -491,7 +493,8 @@ window.openUserModal = function(userId) {
             can_approve_partners: false,
             can_manage_users: false,
             can_view_analytics: false,
-            can_manage_driver_orders: false
+            can_manage_driver_orders: false,
+            can_manage_driver_payments: false
         };
 
         permsGrid.innerHTML = `
@@ -515,6 +518,9 @@ window.openUserModal = function(userId) {
             </label>
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                 <input type="checkbox" id="modal_perm_driver_orders" ${perms.can_manage_driver_orders ? 'checked' : ''} style="cursor: pointer;"> Manage Driver Orders
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="modal_perm_driver_payments" ${perms.can_manage_driver_payments ? 'checked' : ''} style="cursor: pointer;"> Manage Driver Payments
             </label>
         `;
 
@@ -572,7 +578,8 @@ window.saveStaffPermissionsModal = async function(userId, btnEl) {
         can_approve_partners: document.getElementById('modal_perm_partners').checked,
         can_manage_users: document.getElementById('modal_perm_users').checked,
         can_view_analytics: document.getElementById('modal_perm_analytics').checked,
-        can_manage_driver_orders: document.getElementById('modal_perm_driver_orders').checked
+        can_manage_driver_orders: document.getElementById('modal_perm_driver_orders').checked,
+        can_manage_driver_payments: document.getElementById('modal_perm_driver_payments').checked
     };
 
     try {
@@ -1477,3 +1484,215 @@ window.advanceDriverOrder = async function(orderId, newStatus) {
         window.showDashboardToast('Failed to advance order status.', 'error');
     }
 };
+
+// ══════════════════════════════════════════════════════════
+// DRIVER ACCOUNTS / PAYMENT LEDGER
+// ══════════════════════════════════════════════════════════
+let driverLedgerData = [];
+
+async function fetchDriverAccounts() {
+    const tbody = document.getElementById('driver-accounts-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--tx-muted); padding: 40px;">Loading driver accounts...</td></tr>';
+    
+    try {
+        // Get all drivers
+        const { data: drivers, error: dErr } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .eq('role', 'driver');
+        if (dErr) throw dErr;
+        
+        if (!drivers || drivers.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--tx-muted); padding: 40px;">No drivers found.</td></tr>';
+            return;
+        }
+        
+        // Get all picked_up orders (invoices)
+        const { data: orders, error: oErr } = await supabase
+            .from('driver_orders')
+            .select('id, driver_id, total_amount, created_at')
+            .eq('status', 'picked_up');
+        if (oErr) throw oErr;
+        
+        // Get all payments
+        const { data: payments, error: pErr } = await supabase
+            .from('driver_payments')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (pErr) throw pErr;
+        
+        // Group orders & payments by driver
+        const ordersByDriver = {};
+        const paymentsByDriver = {};
+        const paymentsByOrder = {};
+        
+        (orders || []).forEach(o => {
+            if (!ordersByDriver[o.driver_id]) ordersByDriver[o.driver_id] = [];
+            ordersByDriver[o.driver_id].push(o);
+        });
+        
+        (payments || []).forEach(p => {
+            if (!paymentsByDriver[p.driver_id]) paymentsByDriver[p.driver_id] = [];
+            paymentsByDriver[p.driver_id].push(p);
+            if (!paymentsByOrder[p.driver_order_id]) paymentsByOrder[p.driver_order_id] = [];
+            paymentsByOrder[p.driver_order_id].push(p);
+        });
+        
+        driverLedgerData = drivers.map(driver => {
+            const driverOrders = ordersByDriver[driver.id] || [];
+            const driverPayments = paymentsByDriver[driver.id] || [];
+            const totalOwed = driverOrders.reduce((s, o) => s + (parseFloat(o.total_amount) || 0), 0);
+            const totalPaid = driverPayments.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+            const balance = totalOwed - totalPaid;
+            const lastPayment = driverPayments.length > 0 ? driverPayments[0] : null;
+            return { ...driver, orders: driverOrders, totalOwed, totalPaid, balance, lastPayment };
+        });
+        
+        renderDriverAccounts();
+        
+        // Refresh button
+        const refreshBtn = document.getElementById('refresh-driver-accounts-btn');
+        if (refreshBtn) refreshBtn.onclick = () => fetchDriverAccounts();
+        
+    } catch (err) {
+        console.error('Error fetching driver accounts:', err);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--red); padding: 40px;">Error loading driver accounts.</td></tr>';
+    }
+}
+
+function renderDriverAccounts() {
+    const tbody = document.getElementById('driver-accounts-tbody');
+    if (!tbody) return;
+    
+    if (driverLedgerData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--tx-muted); padding: 40px;">No drivers found.</td></tr>';
+        return;
+    }
+    
+    // Sort: most owed first
+    const sorted = [...driverLedgerData].sort((a, b) => b.balance - a.balance);
+    
+    tbody.innerHTML = '';
+    sorted.forEach(driver => {
+        const tr = document.createElement('tr');
+        
+        let statusIcon, statusLabel, statusColor, statusBg;
+        if (driver.balance <= 0) {
+            statusIcon = '🟢'; statusLabel = 'Clear'; statusColor = '#1B5E20'; statusBg = 'rgba(27,94,32,0.15)';
+        } else if (driver.totalPaid > 0) {
+            statusIcon = '🟡'; statusLabel = 'Partial'; statusColor = '#E2A93B'; statusBg = 'rgba(226,169,59,0.15)';
+        } else if (driver.totalOwed > 0) {
+            statusIcon = '🔴'; statusLabel = 'Unpaid'; statusColor = 'var(--red)'; statusBg = 'rgba(200,16,46,0.15)';
+        } else {
+            statusIcon = '⭕'; statusLabel = 'No Orders'; statusColor = 'var(--tx-muted)'; statusBg = 'transparent';
+        }
+        
+        const lastPaymentStr = driver.lastPayment 
+            ? `${new Date(driver.lastPayment.created_at).toLocaleDateString()} · $${parseFloat(driver.lastPayment.amount).toFixed(2)} (${driver.lastPayment.method})`
+            : '<span style="color: var(--tx-muted)">—</span>';
+        
+        tr.innerHTML = `
+            <td><strong>${driver.full_name || 'Unknown'}</strong></td>
+            <td>$${driver.totalOwed.toFixed(2)}</td>
+            <td>$${driver.totalPaid.toFixed(2)}</td>
+            <td><strong style="color: ${driver.balance > 0 ? 'var(--red)' : '#1B5E20'}">$${driver.balance.toFixed(2)}</strong></td>
+            <td style="font-size: 0.85rem;">${lastPaymentStr}</td>
+            <td><span class="badge" style="background:${statusBg};color:${statusColor};border:1px solid ${statusColor}">${statusIcon} ${statusLabel}</span></td>
+            <td><button class="btn-submit" style="padding:6px 14px;margin:0;width:auto;font-size:0.8rem" onclick="window.openLogPaymentModal('${driver.id}','${(driver.full_name || '').replace(/'/g, '\\')}')" ${driver.orders.length === 0 ? 'disabled style="opacity:0.4;padding:6px 14px;margin:0;width:auto;font-size:0.8rem"' : ''}>Log Payment</button></td>
+        `;
+        
+        tbody.appendChild(tr);
+    });
+}
+
+let paymentDriverId = null;
+
+window.openLogPaymentModal = async function(driverId, driverName) {
+    paymentDriverId = driverId;
+    const nameEl = document.getElementById('log-payment-driver-name');
+    const orderSelect = document.getElementById('payment-order-select');
+    const amountInput = document.getElementById('payment-amount');
+    const notesInput = document.getElementById('payment-notes');
+    
+    if (nameEl) nameEl.textContent = driverName;
+    if (amountInput) amountInput.value = '';
+    if (notesInput) notesInput.value = '';
+    
+    // Load driver's picked_up orders
+    try {
+        const { data: orders, error } = await supabase
+            .from('driver_orders')
+            .select('id, total_amount, created_at')
+            .eq('driver_id', driverId)
+            .eq('status', 'picked_up')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        if (orderSelect) {
+            orderSelect.innerHTML = '';
+            if (!orders || orders.length === 0) {
+                orderSelect.innerHTML = '<option value="">No unpicked up orders</option>';
+            } else {
+                orders.forEach(o => {
+                    const shortId = o.id.split('-')[0].toUpperCase();
+                    const date = new Date(o.created_at).toLocaleDateString();
+                    const total = parseFloat(o.total_amount) || 0;
+                    orderSelect.innerHTML += `<option value="${o.id}">#${shortId} · ${date} · $${total.toFixed(2)}</option>`;
+                });
+            }
+        }
+    } catch (err) {
+        console.error('Error loading orders for payment:', err);
+        if (orderSelect) orderSelect.innerHTML = '<option value="">Error loading orders</option>';
+    }
+    
+    const overlay = document.getElementById('log-payment-modal-overlay');
+    if (overlay) overlay.classList.add('open');
+    if (window.lucide) window.lucide.createIcons();
+};
+
+window.closeLogPaymentModal = function() {
+    const overlay = document.getElementById('log-payment-modal-overlay');
+    if (overlay) overlay.classList.remove('open');
+    paymentDriverId = null;
+};
+
+window.submitPayment = async function() {
+    const orderId = document.getElementById('payment-order-select')?.value;
+    const amount = parseFloat(document.getElementById('payment-amount')?.value);
+    const method = document.getElementById('payment-method')?.value || 'cash';
+    const notes = document.getElementById('payment-notes')?.value || '';
+    const btn = document.getElementById('submit-payment-btn');
+    
+    if (!orderId) { window.showDashboardToast('Please select an order.', 'warning'); return; }
+    if (!amount || amount <= 0) { window.showDashboardToast('Please enter a valid amount.', 'warning'); return; }
+    if (!paymentDriverId) { window.showDashboardToast('No driver selected.', 'error'); return; }
+    
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+    
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { error } = await supabase.from('driver_payments').insert({
+            driver_order_id: orderId,
+            driver_id: paymentDriverId,
+            amount: amount,
+            method: method,
+            notes: notes || null,
+            recorded_by: user.id
+        });
+        
+        if (error) throw error;
+        
+        window.showDashboardToast(`Payment of $${amount.toFixed(2)} logged!`, 'success');
+        window.closeLogPaymentModal();
+        fetchDriverAccounts();
+    } catch (err) {
+        console.error('Error logging payment:', err);
+        window.showDashboardToast('Failed to log payment.', 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Log Payment'; }
+    }
+};
+
