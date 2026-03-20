@@ -3118,11 +3118,8 @@
       transition: color .2s;
     }
 
-    .mobile-drawer-links a:hover {
-      color: var(--red);
-    }
-
-    .mobile-drawer-links a.nav-cta {
+    .mobile-drawer-links a:hover,
+    .mobile-drawer-links a:active {
       color: var(--red);
     }
 
@@ -3295,12 +3292,10 @@
     <ul class="mobile-drawer-links">
       <li><a href="index.html" onclick="closeMobileMenu()" data-en="<i data-lucide='home' class='icon'></i> Home" data-es="<i data-lucide='home' class='icon'></i> Inicio"><i data-lucide='home' class='icon'></i> Home</a></li>
       <li><a href="menu.html" class="active" onclick="closeMobileMenu()" data-en="<i data-lucide='book-open' class='icon'></i> Menu" data-es="<i data-lucide='book-open' class='icon'></i> Menú"><i data-lucide='book-open' class='icon'></i> Menu</a></li>
+      <li><a href="index.html#story" onclick="closeMobileMenu()" data-en="<i data-lucide='heart' class='icon'></i> Our Story" data-es="<i data-lucide='heart' class='icon'></i> Nuestra Historia"><i data-lucide='heart' class='icon'></i> Our Story</a></li>
       <li><a href="index.html#wholesale" onclick="closeMobileMenu()" data-en="<i data-lucide='store' class='icon'></i> Wholesale" data-es="<i data-lucide='store' class='icon'></i> Mayoreo"><i data-lucide='store' class='icon'></i> Wholesale</a></li>
       <li id="mobile-login-btn"><a href="login.html" onclick="closeMobileMenu()" data-en="<i data-lucide='key' class='icon'></i> Log In" data-es="<i data-lucide='key' class='icon'></i> Iniciar Sesión"><i data-lucide='key' class='icon'></i> Log In</a></li>
-      <li id="mobile-user-menu" style="display: none;">
-        <a href="index.html" id="mobile-profile-link" onclick="closeMobileMenu()" data-en="<i data-lucide='home' class='icon'></i> Home" data-es="<i data-lucide='home' class='icon'></i> Inicio"><i data-lucide='home' class='icon'></i> Home</a>
-      </li>
-      <li><a href="index.html#experience" onclick="closeMobileMenu()" class="nav-cta" data-en="<i data-lucide='cake' class='icon'></i> Order a Custom Cake" data-es="<i data-lucide='cake' class='icon'></i> Ordenar un Bizcocho"><i data-lucide='cake' class='icon'></i> Order a Custom Cake</a></li>
+      <li><a href="index.html#experience" onclick="closeMobileMenu()" data-en="<i data-lucide='cake' class='icon'></i> Order a Custom Cake" data-es="<i data-lucide='cake' class='icon'></i> Ordenar un Bizcocho"><i data-lucide='cake' class='icon'></i> Order a Custom Cake</a></li>
       <li id="mobile-signout-menu" style="display: none;">
         <a href="#" id="mobile-sign-out-btn" style="color: var(--red);" onclick="closeMobileMenu()" data-en="<i data-lucide='log-out' class='icon'></i> Sign Out" data-es="<i data-lucide='log-out' class='icon'></i> Cerrar Sesión"><i data-lucide='log-out' class='icon'></i> Sign Out</a>
       </li>

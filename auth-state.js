@@ -8,7 +8,6 @@ export async function updateAuthUI(session) {
     
     // Mobile elements
     const mobileLoginBtn = document.getElementById('mobile-login-btn');
-    const mobileUserMenu = document.getElementById('mobile-user-menu');
     const mobileSignoutMenu = document.getElementById('mobile-signout-menu');
 
     if (session) {
@@ -16,7 +15,6 @@ export async function updateAuthUI(session) {
         if (loginBtn) loginBtn.style.display = 'none';
         if (userMenu) userMenu.style.display = 'block';
         if (mobileLoginBtn) mobileLoginBtn.style.display = 'none';
-        if (mobileUserMenu) mobileUserMenu.style.display = 'block';
         if (mobileSignoutMenu) mobileSignoutMenu.style.display = 'block';
         
         if (userGreeting) {
@@ -44,7 +42,6 @@ export async function updateAuthUI(session) {
         if (loginBtn) loginBtn.style.display = 'block';
         if (userMenu) userMenu.style.display = 'none';
         if (mobileLoginBtn) mobileLoginBtn.style.display = 'block';
-        if (mobileUserMenu) mobileUserMenu.style.display = 'none';
         if (mobileSignoutMenu) mobileSignoutMenu.style.display = 'none';
     }
 }
