@@ -99,7 +99,6 @@
     }
 
     html {
-      scroll-behavior: smooth;
       scroll-padding-top: 100px;
     }
 
@@ -3266,6 +3265,10 @@
         alt="Cecilia Bakery" class="nav-logo-img" />
     </a>
     <div class="nav-right-group">
+      <a href="login.html" id="nav-login-btn" style="text-decoration: none; color: var(--text); margin-right: 1.5rem; display: flex; align-items: center; gap: 4px;">
+        <i data-lucide='key' class='icon' width="18" height="18"></i>
+        <span data-en="Log In" data-es="Iniciar Sesión" style="font-weight: 500; font-size: 0.9rem;">Log In</span>
+      </a>
       <div id="nav-user-menu" style="display: none; align-items: center; margin-right: 1rem;">
         <span id="nav-user-greeting" style="font-weight: 500; font-size: 1rem; color: var(--text);">Profile</span>
       </div>
@@ -3294,7 +3297,7 @@
       <li><a href="menu.html" class="active" onclick="closeMobileMenu()" data-en="<i data-lucide='book-open' class='icon'></i> Menu" data-es="<i data-lucide='book-open' class='icon'></i> Menú"><i data-lucide='book-open' class='icon'></i> Menu</a></li>
       <li><a href="index.html#story" onclick="closeMobileMenu()" data-en="<i data-lucide='heart' class='icon'></i> Our Story" data-es="<i data-lucide='heart' class='icon'></i> Nuestra Historia"><i data-lucide='heart' class='icon'></i> Our Story</a></li>
       <li><a href="index.html#wholesale" onclick="closeMobileMenu()" data-en="<i data-lucide='store' class='icon'></i> Wholesale" data-es="<i data-lucide='store' class='icon'></i> Mayoreo"><i data-lucide='store' class='icon'></i> Wholesale</a></li>
-      <li id="mobile-login-btn"><a href="login.html" onclick="closeMobileMenu()" data-en="<i data-lucide='key' class='icon'></i> Log In" data-es="<i data-lucide='key' class='icon'></i> Iniciar Sesión"><i data-lucide='key' class='icon'></i> Log In</a></li>
+
       <li><a href="index.html#experience" onclick="closeMobileMenu()" data-en="<i data-lucide='cake' class='icon'></i> Order a Custom Cake" data-es="<i data-lucide='cake' class='icon'></i> Ordenar un Bizcocho"><i data-lucide='cake' class='icon'></i> Order a Custom Cake</a></li>
       <li id="mobile-signout-menu" style="display: none;">
         <a href="#" id="mobile-sign-out-btn" style="color: var(--red);" onclick="closeMobileMenu()" data-en="<i data-lucide='log-out' class='icon'></i> Sign Out" data-es="<i data-lucide='log-out' class='icon'></i> Cerrar Sesión"><i data-lucide='log-out' class='icon'></i> Sign Out</a>

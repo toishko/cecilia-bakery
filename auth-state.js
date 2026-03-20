@@ -39,7 +39,7 @@ export async function updateAuthUI(session) {
         }
     } else {
         // User is signed out
-        if (loginBtn) loginBtn.style.display = 'block';
+        if (loginBtn) loginBtn.style.display = 'flex';
         if (userMenu) userMenu.style.display = 'none';
         if (mobileLoginBtn) mobileLoginBtn.style.display = 'block';
         if (mobileSignoutMenu) mobileSignoutMenu.style.display = 'none';
