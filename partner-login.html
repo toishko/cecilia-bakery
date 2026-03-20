@@ -94,7 +94,15 @@
 
                 <div class="input-group">
                     <label class="input-label" data-en="Password" data-es="Contraseña">Password</label>
-                    <input type="password" class="input-field" data-en="••••••••" data-es="••••••••" placeholder="••••••••" required />
+                    <input type="password" class="input-field has-toggle" data-en="••••••••" data-es="••••••••" placeholder="••••••••" required />
+                    <button type="button" class="password-toggle" title="Toggle password visibility">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+                
+                <div class="remember-me-group hide-on-signup" style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px; font-size: 0.85rem; color: var(--tx-muted);">
+                    <input type="checkbox" id="remember-me" style="accent-color: var(--red); cursor: pointer;" />
+                    <label for="remember-me" style="cursor: pointer; font-family: 'Outfit', sans-serif;" data-en="Remember Me" data-es="Recuérdame">Remember Me</label>
                 </div>
 
                 <button type="submit" class="btn-submit hide-on-signup" data-en="Access Portal" data-es="Acceder al Portal">Access Portal</button>

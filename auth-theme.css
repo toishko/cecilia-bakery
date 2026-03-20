@@ -81,6 +81,13 @@ body {
     width: 100%; background: var(--bg-input); border: 1.5px solid var(--bd-input); border-radius: var(--r); padding: 14px 16px;
     font-family: 'Outfit', sans-serif; font-size: 1rem; color: var(--tx); transition: var(--transition); outline: none;
 }
+.input-field.has-toggle { padding-right: 48px; }
+.password-toggle {
+    position: absolute; right: 16px; bottom: 12px; background: transparent; border: none; padding: 4px;
+    color: var(--tx-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.3s;
+}
+.password-toggle:hover { color: var(--tx); }
+.password-toggle svg { width: 20px; height: 20px; }
 .input-field:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(200,16,46,0.1); }
 .input-field::placeholder { color: var(--tx-faint); }
 
