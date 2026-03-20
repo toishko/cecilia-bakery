@@ -366,43 +366,94 @@
                 </div>
             </section>
 
-            <!-- Analytics Module -->
+                        <!-- Analytics Module (Redesigned) -->
             <section id="sec-analytics" class="tab-pane">
-                <div style="display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <!-- Header: Title + Export -->
+                <div class="analytics-header">
                     <div>
-                        <h2 style="font-size: 1.8rem; font-family: 'Cormorant Garamond', serif; color: var(--tx);" data-en="Analytics & Insights" data-es="Analíticas y Estadísticas">Analytics & Insights</h2>
-                        <p style="color: var(--tx-muted); margin-top: 4px; font-size: 0.95rem;">Track your bakery's performance over time.</p>
+                        <h2 style="font-size: 1.8rem; font-family: 'Cormorant Garamond', serif; color: var(--tx);" data-en="Analytics &amp; Insights" data-es="Analíticas y Estadísticas">Analytics &amp; Insights</h2>
+                        <p style="color: var(--tx-muted); margin-top: 4px; font-size: 0.95rem;" data-en="Track your bakery's performance across all channels." data-es="Seguimiento del rendimiento en todos los canales.">Track your bakery's performance across all channels.</p>
                     </div>
-                    <div>
-                        <select id="analytics-date-range" class="input-field" style="min-width: 150px; margin: 0; cursor: pointer;">
-                            <option value="7" selected>Last 7 Days</option>
-                            <option value="30">Last 30 Days</option>
-                            <option value="90">Last 90 Days</option>
-                            <option value="all">All Time</option>
-                        </select>
-                    </div>
+                    <button class="analytics-export-btn" id="analytics-export-csv" title="Export filtered data as CSV">
+                        <i data-lucide="download" class="icon"></i>
+                        <span data-en="Export CSV" data-es="Exportar CSV">Export CSV</span>
+                    </button>
                 </div>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 24px;">
-                    <div style="background: var(--bg-card); border: 1px solid var(--bd); border-radius: 12px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
-                        <h3 style="font-size: 1.1rem; margin-bottom: 16px; font-family: 'Outfit', sans-serif;">Revenue Trend</h3>
-                        <div style="height: 300px; width: 100%; position: relative;">
-                            <canvas id="revenueChart"></canvas>
-                        </div>
+
+                <!-- Controls: Channel Toggle + Date Picker -->
+                <div class="analytics-controls">
+                    <!-- Channel Toggle -->
+                    <div class="analytics-channel-bar" id="analytics-channel-bar">
+                        <button class="analytics-channel-btn active" data-channel="all" data-en="All" data-es="Todos">All</button>
+                        <button class="analytics-channel-btn" data-channel="customers" data-en="Customers" data-es="Clientes">Customers</button>
+                        <button class="analytics-channel-btn" data-channel="drivers" data-en="Drivers" data-es="Conductores">Drivers</button>
+                        <button class="analytics-channel-btn" data-channel="partners" data-en="Partners" data-es="Socios">Partners</button>
                     </div>
-                    <div style="background: var(--bg-card); border: 1px solid var(--bd); border-radius: 12px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
-                        <h3 style="font-size: 1.1rem; margin-bottom: 16px; font-family: 'Outfit', sans-serif;">Order Volume</h3>
-                        <div style="height: 300px; width: 100%; position: relative;">
-                            <canvas id="volumeChart"></canvas>
+
+                    <!-- Date Range -->
+                    <div class="analytics-controls-row">
+                        <div class="analytics-date-row">
+                            <input type="date" id="analytics-start-date" class="analytics-date-input" />
+                            <span style="color: var(--tx-muted); font-size: 0.85rem;">to</span>
+                            <input type="date" id="analytics-end-date" class="analytics-date-input" />
+                        </div>
+                        <div class="analytics-preset-group" id="analytics-presets">
+                            <button class="analytics-preset-btn" data-days="7">7D</button>
+                            <button class="analytics-preset-btn active" data-days="30">30D</button>
+                            <button class="analytics-preset-btn" data-days="90">90D</button>
+                            <button class="analytics-preset-btn" data-days="all">All</button>
                         </div>
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px;">
-                    <div style="background: var(--bg-card); border: 1px solid var(--bd); border-radius: 12px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
-                        <h3 style="font-size: 1.1rem; margin-bottom: 16px; font-family: 'Outfit', sans-serif;">Top Selling Items</h3>
-                        <div style="height: 300px; width: 100%; position: relative;">
-                            <canvas id="itemsChart"></canvas>
+                <!-- KPI Summary Cards -->
+                <div class="analytics-kpi-grid" id="analytics-kpi-grid">
+                    <div class="analytics-kpi-card" data-accent="red">
+                        <div class="analytics-kpi-label" data-en="Total Revenue" data-es="Ingresos Totales">Total Revenue</div>
+                        <div class="analytics-kpi-value" id="kpi-revenue">$0.00</div>
+                        <div class="analytics-kpi-sub" id="kpi-revenue-sub">&mdash;</div>
+                    </div>
+                    <div class="analytics-kpi-card" data-accent="navy">
+                        <div class="analytics-kpi-label" data-en="Orders" data-es="Pedidos">Orders</div>
+                        <div class="analytics-kpi-value" id="kpi-orders">0</div>
+                        <div class="analytics-kpi-sub" id="kpi-orders-sub">&mdash;</div>
+                    </div>
+                    <div class="analytics-kpi-card" data-accent="amber">
+                        <div class="analytics-kpi-label" data-en="Avg Order Value" data-es="Valor Promedio">Avg Order Value</div>
+                        <div class="analytics-kpi-value" id="kpi-aov">$0.00</div>
+                        <div class="analytics-kpi-sub" id="kpi-aov-sub">&mdash;</div>
+                    </div>
+                    <div class="analytics-kpi-card" data-accent="green">
+                        <div class="analytics-kpi-label" id="kpi-extra-label">Extra Metric</div>
+                        <div class="analytics-kpi-value" id="kpi-extra">&mdash;</div>
+                        <div class="analytics-kpi-sub" id="kpi-extra-sub">&mdash;</div>
+                    </div>
+                </div>
+
+                <!-- Chart Grid -->
+                <div class="analytics-chart-grid" id="analytics-chart-grid">
+                    <div class="analytics-chart-card">
+                        <div class="analytics-chart-title" id="chart1-title">Revenue Trend</div>
+                        <div class="analytics-chart-container">
+                            <canvas id="analyticsChart1"></canvas>
+                        </div>
+                    </div>
+                    <div class="analytics-chart-card">
+                        <div class="analytics-chart-title" id="chart2-title">Order Volume</div>
+                        <div class="analytics-chart-container">
+                            <canvas id="analyticsChart2"></canvas>
+                        </div>
+                    </div>
+                    <div class="analytics-chart-card">
+                        <div class="analytics-chart-title" id="chart3-title">Top Items</div>
+                        <div class="analytics-chart-container">
+                            <canvas id="analyticsChart3"></canvas>
+                        </div>
+                    </div>
+                    <div class="analytics-chart-card">
+                        <div class="analytics-chart-title" id="chart4-title">Breakdown</div>
+                        <div class="analytics-chart-container">
+                            <canvas id="analyticsChart4"></canvas>
                         </div>
                     </div>
                 </div>

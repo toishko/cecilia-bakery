@@ -766,3 +766,336 @@ body {
     flex-grow: 1;
     line-height: 1.4;
 }
+
+/* ═══════════════════════════════════════════
+   ANALYTICS MODULE
+   ═══════════════════════════════════════════ */
+
+/* ── Channel Toggle Bar ── */
+.analytics-channel-bar {
+    display: flex;
+    gap: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--bd);
+    border-radius: 10px;
+    padding: 4px;
+    width: fit-content;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+
+.analytics-channel-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--tx-muted);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+}
+
+.analytics-channel-btn:hover {
+    color: var(--tx);
+    background: rgba(200, 16, 46, 0.04);
+}
+
+.analytics-channel-btn.active {
+    background: var(--red);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(200, 16, 46, 0.3);
+}
+
+[data-theme="dark"] .analytics-channel-bar {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* ── Custom Date Picker Row ── */
+.analytics-date-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.analytics-date-input {
+    padding: 7px 12px;
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--tx);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.analytics-date-input:focus {
+    outline: none;
+    border-color: var(--red);
+}
+
+.analytics-preset-group {
+    display: flex;
+    gap: 0;
+    background: rgba(107, 80, 87, 0.06);
+    border-radius: 8px;
+    padding: 3px;
+}
+
+.analytics-preset-btn {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--tx-muted);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+}
+
+.analytics-preset-btn:hover {
+    color: var(--tx);
+}
+
+.analytics-preset-btn.active {
+    background: var(--bg-card);
+    color: var(--tx);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+[data-theme="dark"] .analytics-preset-group {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .analytics-preset-btn.active {
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+/* ── KPI Summary Cards ── */
+.analytics-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.analytics-kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--bd);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: transform 0.3s, box-shadow 0.3s;
+    position: relative;
+    overflow: hidden;
+}
+
+.analytics-kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 12px 12px 0 0;
+}
+
+.analytics-kpi-card[data-accent="red"]::before { background: var(--red); }
+.analytics-kpi-card[data-accent="navy"]::before { background: #002D62; }
+.analytics-kpi-card[data-accent="amber"]::before { background: #F2994A; }
+.analytics-kpi-card[data-accent="green"]::before { background: #27ae60; }
+
+[data-theme="dark"] .analytics-kpi-card[data-accent="navy"]::before { background: #A6CEFF; }
+
+.analytics-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+}
+
+[data-theme="dark"] .analytics-kpi-card:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+.analytics-kpi-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--tx-muted);
+    font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+}
+
+.analytics-kpi-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--tx);
+    line-height: 1.1;
+}
+
+.analytics-kpi-sub {
+    font-size: 0.78rem;
+    color: var(--tx-muted);
+    font-weight: 400;
+}
+
+/* ── Chart Cards ── */
+.analytics-chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.analytics-chart-card {
+    background: var(--bg-card);
+    border: 1px solid var(--bd);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.02);
+    transition: box-shadow 0.3s;
+}
+
+.analytics-chart-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+[data-theme="dark"] .analytics-chart-card {
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+}
+
+[data-theme="dark"] .analytics-chart-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+.analytics-chart-title {
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+    color: var(--tx);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.analytics-chart-title .chart-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--tx-muted);
+}
+
+.analytics-chart-container {
+    height: 280px;
+    width: 100%;
+    position: relative;
+}
+
+/* Full-width chart variant */
+.analytics-chart-card.full-width {
+    grid-column: 1 / -1;
+}
+
+/* ── Export Button ── */
+.analytics-export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--tx);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.analytics-export-btn:hover {
+    background: rgba(200, 16, 46, 0.05);
+    border-color: var(--red);
+    color: var(--red);
+}
+
+.analytics-export-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ── Analytics Header Layout ── */
+.analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+}
+
+.analytics-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.analytics-controls-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* ── Empty State for chart cards ── */
+.analytics-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 280px;
+    color: var(--tx-muted);
+    font-size: 0.9rem;
+    gap: 8px;
+}
+
+.analytics-empty svg {
+    width: 32px;
+    height: 32px;
+    opacity: 0.3;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1100px) {
+    .analytics-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .analytics-chart-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .analytics-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+    .analytics-channel-bar {
+        width: 100%;
+        overflow-x: auto;
+    }
+    .analytics-header {
+        flex-direction: column;
+    }
+    .analytics-chart-container {
+        height: 220px;
+    }
+}

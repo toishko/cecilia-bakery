@@ -562,6 +562,8 @@ function setupTabs() {
                 fetchInvoices();
             } else if (targetId === 'myroute') {
                 fetchRouteClients();
+            } else if (targetId === 'mystats') {
+                fetchMyStats();
             }
         });
     });
@@ -898,3 +900,247 @@ window.toggleClientActive = async function(clientId, active) {
         window.showDashboardToast('Failed to update client.', 'error');
     }
 };
+
+/* ═══════════════════════════════════════════════════════════════
+   MY STATS TAB — Driver-facing analytics
+   ═══════════════════════════════════════════════════════════════ */
+
+let myStatsOrders = [];
+let myRouteClientCount = 0;
+let statsDateRange = { start: null, end: null };
+let statsCharts = {};
+
+const STATS_COLORS = {
+    navy: '#002D62', red: '#C8102E', amber: '#F2994A', green: '#27ae60',
+    plum: '#6B5057', forest: '#1B5E20', violet: '#8B5CF6', teal: '#0891B2',
+    rose: '#E11D48', slate: '#64748B',
+};
+const STATS_PALETTE = Object.values(STATS_COLORS);
+
+// Setup date controls on DOM ready
+(function setupStatsDateControls() {
+    // Set default 30D
+    setStatsPreset(30);
+
+    const startInput = document.getElementById('stats-start-date');
+    const endInput = document.getElementById('stats-end-date');
+    if (startInput) startInput.addEventListener('change', handleStatsDateChange);
+    if (endInput) endInput.addEventListener('change', handleStatsDateChange);
+
+    const presetsEl = document.getElementById('stats-presets');
+    if (presetsEl) {
+        presetsEl.addEventListener('click', (e) => {
+            const btn = e.target.closest('.analytics-preset-btn');
+            if (!btn) return;
+            presetsEl.querySelectorAll('.analytics-preset-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const days = btn.dataset.days;
+            if (days === 'all') {
+                statsDateRange = { start: null, end: null };
+                document.getElementById('stats-start-date').value = '';
+                document.getElementById('stats-end-date').value = '';
+            } else {
+                setStatsPreset(parseInt(days));
+            }
+            if (myStatsOrders.length > 0) renderMyStats();
+        });
+    }
+})();
+
+function setStatsPreset(days) {
+    const now = new Date();
+    const start = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
+    statsDateRange = { start, end: now };
+    const si = document.getElementById('stats-start-date');
+    const ei = document.getElementById('stats-end-date');
+    if (si) si.value = start.toISOString().split('T')[0];
+    if (ei) ei.value = now.toISOString().split('T')[0];
+}
+
+function handleStatsDateChange() {
+    const sv = document.getElementById('stats-start-date').value;
+    const ev = document.getElementById('stats-end-date').value;
+    statsDateRange.start = sv ? new Date(sv + 'T00:00:00') : null;
+    statsDateRange.end = ev ? new Date(ev + 'T23:59:59') : null;
+    document.querySelectorAll('#stats-presets .analytics-preset-btn').forEach(b => b.classList.remove('active'));
+    if (myStatsOrders.length > 0) renderMyStats();
+}
+
+async function fetchMyStats() {
+    if (!currentUser) return;
+    try {
+        const [ordersRes, clientsRes] = await Promise.all([
+            supabase.from('driver_orders').select('id, created_at, total, items, status').eq('driver_id', currentUser.id),
+            supabase.from('driver_route_clients').select('id', { count: 'exact' }).eq('driver_id', currentUser.id).eq('is_active', true),
+        ]);
+        myStatsOrders = ordersRes.data || [];
+        myRouteClientCount = clientsRes.count || 0;
+        renderMyStats();
+    } catch (err) {
+        console.error('Stats fetch error:', err);
+    }
+}
+
+function renderMyStats() {
+    const { start, end } = statsDateRange;
+    const inRange = (d) => {
+        if (!start && !end) return true;
+        const dt = new Date(d);
+        if (start && dt < start) return false;
+        if (end && dt > end) return false;
+        return true;
+    };
+    const orders = myStatsOrders.filter(o => inRange(o.created_at));
+
+    // KPIs
+    const totalSpent = orders.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
+    const aov = orders.length > 0 ? totalSpent / orders.length : 0;
+
+    document.getElementById('stats-kpi-orders').textContent = orders.length.toString();
+    document.getElementById('stats-kpi-orders-sub').textContent = 'in selected period';
+    document.getElementById('stats-kpi-spent').textContent = statsFmtCurrency(totalSpent);
+    document.getElementById('stats-kpi-spent-sub').textContent = 'total ordered';
+    document.getElementById('stats-kpi-aov').textContent = statsFmtCurrency(aov);
+    document.getElementById('stats-kpi-aov-sub').textContent = 'per order average';
+    document.getElementById('stats-kpi-clients').textContent = myRouteClientCount.toString();
+    document.getElementById('stats-kpi-clients-sub').textContent = 'active on your route';
+
+    // Charts
+    drawStatsSpendingTrend(orders);
+    drawStatsOrderFrequency(orders);
+    drawStatsTopItems(orders);
+    drawStatsOrdersByStatus(orders);
+
+    if (window.lucide) lucide.createIcons();
+}
+
+// ── Chart Helpers ──
+function statsFmtCurrency(n) {
+    return '$' + (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function statsDestroyChart(id) {
+    if (statsCharts[id]) { statsCharts[id].destroy(); delete statsCharts[id]; }
+    const c = document.getElementById(id);
+    if (c) { c.style.display = ''; const em = c.parentElement.querySelector('.analytics-empty'); if (em) em.remove(); }
+}
+
+function statsEmptyChart(id) {
+    const c = document.getElementById(id); if (!c) return;
+    c.style.display = 'none';
+    const div = document.createElement('div');
+    div.className = 'analytics-empty';
+    div.innerHTML = '<i data-lucide="bar-chart-2" class="icon"></i><span>No data for this period</span>';
+    c.parentElement.appendChild(div);
+}
+
+function statsGradient(context, color) {
+    const { ctx, chartArea } = context.chart;
+    if (!chartArea) return color + '33';
+    const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+    g.addColorStop(0, color + '30');
+    g.addColorStop(1, color + '03');
+    return g;
+}
+
+function statsChartOpts(valueType) {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+    const textColor = isDark ? '#ccc' : '#666';
+    return {
+        responsive: true, maintainAspectRatio: false,
+        animation: { duration: 800, easing: 'easeOutQuart' },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: isDark ? '#1e1e2e' : '#1a1a2e',
+                titleColor: '#fff', bodyColor: '#e0e0e0',
+                titleFont: { family: "'Outfit', sans-serif", size: 13, weight: '600' },
+                bodyFont: { family: "'Outfit', sans-serif", size: 12 },
+                padding: 12, cornerRadius: 8, boxPadding: 4,
+                callbacks: {
+                    label: (ctx) => {
+                        const v = ctx.parsed.y ?? ctx.parsed.x ?? ctx.parsed;
+                        return valueType === 'currency' ? ` ${statsFmtCurrency(v)}` : ` ${v.toLocaleString()}`;
+                    }
+                }
+            },
+        },
+        scales: {
+            x: { grid: { color: gridColor, drawBorder: false }, ticks: { color: textColor, font: { family: "'Outfit', sans-serif", size: 11 }, maxRotation: 45 } },
+            y: { grid: { color: gridColor, drawBorder: false }, ticks: { color: textColor, font: { family: "'Outfit', sans-serif", size: 11 }, callback: v => valueType === 'currency' ? '$' + v.toLocaleString() : v }, beginAtZero: true },
+        },
+    };
+}
+
+function statsDoughnutOpts() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    return {
+        responsive: true, maintainAspectRatio: false, cutout: '65%',
+        animation: { duration: 800, easing: 'easeOutQuart' },
+        plugins: {
+            legend: { position: 'right', labels: { color: isDark ? '#ccc' : '#555', font: { family: "'Outfit', sans-serif", size: 12 }, padding: 16, usePointStyle: true, pointStyleWidth: 10 } },
+            tooltip: { backgroundColor: isDark ? '#1e1e2e' : '#1a1a2e', titleColor: '#fff', bodyColor: '#e0e0e0', padding: 12, cornerRadius: 8 },
+        },
+    };
+}
+
+function sortDates(labels) { return labels.sort((a, b) => new Date(a) - new Date(b)); }
+
+// ── Charts ──
+function drawStatsSpendingTrend(orders) {
+    const map = {};
+    orders.forEach(o => { const d = new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); map[d] = (map[d] || 0) + (parseFloat(o.total) || 0); });
+    const labels = sortDates(Object.keys(map));
+    if (labels.length === 0) { statsDestroyChart('statsChart1'); statsEmptyChart('statsChart1'); return; }
+    statsDestroyChart('statsChart1');
+    const ctx = document.getElementById('statsChart1');
+    statsCharts['statsChart1'] = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'Spent ($)', data: labels.map(d => map[d]), borderColor: STATS_COLORS.red, backgroundColor: (c) => statsGradient(c, STATS_COLORS.red), fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6, pointBackgroundColor: STATS_COLORS.red, pointBorderColor: '#fff', pointBorderWidth: 2, borderWidth: 2.5 }] },
+        options: statsChartOpts('currency'),
+    });
+}
+
+function drawStatsOrderFrequency(orders) {
+    const map = {};
+    orders.forEach(o => { const d = new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); map[d] = (map[d] || 0) + 1; });
+    const labels = sortDates(Object.keys(map));
+    if (labels.length === 0) { statsDestroyChart('statsChart2'); statsEmptyChart('statsChart2'); return; }
+    statsDestroyChart('statsChart2');
+    const ctx = document.getElementById('statsChart2');
+    statsCharts['statsChart2'] = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Orders', data: labels.map(d => map[d]), backgroundColor: STATS_COLORS.navy + '99', hoverBackgroundColor: STATS_COLORS.navy, borderRadius: 6, borderSkipped: false, barPercentage: 0.6, categoryPercentage: 0.8 }] },
+        options: statsChartOpts('number'),
+    });
+}
+
+function drawStatsTopItems(orders) {
+    const map = {};
+    orders.forEach(o => { if (!Array.isArray(o.items)) return; o.items.forEach(i => { const n = i.name || 'Unknown'; map[n] = (map[n] || 0) + (i.qty || i.quantity || 1); }); });
+    let sorted = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    if (sorted.length === 0) { statsDestroyChart('statsChart3'); statsEmptyChart('statsChart3'); return; }
+    statsDestroyChart('statsChart3');
+    const ctx = document.getElementById('statsChart3');
+    statsCharts['statsChart3'] = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: sorted.map(s => s[0]), datasets: [{ label: 'Qty', data: sorted.map(s => s[1]), backgroundColor: sorted.map((_, i) => STATS_PALETTE[i % STATS_PALETTE.length] + 'CC'), borderRadius: 6, borderSkipped: false, barPercentage: 0.7 }] },
+        options: { ...statsChartOpts('number'), indexAxis: 'y' },
+    });
+}
+
+function drawStatsOrdersByStatus(orders) {
+    const map = {};
+    orders.forEach(o => { const s = o.status || 'unknown'; map[s] = (map[s] || 0) + 1; });
+    const labels = Object.keys(map);
+    if (labels.length === 0) { statsDestroyChart('statsChart4'); statsEmptyChart('statsChart4'); return; }
+    const colorMap = { pending: STATS_COLORS.amber, approved: STATS_COLORS.navy, in_progress: STATS_COLORS.violet, ready_for_pickup: STATS_COLORS.forest, picked_up: STATS_COLORS.green, unknown: STATS_COLORS.slate };
+    statsDestroyChart('statsChart4');
+    const ctx = document.getElementById('statsChart4');
+    statsCharts['statsChart4'] = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels: labels.map(l => l.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())), datasets: [{ data: Object.values(map), backgroundColor: labels.map(l => (colorMap[l] || STATS_COLORS.slate) + 'DD'), borderWidth: 0, spacing: 4 }] },
+        options: statsDoughnutOpts(),
+    });
+}

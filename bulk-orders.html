@@ -14,6 +14,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="auth-i18n.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Route Protection & Logic -->
     <script type="module" src="driver-dashboard.js"></script>
 
@@ -174,6 +175,12 @@
                     </a>
                 </li>
                 <li>
+                    <a href="#mystats" class="sidebar-link">
+                        <i data-lucide="bar-chart-2" class="icon"></i>
+                        <span data-en="My Stats" data-es="Mis Estadísticas">My Stats</span>
+                    </a>
+                </li>
+                <li>
                     <a href="#account" class="sidebar-link">
                         <i data-lucide="user" class="icon"></i>
                         <span data-en="Account" data-es="Cuenta">Account</span>
@@ -294,6 +301,85 @@
                 </div>
                 <div id="route-clients-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
                     <p style="color: var(--tx-muted); text-align: center; padding: 40px; grid-column: 1 / -1;">Loading clients...</p>
+                </div>
+            </section>
+
+            <!-- ══════ MY STATS TAB ══════ -->
+            <section id="sec-mystats" class="tab-pane">
+                <div class="analytics-header">
+                    <div>
+                        <h2 style="font-size: 1.8rem; font-family: 'Cormorant Garamond', serif; color: var(--tx);" data-en="My Stats" data-es="Mis Estadísticas">My Stats</h2>
+                        <p style="color: var(--tx-muted); margin-top: 4px; font-size: 0.95rem;" data-en="Your personal ordering analytics." data-es="Tus analíticas personales de pedidos.">Your personal ordering analytics.</p>
+                    </div>
+                </div>
+
+                <!-- Date Range -->
+                <div class="analytics-controls" style="margin-bottom: 24px;">
+                    <div class="analytics-controls-row">
+                        <div class="analytics-date-row">
+                            <input type="date" id="stats-start-date" class="analytics-date-input" />
+                            <span style="color: var(--tx-muted); font-size: 0.85rem;">to</span>
+                            <input type="date" id="stats-end-date" class="analytics-date-input" />
+                        </div>
+                        <div class="analytics-preset-group" id="stats-presets">
+                            <button class="analytics-preset-btn" data-days="7">7D</button>
+                            <button class="analytics-preset-btn active" data-days="30">30D</button>
+                            <button class="analytics-preset-btn" data-days="90">90D</button>
+                            <button class="analytics-preset-btn" data-days="all">All</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="analytics-kpi-grid" id="stats-kpi-grid">
+                    <div class="analytics-kpi-card" data-accent="red">
+                        <div class="analytics-kpi-label" data-en="Orders Placed" data-es="Pedidos Realizados">Orders Placed</div>
+                        <div class="analytics-kpi-value" id="stats-kpi-orders">0</div>
+                        <div class="analytics-kpi-sub" id="stats-kpi-orders-sub">&mdash;</div>
+                    </div>
+                    <div class="analytics-kpi-card" data-accent="navy">
+                        <div class="analytics-kpi-label" data-en="Total Spent" data-es="Total Gastado">Total Spent</div>
+                        <div class="analytics-kpi-value" id="stats-kpi-spent">$0.00</div>
+                        <div class="analytics-kpi-sub" id="stats-kpi-spent-sub">&mdash;</div>
+                    </div>
+                    <div class="analytics-kpi-card" data-accent="amber">
+                        <div class="analytics-kpi-label" data-en="Avg Order Value" data-es="Valor Promedio">Avg Order Value</div>
+                        <div class="analytics-kpi-value" id="stats-kpi-aov">$0.00</div>
+                        <div class="analytics-kpi-sub" id="stats-kpi-aov-sub">&mdash;</div>
+                    </div>
+                    <div class="analytics-kpi-card" data-accent="green">
+                        <div class="analytics-kpi-label" data-en="Route Clients" data-es="Clientes de Ruta">Route Clients</div>
+                        <div class="analytics-kpi-value" id="stats-kpi-clients">0</div>
+                        <div class="analytics-kpi-sub" id="stats-kpi-clients-sub">&mdash;</div>
+                    </div>
+                </div>
+
+                <!-- Chart Grid -->
+                <div class="analytics-chart-grid">
+                    <div class="analytics-chart-card">
+                        <div class="analytics-chart-title">My Spending Trend</div>
+                        <div class="analytics-chart-container">
+                            <canvas id="statsChart1"></canvas>
+                        </div>
+                    </div>
+                    <div class="analytics-chart-card">
+                        <div class="analytics-chart-title">My Order Frequency</div>
+                        <div class="analytics-chart-container">
+                            <canvas id="statsChart2"></canvas>
+                        </div>
+                    </div>
+                    <div class="analytics-chart-card">
+                        <div class="analytics-chart-title">My Top Items</div>
+                        <div class="analytics-chart-container">
+                            <canvas id="statsChart3"></canvas>
+                        </div>
+                    </div>
+                    <div class="analytics-chart-card">
+                        <div class="analytics-chart-title">Orders by Status</div>
+                        <div class="analytics-chart-container">
+                            <canvas id="statsChart4"></canvas>
+                        </div>
+                    </div>
                 </div>
             </section>
 
