@@ -1492,10 +1492,10 @@ function renderDriverAccounts() {
     sorted.forEach(driver => {
         const tr = document.createElement('tr');
         let statusIcon, statusLabel, statusColor, statusBg;
-        if (driver.balance <= 0) { statusIcon = '🟢'; statusLabel = 'Clear'; statusColor = '#1B5E20'; statusBg = 'rgba(27,94,32,0.15)'; }
-        else if (driver.totalPaid > 0) { statusIcon = '🟡'; statusLabel = 'Partial'; statusColor = '#E2A93B'; statusBg = 'rgba(226,169,59,0.15)'; }
-        else if (driver.totalOwed > 0) { statusIcon = '🔴'; statusLabel = 'Unpaid'; statusColor = 'var(--red)'; statusBg = 'rgba(200,16,46,0.15)'; }
-        else { statusIcon = '⭕'; statusLabel = 'No Orders'; statusColor = 'var(--tx-muted)'; statusBg = 'transparent'; }
+        if (driver.balance <= 0) { statusIcon = '<i data-lucide="check-circle" style="width:14px;height:14px;display:inline;vertical-align:-2px"></i>'; statusLabel = 'Clear'; statusColor = '#1B5E20'; statusBg = 'rgba(27,94,32,0.15)'; }
+        else if (driver.totalPaid > 0) { statusIcon = '<i data-lucide="clock" style="width:14px;height:14px;display:inline;vertical-align:-2px"></i>'; statusLabel = 'Partial'; statusColor = '#E2A93B'; statusBg = 'rgba(226,169,59,0.15)'; }
+        else if (driver.totalOwed > 0) { statusIcon = '<i data-lucide="alert-circle" style="width:14px;height:14px;display:inline;vertical-align:-2px"></i>'; statusLabel = 'Unpaid'; statusColor = 'var(--red)'; statusBg = 'rgba(200,16,46,0.15)'; }
+        else { statusIcon = '<i data-lucide="minus-circle" style="width:14px;height:14px;display:inline;vertical-align:-2px"></i>'; statusLabel = 'No Orders'; statusColor = 'var(--tx-muted)'; statusBg = 'transparent'; }
         const lastPaymentStr = driver.lastPayment ? `${new Date(driver.lastPayment.created_at).toLocaleDateString()} · $${parseFloat(driver.lastPayment.amount).toFixed(2)} (${driver.lastPayment.method})` : '<span style="color:var(--tx-muted)">—</span>';
         tr.innerHTML = `
             <td><strong>${driver.full_name || 'Unknown'}</strong></td>
@@ -1507,6 +1507,7 @@ function renderDriverAccounts() {
         `;
         tbody.appendChild(tr);
     });
+    if (window.lucide) window.lucide.createIcons();
 }
 
 let paymentDriverId = null;
