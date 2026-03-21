@@ -1,4 +1,5 @@
 import { supabase } from './supabase-client.js';
+import { fireNotification, initNotificationUI, incrementTabBadge } from './notification-utils.js';
 
 window.showDashboardToast = function(message, type = 'error') {
     let container = document.getElementById('dashboard-toast-container');
@@ -1050,57 +1051,18 @@ function setupSearchAndExport() {
 }
 
 // ── Admin QoL: Realtime Notifications & Subscriptions ──
-function playNotificationSound() {
-    try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        
-        // Helper function to synthesize a soft bell/chime strike
-        const playTone = (freq, startTime, duration) => {
-            const osc = ctx.createOscillator();
-            const gainNode = ctx.createGain();
-            
-            // A triangle wave has richer harmonics than a pure sine wave, sounding more like a glass chime
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(freq, startTime);
-            
-            osc.connect(gainNode);
-            gainNode.connect(ctx.destination);
-            
-            // Volume Envelope: Sharp strike (0.02s) fading out smoothly
-            gainNode.gain.setValueAtTime(0, startTime);
-            gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.02);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-            
-            osc.start(startTime);
-            osc.stop(startTime + duration);
-        };
-
-        // Synthesize an ascending major third double-chime (like an iPhone SMS alert)
-        const now = ctx.currentTime;
-        playTone(1046.50, now, 0.3);         // Initial 'ding' (C6)
-        playTone(1318.51, now + 0.12, 0.5);  // Staggered higher 'ping' (E6)
-        
-    } catch(e) { console.error('Audio setup failed:', e); }
-}
-
-function showNotification(title, body) {
-    if (Notification.permission === 'granted') {
-        new Notification(title, { body });
-    }
-}
-
 function setupRealtimeSubscriptions() {
-    if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-    }
+    // Initialize shared notification UI (mute toggle, bell panel, sidebar badges)
+    initNotificationUI();
 
     supabase.channel('admin-orders')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
             console.log('Realtime Order Event:', payload);
             if (payload.eventType === 'INSERT') {
-                playNotificationSound();
-                showNotification('New Bakery Order!', 'An order was just placed.');
+                fireNotification('order', 'New Bakery Order!', 'An order was just placed.');
+                window.showDashboardToast('🛒 New bakery order received!', 'success');
             }
+            incrementTabBadge('#orders');
             fetchMasterOrders();
         })
         .subscribe();
@@ -1109,10 +1071,24 @@ function setupRealtimeSubscriptions() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'partner_details' }, (payload) => {
             console.log('Realtime Partner Event:', payload);
             if (payload.eventType === 'INSERT') {
-                playNotificationSound();
-                showNotification('New Wholesale Application', 'A new partner just applied.');
+                fireNotification('order', 'New Wholesale Application', 'A new partner just applied.');
+                window.showDashboardToast('🏪 New partner application received!', 'success');
             }
+            incrementTabBadge('#partners');
             fetchPendingPartners();
+        })
+        .subscribe();
+
+    // Listen for driver supply orders (driver_orders table)
+    supabase.channel('admin-driver-orders')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'driver_orders' }, (payload) => {
+            console.log('Realtime Driver Order Event:', payload);
+            if (payload.eventType === 'INSERT') {
+                fireNotification('order', 'New Driver Order!', 'A driver just submitted a supply order.');
+                window.showDashboardToast('🚚 New driver supply order received!', 'success');
+            }
+            incrementTabBadge('#driverorders');
+            if (typeof fetchDriverOrders === 'function') fetchDriverOrders();
         })
         .subscribe();
 }

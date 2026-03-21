@@ -1,5 +1,6 @@
 import { supabase } from './supabase-client.js';
 import { initIdleTimeout } from './idle-timeout.js';
+import { fireNotification, initNotificationUI, incrementTabBadge, playSound, showBrowserNotification, addToHistory, startTitleBlink } from './notification-utils.js';
 initIdleTimeout(20 * 60 * 1000);
 
 // ── Toast Notification System ──
@@ -93,6 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         fetchMyOrders();
         fetchInvoices();
         fetchRouteClients();
+        setupRealtimeSubscriptions();
 
     } catch (err) {
         console.error('Error during driver verification:', err);
@@ -315,6 +317,8 @@ async function fetchMyOrders() {
         if (error) throw error;
         
         if (!data || data.length === 0) {
+            // Seed status map even if empty
+            previousDriverStatuses = {};
             tbody.innerHTML = `
                 <tr>
                     <td colspan="5" style="text-align: center; padding: 40px;">
@@ -329,6 +333,10 @@ async function fetchMyOrders() {
         }
         
         tbody.innerHTML = '';
+        // Seed previousDriverStatuses from fetched orders
+        data.forEach(order => {
+            previousDriverStatuses[order.id] = order.status;
+        });
         data.forEach(order => {
             const tr = document.createElement('tr');
             tr.style.cursor = 'pointer';
@@ -600,6 +608,67 @@ function setupSignOut() {
             window.location.href = 'index.html';
         }
     });
+}
+
+// ══════════════════════════════════════════════════════════
+// REAL-TIME ORDER UPDATES + NOTIFICATIONS
+// ══════════════════════════════════════════════════════════
+
+const DRIVER_STATUS_MESSAGES = {
+    pending:          { emoji: '📝', text: 'Your order has been received' },
+    approved:         { emoji: '✅', text: 'Your order has been approved!' },
+    in_progress:      { emoji: '🔥', text: 'Your order is being prepared!' },
+    ready_for_pickup: { emoji: '🎉', text: 'Your order is ready for pickup!' },
+    picked_up:        { emoji: '🛍️', text: 'Order picked up — marked complete' },
+    rejected:         { emoji: '❌', text: 'Your order has been declined' },
+};
+
+let previousDriverStatuses = {};
+
+function setupRealtimeSubscriptions() {
+    // Initialize shared notification UI (mute toggle, bell panel, sidebar badges)
+    initNotificationUI();
+
+    // Subscribe to own driver_orders for live status updates
+    supabase.channel('driver-my-orders')
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'driver_orders',
+            filter: `driver_id=eq.${currentUser.id}`
+        }, (payload) => {
+            console.log('Driver order update received:', payload);
+
+            if (payload.eventType === 'UPDATE' && payload.new) {
+                const orderId = payload.new.id;
+                const newStatus = payload.new.status;
+                const oldStatus = previousDriverStatuses[orderId];
+
+                if (oldStatus && newStatus && oldStatus !== newStatus) {
+                    const msg = DRIVER_STATUS_MESSAGES[newStatus];
+                    if (msg) {
+                        const shortId = orderId.split('-')[0].toUpperCase();
+                        window.showDashboardToast(`${msg.emoji} #${shortId}: ${msg.text}`, 'success');
+                        // Use 'alert' tone for rejections, 'status' for everything else
+                        const toneType = newStatus === 'rejected' ? 'alert' : 'status';
+                        playSound(toneType);
+                        showBrowserNotification('Order Update', `#${shortId}: ${msg.text}`);
+                        addToHistory('status', 'Order Update', `#${shortId}: ${msg.text}`);
+                        startTitleBlink(`#${shortId}: ${msg.text}`);
+                    }
+                }
+                previousDriverStatuses[orderId] = newStatus;
+            } else if (payload.eventType === 'INSERT' && payload.new) {
+                previousDriverStatuses[payload.new.id] = payload.new.status || 'pending';
+            }
+
+            // Auto-refresh orders and invoices
+            incrementTabBadge('#myorders');
+            incrementTabBadge('#account');
+            fetchMyOrders();
+            fetchInvoices();
+        })
+        .subscribe();
 }
 
 // ══════════════════════════════════════════════════════════

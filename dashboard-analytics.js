@@ -62,11 +62,11 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fetchAllAnalyticsData() {
     try {
         const [custRes, driverRes, paymentRes, clientRes, profileRes] = await Promise.all([
-            supabase.from('orders').select('id, created_at, total, items, delivery_status, user_id, profiles(full_name, role)'),
-            supabase.from('driver_orders').select('id, created_at, total, items, status, driver_id, profiles(full_name)'),
+            supabase.from('orders').select('id, created_at, items, delivery_status, profile_id, profiles:profile_id(full_name, role)'),
+            supabase.from('driver_orders').select('id, created_at, total_amount, items, status, driver_id, profiles:driver_id(full_name)'),
             supabase.from('driver_payments').select('id, created_at, amount, driver_id'),
             supabase.from('driver_route_clients').select('id, created_at, driver_id, is_active'),
-            supabase.from('profiles').select('id, full_name, email, role').eq('role', 'driver'),
+            supabase.from('profiles').select('id, full_name, role').eq('role', 'driver'),
         ]);
 
         allCustomerOrders = (custRes.data || []).filter(o => o.delivery_status !== 'cancelled');
@@ -77,7 +77,7 @@ async function fetchAllAnalyticsData() {
         // Build driver profile map
         driverProfiles = {};
         (profileRes.data || []).forEach(p => {
-            driverProfiles[p.id] = { name: p.full_name || p.email || 'Unknown', email: p.email };
+            driverProfiles[p.id] = { name: p.full_name || 'Unknown', email: '' };
         });
 
         renderAnalytics();
@@ -97,6 +97,17 @@ function renderAnalytics() {
 
     // Re-init lucide icons for any dynamic ones
     if (window.lucide) lucide.createIcons();
+}
+
+// Helper: compute order total — customer orders use items JSONB, driver_orders use total_amount column
+function getOrderTotal(order) {
+    // Driver orders have total_amount column
+    if (order.total_amount !== undefined && order.total_amount !== null) {
+        return parseFloat(order.total_amount) || 0;
+    }
+    // Customer/partner orders: compute from items array
+    const items = order.items || [];
+    return items.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * (parseInt(item.qty) || parseInt(item.quantity) || 1)), 0);
 }
 
 function getFilteredData() {
@@ -136,30 +147,30 @@ function updateKPICards(data) {
 
     if (channel === 'all') {
         orders = [...customerOrders, ...driverOrders];
-        revenue = orders.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
+        revenue = orders.reduce((s, o) => s + getOrderTotal(o), 0);
         extraLabel = 'Active Channels';
         const channelCount = [custOnly.length > 0, driverOrders.length > 0, partnerOnly.length > 0].filter(Boolean).length;
         extraValue = channelCount.toString();
         extraSub = `${custOnly.length} cust · ${driverOrders.length} driver · ${partnerOnly.length} partner orders`;
     } else if (channel === 'customers') {
         orders = custOnly;
-        revenue = orders.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
+        revenue = orders.reduce((s, o) => s + getOrderTotal(o), 0);
         extraLabel = 'Unique Customers';
-        const uniqueCustomers = new Set(orders.map(o => o.user_id).filter(Boolean));
+        const uniqueCustomers = new Set(orders.map(o => o.profile_id).filter(Boolean));
         extraValue = uniqueCustomers.size.toString();
         extraSub = 'distinct accounts';
     } else if (channel === 'drivers') {
         orders = driverOrders;
-        revenue = orders.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
+        revenue = orders.reduce((s, o) => s + getOrderTotal(o), 0);
         const totalPaid = driverPayments.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
         extraLabel = 'Outstanding Balance';
         extraValue = formatCurrency(revenue - totalPaid);
         extraSub = `${formatCurrency(totalPaid)} collected`;
     } else if (channel === 'partners') {
         orders = partnerOnly;
-        revenue = orders.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
+        revenue = orders.reduce((s, o) => s + getOrderTotal(o), 0);
         extraLabel = 'Partner Accounts';
-        const uniquePartners = new Set(orders.map(o => o.user_id).filter(Boolean));
+        const uniquePartners = new Set(orders.map(o => o.profile_id).filter(Boolean));
         extraValue = uniquePartners.size.toString();
         extraSub = 'active partners';
     }
@@ -181,7 +192,7 @@ function updateKPICards(data) {
 function updateOverviewCard() {
     const revWidget = document.getElementById('overview-revenue-val');
     if (!revWidget) return;
-    const totalRev = [...allCustomerOrders, ...allDriverOrders].reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+    const totalRev = [...allCustomerOrders, ...allDriverOrders].reduce((sum, o) => sum + getOrderTotal(o), 0);
     revWidget.textContent = formatCurrency(totalRev);
 }
 
@@ -233,7 +244,7 @@ function drawRevenueTrend(canvasId, orders, channel) {
     const dailyMap = {};
     orders.forEach(o => {
         const d = new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        dailyMap[d] = (dailyMap[d] || 0) + (parseFloat(o.total) || 0);
+        dailyMap[d] = (dailyMap[d] || 0) + getOrderTotal(o);
     });
     const sorted = sortDateLabels(Object.keys(dailyMap));
     const data = sorted.map(d => dailyMap[d]);
@@ -350,9 +361,9 @@ function drawTopItems(canvasId, orders) {
 
 // ── Chart 4a: Revenue by Channel (doughnut) ──
 function drawRevenueByChannel(canvasId, custOrders, driverOrders, partnerOrders) {
-    const custRev = custOrders.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
-    const driverRev = driverOrders.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
-    const partnerRev = partnerOrders.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
+    const custRev = custOrders.reduce((s, o) => s + getOrderTotal(o), 0);
+    const driverRev = driverOrders.reduce((s, o) => s + getOrderTotal(o), 0);
+    const partnerRev = partnerOrders.reduce((s, o) => s + getOrderTotal(o), 0);
 
     if (custRev === 0 && driverRev === 0 && partnerRev === 0) {
         destroyChart(canvasId);
@@ -423,7 +434,7 @@ function drawOutstandingByDriver(canvasId, driverOrders, driverPayments) {
     driverOrders.forEach(o => {
         const id = o.driver_id;
         if (!id) return;
-        driverTotals[id] = (driverTotals[id] || 0) + (parseFloat(o.total) || 0);
+        driverTotals[id] = (driverTotals[id] || 0) + getOrderTotal(o);
     });
 
     driverPayments.forEach(p => {
@@ -468,7 +479,7 @@ function drawRevenueByPartner(canvasId, partnerOrders) {
     const partnerMap = {};
     partnerOrders.forEach(o => {
         const name = o.profiles?.full_name || 'Unknown Partner';
-        partnerMap[name] = (partnerMap[name] || 0) + (parseFloat(o.total) || 0);
+        partnerMap[name] = (partnerMap[name] || 0) + getOrderTotal(o);
     });
 
     let sorted = Object.entries(partnerMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
@@ -733,7 +744,7 @@ function exportCSV() {
                 'Customer',
                 o.id?.substring(0, 8) || '',
                 new Date(o.created_at).toLocaleDateString(),
-                parseFloat(o.total || 0).toFixed(2),
+                getOrderTotal(o).toFixed(2),
                 o.delivery_status || '',
                 o.profiles?.full_name || '',
             ]);
@@ -749,7 +760,7 @@ function exportCSV() {
                 'Driver',
                 o.id?.substring(0, 8) || '',
                 new Date(o.created_at).toLocaleDateString(),
-                parseFloat(o.total || 0).toFixed(2),
+                getOrderTotal(o).toFixed(2),
                 o.status || '',
                 driverProfiles[o.driver_id]?.name || '',
             ]);
@@ -766,7 +777,7 @@ function exportCSV() {
                 'Partner',
                 o.id?.substring(0, 8) || '',
                 new Date(o.created_at).toLocaleDateString(),
-                parseFloat(o.total || 0).toFixed(2),
+                getOrderTotal(o).toFixed(2),
                 o.delivery_status || '',
                 o.profiles?.full_name || '',
             ]);

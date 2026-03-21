@@ -34,10 +34,32 @@
             <a href="index.html"><img src="assets/logo.png" alt="Cecilia Bakery" class="account-topbar-logo" /></a>
             <span class="account-topbar-brand" data-en="My Account" data-es="Mi Cuenta">My Account</span>
         </div>
-        <div class="account-topbar-right">
+        <div class="account-topbar-right" style="position: relative;">
             <div style="display: flex; align-items: center; gap: 0;">
                 <button class="lang-btn active" id="btn-en" onclick="setAuthLang('en')">EN</button>
                 <button class="lang-btn" id="btn-es" onclick="setAuthLang('es')">ES</button>
+            </div>
+            <span class="ctrl-divider">·</span>
+            <button class="notif-mute-btn" id="notif-mute-btn" aria-label="Toggle notification sound" style="background:none;border:none;cursor:pointer;color:var(--tx-muted);padding:4px;">
+                <i data-lucide="bell" class="icon" style="width:16px;height:16px;"></i>
+            </button>
+            <div class="notif-bell-wrapper" style="position:relative;">
+                <button class="notif-bell-btn" id="notif-bell-btn" aria-label="Notification history" style="background:none;border:none;cursor:pointer;color:var(--tx-muted);padding:4px;">
+                    <i data-lucide="inbox" class="icon" style="width:16px;height:16px;"></i>
+                </button>
+                <span class="notif-bell-badge" id="notif-bell-badge">0</span>
+                <div class="notif-history-panel" id="notif-history-panel">
+                    <div class="notif-panel-header">
+                        <h4>Notifications</h4>
+                        <button class="notif-panel-clear" id="notif-clear-btn">Mark all read</button>
+                    </div>
+                    <div class="notif-list" id="notif-list">
+                        <div style="text-align: center; padding: 32px 16px; color: var(--tx-muted); font-size: 0.85rem;">
+                            <div style="font-size: 1.5rem; margin-bottom: 8px;">🔔</div>
+                            No notifications yet
+                        </div>
+                    </div>
+                </div>
             </div>
             <span class="ctrl-divider">·</span>
             <button class="theme-btn" id="theme-toggle" onclick="toggleAuthTheme()" aria-label="Toggle Theme">
@@ -56,8 +78,29 @@
                 <i data-lucide="log-out" class="icon" style="width:16px;height:16px;"></i>
                 <span data-en="Sign Out" data-es="Cerrar Sesión">Sign Out</span>
             </button>
+            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">
+                <i data-lucide="menu" class="icon" style="width:20px;height:20px;"></i>
+            </button>
         </div>
     </nav>
+
+    <!-- Mobile Nav Drawer -->
+    <div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+    <div class="mobile-nav-drawer" id="mobile-nav-drawer">
+        <button class="mobile-nav-drawer-close" id="mobile-drawer-close">✕</button>
+        <a href="menu.html" class="account-nav-link">
+            <i data-lucide="book-open" class="icon" style="width:16px;height:16px;"></i>
+            <span data-en="Menu" data-es="Menú">Menu</span>
+        </a>
+        <a href="index.html" class="account-nav-link">
+            <i data-lucide="home" class="icon" style="width:16px;height:16px;"></i>
+            <span data-en="Home" data-es="Inicio">Home</span>
+        </a>
+        <button class="account-nav-link danger" id="drawer-sign-out-btn">
+            <i data-lucide="log-out" class="icon" style="width:16px;height:16px;"></i>
+            <span data-en="Sign Out" data-es="Cerrar Sesión">Sign Out</span>
+        </button>
+    </div>
 
     <!-- ── MAIN CONTENT ── -->
     <div class="account-container">
@@ -68,6 +111,10 @@
                 <span data-en="Welcome Back, " data-es="Bienvenido, ">Welcome Back, </span><em id="welcome-name">...</em>
             </h1>
             <p class="account-welcome-sub" id="welcome-sub" data-en="Here's what's happening with your orders" data-es="Esto es lo que pasa con tus pedidos">Here's what's happening with your orders</p>
+            <a href="menu.html" class="welcome-cta" data-en="Place an Order" data-es="Hacer un Pedido">
+                <i data-lucide="shopping-bag" class="icon" style="width:16px;height:16px;"></i>
+                Place an Order
+            </a>
         </div>
 
         <!-- Quick Stats -->
@@ -209,6 +256,44 @@
             <div class="address-modal-actions">
                 <button class="btn-cancel" onclick="closeAddressModal()">Cancel</button>
                 <button class="btn-save" id="addr-save-btn" onclick="saveAddress()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div class="receipt-modal-overlay" id="receipt-modal-overlay">
+        <div class="receipt-modal">
+            <div class="receipt-header">
+                <div>
+                    <h3 id="receipt-title">Order Receipt</h3>
+                    <span id="receipt-date" style="font-size: 0.85rem; color: var(--tx-muted);"></span>
+                </div>
+                <button class="receipt-close" id="receipt-close-btn">✕</button>
+            </div>
+            <div class="receipt-body">
+                <div class="receipt-eta" id="receipt-eta" style="display:none;"></div>
+                <table class="receipt-items-table">
+                    <thead>
+                        <tr>
+                            <th data-en="Item" data-es="Artículo">Item</th>
+                            <th style="text-align:center;" data-en="Qty" data-es="Cant">Qty</th>
+                            <th style="text-align:right;" data-en="Subtotal" data-es="Subtotal">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="receipt-items-body"></tbody>
+                </table>
+                <div class="receipt-total-row">
+                    <span data-en="Total" data-es="Total">Total</span>
+                    <span id="receipt-total">$0.00</span>
+                </div>
+                <div id="receipt-notes" style="margin-top: 16px; font-size: 0.85rem; color: var(--tx-muted); display:none;"></div>
+                <div class="receipt-actions">
+                    <button class="receipt-btn-close" id="receipt-action-close" data-en="Close" data-es="Cerrar">Close</button>
+                    <button class="receipt-btn-print" id="receipt-print-btn">
+                        <i data-lucide="printer" class="icon" style="width:14px;height:14px;"></i>
+                        <span data-en="Print" data-es="Imprimir">Print</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>

@@ -75,6 +75,12 @@
                         <span data-en="Profile Settings" data-es="Configuración de Perfil">Profile Settings</span>
                     </a>
                 </li>
+                <li>
+                    <a href="#analytics" class="sidebar-link">
+                        <i data-lucide="bar-chart-3" class="icon"></i>
+                        <span data-en="Analytics" data-es="Analíticas">Analytics</span>
+                    </a>
+                </li>
             </ul>
 
             <!-- Bottom Actions -->
@@ -105,10 +111,32 @@
                 </div>
                 
                 <!-- Controls -->
-                <div class="dash-controls">
+                <div class="dash-controls" style="position: relative;">
                     <div style="display: flex; align-items: center; gap: 0;">
                         <button class="lang-btn active" id="btn-en" onclick="setAuthLang('en')">EN</button>
                         <button class="lang-btn" id="btn-es" onclick="setAuthLang('es')">ES</button>
+                    </div>
+                    <span class="ctrl-divider">·</span>
+                    <button class="notif-mute-btn" id="notif-mute-btn" aria-label="Toggle notification sound">
+                        <i data-lucide="bell" class="icon" style="width:18px;height:18px;"></i>
+                    </button>
+                    <div class="notif-bell-wrapper">
+                        <button class="notif-bell-btn" id="notif-bell-btn" aria-label="Notification history">
+                            <i data-lucide="inbox" class="icon" style="width:18px;height:18px;"></i>
+                        </button>
+                        <span class="notif-bell-badge" id="notif-bell-badge">0</span>
+                        <div class="notif-history-panel" id="notif-history-panel">
+                            <div class="notif-panel-header">
+                                <h4>Notifications</h4>
+                                <button class="notif-panel-clear" id="notif-clear-btn">Mark all read</button>
+                            </div>
+                            <div class="notif-list" id="notif-list">
+                                <div style="text-align: center; padding: 32px 16px; color: var(--tx-muted); font-size: 0.85rem;">
+                                    <div style="font-size: 1.5rem; margin-bottom: 8px;">🔔</div>
+                                    No notifications yet
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <span class="ctrl-divider">·</span>
                     <button class="theme-btn" id="theme-toggle" onclick="toggleAuthTheme()" aria-label="Toggle Theme">
@@ -160,45 +188,19 @@
                 </div>
             </section>
 
-            <!-- Phase 3.3 & 3.4: Bulk Order Form -->
+            <!-- New Order — Coming Soon -->
             <section id="sec-new-order" class="tab-pane">
-                <div style="background: var(--bg-card); border: 1px solid var(--bd); border-radius: 12px; padding: 24px;">
-                    <h3 style="font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; margin-bottom: 8px;" data-en="Place a Bulk Order" data-es="Realizar un Pedido Mayorista">Place a Bulk Order</h3>
-                    <p style="color: var(--tx-muted); margin-bottom: 24px; font-size: 0.95rem;" data-en="Select the wholesale items and quantities you'd like to order." data-es="Seleccione los artículos al por mayor y las cantidades que desea pedir.">Select the wholesale items and quantities you'd like to order.</p>
-
-                    <div style="display: grid; grid-template-columns: 1fr; gap: 24px;">
-                        <div>
-                            <table class="data-table" id="new-order-table">
-                                <thead>
-                                    <tr>
-                                        <th data-en="Item Description" data-es="Descripción del Artículo">Item Description</th>
-                                        <th data-en="Price" data-es="Precio">Price</th>
-                                        <th data-en="Quantity" data-es="Cantidad" style="text-align: center; width: 140px;">Quantity</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="bulk-items-tbody">
-                                    <!-- Items will be injected here via JS -->
-                                </tbody>
-                            </table>
-                            
-                            <div style="display: flex; justify-content: flex-end; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--bd);">
-                                <div style="width: 300px;">
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                        <span data-en="Subtotal" data-es="Subtotal">Subtotal</span>
-                                        <span id="order-subtotal">$0.00</span>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 16px; font-weight: 600; font-size: 1.2rem;">
-                                        <span data-en="Total" data-es="Total">Total</span>
-                                        <span id="order-total">$0.00</span>
-                                    </div>
-                                    <label style="display: block; margin-bottom: 16px;">
-                                        <span style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--tx-muted);" data-en="Delivery Notes / Special Requests" data-es="Notas de entrega / Solicitudes especiales">Delivery Notes / Special Requests</span>
-                                        <textarea id="order-notes" class="input-field" style="resize: vertical; min-height: 80px;" placeholder="Optional notes..."></textarea>
-                                    </label>
-                                    <button class="btn-submit" id="submit-order-btn" data-en="Submit Order" data-es="Enviar Pedido" style="width: 100%;">Submit Order</button>
-                                </div>
-                            </div>
+                <div style="background: var(--bg-card); border: 1px solid var(--bd); border-radius: 12px; padding: 48px 24px; text-align: center;">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 16px; max-width: 420px; margin: 0 auto;">
+                        <div style="width: 72px; height: 72px; border-radius: 16px; background: linear-gradient(135deg, rgba(200,16,46,0.1), rgba(0,45,98,0.1)); display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="shopping-cart" class="icon" style="width: 36px; height: 36px; color: var(--tx-muted); opacity: 0.6;"></i>
                         </div>
+                        <h3 style="font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 600; margin: 0;" data-en="Ordering Coming Soon" data-es="Pedidos Próximamente">Ordering Coming Soon</h3>
+                        <p style="color: var(--tx-muted); font-size: 0.95rem; line-height: 1.6; margin: 0;" data-en="We're setting up online wholesale ordering for partners. In the meantime, please contact us directly to place bulk orders." data-es="Estamos preparando los pedidos mayoristas en línea para socios. Mientras tanto, contáctenos directamente para realizar pedidos al por mayor.">We're setting up online wholesale ordering for partners. In the meantime, please contact us directly to place bulk orders.</p>
+                        <a href="index.html#wholesale" class="btn-submit" style="display: inline-flex; align-items: center; gap: 8px; width: auto; padding: 12px 24px; margin-top: 8px; text-decoration: none;" data-en="Contact Us" data-es="Contáctenos">
+                            <i data-lucide="mail" class="icon" style="width: 16px; height: 16px;"></i>
+                            Contact Us
+                        </a>
                     </div>
                 </div>
             </section>
@@ -272,8 +274,48 @@
                 </div>
             </section>
 
+            <!-- Analytics -->
+            <section id="sec-analytics" class="tab-pane">
+                <div class="widget-grid" style="margin-bottom: 24px;">
+                    <div class="widget-card">
+                        <div class="widget-icon"><i data-lucide="shopping-bag" class="icon"></i></div>
+                        <div class="widget-title" data-en="Total Orders" data-es="Pedidos Totales">Total Orders</div>
+                        <div class="widget-value" id="analytics-kpi-orders">0</div>
+                    </div>
+                    <div class="widget-card">
+                        <div class="widget-icon"><i data-lucide="dollar-sign" class="icon"></i></div>
+                        <div class="widget-title" data-en="Total Spent" data-es="Total Gastado">Total Spent</div>
+                        <div class="widget-value" id="analytics-kpi-spent">$0.00</div>
+                    </div>
+                    <div class="widget-card">
+                        <div class="widget-icon"><i data-lucide="trending-up" class="icon"></i></div>
+                        <div class="widget-title" data-en="Avg Order Value" data-es="Valor Promedio">Avg Order Value</div>
+                        <div class="widget-value" id="analytics-kpi-aov">$0.00</div>
+                    </div>
+                    <div class="widget-card">
+                        <div class="widget-icon"><i data-lucide="clock" class="icon"></i></div>
+                        <div class="widget-title" data-en="Active Orders" data-es="Pedidos Activos">Active Orders</div>
+                        <div class="widget-value" id="analytics-kpi-active">0</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                    <div style="background: var(--bg-card); border: 1px solid var(--bd); border-radius: 12px; padding: 24px; min-height: 320px;">
+                        <h3 style="font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; margin-bottom: 12px;" data-en="Spending Trend (30 Days)" data-es="Tendencia de Gasto (30 Días)">Spending Trend (30 Days)</h3>
+                        <div style="height: 260px;"><canvas id="partnerTrendChart"></canvas></div>
+                    </div>
+                    <div style="background: var(--bg-card); border: 1px solid var(--bd); border-radius: 12px; padding: 24px; min-height: 320px;">
+                        <h3 style="font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; margin-bottom: 12px;" data-en="Most Ordered Items" data-es="Artículos Más Pedidos">Most Ordered Items</h3>
+                        <div style="height: 260px;"><canvas id="partnerItemsChart"></canvas></div>
+                    </div>
+                </div>
+            </section>
+
         </main>
     </div>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Initialize Lucide Icons & Mobile Menu -->
     <script>

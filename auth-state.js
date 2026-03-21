@@ -17,18 +17,37 @@ export async function updateAuthUI(session) {
         if (mobileAccountMenu) mobileAccountMenu.style.display = 'block';
         if (mobileSignoutMenu) mobileSignoutMenu.style.display = 'block';
 
-        // Show user name in navbar
+        // Show user name in navbar and set correct dashboard link based on role
         const navGreeting = document.getElementById('nav-user-greeting');
         const navUserName = document.getElementById('nav-user-name');
         if (navGreeting && navUserName) {
             try {
                 const { data: profile } = await supabase
                     .from('profiles')
-                    .select('full_name')
+                    .select('full_name, role')
                     .eq('id', session.user.id)
                     .single();
                 const displayName = profile?.full_name || session.user.user_metadata?.full_name || session.user.email.split('@')[0];
                 navUserName.textContent = displayName;
+
+                // Set the correct dashboard URL based on user role
+                const role = profile?.role || 'customer';
+                const dashboardMap = {
+                    customer: 'customer-dashboard.html',
+                    staff: 'staff-dashboard.html',
+                    admin: 'admin-dashboard.html',
+                    driver: 'driver-dashboard.html',
+                    partner: 'partner-dashboard.html',
+                };
+                const dashboardUrl = dashboardMap[role] || 'customer-dashboard.html';
+
+                // Update all "My Account" links to point to the correct dashboard
+                if (mobileAccountMenu) {
+                    const accountLink = mobileAccountMenu.querySelector('a');
+                    if (accountLink) {
+                        accountLink.href = dashboardUrl;
+                    }
+                }
             } catch (err) {
                 navUserName.textContent = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
             }

@@ -137,10 +137,33 @@
                 </div>
                 
                 <!-- Controls -->
-                <div class="dash-controls">
+                <div class="dash-controls" style="position: relative;">
                     <div style="display: flex; align-items: center; gap: 0;">
                         <button class="lang-btn active" id="btn-en" onclick="setAuthLang('en')">EN</button>
                         <button class="lang-btn" id="btn-es" onclick="setAuthLang('es')">ES</button>
+                    </div>
+                    <span class="ctrl-divider">·</span>
+                    <button class="notif-mute-btn" id="notif-mute-btn" aria-label="Toggle notification sound">
+                        <i data-lucide="bell" class="icon" style="width:18px;height:18px;"></i>
+                    </button>
+                    <div class="notif-bell-wrapper">
+                        <button class="notif-bell-btn" id="notif-bell-btn" aria-label="Notification history">
+                            <i data-lucide="inbox" class="icon" style="width:18px;height:18px;"></i>
+                        </button>
+                        <span class="notif-bell-badge" id="notif-bell-badge">0</span>
+                        <!-- Notification History Panel -->
+                        <div class="notif-history-panel" id="notif-history-panel">
+                            <div class="notif-panel-header">
+                                <h4>Notifications</h4>
+                                <button class="notif-panel-clear" id="notif-clear-btn">Mark all read</button>
+                            </div>
+                            <div class="notif-list" id="notif-list">
+                                <div style="text-align: center; padding: 32px 16px; color: var(--tx-muted); font-size: 0.85rem;">
+                                    <div style="font-size: 1.5rem; margin-bottom: 8px;">🔔</div>
+                                    No notifications yet
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <span class="ctrl-divider">·</span>
                     <button class="theme-btn" id="theme-toggle" onclick="toggleAuthTheme()" aria-label="Toggle Theme">

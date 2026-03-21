@@ -1,10 +1,28 @@
 import { supabase } from './supabase-client.js';
 import { initIdleTimeout } from './idle-timeout.js';
+import { initNotificationUI, playSound, showBrowserNotification as showBrowserNotif, addToHistory, startTitleBlink } from './notification-utils.js';
 initIdleTimeout(20 * 60 * 1000);
 
 let currentUser = null;
 let currentProfile = null;
 let allOrders = [];
+
+// ── Relative Time Helper ─────────────────────────────────────
+function timeAgo(dateStr) {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - d;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays <= 7) return `${diffDays} days ago`;
+    return d.toLocaleDateString();
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -34,18 +52,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('auth-loading-overlay')?.remove();
         console.log('Customer access granted.');
         
+        showSkeletonLoading();
         renderWelcome();
         await fetchOrders();
         setupRealtimeOrders();
         setupProfileForm();
         setupSignOut();
         fetchAddresses();
+        setupMobileDrawer();
+        setupReceiptModal();
+        setupKeyboardAccessibility();
         
     } catch (err) {
         console.error('Error during customer verification:', err);
         window.location.href = 'index.html';
     }
 });
+
+// ── Skeleton Loading ──────────────────────────────────────────
+
+function showSkeletonLoading() {
+    document.querySelectorAll('.stat-value').forEach(el => {
+        el.classList.add('skeleton');
+        el.dataset.originalText = el.textContent;
+        el.innerHTML = '&nbsp;';
+    });
+}
+
+function hideSkeletonLoading() {
+    document.querySelectorAll('.stat-value.skeleton').forEach(el => {
+        el.classList.remove('skeleton');
+    });
+}
 
 // ── Welcome & Stats ──────────────────────────────────────────
 
@@ -60,8 +98,12 @@ function renderWelcome() {
 }
 
 function renderStats(orders) {
+    hideSkeletonLoading();
     const totalOrders = orders.length;
-    const totalSpent = orders.reduce((sum, o) => sum + (parseFloat(o.total_amount || o.total) || 0), 0);
+    const totalSpent = orders.reduce((sum, o) => {
+        const items = Array.isArray(o.items) ? o.items : [];
+        return sum + items.reduce((s, item) => s + ((parseFloat(item.price) || 0) * (item.qty || item.quantity || 1)), 0);
+    }, 0);
     
     document.getElementById('stat-total-orders').textContent = totalOrders;
     document.getElementById('stat-total-spent').textContent = '$' + totalSpent.toFixed(2);
@@ -132,8 +174,9 @@ function renderActiveOrders(orders) {
     
     container.innerHTML = orders.map(order => {
         const shortId = order.id ? order.id.split('-')[0].toUpperCase() : 'N/A';
-        const orderDate = new Date(order.created_at).toLocaleDateString();
-        const total = parseFloat(order.total_amount || order.total) || 0;
+        const orderDate = timeAgo(order.created_at);
+        const items = Array.isArray(order.items) ? order.items : [];
+        const total = items.reduce((s, item) => s + ((parseFloat(item.price) || 0) * (item.qty || item.quantity || 1)), 0);
         const itemCount = Array.isArray(order.items) ? order.items.reduce((s, i) => s + (i.qty || i.quantity || 1), 0) : 0;
         const ds = order.delivery_status || 'pending';
         
@@ -181,7 +224,7 @@ function renderActiveOrders(orders) {
         }
         
         return `
-            <div class="active-order-card">
+            <div class="active-order-card" style="cursor:pointer;" onclick="showOrderReceipt('${order.id}')">
                 <div class="order-card-header">
                     <div>
                         <div class="order-card-id">#${shortId}</div>
@@ -271,8 +314,9 @@ function renderPastOrders(orders) {
     
     container.innerHTML = orders.map(order => {
         const shortId = order.id ? order.id.split('-')[0].toUpperCase() : 'N/A';
-        const orderDate = new Date(order.created_at).toLocaleDateString();
-        const total = parseFloat(order.total_amount || order.total) || 0;
+        const orderDate = timeAgo(order.created_at);
+        const orderItems = Array.isArray(order.items) ? order.items : [];
+        const total = orderItems.reduce((s, item) => s + ((parseFloat(item.price) || 0) * (item.qty || item.quantity || 1)), 0);
         const ds = order.delivery_status || 'delivered';
         
         const statusStyles = {
@@ -587,6 +631,9 @@ const STATUS_MESSAGES = {
 let previousStatuses = {};
 
 function setupRealtimeOrders() {
+    // Initialize shared notification UI (mute toggle, bell panel)
+    initNotificationUI();
+
     // Snapshot current statuses before any realtime events
     allOrders.forEach(o => {
         if (o.id) previousStatuses[o.id] = o.delivery_status || 'pending';
@@ -601,7 +648,6 @@ function setupRealtimeOrders() {
         }, async (payload) => {
             console.log('Order update received:', payload);
 
-            // Detect status change from the payload directly
             if (payload.eventType === 'UPDATE' && payload.new) {
                 const orderId = payload.new.id;
                 const newStatus = payload.new.delivery_status;
@@ -612,6 +658,12 @@ function setupRealtimeOrders() {
                     if (msg) {
                         const shortId = orderId.split('-')[0].toUpperCase();
                         showToast(`${msg.emoji} #${shortId}: ${msg.text}`);
+                        // Use 'alert' for cancellations, 'status' for normal updates
+                        const toneType = newStatus === 'cancelled' ? 'alert' : 'status';
+                        playSound(toneType);
+                        showBrowserNotif('Order Update', `#${shortId}: ${msg.text}`);
+                        addToHistory('status', 'Order Update', `#${shortId}: ${msg.text}`);
+                        startTitleBlink(`#${shortId}: ${msg.text}`);
                     }
                 }
                 previousStatuses[orderId] = newStatus;
@@ -736,6 +788,141 @@ function setupProfileForm() {
             }
         });
     }
+}
+
+// ── Order Receipt Modal ──
+
+window.showOrderReceipt = function(orderId) {
+    const order = allOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    const shortId = order.id.split('-')[0].toUpperCase();
+    document.getElementById('receipt-title').textContent = `Order #${shortId}`;
+    document.getElementById('receipt-date').textContent = new Date(order.created_at).toLocaleString();
+
+    const orderItems = Array.isArray(order.items) ? order.items : [];
+    const total = orderItems.reduce((s, item) => s + ((parseFloat(item.price) || 0) * (item.qty || item.quantity || 1)), 0);
+    document.getElementById('receipt-total').textContent = `$${total.toFixed(2)}`;
+
+    // ETA
+    const etaEl = document.getElementById('receipt-eta');
+    if (order.estimated_pickup_at && order.delivery_status !== 'delivered' && order.delivery_status !== 'cancelled') {
+        const etaDate = new Date(order.estimated_pickup_at);
+        const etaTime = etaDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        const diffMins = Math.round((etaDate - new Date()) / 60000);
+        let etaLabel = `Est. ready by ${etaTime}`;
+        if (diffMins > 0 && diffMins <= 120) etaLabel += ` (~${diffMins} min)`;
+        else if (diffMins <= 0) etaLabel = 'Should be ready now!';
+        etaEl.innerHTML = `<span>⏱️</span> ${etaLabel}`;
+        etaEl.style.display = 'flex';
+    } else {
+        etaEl.style.display = 'none';
+    }
+
+    // Items table
+    const items = Array.isArray(order.items) ? order.items : [];
+    const tbody = document.getElementById('receipt-items-body');
+    tbody.innerHTML = items.map(item => {
+        const qty = item.qty || item.quantity || 1;
+        const price = parseFloat(item.price) || 0;
+        const sizeLabel = item.size ? ` (${item.size})` : '';
+        return `<tr>
+            <td>${item.name || 'Item'}${sizeLabel}</td>
+            <td style="text-align:center;">${qty}</td>
+            <td style="text-align:right;">$${(price * qty).toFixed(2)}</td>
+        </tr>`;
+    }).join('') || `<tr><td colspan="3" style="text-align:center;color:var(--tx-muted);">No item details</td></tr>`;
+
+    // Notes
+    const notesEl = document.getElementById('receipt-notes');
+    if (order.notes) {
+        notesEl.innerHTML = `<strong>Notes:</strong> ${order.notes}`;
+        notesEl.style.display = 'block';
+    } else {
+        notesEl.style.display = 'none';
+    }
+
+    document.getElementById('receipt-modal-overlay').classList.add('open');
+};
+
+function closeReceiptModal() {
+    document.getElementById('receipt-modal-overlay').classList.remove('open');
+}
+
+function setupReceiptModal() {
+    document.getElementById('receipt-close-btn')?.addEventListener('click', closeReceiptModal);
+    document.getElementById('receipt-action-close')?.addEventListener('click', closeReceiptModal);
+    document.getElementById('receipt-modal-overlay')?.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeReceiptModal();
+    });
+    document.getElementById('receipt-print-btn')?.addEventListener('click', () => {
+        window.print();
+    });
+}
+
+// ── Mobile Drawer ──
+
+function setupMobileDrawer() {
+    const btn = document.getElementById('mobile-menu-btn');
+    const drawer = document.getElementById('mobile-nav-drawer');
+    const overlay = document.getElementById('mobile-drawer-overlay');
+    const closeBtn = document.getElementById('mobile-drawer-close');
+
+    function openDrawer() {
+        drawer?.classList.add('open');
+        overlay?.classList.add('open');
+    }
+    function closeDrawer() {
+        drawer?.classList.remove('open');
+        overlay?.classList.remove('open');
+    }
+
+    btn?.addEventListener('click', openDrawer);
+    closeBtn?.addEventListener('click', closeDrawer);
+    overlay?.addEventListener('click', closeDrawer);
+
+    // Wire up the drawer sign-out button
+    const drawerSignOut = document.getElementById('drawer-sign-out-btn');
+    if (drawerSignOut) {
+        drawerSignOut.addEventListener('click', async () => {
+            const { error } = await supabase.auth.signOut();
+            if (!error) window.location.href = 'index.html';
+        });
+    }
+}
+
+// ── Keyboard Accessibility ──
+
+function setupKeyboardAccessibility() {
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            // Close receipt modal
+            const receiptOverlay = document.getElementById('receipt-modal-overlay');
+            if (receiptOverlay?.classList.contains('open')) {
+                closeReceiptModal();
+                return;
+            }
+            // Close address modal
+            const addressOverlay = document.getElementById('address-modal-overlay');
+            if (addressOverlay?.classList.contains('open')) {
+                window.closeAddressModal();
+                return;
+            }
+            // Close mobile drawer
+            const drawer = document.getElementById('mobile-nav-drawer');
+            if (drawer?.classList.contains('open')) {
+                drawer.classList.remove('open');
+                document.getElementById('mobile-drawer-overlay')?.classList.remove('open');
+                return;
+            }
+            // Close notification panel
+            const notifPanel = document.getElementById('notif-history-panel');
+            if (notifPanel?.classList.contains('open')) {
+                notifPanel.classList.remove('open');
+                return;
+            }
+        }
+    });
 }
 
 // ── Toast ──
