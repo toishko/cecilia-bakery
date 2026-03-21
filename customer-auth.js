@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .eq('id', user.id)
                 .single();
             if (profile && profile.role === 'customer') {
-                window.location.href = 'customer-dashboard.html';
+                window.location.href = 'index.html';
                 return;
             }
         }
@@ -139,8 +139,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // Redirect to customer dashboard
-            window.location.href = 'customer-dashboard.html';
+            // Redirect to homepage (account accessible via navbar dropdown)
+            window.location.href = 'index.html';
         }
     });
 });

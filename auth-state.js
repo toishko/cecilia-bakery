@@ -13,7 +13,7 @@ export async function updateAuthUI(session) {
     if (session) {
         // User is signed in
         if (loginBtn) loginBtn.style.display = 'none';
-        if (userMenu) userMenu.style.display = 'block';
+        if (userMenu) userMenu.style.display = 'flex';
         if (mobileLoginBtn) mobileLoginBtn.style.display = 'none';
         if (mobileSignoutMenu) mobileSignoutMenu.style.display = 'block';
         
@@ -26,7 +26,7 @@ export async function updateAuthUI(session) {
                     .single();
                 
                 const displayName = profile?.full_name || session.user.user_metadata?.full_name || session.user.email.split('@')[0];
-                userGreeting.innerHTML = `hi, ${displayName}`;
+                userGreeting.innerHTML = `<i data-lucide='user' class='icon' width='18' height='18'></i> hi, ${displayName} <i data-lucide='chevron-down' class='icon' width='14' height='14'></i>`;
                 
                 // Store role if needed for routing
                 if (profile?.role) {
@@ -34,8 +34,10 @@ export async function updateAuthUI(session) {
                 }
             } catch (err) {
                 const fallbackName = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
-                userGreeting.innerHTML = `hi, ${fallbackName}`;
+                userGreeting.innerHTML = `<i data-lucide='user' class='icon' width='18' height='18'></i> hi, ${fallbackName} <i data-lucide='chevron-down' class='icon' width='14' height='14'></i>`;
             }
+            // Re-render Lucide icons
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     } else {
         // User is signed out
