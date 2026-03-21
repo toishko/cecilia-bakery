@@ -4,10 +4,9 @@ initIdleTimeout(20 * 60 * 1000);
 
 let currentUser = null;
 let currentProfile = null;
+let allOrders = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Loading overlay is in the HTML, no need to hide body
-    
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
@@ -35,32 +34,479 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('auth-loading-overlay')?.remove();
         console.log('Customer access granted.');
         
-        setupTabs();
-        setupSignOut();
+        renderWelcome();
+        await fetchOrders();
         setupProfileForm();
-        fetchOrders();
+        setupSignOut();
+        renderAddresses();
         
-        // Setup visual elements
-        document.getElementById('member-since').textContent = new Date(profile.created_at).toLocaleDateString();
-        document.getElementById('account-email').textContent = user.email;
-
     } catch (err) {
         console.error('Error during customer verification:', err);
         window.location.href = 'index.html';
     }
 });
 
-function setupSignOut() {
-    document.addEventListener('click', async (e) => {
-        const btn = e.target.closest('#nav-sign-out-btn') || e.target.closest('#mobile-sign-out-btn');
-        if (btn) {
-            e.preventDefault();
-            const { error } = await supabase.auth.signOut();
-            if (!error) {
-                window.location.href = 'index.html';
+// ── Welcome & Stats ──────────────────────────────────────────
+
+function renderWelcome() {
+    const firstName = (currentProfile.full_name || '').split(' ')[0] || 'Friend';
+    document.getElementById('welcome-name').textContent = firstName;
+    document.getElementById('account-email').textContent = currentUser.email;
+    
+    const memberDate = new Date(currentProfile.created_at);
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    document.getElementById('stat-member-since').textContent = `${monthNames[memberDate.getMonth()]} ${memberDate.getFullYear()}`;
+}
+
+function renderStats(orders) {
+    const totalOrders = orders.length;
+    const totalSpent = orders.reduce((sum, o) => sum + (parseFloat(o.total_amount || o.total) || 0), 0);
+    
+    document.getElementById('stat-total-orders').textContent = totalOrders;
+    document.getElementById('stat-total-spent').textContent = '$' + totalSpent.toFixed(2);
+    
+    // Find most ordered item
+    const itemCounts = {};
+    orders.forEach(o => {
+        if (!Array.isArray(o.items)) return;
+        o.items.forEach(item => {
+            const name = item.name || 'Unknown';
+            const qty = item.qty || item.quantity || 1;
+            itemCounts[name] = (itemCounts[name] || 0) + qty;
+        });
+    });
+    
+    const sorted = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]);
+    if (sorted.length > 0) {
+        document.getElementById('stat-fav-item').textContent = sorted[0][0];
+    }
+}
+
+// ── Orders ───────────────────────────────────────────────────
+
+async function fetchOrders() {
+    try {
+        const { data, error } = await supabase
+            .from('orders')
+            .select('*')
+            .eq('profile_id', currentUser.id)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        allOrders = data || [];
+        
+        renderStats(allOrders);
+        
+        const activeOrders = allOrders.filter(o => o.delivery_status !== 'delivered' && o.delivery_status !== 'cancelled');
+        const pastOrders = allOrders.filter(o => o.delivery_status === 'delivered' || o.delivery_status === 'cancelled');
+        
+        renderActiveOrders(activeOrders);
+        renderPastOrders(pastOrders);
+        renderMostOrdered(allOrders);
+        
+    } catch (err) {
+        console.error('Error fetching orders:', err);
+    }
+}
+
+// ── Active Orders with Timeline ──
+
+function renderActiveOrders(orders) {
+    const container = document.getElementById('active-orders-container');
+    const badge = document.getElementById('active-count-badge');
+    
+    if (orders.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📦</div>
+                <p data-en="No active orders right now" data-es="No hay pedidos activos ahora">No active orders right now</p>
+                <p class="sub" data-en="When you place an order, you'll be able to track it here" data-es="Cuando hagas un pedido, podrás rastrearlo aquí">When you place an order, you'll be able to track it here</p>
+            </div>`;
+        badge.style.display = 'none';
+        return;
+    }
+    
+    badge.textContent = orders.length;
+    badge.style.display = 'inline-block';
+    
+    container.innerHTML = orders.map(order => {
+        const shortId = order.id ? order.id.split('-')[0].toUpperCase() : 'N/A';
+        const orderDate = new Date(order.created_at).toLocaleDateString();
+        const total = parseFloat(order.total_amount || order.total) || 0;
+        const itemCount = Array.isArray(order.items) ? order.items.reduce((s, i) => s + (i.qty || i.quantity || 1), 0) : 0;
+        const ds = order.delivery_status || 'pending';
+        
+        const steps = ['pending', 'baking', 'out_for_delivery', 'delivered'];
+        const stepLabels = ['Placed', 'Baking', 'On the Way', 'Delivered'];
+        const stepIcons = ['📝', '🧁', '🚗', '✅'];
+        const currentIdx = steps.indexOf(ds);
+        
+        const timeline = steps.map((step, i) => {
+            let cls = '';
+            if (i < currentIdx) cls = 'completed';
+            else if (i === currentIdx) cls = 'active';
+            return `
+                <div class="timeline-step ${cls}">
+                    <div class="timeline-dot"></div>
+                    <span class="timeline-label">${stepLabels[i]}</span>
+                </div>`;
+        }).join('');
+        
+        return `
+            <div class="active-order-card">
+                <div class="order-card-header">
+                    <div>
+                        <div class="order-card-id">#${shortId}</div>
+                    </div>
+                    <div class="order-card-meta">
+                        <span>${itemCount} items · $${total.toFixed(2)}</span>
+                        <span>${orderDate}</span>
+                    </div>
+                </div>
+                <div class="status-timeline">${timeline}</div>
+            </div>`;
+    }).join('');
+}
+
+// ── Most Ordered ──
+
+const ITEM_EMOJIS = {
+    'Tres Leches': '🍰', 'Tres Leche Piña': '🍍', 'Tres Leche Strawberry': '🍓',
+    'Tres Leche Hershey': '🍫', 'Cuatro Leche': '🥛', 'Piña': '🍍',
+    'Guava': '🍈', 'Dulce de Leche': '🍮', 'Chocolate': '🍫',
+    'Strawberry': '🍓', 'Pudin': '🍞', 'Plain': '🎂', 'Raisin': '🍇',
+    'Maiz': '🌽', 'Red Velvet': '❤️', 'Carrot Cake': '🥕',
+    'Cheesecake': '🧀', 'Chocoflan': '🍮',
+};
+
+function renderMostOrdered(orders) {
+    const itemCounts = {};
+    const itemDetails = {};
+    
+    orders.forEach(o => {
+        if (!Array.isArray(o.items)) return;
+        o.items.forEach(item => {
+            const name = item.name || 'Unknown';
+            const qty = item.qty || item.quantity || 1;
+            itemCounts[name] = (itemCounts[name] || 0) + qty;
+            if (!itemDetails[name]) {
+                itemDetails[name] = { price: item.price, tag: item.tag, size: item.size };
             }
+        });
+    });
+    
+    const sorted = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const grid = document.getElementById('most-ordered-grid');
+    
+    if (sorted.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <div class="empty-state-icon">🍰</div>
+                <p data-en="No order history yet" data-es="Aún no hay historial de pedidos">No order history yet</p>
+                <p class="sub" data-en="Your most ordered items will appear here" data-es="Tus artículos más pedidos aparecerán aquí">Your most ordered items will appear here</p>
+            </div>`;
+        return;
+    }
+    
+    grid.innerHTML = sorted.map(([name, count]) => {
+        const emoji = ITEM_EMOJIS[name] || '🎂';
+        const detail = itemDetails[name] || {};
+        return `
+            <div class="most-ordered-card">
+                <div class="most-ordered-emoji">${emoji}</div>
+                <div class="most-ordered-name">${name}</div>
+                <div class="most-ordered-count">Ordered ${count}×</div>
+                <button class="most-ordered-btn" onclick="orderAgainItem('${name.replace(/'/g, "\\'")}')">Order Again</button>
+            </div>`;
+    }).join('');
+}
+
+// ── Past Orders (Collapsible) ──
+
+function renderPastOrders(orders) {
+    const container = document.getElementById('past-orders-container');
+    const badge = document.getElementById('past-count-badge');
+    
+    if (orders.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <p data-en="No past orders yet" data-es="Aún no hay pedidos pasados">No past orders yet</p>
+            </div>`;
+        badge.style.display = 'none';
+        return;
+    }
+    
+    badge.textContent = orders.length;
+    badge.style.display = 'inline-block';
+    
+    container.innerHTML = orders.map(order => {
+        const shortId = order.id ? order.id.split('-')[0].toUpperCase() : 'N/A';
+        const orderDate = new Date(order.created_at).toLocaleDateString();
+        const total = parseFloat(order.total_amount || order.total) || 0;
+        const ds = order.delivery_status || 'delivered';
+        
+        const statusStyles = {
+            delivered: { color: '#1B5E20', bg: 'rgba(27, 94, 32, 0.12)', text: 'Delivered' },
+            cancelled: { color: '#C8102E', bg: 'rgba(200, 16, 46, 0.12)', text: 'Cancelled' },
+        };
+        const sInfo = statusStyles[ds] || statusStyles.delivered;
+        
+        const items = Array.isArray(order.items) ? order.items : [];
+        const itemRows = items.map(item => {
+            const qty = item.qty || item.quantity || 1;
+            const price = parseFloat(item.price) || 0;
+            const sizeLabel = item.size ? ` (${item.size})` : '';
+            return `<tr>
+                <td>${item.name || 'Item'}${sizeLabel}</td>
+                <td style="text-align:center;">${qty}</td>
+                <td style="text-align:right;">$${(price * qty).toFixed(2)}</td>
+            </tr>`;
+        }).join('');
+        
+        return `
+            <div class="past-order-card" data-order-id="${order.id}">
+                <div class="past-order-summary" onclick="togglePastOrder(this)">
+                    <div class="past-order-left">
+                        <span class="past-order-id">#${shortId}</span>
+                        <span class="past-order-date">${orderDate}</span>
+                    </div>
+                    <div class="past-order-right">
+                        <span class="past-order-badge" style="background:${sInfo.bg};color:${sInfo.color};border:1px solid ${sInfo.color};">${sInfo.text}</span>
+                        <span class="past-order-total">$${total.toFixed(2)}</span>
+                        <svg class="past-order-toggle" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                </div>
+                <div class="past-order-details">
+                    <table class="order-items-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th style="text-align:center;">Qty</th>
+                                <th style="text-align:right;">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>${itemRows || '<tr><td colspan="3" style="text-align:center;color:var(--tx-muted);">No item details available</td></tr>'}</tbody>
+                    </table>
+                    <button class="order-reorder-btn" onclick="orderAgainAll('${order.id}')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                        Order Again
+                    </button>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+// ── Toggle Past Order ──
+
+window.togglePastOrder = function(el) {
+    const card = el.closest('.past-order-card');
+    card.classList.toggle('expanded');
+};
+
+// ── Order Again Functions ──
+
+window.orderAgainItem = function(itemName) {
+    // Look through all orders to find this item's details
+    let itemData = null;
+    for (const order of allOrders) {
+        if (!Array.isArray(order.items)) continue;
+        const found = order.items.find(i => i.name === itemName);
+        if (found) { itemData = found; break; }
+    }
+    
+    if (!itemData) {
+        showToast('Could not find item details.', true);
+        return;
+    }
+    
+    // Add to cecilia_cart localStorage format
+    const cart = JSON.parse(localStorage.getItem('cecilia_cart') || '[]');
+    
+    // Check if item already in cart
+    const existing = cart.find(c => c.name === itemData.name && c.size === (itemData.size || null));
+    if (existing) {
+        existing.qty += 1;
+    } else {
+        cart.push({
+            name: itemData.name,
+            nameEn: itemData.nameEn || itemData.name,
+            nameEs: itemData.nameEs || itemData.name,
+            tag: itemData.tag || '',
+            tagEn: itemData.tagEn || itemData.tag || '',
+            tagEs: itemData.tagEs || itemData.tag || '',
+            key: itemData.key || itemData.name,
+            size: itemData.size || null,
+            sizeDisplay: itemData.sizeDisplay || itemData.size || null,
+            qty: 1,
+            price: itemData.price || null,
+            img: itemData.img || null,
+        });
+    }
+    
+    localStorage.setItem('cecilia_cart', JSON.stringify(cart));
+    showToast(`${itemData.name} added to cart!`);
+    
+    // Small delay then redirect to menu
+    setTimeout(() => {
+        window.location.href = 'menu.html';
+    }, 800);
+};
+
+window.orderAgainAll = function(orderId) {
+    const order = allOrders.find(o => o.id === orderId);
+    if (!order || !Array.isArray(order.items)) {
+        showToast('Could not find order details.', true);
+        return;
+    }
+    
+    const cart = JSON.parse(localStorage.getItem('cecilia_cart') || '[]');
+    
+    order.items.forEach(item => {
+        const existing = cart.find(c => c.name === item.name && c.size === (item.size || null));
+        if (existing) {
+            existing.qty += (item.qty || item.quantity || 1);
+        } else {
+            cart.push({
+                name: item.name,
+                nameEn: item.nameEn || item.name,
+                nameEs: item.nameEs || item.name,
+                tag: item.tag || '',
+                tagEn: item.tagEn || item.tag || '',
+                tagEs: item.tagEs || item.tag || '',
+                key: item.key || item.name,
+                size: item.size || null,
+                sizeDisplay: item.sizeDisplay || item.size || null,
+                qty: item.qty || item.quantity || 1,
+                price: item.price || null,
+                img: item.img || null,
+            });
         }
     });
+    
+    localStorage.setItem('cecilia_cart', JSON.stringify(cart));
+    showToast('All items added to cart!');
+    
+    setTimeout(() => {
+        window.location.href = 'menu.html';
+    }, 800);
+};
+
+// ── Saved Addresses (localStorage) ──
+
+function getAddresses() {
+    try {
+        return JSON.parse(localStorage.getItem('cecilia_addresses') || '[]');
+    } catch { return []; }
+}
+
+function saveAddresses(addresses) {
+    localStorage.setItem('cecilia_addresses', JSON.stringify(addresses));
+}
+
+function renderAddresses() {
+    const grid = document.getElementById('address-grid');
+    const addresses = getAddresses();
+    
+    let html = addresses.map((addr, i) => `
+        <div class="address-card">
+            <div class="address-card-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                ${addr.label || 'Address'}
+            </div>
+            <div class="address-card-text">${addr.street || ''}<br>${addr.city || ''}</div>
+            <div class="address-card-actions">
+                <button class="address-action-btn" onclick="editAddress(${i})">Edit</button>
+                <button class="address-action-btn delete" onclick="deleteAddress(${i})">Delete</button>
+            </div>
+        </div>
+    `).join('');
+    
+    html += `
+        <button class="add-address-card" onclick="openAddressModal()">
+            <span class="plus-icon">+</span>
+            <span data-en="Add Address" data-es="Agregar Dirección">Add Address</span>
+        </button>
+    `;
+    
+    grid.innerHTML = html;
+}
+
+let editingAddressIdx = -1;
+
+window.openAddressModal = function(idx) {
+    editingAddressIdx = idx !== undefined ? idx : -1;
+    const overlay = document.getElementById('address-modal-overlay');
+    
+    if (editingAddressIdx >= 0) {
+        const addresses = getAddresses();
+        const addr = addresses[editingAddressIdx];
+        document.getElementById('addr-label').value = addr.label || '';
+        document.getElementById('addr-street').value = addr.street || '';
+        document.getElementById('addr-city').value = addr.city || '';
+        document.getElementById('address-modal-title').textContent = 'Edit Address';
+    } else {
+        document.getElementById('addr-label').value = '';
+        document.getElementById('addr-street').value = '';
+        document.getElementById('addr-city').value = '';
+        document.getElementById('address-modal-title').textContent = 'Add Address';
+    }
+    
+    overlay.classList.add('open');
+};
+
+window.closeAddressModal = function() {
+    document.getElementById('address-modal-overlay').classList.remove('open');
+    editingAddressIdx = -1;
+};
+
+window.saveAddress = function() {
+    const label = document.getElementById('addr-label').value.trim();
+    const street = document.getElementById('addr-street').value.trim();
+    const city = document.getElementById('addr-city').value.trim();
+    
+    if (!street) {
+        showToast('Please enter a street address.', true);
+        return;
+    }
+    
+    const addresses = getAddresses();
+    const entry = { label: label || 'Address', street, city };
+    
+    if (editingAddressIdx >= 0) {
+        addresses[editingAddressIdx] = entry;
+    } else {
+        addresses.push(entry);
+    }
+    
+    saveAddresses(addresses);
+    closeAddressModal();
+    renderAddresses();
+    showToast(editingAddressIdx >= 0 ? 'Address updated!' : 'Address added!');
+};
+
+window.editAddress = function(idx) {
+    openAddressModal(idx);
+};
+
+window.deleteAddress = function(idx) {
+    const addresses = getAddresses();
+    addresses.splice(idx, 1);
+    saveAddresses(addresses);
+    renderAddresses();
+    showToast('Address removed.');
+};
+
+// ── Sign Out ──
+
+function setupSignOut() {
+    const btn = document.getElementById('nav-sign-out-btn');
+    if (btn) {
+        btn.addEventListener('click', async () => {
+            const { error } = await supabase.auth.signOut();
+            if (!error) window.location.href = 'index.html';
+        });
+    }
 
     supabase.auth.onAuthStateChange((event) => {
         if (event === 'SIGNED_OUT') {
@@ -69,33 +515,7 @@ function setupSignOut() {
     });
 }
 
-function setupTabs() {
-    const links = document.querySelectorAll('.sidebar-nav .sidebar-link');
-    const panes = document.querySelectorAll('.tab-pane');
-
-    links.forEach(link => {
-        link.addEventListener('click', (e) => {
-            const targetId = link.getAttribute('href').replace('#', '');
-            if (!link.getAttribute('href').startsWith('#')) return;
-            
-            e.preventDefault();
-
-            links.forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
-
-            panes.forEach(pane => {
-                pane.classList.remove('active');
-                if (pane.id === 'sec-' + targetId) {
-                    pane.classList.add('active');
-                }
-            });
-
-            if (targetId === 'orders') {
-                fetchOrders();
-            }
-        });
-    });
-}
+// ── Profile & Settings Form ──
 
 function setupProfileForm() {
     if (!currentProfile) return;
@@ -126,8 +546,12 @@ function setupProfileForm() {
             if (error) throw error;
             
             msg.textContent = 'Profile updated successfully!';
-            msg.style.color = 'green';
+            msg.style.color = '#27ae60';
             currentProfile = { ...currentProfile, ...updates };
+            
+            // Update the welcome name
+            const firstName = (updates.full_name || '').split(' ')[0] || 'Friend';
+            document.getElementById('welcome-name').textContent = firstName;
 
         } catch (err) {
             console.error('Error updating profile:', err);
@@ -172,7 +596,7 @@ function setupProfileForm() {
                 if (updateError) throw updateError;
                 
                 msg.textContent = 'Password updated successfully!';
-                msg.style.color = 'green';
+                msg.style.color = '#27ae60';
                 settingsForm.reset();
             } catch (err) {
                 console.error('Error updating password:', err);
@@ -181,79 +605,18 @@ function setupProfileForm() {
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Change Password';
+                setTimeout(() => { msg.textContent = ''; }, 4000);
             }
         });
     }
 }
 
-// ── Phase 5.3: Retail Active & Past Order Tracker ──
-async function fetchOrders() {
-    const tbodyActive = document.getElementById('active-orders-tbody');
-    const tbodyPast = document.getElementById('past-orders-tbody');
-    
-    if (tbodyActive) tbodyActive.innerHTML = '<tr><td colspan="4" style="text-align: center;">Loading...</td></tr>';
-    if (tbodyPast) tbodyPast.innerHTML = '<tr><td colspan="4" style="text-align: center;">Loading...</td></tr>';
-    
-    try {
-        const { data, error } = await supabase
-            .from('orders')
-            .select('*')
-            .eq('profile_id', currentUser.id)
-            .order('created_at', { ascending: false });
+// ── Toast ──
 
-        if (error) throw error;
-
-        const activeOrders = data.filter(o => o.delivery_status !== 'delivered' && o.delivery_status !== 'cancelled');
-        const pastOrders = data.filter(o => o.delivery_status === 'delivered' || o.delivery_status === 'cancelled');
-
-        renderOrdersTable(activeOrders, 'active-orders-tbody', 'No active orders.');
-        renderOrdersTable(pastOrders, 'past-orders-tbody', 'No past orders found.');
-
-    } catch (err) {
-        console.error('Error fetching orders:', err);
-        if (tbodyActive) tbodyActive.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--red);">Error loading orders.</td></tr>`;
-        if (tbodyPast) tbodyPast.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--red);">Error loading orders.</td></tr>`;
-    }
-}
-
-function renderOrdersTable(orders, tbodyId, emptyMessage) {
-    const tbody = document.getElementById(tbodyId);
-    if (!tbody) return;
-
-    if (orders.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="4" style="text-align: center; padding: 30px 20px; color: var(--tx-muted);">
-                    ${emptyMessage}
-                </td>
-            </tr>`;
-        return;
-    }
-
-    tbody.innerHTML = '';
-    orders.forEach(order => {
-        const tr = document.createElement('tr');
-        
-        const statusMap = {
-            pending: { color: '#F2994A', bg: 'rgba(242, 153, 74, 0.15)', text: 'Pending' },
-            baking: { color: '#002D62', bg: 'rgba(0, 45, 98, 0.15)', text: 'Baking' },
-            out_for_delivery: { color: '#6B5057', bg: 'rgba(107, 80, 87, 0.15)', text: 'Out for Delivery' },
-            delivered: { color: '#1B5E20', bg: 'rgba(27, 94, 32, 0.15)', text: 'Delivered' },
-            cancelled: { color: 'var(--red)', bg: 'rgba(200, 16, 46, 0.15)', text: 'Cancelled' }
-        };
-        const ds = order.delivery_status || 'pending';
-        const sInfo = statusMap[ds] || statusMap.pending;
-        
-        const orderDate = new Date(order.created_at).toLocaleDateString();
-        const shortId = order.id ? order.id.split('-')[0].toUpperCase() : 'N/A';
-        const total = parseFloat(order.total_amount) || 0;
-
-        tr.innerHTML = `
-            <td><strong>#${shortId}</strong></td>
-            <td>${orderDate}</td>
-            <td><span class="badge" style="background: ${sInfo.bg}; color: ${sInfo.color}; border: 1px solid ${sInfo.color}; opacity: 0.8">${sInfo.text}</span></td>
-            <td><strong>$${total.toFixed(2)}</strong></td>
-        `;
-        tbody.appendChild(tr);
-    });
+function showToast(message, isError = false) {
+    const toast = document.getElementById('account-toast');
+    toast.textContent = message;
+    toast.className = 'account-toast' + (isError ? ' error' : '');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
 }
