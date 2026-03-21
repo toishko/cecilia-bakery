@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Logo Options Preview — No White Backgrounds</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #1a0a0a 0%, #2d1414 50%, #1a0808 100%);
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #e8d4c8;
+            padding: 30px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: #c9a96e;
+        }
+        .subtitle {
+            text-align: center;
+            font-size: 13px;
+            margin-bottom: 40px;
+            opacity: 0.6;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .option-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+        }
+        .option-label {
+            font-size: 18px;
+            font-weight: 600;
+            color: #c9a96e;
+            margin-bottom: 5px;
+        }
+        .option-desc {
+            font-size: 12px;
+            opacity: 0.6;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 180px;
+        }
+        .logo-container img {
+            max-width: 80%;
+            height: auto;
+            max-height: 160px;
+        }
+
+        /* Option A: Full invert — white lines on dark */
+        .style-a img {
+            filter: invert(1);
+        }
+
+        /* Option B: Invert + slight warmth via sepia */
+        .style-b img {
+            filter: invert(1) sepia(0.15) brightness(1.1);
+        }
+
+        /* Option C: Invert + gold/cream tint to match brand */
+        .style-c img {
+            filter: invert(1) sepia(0.3) saturate(2) hue-rotate(-10deg) brightness(1.05);
+        }
+
+        /* Option D: Bright white — make everything pure white */
+        .style-d img {
+            filter: brightness(0) invert(1);
+        }
+
+        /* Option E: Soft cream/warm white */
+        .style-e img {
+            filter: brightness(0) invert(1) sepia(0.2) brightness(1.05);
+        }
+
+        /* Option F: Inverted with subtle glow */
+        .style-f img {
+            filter: invert(1) brightness(1.1);
+            -webkit-filter: invert(1) brightness(1.1);
+        }
+        .style-f {
+            position: relative;
+        }
+        .style-f::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70%;
+            height: 80%;
+            background: radial-gradient(ellipse, rgba(201, 169, 110, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Logo Options — Zero White Backgrounds</h1>
+    <p class="subtitle">All options use CSS filters only — the actual logo file stays unchanged</p>
+
+    <div class="options-grid">
+        <div class="option-card">
+            <div class="option-label">Option A — Clean Invert</div>
+            <div class="option-desc">CSS invert makes dark lines white, removes all white</div>
+            <div class="logo-container style-a">
+                <img src="assets/logo.png" alt="Cecilia Bakery" />
+            </div>
+        </div>
+
+        <div class="option-card">
+            <div class="option-label">Option B — Warm Invert</div>
+            <div class="option-desc">Inverted + slight warm sepia tone</div>
+            <div class="logo-container style-b">
+                <img src="assets/logo.png" alt="Cecilia Bakery" />
+            </div>
+        </div>
+
+        <div class="option-card">
+            <div class="option-label">Option C — Gold Brand Invert</div>
+            <div class="option-desc">Inverted with gold/cream tint to match bakery branding</div>
+            <div class="logo-container style-c">
+                <img src="assets/logo.png" alt="Cecilia Bakery" />
+            </div>
+        </div>
+
+        <div class="option-card">
+            <div class="option-label">Option D — Pure White</div>
+            <div class="option-desc">Everything becomes pure white — clean and minimal</div>
+            <div class="logo-container style-d">
+                <img src="assets/logo.png" alt="Cecilia Bakery" />
+            </div>
+        </div>
+
+        <div class="option-card">
+            <div class="option-label">Option E — Warm Cream</div>
+            <div class="option-desc">Everything becomes a warm cream color</div>
+            <div class="logo-container style-e">
+                <img src="assets/logo.png" alt="Cecilia Bakery" />
+            </div>
+        </div>
+
+        <div class="option-card">
+            <div class="option-label">Option F — Invert + Glow</div>
+            <div class="option-desc">Inverted with a subtle warm glow behind</div>
+            <div class="logo-container style-f">
+                <img src="assets/logo.png" alt="Cecilia Bakery" />
+            </div>
+        </div>
+    </div>
+</body>
+</html>
