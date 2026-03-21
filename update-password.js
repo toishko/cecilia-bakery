@@ -4,7 +4,30 @@ import { showFeedback, setLoading, setupPasswordToggle, storeButtonText } from '
 
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('updatePasswordForm');
+    const expiredEl = document.getElementById('linkExpired');
     if (!form) return;
+
+    // Hide form until we verify a valid recovery session
+    form.style.display = 'none';
+
+    let recoveryDetected = false;
+
+    // Listen for the PASSWORD_RECOVERY event from the token in the URL
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'PASSWORD_RECOVERY') {
+            recoveryDetected = true;
+            form.style.display = '';             // Show form
+            if (expiredEl) expiredEl.style.display = 'none';
+        }
+    });
+
+    // If no recovery event fires within 3s, show expired/invalid message
+    setTimeout(() => {
+        if (!recoveryDetected) {
+            form.style.display = 'none';
+            if (expiredEl) expiredEl.style.display = '';
+        }
+    }, 3000);
 
     // Set up password toggle for the new password field
     setupPasswordToggle(form);
@@ -51,6 +74,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.disabled = true;
                 btn.style.opacity = '0.5';
                 btn.textContent = 'Updated ✓';
+
+                // Clean up auth listener
+                subscription.unsubscribe();
 
                 // Redirect to login after a short delay
                 setTimeout(() => {
