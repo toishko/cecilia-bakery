@@ -395,7 +395,7 @@ async function fetchOrderHistory() {
 function updateOverviewWidgets(orders) {
     document.getElementById('overview-total-orders').textContent = orders.length;
     
-    const activeDeliveries = orders.filter(o => o.delivery_status === 'out_for_delivery' || o.delivery_status === 'baking' || o.delivery_status === 'pending').length;
+    const activeDeliveries = orders.filter(o => o.delivery_status === 'ready_for_pickup' || o.delivery_status === 'baking' || o.delivery_status === 'pending').length;
     document.getElementById('overview-active-deliveries').textContent = activeDeliveries;
     
     const totalSpent = orders.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
@@ -480,14 +480,14 @@ function getStatusColors(status) {
     const statusColorMap = {
         pending: '#F2994A',
         baking: '#002D62',
-        out_for_delivery: '#6B5057',
+        ready_for_pickup: '#1B5E20',
         delivered: '#1B5E20',
         cancelled: 'var(--red)'
     };
     const statusBgMap = {
         pending: 'rgba(242, 153, 74, 0.15)',
         baking: 'rgba(0, 45, 98, 0.15)',
-        out_for_delivery: 'rgba(107, 80, 87, 0.15)',
+        ready_for_pickup: 'rgba(27, 94, 32, 0.15)',
         delivered: 'rgba(27, 94, 32, 0.15)',
         cancelled: 'rgba(200, 16, 46, 0.15)'
     };

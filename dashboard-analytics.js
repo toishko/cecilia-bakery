@@ -394,7 +394,7 @@ function drawOrdersByStatus(canvasId, orders, statusField) {
     if (data.length === 0) { destroyChart(canvasId); showEmptyChart(canvasId); return; }
 
     const colorMap = {
-        pending: COLORS.amber, baking: COLORS.red, out_for_delivery: COLORS.teal,
+        pending: COLORS.amber, baking: COLORS.red, ready_for_pickup: COLORS.teal,
         delivered: COLORS.green, approved: COLORS.navy, in_progress: COLORS.violet,
         ready_for_pickup: COLORS.forest, picked_up: COLORS.green, unknown: COLORS.slate,
     };

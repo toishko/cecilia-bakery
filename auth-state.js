@@ -1,50 +1,48 @@
 import { supabase } from './supabase-client.js';
+window.__supabase = supabase;
 
 // Global function to update UI based on session
 export async function updateAuthUI(session) {
     const loginBtn = document.getElementById('nav-login-btn');
-    const userMenu = document.getElementById('nav-user-menu');
-    const userGreeting = document.getElementById('nav-user-greeting');
     
-    // Mobile elements
+    // Mobile/hamburger elements
     const mobileLoginBtn = document.getElementById('mobile-login-btn');
+    const mobileAccountMenu = document.getElementById('mobile-account-menu');
     const mobileSignoutMenu = document.getElementById('mobile-signout-menu');
 
     if (session) {
-        // User is signed in
+        // User is signed in — hide login, show name + account items in hamburger
         if (loginBtn) loginBtn.style.display = 'none';
-        if (userMenu) userMenu.style.display = 'flex';
         if (mobileLoginBtn) mobileLoginBtn.style.display = 'none';
+        if (mobileAccountMenu) mobileAccountMenu.style.display = 'block';
         if (mobileSignoutMenu) mobileSignoutMenu.style.display = 'block';
-        
-        if (userGreeting) {
+
+        // Show user name in navbar
+        const navGreeting = document.getElementById('nav-user-greeting');
+        const navUserName = document.getElementById('nav-user-name');
+        if (navGreeting && navUserName) {
             try {
-                const { data: profile, error } = await supabase
+                const { data: profile } = await supabase
                     .from('profiles')
-                    .select('full_name, role')
+                    .select('full_name')
                     .eq('id', session.user.id)
                     .single();
-                
                 const displayName = profile?.full_name || session.user.user_metadata?.full_name || session.user.email.split('@')[0];
-                userGreeting.innerHTML = `<i data-lucide='user' class='icon' width='18' height='18'></i> hi, ${displayName} <i data-lucide='chevron-down' class='icon' width='14' height='14'></i>`;
-                
-                // Store role if needed for routing
-                if (profile?.role) {
-                    sessionStorage.setItem('userRole', profile.role);
-                }
+                navUserName.textContent = displayName;
             } catch (err) {
-                const fallbackName = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
-                userGreeting.innerHTML = `<i data-lucide='user' class='icon' width='18' height='18'></i> hi, ${fallbackName} <i data-lucide='chevron-down' class='icon' width='14' height='14'></i>`;
+                navUserName.textContent = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
             }
-            // Re-render Lucide icons
+            navGreeting.style.display = 'flex';
             if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     } else {
-        // User is signed out
+        // User is signed out — show login, hide account items
         if (loginBtn) loginBtn.style.display = 'flex';
-        if (userMenu) userMenu.style.display = 'none';
         if (mobileLoginBtn) mobileLoginBtn.style.display = 'block';
+        if (mobileAccountMenu) mobileAccountMenu.style.display = 'none';
         if (mobileSignoutMenu) mobileSignoutMenu.style.display = 'none';
+        const navGreeting = document.getElementById('nav-user-greeting');
+        if (navGreeting) navGreeting.style.display = 'none';
     }
 }
 

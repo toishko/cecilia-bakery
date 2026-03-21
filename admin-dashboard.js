@@ -685,13 +685,13 @@ function renderOrdersTable(orders) {
         const statusColorMap = {
             pending: '#F2994A',
             baking: '#002D62',
-            out_for_delivery: '#6B5057',
+            ready_for_pickup: '#1B5E20',
             delivered: '#1B5E20'
         };
         const statusBgMap = {
             pending: 'rgba(242, 153, 74, 0.15)',
             baking: 'rgba(0, 45, 98, 0.15)',
-            out_for_delivery: 'rgba(107, 80, 87, 0.15)',
+            ready_for_pickup: 'rgba(27, 94, 32, 0.15)',
             delivered: 'rgba(27, 94, 32, 0.15)'
         };
         
@@ -735,8 +735,8 @@ window.handleAdvanceClick = async function(btnElem, orderId, currentStatus, from
 
     const nextStatusMap = {
         pending: 'baking',
-        baking: 'out_for_delivery',
-        out_for_delivery: 'delivered',
+        baking: 'ready_for_pickup',
+        ready_for_pickup: 'delivered',
         delivered: 'pending' 
     };
     const newStatus = nextStatusMap[currentStatus] || 'pending';
@@ -766,16 +766,32 @@ window.handleAdvanceClick = async function(btnElem, orderId, currentStatus, from
         return;
     }
 
+    // ── Phase 1.5: ETA Picker when advancing to 'baking' ──
+    if (newStatus === 'baking' && !btnElem.dataset.etaSet) {
+        showETAPicker(orderId, btnElem, fromModal);
+        return;
+    }
+
     // ── Phase 2: Execute! ──
     btnElem.dataset.confirming = 'false';
+    btnElem.dataset.etaSet = '';
     const originalHtml = btnElem.dataset.originalHtml;
     btnElem.innerHTML = 'Updating...';
     btnElem.style.opacity = '0.7';
 
     try {
+        const updateData = { delivery_status: newStatus };
+
+        // Include ETA if set
+        const eta = btnElem.dataset.etaValue;
+        if (eta) {
+            updateData.estimated_pickup_at = eta;
+            btnElem.dataset.etaValue = '';
+        }
+
         const { error } = await supabase
             .from('orders')
-            .update({ delivery_status: newStatus })
+            .update(updateData)
             .eq('id', orderId);
 
         if (error) throw error;
@@ -796,6 +812,92 @@ window.handleAdvanceClick = async function(btnElem, orderId, currentStatus, from
             btnElem.style.borderColor = '';
         }, 3000);
     }
+}
+
+// ── ETA Picker Modal ──
+function showETAPicker(orderId, btnElem, fromModal) {
+    document.getElementById('eta-picker-overlay')?.remove();
+
+    const defaultTime = new Date(Date.now() + 30 * 60 * 1000);
+    const hh = String(defaultTime.getHours()).padStart(2, '0');
+    const mm = String(defaultTime.getMinutes()).padStart(2, '0');
+
+    const overlay = document.createElement('div');
+    overlay.id = 'eta-picker-overlay';
+    overlay.style.cssText = `
+        position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 10000; backdrop-filter: blur(4px);
+    `;
+    overlay.innerHTML = `
+        <div style="
+            background: var(--card-bg, #1e1e2e); border: 1px solid var(--border-subtle, #333);
+            border-radius: 16px; padding: 28px 32px; max-width: 360px; width: 90%;
+            font-family: 'Outfit', sans-serif; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        ">
+            <h3 style="margin: 0 0 6px; color: var(--tx-normal, #fff); font-size: 1.15rem;">
+                ⏱️ Set Estimated Pickup Time
+            </h3>
+            <p style="margin: 0 0 18px; color: var(--tx-muted, #888); font-size: 0.85rem;">
+                When should the customer expect their order to be ready?
+            </p>
+            <input type="time" id="eta-time-input" value="${hh}:${mm}" style="
+                width: 100%; padding: 12px 14px; border-radius: 10px;
+                border: 1px solid var(--border-subtle, #444);
+                background: var(--bg-inset, #16161e); color: var(--tx-normal, #fff);
+                font-family: 'Outfit', sans-serif; font-size: 1.1rem;
+                outline: none; margin-bottom: 18px;
+            "/>
+            <div style="display: flex; gap: 10px;">
+                <button id="eta-skip-btn" style="
+                    flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border-subtle, #444);
+                    background: transparent; color: var(--tx-muted, #888); cursor: pointer;
+                    font-family: 'Outfit', sans-serif; font-size: 0.9rem;
+                ">Skip</button>
+                <button id="eta-confirm-btn" style="
+                    flex: 1; padding: 10px; border-radius: 10px; border: none;
+                    background: var(--brand-gold, #d4a853); color: #1a1a2e; cursor: pointer;
+                    font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 600;
+                ">Set ETA</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const timeInput = document.getElementById('eta-time-input');
+    const confirmBtn = document.getElementById('eta-confirm-btn');
+    const skipBtn = document.getElementById('eta-skip-btn');
+
+    confirmBtn.addEventListener('click', () => {
+        const [h, m] = timeInput.value.split(':');
+        const etaDate = new Date();
+        etaDate.setHours(parseInt(h), parseInt(m), 0, 0);
+        if (etaDate < new Date()) etaDate.setDate(etaDate.getDate() + 1);
+
+        btnElem.dataset.etaSet = 'true';
+        btnElem.dataset.etaValue = etaDate.toISOString();
+        overlay.remove();
+        handleAdvanceClick(btnElem, orderId, 'pending', fromModal);
+    });
+
+    skipBtn.addEventListener('click', () => {
+        btnElem.dataset.etaSet = 'true';
+        btnElem.dataset.etaValue = '';
+        overlay.remove();
+        handleAdvanceClick(btnElem, orderId, 'pending', fromModal);
+    });
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            btnElem.dataset.confirming = 'false';
+            btnElem.innerHTML = btnElem.dataset.originalHtml;
+            btnElem.style.background = '';
+            btnElem.style.color = '';
+            btnElem.style.borderColor = '';
+            overlay.remove();
+        }
+    });
 }
 
 window.handleCancelClick = async function(btnElem, orderId, fromModal = false) {
@@ -1073,8 +1175,8 @@ window.openOrderModal = function(orderId) {
     document.getElementById('modal-grand-total').innerText = grandTotal.toFixed(2);
 
     // Progress Bar
-    const stages = ['pending', 'baking', 'out_for_delivery', 'delivered'];
-    const humanStages = ['Pending', 'Baking', 'Out for Delivery', 'Delivered'];
+    const stages = ['pending', 'baking', 'ready_for_pickup', 'delivered'];
+    const humanStages = ['Pending', 'Baking', 'Ready for Pickup', 'Picked Up'];
     const ds = order.delivery_status || 'pending';
     const activeIdx = stages.indexOf(ds);
 

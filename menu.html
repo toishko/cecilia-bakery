@@ -196,31 +196,29 @@
       font-weight: 600;
       letter-spacing: .08em;
       text-transform: uppercase;
-      padding: 5px 10px;
-      border-radius: 2px;
-      border: 1.5px solid var(--lang-border);
+      padding: 4px;
+      border-radius: 0;
+      border: none;
       background: transparent;
       cursor: pointer;
       transition: var(--transition);
       color: var(--lang-text);
-      width: 32px;
-      height: 32px;
+      width: auto;
+      height: auto;
       display: inline-flex;
       justify-content: center;
       align-items: center;
-      padding: 0;
       line-height: 1;
     }
 
     .lang-btn.active {
-      background: var(--red);
-      border-color: var(--red);
-      color: #fff;
+      background: transparent;
+      border: none;
+      color: var(--red);
     }
 
     .lang-btn:not(.active):hover,
     .theme-btn:hover {
-      border-color: var(--red);
       color: var(--red);
     }
 
@@ -4862,7 +4860,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         checkoutConfirmTitle: 'Ready to place your order?',
         checkoutConfirmOk: 'Yes, Place Order',
         checkoutConfirmCancel: 'Go Back',
-        checkoutNote: "We'll confirm your order and arrange pickup after receiving it.",
+        checkoutNote: "Pay at Pickup — we'll confirm your order and notify you when it's ready.",
         addToCart: 'Add to Cart',
         selectSize: 'Select a size to continue',
         sizeLabel: 'Size',
@@ -4904,7 +4902,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         checkoutConfirmTitle: '¿Listo para hacer tu pedido?',
         checkoutConfirmOk: 'Sí, Hacer Pedido',
         checkoutConfirmCancel: 'Volver',
-        checkoutNote: 'Confirmaremos tu pedido y coordinaremos la recogida después de recibirlo.',
+        checkoutNote: 'Pago al Recoger — confirmaremos tu pedido y te avisaremos cuando esté listo.',
         addToCart: 'Agregar al Carrito',
         selectSize: 'Selecciona un tamaño para continuar',
         sizeLabel: 'Tamaño',
@@ -5458,7 +5456,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       );
     }
 
-    function _placeOrder() {
+    async function _placeOrder() {
       const t = cartI18n[lang];
       const name = (document.getElementById('cart-name')?.value || '').trim();
       const phone = (document.getElementById('cart-phone')?.value || '').trim();
@@ -5488,11 +5486,73 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         }
       }
 
+      // ── Save to Supabase if logged in ──
+      let orderId = null;
+      const sb = window.__supabase;
+      if (sb) {
+        try {
+          const { data: sessionData } = await sb.auth.getSession();
+          if (sessionData?.session?.user) {
+            const userId = sessionData.session.user.id;
+            const total = cart.reduce((sum, item) => {
+              const p = parseFloat(item.price || 0);
+              return sum + (p * item.qty);
+            }, 0);
+
+            const orderData = {
+              profile_id: userId,
+              role: 'customer',
+              status: 'active',
+              delivery_status: 'pending',
+              payment_method: 'at_pickup',
+              payment_status: 'pending',
+              items: cart.map(i => ({
+                name: i.nameEn || i.name,
+                qty: i.qty,
+                price: parseFloat(i.price || 0),
+                size: i.size || null,
+                tag: i.tagEn || i.tag || '',
+              })),
+              total_amount: total,
+              note: note || null,
+            };
+
+            const { data: inserted, error } = await sb
+              .from('orders')
+              .insert(orderData)
+              .select('id')
+              .single();
+
+            if (!error && inserted) {
+              orderId = inserted.id;
+            } else {
+              console.error('Order insert error:', error);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to save order:', err);
+        }
+      }
+
+      // ── Send WhatsApp notification ──
       const msg = t.whatsappMsg(name, phone, pickupStr, summary, note);
       const waNumber = '12018697633';
       const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
+
+      // Clear cart
+      cart = [];
+      saveCart();
+      updateBadge();
       closeCart();
-      window.open(waUrl, '_blank');
+
+      // Redirect to confirmation if order was saved, else just open WhatsApp
+      if (orderId) {
+        sessionStorage.setItem('cecilia_last_order_id', orderId);
+        window.location.href = `order-confirmation.html?id=${orderId.split('-')[0]}`;
+        window.open(waUrl, '_blank');
+      } else {
+        window.open(waUrl, '_blank');
+      }
     }
 
     /* ── Init ── */

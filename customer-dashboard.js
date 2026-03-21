@@ -36,9 +36,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         renderWelcome();
         await fetchOrders();
+        setupRealtimeOrders();
         setupProfileForm();
         setupSignOut();
-        renderAddresses();
+        fetchAddresses();
         
     } catch (err) {
         console.error('Error during customer verification:', err);
@@ -136,9 +137,9 @@ function renderActiveOrders(orders) {
         const itemCount = Array.isArray(order.items) ? order.items.reduce((s, i) => s + (i.qty || i.quantity || 1), 0) : 0;
         const ds = order.delivery_status || 'pending';
         
-        const steps = ['pending', 'baking', 'out_for_delivery', 'delivered'];
-        const stepLabels = ['Placed', 'Baking', 'On the Way', 'Delivered'];
-        const stepIcons = ['📝', '🧁', '🚗', '✅'];
+        const steps = ['pending', 'baking', 'ready_for_pickup', 'delivered'];
+        const stepLabels = ['Placed', 'Baking', 'Ready for Pickup', 'Picked Up'];
+        const stepIcons = ['📝', '🧁', '✅', '🛍️'];
         const currentIdx = steps.indexOf(ds);
         
         const timeline = steps.map((step, i) => {
@@ -151,6 +152,33 @@ function renderActiveOrders(orders) {
                     <span class="timeline-label">${stepLabels[i]}</span>
                 </div>`;
         }).join('');
+
+        // ETA display
+        let etaHtml = '';
+        if (order.estimated_pickup_at && ds !== 'delivered' && ds !== 'cancelled') {
+            const etaDate = new Date(order.estimated_pickup_at);
+            const etaTime = etaDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            const now = new Date();
+            const diffMs = etaDate - now;
+            const diffMins = Math.round(diffMs / 60000);
+            
+            let etaLabel = `Est. ready by ${etaTime}`;
+            if (diffMins > 0 && diffMins <= 120) {
+                etaLabel += ` (~${diffMins} min)`;
+            } else if (diffMins <= 0) {
+                etaLabel = `Should be ready now!`;
+            }
+            
+            etaHtml = `
+                <div style="
+                    display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+                    background: rgba(212, 168, 83, 0.1); border: 1px solid rgba(212, 168, 83, 0.25);
+                    border-radius: 10px; margin-bottom: 4px;
+                    font-size: 0.85rem; color: var(--brand-gold, #d4a853); font-weight: 500;
+                ">
+                    <span>⏱️</span> ${etaLabel}
+                </div>`;
+        }
         
         return `
             <div class="active-order-card">
@@ -163,6 +191,7 @@ function renderActiveOrders(orders) {
                         <span>${orderDate}</span>
                     </div>
                 </div>
+                ${etaHtml}
                 <div class="status-timeline">${timeline}</div>
             </div>`;
     }).join('');
@@ -392,23 +421,52 @@ window.orderAgainAll = function(orderId) {
     }, 800);
 };
 
-// ── Saved Addresses (localStorage) ──
+// ── Saved Addresses (Supabase) ──
 
-function getAddresses() {
+let addressesCache = [];
+
+async function fetchAddresses() {
     try {
-        return JSON.parse(localStorage.getItem('cecilia_addresses') || '[]');
-    } catch { return []; }
-}
+        const { data, error } = await supabase
+            .from('addresses')
+            .select('*')
+            .eq('profile_id', currentUser.id)
+            .order('created_at', { ascending: true });
 
-function saveAddresses(addresses) {
-    localStorage.setItem('cecilia_addresses', JSON.stringify(addresses));
+        if (error) throw error;
+        addressesCache = data || [];
+
+        // One-time migration from localStorage
+        const localRaw = localStorage.getItem('cecilia_addresses');
+        if (localRaw && addressesCache.length === 0) {
+            try {
+                const localAddrs = JSON.parse(localRaw);
+                if (Array.isArray(localAddrs) && localAddrs.length > 0) {
+                    const rows = localAddrs.map(a => ({
+                        profile_id: currentUser.id,
+                        label: a.label || 'Address',
+                        street: a.street || '',
+                        city: a.city || ''
+                    }));
+                    const { error: insertErr } = await supabase.from('addresses').insert(rows);
+                    if (!insertErr) {
+                        localStorage.removeItem('cecilia_addresses');
+                        return fetchAddresses(); // re-fetch after migration
+                    }
+                }
+            } catch { /* ignore parse errors */ }
+        }
+
+        renderAddresses();
+    } catch (err) {
+        console.error('Error fetching addresses:', err);
+    }
 }
 
 function renderAddresses() {
     const grid = document.getElementById('address-grid');
-    const addresses = getAddresses();
     
-    let html = addresses.map((addr, i) => `
+    let html = addressesCache.map((addr) => `
         <div class="address-card">
             <div class="address-card-label">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -416,8 +474,8 @@ function renderAddresses() {
             </div>
             <div class="address-card-text">${addr.street || ''}<br>${addr.city || ''}</div>
             <div class="address-card-actions">
-                <button class="address-action-btn" onclick="editAddress(${i})">Edit</button>
-                <button class="address-action-btn delete" onclick="deleteAddress(${i})">Delete</button>
+                <button class="address-action-btn" onclick="editAddress('${addr.id}')">Edit</button>
+                <button class="address-action-btn delete" onclick="deleteAddress('${addr.id}')">Delete</button>
             </div>
         </div>
     `).join('');
@@ -432,18 +490,19 @@ function renderAddresses() {
     grid.innerHTML = html;
 }
 
-let editingAddressIdx = -1;
+let editingAddressId = null;
 
-window.openAddressModal = function(idx) {
-    editingAddressIdx = idx !== undefined ? idx : -1;
+window.openAddressModal = function(id) {
+    editingAddressId = id || null;
     const overlay = document.getElementById('address-modal-overlay');
     
-    if (editingAddressIdx >= 0) {
-        const addresses = getAddresses();
-        const addr = addresses[editingAddressIdx];
-        document.getElementById('addr-label').value = addr.label || '';
-        document.getElementById('addr-street').value = addr.street || '';
-        document.getElementById('addr-city').value = addr.city || '';
+    if (editingAddressId) {
+        const addr = addressesCache.find(a => a.id === editingAddressId);
+        if (addr) {
+            document.getElementById('addr-label').value = addr.label || '';
+            document.getElementById('addr-street').value = addr.street || '';
+            document.getElementById('addr-city').value = addr.city || '';
+        }
         document.getElementById('address-modal-title').textContent = 'Edit Address';
     } else {
         document.getElementById('addr-label').value = '';
@@ -457,10 +516,10 @@ window.openAddressModal = function(idx) {
 
 window.closeAddressModal = function() {
     document.getElementById('address-modal-overlay').classList.remove('open');
-    editingAddressIdx = -1;
+    editingAddressId = null;
 };
 
-window.saveAddress = function() {
+window.saveAddress = async function() {
     const label = document.getElementById('addr-label').value.trim();
     const street = document.getElementById('addr-street').value.trim();
     const city = document.getElementById('addr-city').value.trim();
@@ -470,32 +529,100 @@ window.saveAddress = function() {
         return;
     }
     
-    const addresses = getAddresses();
     const entry = { label: label || 'Address', street, city };
     
-    if (editingAddressIdx >= 0) {
-        addresses[editingAddressIdx] = entry;
-    } else {
-        addresses.push(entry);
+    try {
+        if (editingAddressId) {
+            const { error } = await supabase
+                .from('addresses')
+                .update(entry)
+                .eq('id', editingAddressId);
+            if (error) throw error;
+        } else {
+            entry.profile_id = currentUser.id;
+            const { error } = await supabase
+                .from('addresses')
+                .insert(entry);
+            if (error) throw error;
+        }
+        
+        closeAddressModal();
+        await fetchAddresses();
+        showToast(editingAddressId ? 'Address updated!' : 'Address added!');
+    } catch (err) {
+        console.error('Error saving address:', err);
+        showToast('Failed to save address.', true);
     }
-    
-    saveAddresses(addresses);
-    closeAddressModal();
-    renderAddresses();
-    showToast(editingAddressIdx >= 0 ? 'Address updated!' : 'Address added!');
 };
 
-window.editAddress = function(idx) {
-    openAddressModal(idx);
+window.editAddress = function(id) {
+    openAddressModal(id);
 };
 
-window.deleteAddress = function(idx) {
-    const addresses = getAddresses();
-    addresses.splice(idx, 1);
-    saveAddresses(addresses);
-    renderAddresses();
-    showToast('Address removed.');
+window.deleteAddress = async function(id) {
+    try {
+        const { error } = await supabase
+            .from('addresses')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+        await fetchAddresses();
+        showToast('Address removed.');
+    } catch (err) {
+        console.error('Error deleting address:', err);
+        showToast('Failed to delete address.', true);
+    }
 };
+
+// ── Real-Time Order Updates ──
+
+const STATUS_MESSAGES = {
+    pending:          { emoji: '📝', text: 'Your order has been placed!' },
+    baking:           { emoji: '🧁', text: 'Your order is now being prepared!' },
+    ready_for_pickup: { emoji: '🎉', text: 'Your order is ready for pickup!' },
+    delivered:        { emoji: '🛍️', text: 'Your order has been picked up!' },
+    cancelled:        { emoji: '❌', text: 'Your order has been cancelled.' },
+};
+
+let previousStatuses = {};
+
+function setupRealtimeOrders() {
+    // Snapshot current statuses before any realtime events
+    allOrders.forEach(o => {
+        if (o.id) previousStatuses[o.id] = o.delivery_status || 'pending';
+    });
+
+    supabase.channel('customer-orders')
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'orders',
+            filter: `profile_id=eq.${currentUser.id}`
+        }, async (payload) => {
+            console.log('Order update received:', payload);
+
+            // Detect status change from the payload directly
+            if (payload.eventType === 'UPDATE' && payload.new) {
+                const orderId = payload.new.id;
+                const newStatus = payload.new.delivery_status;
+                const oldStatus = previousStatuses[orderId];
+
+                if (oldStatus && newStatus && oldStatus !== newStatus) {
+                    const msg = STATUS_MESSAGES[newStatus];
+                    if (msg) {
+                        const shortId = orderId.split('-')[0].toUpperCase();
+                        showToast(`${msg.emoji} #${shortId}: ${msg.text}`);
+                    }
+                }
+                previousStatuses[orderId] = newStatus;
+            } else if (payload.eventType === 'INSERT' && payload.new) {
+                previousStatuses[payload.new.id] = payload.new.delivery_status || 'pending';
+            }
+
+            await fetchOrders();
+        })
+        .subscribe();
+}
 
 // ── Sign Out ──
 
