@@ -18,7 +18,7 @@ export default defineConfig({
         adminDashboard: resolve(__dirname, 'admin-dashboard.html'),
         partnerDashboard: resolve(__dirname, 'partner-dashboard.html'),
         staffDashboard: resolve(__dirname, 'staff-dashboard.html'),
-        bulkOrders: resolve(__dirname, 'bulk-orders.html'),
+        driverDashboard: resolve(__dirname, 'driver-dashboard.html'),
         extractedLogo: resolve(__dirname, 'extracted_logo.html'),
       },
     },

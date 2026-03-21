@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .eq('id', user.id)
                 .single();
             if (profile && profile.role === 'driver') {
-                window.location.href = 'bulk-orders.html';
+                window.location.href = 'driver-dashboard.html';
                 return;
             }
         }
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            window.location.href = 'bulk-orders.html';
+            window.location.href = 'driver-dashboard.html';
         }
     });
 });
