@@ -1,4 +1,4 @@
-import { supabase } from './supabase-client.js';
+import { supabase, getOrderTotal } from './supabase-client.js';
 import { fireNotification, initNotificationUI, incrementTabBadge } from './notification-utils.js';
 
 // Helper: populate a widget value and remove skeleton shimmer
@@ -739,11 +739,7 @@ async function fetchMasterOrders() {
 
         // Revenue: sum from today's non-cancelled customer orders + today's driver orders
         const todaysNonCancelled = data ? data.filter(o => new Date(o.created_at) >= today && o.delivery_status !== 'cancelled') : [];
-        const customerRevenue = todaysNonCancelled.reduce((sum, o) => {
-            const items = o.items || [];
-            const orderTotal = items.reduce((s, item) => s + ((item.price || 0) * (item.qty || item.quantity || 1)), 0);
-            return sum + orderTotal;
-        }, 0);
+        const customerRevenue = todaysNonCancelled.reduce((sum, o) => sum + getOrderTotal(o), 0);
 
         // Also include today's driver orders revenue
         let driverRevenue = 0;

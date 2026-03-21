@@ -340,6 +340,8 @@ function setupOrderForm() {
                 profile_id: currentUser.id, role: 'partner', items: orderItems,
                 delivery_status: 'pending',
                 delivery_address: currentPartnerDetails.delivery_address || '',
+                payment_method: 'at_pickup',
+                payment_status: 'pending',
                 total_amount: totalAmount,
                 note: notes || null,
             });

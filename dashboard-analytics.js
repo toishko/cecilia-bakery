@@ -1,4 +1,4 @@
-import { supabase } from './supabase-client.js';
+import { supabase, getOrderTotal } from './supabase-client.js';
 
 /* ═══════════════════════════════════════════════════════════════
    ANALYTICS ENGINE — Cecilia Bakery Admin Dashboard
@@ -99,16 +99,8 @@ function renderAnalytics() {
     if (window.lucide) lucide.createIcons();
 }
 
-// Helper: compute order total — customer orders use items JSONB, driver_orders use total_amount column
-function getOrderTotal(order) {
-    // Driver orders have total_amount column
-    if (order.total_amount !== undefined && order.total_amount !== null) {
-        return parseFloat(order.total_amount) || 0;
-    }
-    // Customer/partner orders: compute from items array
-    const items = order.items || [];
-    return items.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * (parseInt(item.qty) || parseInt(item.quantity) || 1)), 0);
-}
+// Helper: compute order total — uses shared getOrderTotal from supabase-client.js
+// (also handles driver_orders which have total_amount column)
 
 function getFilteredData() {
     const { start, end } = dateRange;
