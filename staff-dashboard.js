@@ -37,7 +37,7 @@ window.showDashboardToast = function(message, type = 'error') {
 // Run check on load, safely wait for hydration
 document.addEventListener('DOMContentLoaded', async () => {
     // Hide body initially to prevent Flash of Unauthenticated Content (FOUC)
-    document.body.style.display = 'none';
+    // Loading overlay is in the HTML, no need to hide body
     
     // Await getUser() explicitly — this safely waits for any background token refreshes 
     // and guarantees we have the true auth state from the server.
@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const hasAnyPermission = Object.values(window.staffPermissions).some(v => v === true);
 
         // Successfully verified
-        document.body.style.display = 'block';
+        document.getElementById('auth-loading-overlay')?.remove();
         console.log('Staff access granted.');
         
         // ALWAYS Hide UI elements based on explicit false permissions
@@ -183,23 +183,9 @@ document.addEventListener('click', async (e) => {
     }
 });
 
-// ── Admin Idle Timeout (20 Mins) ──
-const IDLE_TIMEOUT_MS = 20 * 60 * 1000;
-let idleTimer;
-
-function resetIdleTimer() {
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(async () => {
-        console.warn('Session timed out due to inactivity.');
-        await supabase.auth.signOut();
-    }, IDLE_TIMEOUT_MS);
-}
-
-// Attach globally
-['mousemove', 'keydown', 'scroll', 'click'].forEach(evt => {
-    document.addEventListener(evt, resetIdleTimer, { passive: true });
-});
-resetIdleTimer();
+// ── Staff Idle Timeout (20 Mins) ──
+import { initIdleTimeout } from './idle-timeout.js';
+initIdleTimeout(20 * 60 * 1000);
 
 // ── Profile Settings ──
 function setupSettings() {

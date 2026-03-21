@@ -1,10 +1,12 @@
 import { supabase } from './supabase-client.js';
+import { initIdleTimeout } from './idle-timeout.js';
+initIdleTimeout(20 * 60 * 1000);
 
 let currentUser = null;
 let currentProfile = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    document.body.style.display = 'none';
+    // Loading overlay is in the HTML, no need to hide body
     
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
@@ -30,7 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentUser = user;
         currentProfile = profile;
         
-        document.body.style.display = 'block';
+        document.getElementById('auth-loading-overlay')?.remove();
         console.log('Customer access granted.');
         
         setupTabs();

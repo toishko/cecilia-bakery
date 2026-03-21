@@ -1,4 +1,6 @@
 import { supabase } from './supabase-client.js';
+import { initIdleTimeout } from './idle-timeout.js';
+initIdleTimeout(20 * 60 * 1000);
 
 // ── Toast Notification System ──
 window.showDashboardToast = function(message, type = 'error') {
@@ -50,7 +52,7 @@ let customItemCounter = 0;
 // INITIALIZATION
 // ══════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
-    document.body.style.display = 'none';
+    // Loading overlay is in the HTML, no need to hide body
     
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
@@ -74,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         currentUser = { ...user, ...profile };
-        document.body.style.display = 'block';
+        document.getElementById('auth-loading-overlay')?.remove();
         console.log('Driver access granted.');
         
         // Load driver-specific price overrides

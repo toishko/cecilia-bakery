@@ -1,40 +1,27 @@
 // customer-auth.js — Handles Login & Signup for /login.html
 import { supabase } from './supabase-client.js';
-
-// ── Helpers ──────────────────────────────────────────────────
-function showFeedback(message, isError = false) {
-    let box = document.getElementById('auth-feedback');
-    if (!box) {
-        box = document.createElement('div');
-        box.id = 'auth-feedback';
-        box.style.cssText = `
-            margin-top: 14px; padding: 12px 16px; border-radius: 10px;
-            font-family: 'Outfit', sans-serif; font-size: 0.88rem;
-            font-weight: 500; text-align: center; transition: all 0.3s;
-        `;
-        document.getElementById('customerAuthForm').after(box);
-    }
-    box.textContent = message;
-    box.style.background = isError
-        ? 'rgba(220, 53, 69, 0.15)'
-        : 'rgba(40, 167, 69, 0.15)';
-    box.style.color  = isError ? '#ff6b7a' : '#6fcf97';
-    box.style.border = isError
-        ? '1px solid rgba(220,53,69,0.3)'
-        : '1px solid rgba(40,167,69,0.3)';
-    box.style.display = 'block';
-}
-
-function setLoading(btn, loading) {
-    btn.disabled = loading;
-    btn.style.opacity = loading ? '0.6' : '1';
-    btn.textContent = loading ? 'Please wait…' : btn.dataset.originalText;
-}
+import { showFeedback, setLoading, setupPasswordToggle, storeButtonText, validatePassword, setupPasswordStrength, checkRateLimit, recordFailedAttempt, resetRateLimit, startRateLimitCountdown, checkEmailConfirmation } from './auth-helpers.js';
 
 // ── Main Logic ────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const form     = document.getElementById('customerAuthForm');
     const authCard = document.getElementById('authCard');
+
+    // ── Already-logged-in redirect ─────────────────────────
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+            if (profile && profile.role === 'customer') {
+                window.location.href = 'customer-dashboard.html';
+                return;
+            }
+        }
+    } catch (_) { /* no session — show login form */ }
 
     const inputs = {
         name:       form.querySelector('input[type="text"]'),
@@ -51,21 +38,10 @@ document.addEventListener('DOMContentLoaded', () => {
         inputs.rememberMe.checked = true;
     }
 
-    const toggleBtn = form.querySelector('.password-toggle');
-    if (toggleBtn && inputs.password) {
-        toggleBtn.addEventListener('click', () => {
-            const isPassword = inputs.password.type === 'password';
-            inputs.password.type = isPassword ? 'text' : 'password';
-            toggleBtn.innerHTML = isPassword 
-                ? '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.578 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>'
-                : '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>';
-        });
-    }
-
-    // Save original button text for reset after load
-    form.querySelectorAll('button[type="submit"]').forEach(btn => {
-        btn.dataset.originalText = btn.textContent;
-    });
+    setupPasswordToggle(form);
+    setupPasswordStrength(form, inputs.password);
+    storeButtonText(form);
+    checkEmailConfirmation(form);
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -82,18 +58,26 @@ document.addEventListener('DOMContentLoaded', () => {
         );
 
         if (!email || !password) {
-            showFeedback('Please fill in your email and password.', true);
+            showFeedback(form, 'Please fill in your email and password.', true);
             return;
         }
 
         setLoading(activeBtn, true);
 
         if (isSignup) {
+            // ── Validate password strength ─────────────────────
+            const { isValid, errors } = validatePassword(password);
+            if (!isValid) {
+                showFeedback(form, 'Password too weak: ' + errors.join(', '), true);
+                setLoading(activeBtn, false);
+                return;
+            }
+
             // ── SIGN UP ──────────────────────────────────────
             const { data, error } = await supabase.auth.signUp({ email, password });
 
             if (error) {
-                showFeedback(error.message, true);
+                showFeedback(form, error.message, true);
                 setLoading(activeBtn, false);
                 return;
             }
@@ -109,12 +93,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
             if (profileError) {
-                showFeedback('Account created but profile setup failed. Please contact support.', true);
+                showFeedback(form, 'Account created but profile setup failed. Please contact support.', true);
                 setLoading(activeBtn, false);
                 return;
             }
 
-            showFeedback('Account created! Check your email to confirm, then log in.');
+            showFeedback(form, 'Account created! Check your email to confirm, then log in.');
             authCard.classList.remove('is-signup');
             setLoading(activeBtn, false);
 
@@ -129,10 +113,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
             if (error) {
-                showFeedback(error.message, true);
+                const rl = recordFailedAttempt();
+                if (rl.blocked) {
+                    startRateLimitCountdown(activeBtn, rl.remainingMs, form);
+                } else {
+                    showFeedback(form, error.message, true);
+                }
                 setLoading(activeBtn, false);
                 return;
             }
+
+            resetRateLimit();
 
             // Verify the user actually has the customer role
             const { data: profile } = await supabase
@@ -143,13 +134,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!profile || profile.role !== 'customer') {
                 await supabase.auth.signOut();
-                showFeedback('This account does not have customer access. Please use the correct portal.', true);
+                showFeedback(form, 'This account does not have customer access. Please use the correct portal.', true);
                 setLoading(activeBtn, false);
                 return;
             }
 
-            // Redirect to homepage
-            window.location.href = 'index.html';
+            // Redirect to customer dashboard
+            window.location.href = 'customer-dashboard.html';
         }
     });
 });
