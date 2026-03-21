@@ -5179,6 +5179,8 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
                 size: i.size || null,
                 tag: i.tagEn || i.tag || '',
               })),
+              total_amount: total,
+              note: note || null,
             };
 
             const { data: inserted, error } = await sb

@@ -1,4 +1,4 @@
-import { supabase } from './supabase-client.js';
+import { supabase, getOrderTotal } from './supabase-client.js';
 import { initIdleTimeout } from './idle-timeout.js';
 import { initNotificationUI, playSound, showBrowserNotification as showBrowserNotif, addToHistory, startTitleBlink } from './notification-utils.js';
 initIdleTimeout(20 * 60 * 1000);
@@ -100,10 +100,7 @@ function renderWelcome() {
 function renderStats(orders) {
     hideSkeletonLoading();
     const totalOrders = orders.length;
-    const totalSpent = orders.reduce((sum, o) => {
-        const items = Array.isArray(o.items) ? o.items : [];
-        return sum + items.reduce((s, item) => s + ((parseFloat(item.price) || 0) * (item.qty || item.quantity || 1)), 0);
-    }, 0);
+    const totalSpent = orders.reduce((sum, o) => sum + getOrderTotal(o), 0);
     
     document.getElementById('stat-total-orders').textContent = totalOrders;
     document.getElementById('stat-total-spent').textContent = '$' + totalSpent.toFixed(2);
@@ -176,7 +173,7 @@ function renderActiveOrders(orders) {
         const shortId = order.id ? order.id.split('-')[0].toUpperCase() : 'N/A';
         const orderDate = timeAgo(order.created_at);
         const items = Array.isArray(order.items) ? order.items : [];
-        const total = items.reduce((s, item) => s + ((parseFloat(item.price) || 0) * (item.qty || item.quantity || 1)), 0);
+        const total = getOrderTotal(order);
         const itemCount = Array.isArray(order.items) ? order.items.reduce((s, i) => s + (i.qty || i.quantity || 1), 0) : 0;
         const ds = order.delivery_status || 'pending';
         
@@ -316,7 +313,7 @@ function renderPastOrders(orders) {
         const shortId = order.id ? order.id.split('-')[0].toUpperCase() : 'N/A';
         const orderDate = timeAgo(order.created_at);
         const orderItems = Array.isArray(order.items) ? order.items : [];
-        const total = orderItems.reduce((s, item) => s + ((parseFloat(item.price) || 0) * (item.qty || item.quantity || 1)), 0);
+        const total = getOrderTotal(order);
         const ds = order.delivery_status || 'delivered';
         
         const statusStyles = {
@@ -801,7 +798,7 @@ window.showOrderReceipt = function(orderId) {
     document.getElementById('receipt-date').textContent = new Date(order.created_at).toLocaleString();
 
     const orderItems = Array.isArray(order.items) ? order.items : [];
-    const total = orderItems.reduce((s, item) => s + ((parseFloat(item.price) || 0) * (item.qty || item.quantity || 1)), 0);
+    const total = getOrderTotal(order);
     document.getElementById('receipt-total').textContent = `$${total.toFixed(2)}`;
 
     // ETA

@@ -192,7 +192,11 @@ function updateKPICards(data) {
 function updateOverviewCard() {
     const revWidget = document.getElementById('overview-revenue-val');
     if (!revWidget) return;
-    const totalRev = [...allCustomerOrders, ...allDriverOrders].reduce((sum, o) => sum + getOrderTotal(o), 0);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const todaysCustomer = allCustomerOrders.filter(o => new Date(o.created_at) >= today);
+    const todaysDriver = allDriverOrders.filter(o => new Date(o.created_at) >= today);
+    const totalRev = [...todaysCustomer, ...todaysDriver].reduce((sum, o) => sum + getOrderTotal(o), 0);
     revWidget.textContent = formatCurrency(totalRev);
 }
 

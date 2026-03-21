@@ -291,7 +291,7 @@
     </div>
 
     <script type="module">
-        import { supabase } from './supabase-client.js';
+        import { supabase, getOrderTotal } from './supabase-client.js';
 
         const fullOrderId = sessionStorage.getItem('cecilia_last_order_id');
         const card = document.getElementById('confirmation-card');
@@ -328,7 +328,7 @@
                 weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
             });
             const items = Array.isArray(order.items) ? order.items : [];
-            const total = items.reduce((s, item) => s + ((parseFloat(item.price) || 0) * (item.qty || item.quantity || 1)), 0);
+            const total = getOrderTotal(order);
             const paymentMethod = order.payment_method === 'at_pickup' ? 'Pay at Pickup' : order.payment_method || 'Pay at Pickup';
 
             const itemsHtml = items.map(item => {

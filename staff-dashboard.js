@@ -737,21 +737,23 @@ async function fetchMasterOrders() {
         const todaysOrders = data ? data.filter(o => new Date(o.created_at) >= today).length : 0;
         setWidgetValue('overview-orders-val', todaysOrders);
 
-        // Revenue: sum from non-cancelled customer orders + driver orders (matches analytics behavior)
-        const nonCancelledOrders = data ? data.filter(o => o.delivery_status !== 'cancelled') : [];
-        const customerRevenue = nonCancelledOrders.reduce((sum, o) => {
+        // Revenue: sum from today's non-cancelled customer orders + today's driver orders
+        const todaysNonCancelled = data ? data.filter(o => new Date(o.created_at) >= today && o.delivery_status !== 'cancelled') : [];
+        const customerRevenue = todaysNonCancelled.reduce((sum, o) => {
             const items = o.items || [];
             const orderTotal = items.reduce((s, item) => s + ((item.price || 0) * (item.qty || item.quantity || 1)), 0);
             return sum + orderTotal;
         }, 0);
 
-        // Also include driver orders revenue
+        // Also include today's driver orders revenue
         let driverRevenue = 0;
         try {
             const { data: driverOrders } = await supabase
                 .from('driver_orders')
-                .select('total_amount');
-            driverRevenue = (driverOrders || []).reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
+                .select('total_amount, created_at');
+            driverRevenue = (driverOrders || [])
+                .filter(o => new Date(o.created_at) >= today)
+                .reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
         } catch (e) { /* driver_orders optional */ }
 
         const totalRevenue = customerRevenue + driverRevenue;

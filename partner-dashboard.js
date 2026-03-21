@@ -1,4 +1,4 @@
-import { supabase } from './supabase-client.js';
+import { supabase, getOrderTotal } from './supabase-client.js';
 import { initIdleTimeout } from './idle-timeout.js';
 import { initNotificationUI, playSound, showBrowserNotification, addToHistory, startTitleBlink } from './notification-utils.js';
 initIdleTimeout(20 * 60 * 1000);
@@ -339,7 +339,9 @@ function setupOrderForm() {
             const { error } = await supabase.from('orders').insert({
                 profile_id: currentUser.id, role: 'partner', items: orderItems,
                 delivery_status: 'pending',
-                delivery_address: currentPartnerDetails.delivery_address || ''
+                delivery_address: currentPartnerDetails.delivery_address || '',
+                total_amount: totalAmount,
+                note: notes || null,
             });
             if (error) throw error;
             window.showDashboardToast('Order submitted successfully!', 'success');
@@ -389,10 +391,7 @@ function updateOverviewWidgets(orders) {
     document.getElementById('overview-total-orders').textContent = orders.length;
     const activeDeliveries = orders.filter(o => ['ready_for_pickup', 'baking', 'pending'].includes(o.delivery_status)).length;
     document.getElementById('overview-active-deliveries').textContent = activeDeliveries;
-    const totalSpent = orders.reduce((sum, o) => {
-        const items = Array.isArray(o.items) ? o.items : [];
-        return sum + items.reduce((s, item) => s + ((parseFloat(item.price) || 0) * (item.qty || item.quantity || 1)), 0);
-    }, 0);
+    const totalSpent = orders.reduce((sum, o) => sum + getOrderTotal(o), 0);
     document.getElementById('overview-total-spent').textContent = '$' + totalSpent.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
 
@@ -408,7 +407,7 @@ function renderOverviewRecentOrders(orders) {
         const orderDate = new Date(order.created_at).toLocaleDateString();
         const shortId = order.id ? order.id.split('-')[0].toUpperCase() : 'N/A';
         const itemsList = Array.isArray(order.items) ? order.items : [];
-        const total = itemsList.reduce((s, item) => s + ((parseFloat(item.price) || 0) * (item.qty || item.quantity || 1)), 0);
+        const total = getOrderTotal(order);
         tr.innerHTML = `<td>#${shortId}</td><td>${orderDate}</td><td><span class="badge" style="background: ${bg}; color: ${color}; border: 1px solid ${color}; opacity: 0.8">${ds.replace(/_/g, ' ')}</span></td><td>$${total.toFixed(2)}</td>`;
         tbody.appendChild(tr);
     });
@@ -429,7 +428,7 @@ function renderHistoryTable(orders) {
         const orderDate = new Date(order.created_at).toLocaleString();
         const shortId = order.id ? order.id.split('-')[0].toUpperCase() : 'N/A';
         const itemsList = Array.isArray(order.items) ? order.items : [];
-        const total = itemsList.reduce((s, item) => s + ((parseFloat(item.price) || 0) * (item.qty || item.quantity || 1)), 0);
+        const total = getOrderTotal(order);
         const itemsCount = Array.isArray(order.items) ? order.items.reduce((sum, item) => sum + (item.quantity || 0), 0) : 0;
         tr.innerHTML = `
             <td><strong>#${shortId}</strong></td>
@@ -468,10 +467,7 @@ async function renderPartnerAnalytics() {
 
     // ── KPI Cards ──
     const totalOrders = orders.length;
-    const totalSpent = orders.reduce((s, o) => {
-        const items = Array.isArray(o.items) ? o.items : [];
-        return s + items.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * (item.qty || item.quantity || 1)), 0);
-    }, 0);
+    const totalSpent = orders.reduce((s, o) => s + getOrderTotal(o), 0);
     const avgOrderValue = totalOrders > 0 ? totalSpent / totalOrders : 0;
     const activeOrders = orders.filter(o => ['pending', 'baking', 'ready_for_pickup'].includes(o.delivery_status)).length;
 
@@ -493,10 +489,7 @@ async function renderPartnerAnalytics() {
             dayLabels.push(d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
             const dayOrders = orders.filter(o => o.created_at && o.created_at.startsWith(key));
             dayCounts.push(dayOrders.length);
-            dayTotals.push(dayOrders.reduce((s, o) => {
-                const items = Array.isArray(o.items) ? o.items : [];
-                return s + items.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * (item.qty || item.quantity || 1)), 0);
-            }, 0));
+            dayTotals.push(dayOrders.reduce((s, o) => s + getOrderTotal(o), 0));
         }
 
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
