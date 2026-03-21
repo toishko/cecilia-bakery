@@ -38,10 +38,10 @@
 
 ## ✅ Verification
 
-- [ ] Log in as Admin in Chrome → Master Orders tab
-- [ ] Table rows show "View" + "Advance" buttons (no tiny inline items)
-- [ ] Click "View" → modal slides up with full order details, itemized table, total, progress bar
-- [ ] Click X or backdrop → modal closes smoothly
-- [ ] Click "Advance Status" inside modal → status updates, progress bar moves forward
-- [ ] Click "Print Receipt" → browser print dialog with only order details visible
-- [ ] Resize to mobile (375px) → modal is responsive and scrollable
+- [x] Log in as Admin in Chrome → Master Orders tab
+- [x] Table rows show "View" + "Advance" buttons (no tiny inline items)
+- [x] Click "View" → modal slides up with full order details, itemized table, total, progress bar
+- [x] Click X or backdrop → modal closes smoothly
+- [x] Click "Advance Status" inside modal → status updates, progress bar moves forward
+- [x] Click "Print Receipt" → browser print dialog with only order details visible
+- [x] Resize to mobile (375px) → modal is responsive and scrollable
