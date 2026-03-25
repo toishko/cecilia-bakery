@@ -511,7 +511,7 @@ function loadOrderToForm(idx) {
     inp.value = o.qty[inp.dataset.key] || 0;
     updateRowHighlight(inp);
   });
-  updateSectionBadges();
+
 }
 
 /* ═══════════════════════════════════
@@ -523,7 +523,7 @@ function buildProductSections() {
 
   Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
     html += `<div class="acc-section" data-section-key="${secKey}" id="sec-${secKey}">`;
-    html += `<div class="acc-header"><span class="acc-title" data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</span><div style="display:flex;align-items:center;gap:8px"><span class="acc-badge" data-badge="${secKey}" style="display:none">0</span><svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div></div>`;
+    html += `<div class="acc-header"><span class="acc-title" data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</span><svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>`;
     html += `<div class="acc-body"><div class="prod-table">`;
 
     if (sec.type === 'redondo') {
@@ -579,7 +579,7 @@ function buildProductSections() {
       const delta = btn.dataset.dir === '+' ? 1 : -1;
       inp.value = Math.max(0, cur + delta);
       updateRowHighlight(inp);
-      updateSectionBadges();
+
       updateFooterCount();
     });
   });
@@ -590,7 +590,7 @@ function buildProductSections() {
     inp.addEventListener('blur', () => {
       if (inp.value === '') inp.value = '0';
       updateRowHighlight(inp);
-      updateSectionBadges();
+
       updateFooterCount();
     });
   });
@@ -609,30 +609,7 @@ function updateRowHighlight(inp) {
   row.classList.toggle('has-value', hasVal);
 }
 
-function updateSectionBadges() {
-  Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
-    let count = 0;
-    sec.items.forEach(item => {
-      if (sec.type === 'redondo') {
-        (item.cols || []).forEach(c => {
-          const inp = document.querySelector(`.qty-input[data-key="${item.key}_${c}"]`);
-          if (inp && parseInt(inp.value) > 0) count++;
-        });
-      } else {
-        ['', '_nt'].forEach(suf => {
-          const inp = document.querySelector(`.qty-input[data-key="${item.key}${suf}"]`);
-          if (inp && parseInt(inp.value) > 0) count++;
-        });
-      }
-    });
-    const badge = document.querySelector(`[data-badge="${secKey}"]`);
-    if (badge) {
-      badge.textContent = count;
-      badge.classList.toggle('active', count > 0);
-      badge.style.display = count > 0 ? '' : 'none';
-    }
-  });
-}
+
 
 function updateFooterCount() {
   let total = 0;

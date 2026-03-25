@@ -216,12 +216,10 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .acc-section{background:var(--bg-card);border:1px solid var(--bd);border-radius:10px;
   margin-bottom:8px;overflow:hidden;box-shadow:var(--shadow-card)}
 .acc-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;
-  cursor:pointer;user-select:none;transition:background .15s}
+  cursor:pointer;user-select:none;transition:background .15s;
+  border-left:3px solid var(--red)}
 .acc-header:hover{background:var(--bg-card-hover)}
-.acc-title{font-size:.95rem;font-weight:600;font-family:'Cormorant Garamond',serif}
-.acc-badge{font-size:.7rem;font-weight:600;padding:2px 8px;border-radius:12px;
-  background:var(--bg-surface);color:var(--tx-muted);min-width:22px;text-align:center}
-.acc-badge.active{background:rgba(27,122,74,.12);color:var(--green)}
+.acc-title{font-size:1rem;font-weight:700;font-family:'Cormorant Garamond',serif}
 .acc-chevron{width:18px;height:18px;transition:transform .2s;color:var(--tx-muted)}
 .acc-section.open .acc-chevron{transform:rotate(180deg)}
 .acc-body{max-height:0;overflow:hidden;transition:max-height .3s ease}
