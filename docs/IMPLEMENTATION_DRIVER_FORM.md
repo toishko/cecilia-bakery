@@ -14,6 +14,7 @@
 - **Mobile-first**: Designed for phone use. Big tap targets (44px minimum)
 - **No prices shown anywhere** — drivers only see product names and quantities
 - **Keep it simple**: Easy for drivers, not cluttered. Modern but not overdone
+- **In-app notifications**: Custom glassmorphic toast system replaces all browser `alert()` calls
 
 ---
 
@@ -42,7 +43,9 @@
 ## Screen 2: Driver Dashboard
 
 ### Navigation
-- **Dropdown menu** (like the homepage mobile accordion) — tap to expand, pick a section, collapses
+- **Hamburger menu** with animated 3-bar → X transform (matches home page pattern)
+- Sticky header + nav dropdown — accessible from anywhere on the page while scrolling
+- Menu auto-closes and icon resets when switching sections
 - Sections:
   - 📋 **Overview** (default landing)
   - ➕ **New Order**
@@ -81,8 +84,8 @@
 ### Header Fields (top of form, before product sections)
 All optional:
 - **Business / Delivery To**: text input, placeholder "Where is this order going?"
-- **Date**: date picker, left BLANK by default (not pre-filled with today)
-- **Time**: time picker, left BLANK by default
+- **Date**: date picker, **defaults to today's date**
+- **Time**: custom scrollable wheel-style time picker (iOS-style modal with Hour 1–12, Minute 00–55 by 5, AM/PM columns, scroll-snap selection, Confirm/Cancel buttons)
 - **My Order #**: text input, placeholder "Your reference number (optional)"
 
 ### Quick Search
@@ -92,38 +95,33 @@ All optional:
 - Sections with no matching products are hidden
 
 ### Product Sections (Accordion Layout)
-Each section has a header you tap to expand/collapse. Matches the layout from the original code:
+Each section has a header you tap to expand/collapse.
 
-**Redondo** (special 4-column layout per row):
-| Product | Inside | No Tkt | Top | No Tkt |
-|---------|--------|--------|-----|--------|
-| Piña | +/- | +/- | +/- | +/- |
-| Guava | +/- | +/- | +/- | +/- |
-| Dulce De Leche | +/- | +/- | — | — |
+**Category headers** have a red left accent border and bold 1rem font to visually distinguish them from product rows. No badge counts — drivers review their order in the summary before submitting.
 
-**Plain** (standard 2-column: Qty, No Ticket):
-| Product | Qty | No Ticket |
-|---------|-----|-----------|
-| Plain | +/- | +/- |
-| Raisin | +/- | +/- |
+**All category names are bilingual** (EN/ES):
+| English | Spanish |
+|---------|---------|
+| Round | Redondo |
+| Plain | Plain |
+| Tres Leche | Tres Leche |
+| Pieces | Piezas |
+| Frosted Pieces | Piezas Frostin |
+| Happy Birthday — BIG | Feliz Cumpleaños — GRANDE |
+| Happy Birthday — SMALL | Feliz Cumpleaños — PEQUEÑO |
+| Square | Cuadrao |
+| Cups | Basos |
 
-**Tres Leche**: Tres Leche, Tres Hershey, Cuatro Leche, TL Strawberry, TL Piña
+**Round** — uses standard row layout (same as all other sections). Products with both Inside and Top are split into separate sub-rows:
+| Product Row | Qty | No Tkt |
+|-------------|-----|--------|
+| Piña — Inside | +/- | +/- |
+| Piña — Top | +/- | +/- |
+| Guava — Inside | +/- | +/- |
+| Guava — Top | +/- | +/- |
+| Dulce De Leche | +/- | +/- |
 
-**Piezas**: Red Velvet, Carrot Cake, Cheesecake, Pudin, Piña, Guava, Chocoflan, Flan
-
-**Piezas Frostin**: Guava, Piña, Dulce De Leche, Chocolate
-
-**Happy Birthday** (two sub-sections):
-- **BIG**: Piña, Guava, Dulce De Leche, Chocolate, Strawberry
-- **SMALL**: Piña, Guava, Dulce De Leche, Chocolate, Strawberry
-
-**Cuadrao**: Pudin, Plain, Raisin, Maiz
-
-**Basos**: Tres Leche, Cuatro Leche, Hershey
-
-### Section Badges
-- Each section header shows count of products with values > 0
-- Green when active, muted when zero
+**All other sections** — standard 2-column layout (Qty, No Ticket) with full product names (no abbreviations).
 
 ### Input UX
 - **+/- buttons**: tap to increment/decrement (min 0)
@@ -201,20 +199,24 @@ Each section has a header you tap to expand/collapse. Matches the layout from th
 - [x] Create `driver-order.html` with base structure
 - [x] Implement design system (CSS variables, fonts, glassmorphic cards, light/dark)
 - [x] **Screen 1**: Code entry with validation + lockout
-- [x] **Screen 2**: Dashboard with dropdown nav
+- [x] **Screen 2**: Dashboard with dropdown nav + animated hamburger
 - [x] **Screen 2a**: Overview (balance, recent orders, new order button)
 - [ ] **Screen 2b**: My Orders (history, payment badges, system order #)
 - [x] **Screen 2c**: Settings (language default, text size, theme, logout)
-- [x] **Screen 3**: Order form header fields (business, date, time, ref)
+- [x] **Screen 3**: Order form header fields (business, date defaults to today, custom time picker, ref)
 - [x] **Screen 3a**: Quick search
-- [x] **Screen 3b**: All product sections with correct layouts
+- [x] **Screen 3b**: All product sections with consistent standard row layouts + bilingual names
 - [x] **Screen 3c**: Input UX (focus/blur, +/-, highlights)
 - [x] **Screen 3d**: Multi-order (tabs, add/delete orders)
 - [x] **Screen 4**: Summary modal (left/right navigation, per-order display)
 - [x] **Screen 5**: Submit to Supabase + confirmation
 - [ ] **Screen 5a**: 30-min edit window (edit + add new orders)
-- [x] EN/ES language toggle throughout
+- [x] EN/ES language toggle throughout (category names, labels, UI text)
 - [x] Light/dark theme throughout
 - [x] Add to `vite.config.js`
 - [x] Full flow browser verification
-
+- [x] Custom scrollable time picker (wheel-style modal)
+- [x] In-app toast notifications (replaced browser alerts)
+- [x] Full product names (no abbreviations)
+- [x] Category header visual distinction (red accent border, no badge counts)
+- [x] Sticky hamburger nav with animated transform
