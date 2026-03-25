@@ -324,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
    ═══════════════════════════════════ */
 const PRODUCTS = {
   redondo: {
-    en: 'Redondo', es: 'Redondo', type: 'redondo',
+    en: 'Round', es: 'Redondo', type: 'redondo',
     items: [
       { key: 'pina', en: 'Piña', es: 'Piña', cols: ['inside','inside_nt','top','top_nt'] },
       { key: 'guava', en: 'Guava', es: 'Guayaba', cols: ['inside','inside_nt','top','top_nt'] },
@@ -332,7 +332,7 @@ const PRODUCTS = {
     ]
   },
   plain: {
-    en: 'Plain', es: 'Plain', type: 'standard',
+    en: 'Plain', es: 'Sencillo', type: 'standard',
     items: [
       { key: 'plain', en: 'Plain', es: 'Plain' },
       { key: 'raisin', en: 'Raisin', es: 'Pasas' },
@@ -349,7 +349,7 @@ const PRODUCTS = {
     ]
   },
   piezas: {
-    en: 'Piezas', es: 'Piezas', type: 'standard',
+    en: 'Pieces', es: 'Piezas', type: 'standard',
     items: [
       { key: 'pz_rv', en: 'Red Velvet', es: 'Red Velvet' },
       { key: 'pz_carrot', en: 'Carrot Cake', es: 'Pastel de Zanahoria' },
@@ -362,7 +362,7 @@ const PRODUCTS = {
     ]
   },
   frostin: {
-    en: 'Piezas Frostin', es: 'Piezas Frostin', type: 'standard',
+    en: 'Frosted Pieces', es: 'Piezas Frostin', type: 'standard',
     items: [
       { key: 'fr_guava', en: 'Guava', es: 'Guayaba' },
       { key: 'fr_pina', en: 'Piña', es: 'Piña' },
@@ -391,7 +391,7 @@ const PRODUCTS = {
     ]
   },
   cuadrao: {
-    en: 'Cuadrao', es: 'Cuadrao', type: 'standard',
+    en: 'Square', es: 'Cuadrao', type: 'standard',
     items: [
       { key: 'cdr_pudin', en: 'Pudin', es: 'Pudin' },
       { key: 'cdr_pound', en: 'Pound', es: 'Pound' },
@@ -400,7 +400,7 @@ const PRODUCTS = {
     ]
   },
   basos: {
-    en: 'Basos', es: 'Basos', type: 'standard',
+    en: 'Cups', es: 'Basos', type: 'standard',
     items: [
       { key: 'bas_tl', en: 'Tres Leche', es: 'Tres Leche' },
       { key: 'bas_cl', en: 'Cuatro Leche', es: 'Cuatro Leche' },
@@ -519,7 +519,7 @@ function buildProductSections() {
 
   Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
     html += `<div class="acc-section" data-section-key="${secKey}" id="sec-${secKey}">`;
-    html += `<div class="acc-header"><span class="acc-title" data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</span><div style="display:flex;align-items:center;gap:8px"><span class="acc-badge" data-badge="${secKey}">0</span><svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div></div>`;
+    html += `<div class="acc-header"><span class="acc-title" data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</span><div style="display:flex;align-items:center;gap:8px"><span class="acc-badge" data-badge="${secKey}" style="display:none">0</span><svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div></div>`;
     html += `<div class="acc-body"><div class="prod-table">`;
 
     if (sec.type === 'redondo') {
@@ -620,6 +620,7 @@ function updateSectionBadges() {
     if (badge) {
       badge.textContent = count;
       badge.classList.toggle('active', count > 0);
+      badge.style.display = count > 0 ? '' : 'none';
     }
   });
 }
