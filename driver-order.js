@@ -525,25 +525,22 @@ function buildProductSections() {
     if (sec.type === 'redondo') {
       // Two grouped columns: INSIDE and TOP, each with Qty and No Tkt
       html += `<div class="redondo-col-headers">`;
-      html += `<div class="rh-spacer"></div>`;
+      html += `<span class="rh-name"></span>`;
       html += `<div class="rh-group"><span class="rh-group-title redondo-col-label" data-en="Inside" data-es="Adentro">${lang === 'es' ? 'Adentro' : 'Inside'}</span><div class="rh-sub"><span class="redondo-col-label" data-en="Qty" data-es="Cant">${lang === 'es' ? 'Cant' : 'Qty'}</span><span class="redondo-col-label" data-en="No Tkt" data-es="Sin Tkt">${lang === 'es' ? 'Sin Tkt' : 'No Tkt'}</span></div></div>`;
       html += `<div class="rh-group"><span class="rh-group-title redondo-col-label" data-en="Top" data-es="Arriba">${lang === 'es' ? 'Arriba' : 'Top'}</span><div class="rh-sub"><span class="redondo-col-label" data-en="Qty" data-es="Cant">${lang === 'es' ? 'Cant' : 'Qty'}</span><span class="redondo-col-label" data-en="No Tkt" data-es="Sin Tkt">${lang === 'es' ? 'Sin Tkt' : 'No Tkt'}</span></div></div>`;
       html += `</div>`;
       sec.items.forEach(item => {
-        const hasTop = item.cols.includes('top') || item.cols.includes('top_nt');
         html += `<div class="prod-row redondo-row" data-product="${item.key}"><span class="prod-name" data-en="${item.en}" data-es="${item.es}">${L(item)}</span>`;
         // Inside group
         html += `<div class="rh-qty-pair">`;
-        html += qtyControl(item.key + '_inside');
-        html += qtyControl(item.key + '_inside_nt');
+        html += item.cols.includes('inside') ? qtyControl(item.key + '_inside') : `<div class="qty-placeholder">—</div>`;
+        html += item.cols.includes('inside_nt') ? qtyControl(item.key + '_inside_nt') : `<div class="qty-placeholder">—</div>`;
         html += `</div>`;
-        // Top group — only if item has top columns
-        if (hasTop) {
-          html += `<div class="rh-qty-pair">`;
-          html += qtyControl(item.key + '_top');
-          html += qtyControl(item.key + '_top_nt');
-          html += `</div>`;
-        }
+        // Top group
+        html += `<div class="rh-qty-pair">`;
+        html += item.cols.includes('top') ? qtyControl(item.key + '_top') : `<div class="qty-placeholder">—</div>`;
+        html += item.cols.includes('top_nt') ? qtyControl(item.key + '_top_nt') : `<div class="qty-placeholder">—</div>`;
+        html += `</div>`;
         html += `</div>`;
       });
     } else {
