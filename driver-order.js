@@ -332,7 +332,7 @@ const PRODUCTS = {
     ]
   },
   plain: {
-    en: 'Plain', es: 'Sencillo', type: 'standard',
+    en: 'Plain', es: 'Plain', type: 'standard',
     items: [
       { key: 'plain', en: 'Plain', es: 'Plain' },
       { key: 'raisin', en: 'Raisin', es: 'Pasas' },
@@ -352,7 +352,7 @@ const PRODUCTS = {
     en: 'Pieces', es: 'Piezas', type: 'standard',
     items: [
       { key: 'pz_rv', en: 'Red Velvet', es: 'Red Velvet' },
-      { key: 'pz_carrot', en: 'Carrot Cake', es: 'Pastel de Zanahoria' },
+      { key: 'pz_carrot', en: 'Carrot Cake', es: 'Zanahoria' },
       { key: 'pz_cheese', en: 'Cheesecake', es: 'Cheesecake' },
       { key: 'pz_pudin', en: 'Pudin', es: 'Pudin' },
       { key: 'pz_pina', en: 'Piña', es: 'Piña' },
