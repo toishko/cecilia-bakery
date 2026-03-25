@@ -976,50 +976,37 @@ let notificationsEnabled = localStorage.getItem('cecilia_driver_notifications') 
 let balanceOrders = []; // cached for breakdown modal
 let driverRealtimeChannel = null;
 
-// ── PRODUCT LABEL MAP (reuse from order form) ──
-const PRODUCT_LABELS = {
-  redondo_inside_pina: 'Piña Inside', redondo_inside_pina_nt: 'Piña Inside (NT)',
-  redondo_top_pina: 'Piña Top', redondo_top_pina_nt: 'Piña Top (NT)',
-  redondo_inside_guava: 'Guava Inside', redondo_inside_guava_nt: 'Guava Inside (NT)',
-  redondo_top_guava: 'Guava Top', redondo_top_guava_nt: 'Guava Top (NT)',
-  redondo_inside_dulce: 'Dulce De Leche Inside', redondo_inside_dulce_nt: 'Dulce De Leche Inside (NT)',
-  plain: 'Plain', plain_nt: 'Plain (NT)',
-  raisin: 'Raisin', raisin_nt: 'Raisin (NT)',
-  cheese: 'Cheese', cheese_nt: 'Cheese (NT)',
-  guava_plain: 'Guava', guava_plain_nt: 'Guava (NT)',
-  coconut: 'Coconut', coconut_nt: 'Coconut (NT)',
-  ham: 'Ham', ham_nt: 'Ham (NT)',
-  tres_leche: 'Tres Leche', tres_leche_nt: 'Tres Leche (NT)',
-  cuatro_leche: 'Cuatro Leche', cuatro_leche_nt: 'Cuatro Leche (NT)',
-  tl_strawberry: 'TL Strawberry', tl_strawberry_nt: 'TL Strawberry (NT)',
-  tl_pina: 'TL Piña', tl_pina_nt: 'TL Piña (NT)',
-  red_velvet: 'Red Velvet', red_velvet_nt: 'Red Velvet (NT)',
-  carrot_cake: 'Carrot Cake', carrot_cake_nt: 'Carrot Cake (NT)',
-  cheesecake: 'Cheesecake', cheesecake_nt: 'Cheesecake (NT)',
-  pudin: 'Pudin', pudin_nt: 'Pudin (NT)',
-  pina_piece: 'Piña', pina_piece_nt: 'Piña (NT)',
-  guava_piece: 'Guava', guava_piece_nt: 'Guava (NT)',
-  chocoflan: 'Chocoflan', chocoflan_nt: 'Chocoflan (NT)',
-  flan: 'Flan', flan_nt: 'Flan (NT)',
-  strawberry_piece: 'Strawberry', strawberry_piece_nt: 'Strawberry (NT)',
-  sq_pudin: 'Pudin', sq_pudin_nt: 'Pudin (NT)',
-  pound: 'Pound', pound_nt: 'Pound (NT)',
-  sq_raisin: 'Raisin', sq_raisin_nt: 'Raisin (NT)',
-  maiz: 'Maiz', maiz_nt: 'Maiz (NT)',
-  cup_tres_leche: 'Tres Leche', cup_tres_leche_nt: 'Tres Leche (NT)',
-  cup_cuatro_leche: 'Cuatro Leche', cup_cuatro_leche_nt: 'Cuatro Leche (NT)',
-  cup_hershey: 'Hershey', cup_hershey_nt: 'Hershey (NT)',
-  hb_big_tres_leche: 'Tres Leche', hb_big_cuatro_leche: 'Cuatro Leche',
-  hb_small_tres_leche: 'Tres Leche', hb_small_cuatro_leche: 'Cuatro Leche'
-};
+// ── PRODUCT LABEL MAP (auto-built from PRODUCTS) ──
+const PRODUCT_LABELS = {};
+(function buildLabels() {
+  Object.values(PRODUCTS).forEach(sec => {
+    const secName = sec.en;
+    sec.items.forEach(item => {
+      if (sec.type === 'redondo') {
+        (item.cols || []).forEach(col => {
+          const k = item.key + '_' + col;
+          const colLabel = col.replace('_nt', ' (NT)').replace('inside', 'Inside').replace('top', 'Top');
+          PRODUCT_LABELS[k] = `${secName} ${item.en} ${colLabel}`;
+        });
+      } else {
+        PRODUCT_LABELS[item.key] = `${secName} — ${item.en}`;
+        PRODUCT_LABELS[item.key + '_nt'] = `${secName} — ${item.en} (NT)`;
+      }
+    });
+  });
+})();
 
-function productLabel(key) {
+function productLabel(key, storedLabel) {
+  // Prefer stored label if it's a full name (not abbreviated)
+  if (storedLabel && storedLabel.length > 3) return storedLabel;
   return PRODUCT_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 // ── SHORT ORDER ID (UUID → readable) ──
 function shortOrderId(uuid) {
-  return uuid ? uuid.split('-')[0].toUpperCase() : '???';
+  if (!uuid) return '???';
+  const clean = uuid.replace(/-/g, '');
+  return clean.slice(-5).toUpperCase();
 }
 
 // ── SMART DATE / TIME LABELS ──
@@ -1160,10 +1147,8 @@ function getEditTimeRemaining(order) {
 function renderOrderCard(order) {
   const dateInfo = smartDateLabel(order);
   const timeInfo = smartTimeLabel(order);
-  const items = order.driver_order_items || [];
-  const itemCount = items.reduce((sum, i) => sum + (i.admin_qty ?? i.quantity), 0);
 
-  // Payment badge
+  // Single payment badge only
   let payBadge = '';
   if (order.payment_status === 'paid') {
     payBadge = `<span class="pay-badge paid">${lang === 'es' ? 'Pagado' : 'Paid'}</span>`;
@@ -1173,51 +1158,36 @@ function renderOrderCard(order) {
     payBadge = `<span class="pay-badge not-paid">${lang === 'es' ? 'No Pagado' : 'Not Paid'}</span>`;
   }
 
-  // Status badge
-  let statusBadge = '';
-  if (order.status === 'sent') {
-    statusBadge = `<span class="status-badge sent">${lang === 'es' ? 'Enviado' : 'Sent'}</span>`;
-  } else {
-    statusBadge = `<span class="status-badge pending">${lang === 'es' ? 'Pendiente' : 'Pending'}</span>`;
-  }
-
   const bizName = order.business_name || (lang === 'es' ? 'Sin nombre' : 'No name');
+  const total = order.total_amount != null ? `$${parseFloat(order.total_amount).toFixed(2)}` : '';
 
-  // Edit window indicator
+  // Edit window indicator (for pending orders)
   let editIndicator = '';
   if (order.status === 'pending') {
     const minLeft = getEditTimeRemaining(order);
     if (minLeft !== null) {
-      editIndicator = `<div class="edit-indicator active"><i data-lucide="pencil"></i> ${lang === 'es' ? `${minLeft} min` : `${minLeft} min`}</div>`;
+      editIndicator = `<div class="edit-indicator active"><i data-lucide="pencil"></i> ${minLeft} min</div>`;
     } else {
       editIndicator = `<div class="edit-indicator locked"><i data-lucide="lock"></i> ${lang === 'es' ? 'Bloqueado' : 'Locked'}</div>`;
     }
   }
 
-  // Build compact meta items
-  let metaItems = `
-    <span><i data-lucide="calendar"></i>${dateInfo.value}</span>
-    <span><i data-lucide="clock"></i>${timeInfo.value}</span>
-    <span>${itemCount} ${lang === 'es' ? 'art.' : 'items'}</span>
-  `;
-  if (order.driver_ref) {
-    metaItems += `<span><i data-lucide="hash"></i>${order.driver_ref}</span>`;
-  }
+  // Status dot for pending (subtle, no full badge)
+  const statusDot = order.status === 'pending'
+    ? `<span class="status-dot pending"></span>`
+    : '';
 
   return `
     <div class="order-card" onclick="showOrderDetail('${order.id}')">
-      <div class="order-card-top">
-        <div>
-          <div class="order-card-biz">${bizName}</div>
-          <div class="order-card-num">#${shortOrderId(order.id)}</div>
-        </div>
-        <div class="order-card-status">${payBadge}${statusBadge}</div>
+      <div class="order-card-row1">
+        <div class="order-card-name">${bizName}</div>
+        <div class="order-card-total">${total}</div>
       </div>
-      <div class="order-card-meta">${metaItems}</div>
-      <div class="order-card-bottom">
-        ${order.status === 'sent' && order.total_amount != null ? `<span class="order-card-total">$${parseFloat(order.total_amount).toFixed(2)}</span>` : `<span></span>`}
-        ${editIndicator}
+      <div class="order-card-row2">
+        <div class="order-card-left">${statusDot}${payBadge}<span class="order-card-id">#${shortOrderId(order.id)}</span></div>
+        <div class="order-card-date">${dateInfo.value} · ${timeInfo.value}</div>
       </div>
+      ${editIndicator ? `<div class="order-card-edit">${editIndicator}</div>` : ''}
     </div>`;
 }
 
@@ -1292,7 +1262,7 @@ window.showOrderDetail = async function(orderId) {
       let itemsHtml = '';
       let grandTotal = 0;
       items.forEach(item => {
-        const label = productLabel(item.product_key);
+        const label = productLabel(item.product_key, item.product_label);
         const origQty = item.quantity;
         const adminQty = item.admin_qty;
         const effectiveQty = adminQty ?? origQty;

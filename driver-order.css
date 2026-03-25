@@ -152,17 +152,6 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .new-order-btn:active{transform:scale(.97)}
 .new-order-btn svg{width:20px;height:20px}
 .section-title{font-size:1.1rem;margin-bottom:12px;color:var(--tx)}
-.order-card{background:var(--bg-card);border:1px solid var(--bd);border-radius:10px;
-  padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;
-  justify-content:space-between;transition:background .15s;cursor:pointer}
-.order-card:hover{background:var(--bg-card-hover)}
-.order-info{flex:1}
-.order-business{font-weight:500;font-size:.95rem}
-.order-meta{font-size:.8rem;color:var(--tx-muted);margin-top:2px}
-.order-badge{font-size:.7rem;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap}
-.badge-paid{background:rgba(27,122,74,.12);color:var(--green)}
-.badge-unpaid{background:rgba(200,16,46,.10);color:var(--red)}
-.badge-partial{background:rgba(200,155,42,.12);color:var(--yellow)}
 .empty-state{text-align:center;padding:40px 20px;color:var(--tx-muted);font-size:.9rem}
 .settings-group{background:var(--bg-card);border:1px solid var(--bd);border-radius:12px;
   padding:8px;margin-bottom:12px;box-shadow:var(--shadow-card)}
@@ -428,34 +417,42 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .balance-banner{display:flex;align-items:center;gap:8px;transition:background .2s}
 .balance-banner:hover{background:var(--bg-surface)}
 
-/* ── Order Cards — Clean 3-row layout ── */
-.order-card{background:var(--bg-card,#fff);border-radius:12px;padding:14px 16px;
-  margin-bottom:10px;cursor:pointer;transition:transform .15s,box-shadow .15s;
+/* ── Order Cards — Clean 2-row layout ── */
+.order-card{background:var(--bg-card,#fff);border-radius:12px;padding:16px;
+  margin-bottom:12px;cursor:pointer;transition:transform .15s,box-shadow .15s;
   border:1px solid var(--bd)}
 .order-card:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
 .order-card:active{transform:scale(.98)}
-/* Row 1: biz name + badges */
-.order-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.order-card-biz{font-weight:600;font-size:.95rem;color:var(--tx);line-height:1.2}
-.order-card-num{font-size:.72rem;color:var(--tx-faint);margin-top:1px;font-family:monospace}
-/* Row 2: date · time · count — compact single line */
-.order-card-meta{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:8px;
-  font-size:.78rem;color:var(--tx-muted)}
-.order-card-meta span{display:inline-flex;align-items:center;gap:3px}
-.order-card-meta i{width:12px;height:12px}
-/* Row 3: total + editability */
-.order-card-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:8px;
-  padding-top:6px;border-top:1px solid var(--bd)}
-.order-card-items{font-size:.78rem;color:var(--tx-faint)}
-.order-card-status{display:flex;gap:4px}
 
-/* Payment badges */
-.pay-badge{display:inline-block;padding:2px 8px;border-radius:99px;
-  font-size:.68rem;font-weight:600;letter-spacing:.02em}
+/* Row 1: business name + total */
+.order-card-row1{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.order-card-name{font-weight:600;font-size:.95rem;color:var(--tx);line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.order-card-total{font-weight:700;font-size:.95rem;color:var(--red);white-space:nowrap;
+  font-family:'Cormorant Garamond',serif;flex-shrink:0}
+
+/* Row 2: badge + order ID (left) · date (right) */
+.order-card-row2{display:flex;justify-content:space-between;align-items:center;
+  margin-top:8px;gap:8px}
+.order-card-left{display:flex;align-items:center;gap:6px;min-width:0}
+.order-card-id{font-size:.72rem;color:var(--tx-faint);font-family:monospace;white-space:nowrap}
+.order-card-date{font-size:.78rem;color:var(--tx-muted);white-space:nowrap;flex-shrink:0}
+
+/* Edit row (pending orders) */
+.order-card-edit{margin-top:8px;padding-top:6px;border-top:1px solid var(--bd)}
+
+/* Payment badges — fixed width for consistency */
+.pay-badge{display:inline-block;padding:3px 10px;border-radius:99px;
+  font-size:.68rem;font-weight:600;letter-spacing:.02em;min-width:60px;text-align:center}
 .pay-badge.paid{background:#e8f5e9;color:#2f8a4c}
 .pay-badge.not-paid{background:#ffebee;color:#c0392b}
 .pay-badge.partial{background:#fff8e1;color:#c09020}
-/* Status badges */
+
+/* Status dot (subtle indicator for pending) */
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+.status-dot.pending{background:#1565c0;box-shadow:0 0 0 2px rgba(21,101,192,.2)}
+
+/* Status badges (kept for detail view) */
 .status-badge{display:inline-block;padding:2px 8px;border-radius:99px;
   font-size:.68rem;font-weight:600}
 .status-badge.pending{background:#e3f2fd;color:#1565c0}
@@ -465,6 +462,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 [data-theme="dark"] .pay-badge.paid{background:rgba(47,138,76,.15);color:#6fcf97}
 [data-theme="dark"] .pay-badge.not-paid{background:rgba(192,57,43,.15);color:#e88a82}
 [data-theme="dark"] .pay-badge.partial{background:rgba(192,144,32,.15);color:#f0c050}
+[data-theme="dark"] .status-dot.pending{background:#64b5f6;box-shadow:0 0 0 2px rgba(100,181,246,.2)}
 [data-theme="dark"] .status-badge.pending{background:rgba(21,101,192,.15);color:#64b5f6}
 [data-theme="dark"] .status-badge.sent{background:rgba(47,138,76,.15);color:#6fcf97}
 
@@ -540,8 +538,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .edit-order-btn:active{transform:scale(.97)}
 .edit-order-btn svg{width:14px;height:14px}
 
-/* ── Order total on card ── */
-.order-card-total{font-weight:700;font-size:.82rem;color:var(--red)}
+
 
 /* ── Grand total in detail ── */
 .order-detail-total{display:flex;justify-content:space-between;padding:8px 0;

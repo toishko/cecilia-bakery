@@ -1015,7 +1015,7 @@ function buildPrintHTML(showTotals) {
   if (!order) return '';
 
   const driverName = getDriverName(order.driver_id);
-  const orderNum = order.order_number ? `#${order.order_number}` : `#${order.id.split('-')[0].toUpperCase()}`;
+  const orderNum = order.order_number ? `#${order.order_number}` : `#${order.id.replace(/-/g, '').slice(-5).toUpperCase()}`;
 
   // Date/time
   let dateStr = '';
@@ -1128,7 +1128,7 @@ window.shareWhatsApp = function() {
 
   const order = detailOrder;
   const driverName = getDriverName(order.driver_id);
-  const orderNum = order.order_number ? `#${order.order_number}` : `#${order.id.split('-')[0].toUpperCase()}`;
+  const orderNum = order.order_number ? `#${order.order_number}` : `#${order.id.replace(/-/g, '').slice(-5).toUpperCase()}`;
 
   let dateStr = '';
   if (order.pickup_date) {
@@ -1196,14 +1196,14 @@ const ADMIN_PRODUCTS = [
   { section: 'Tres Leche', sectionEs: 'Tres Leche', items: [
     { key: 'tl', en: 'Tres Leche', es: 'Tres Leche' },
     { key: 'tl_nt', en: 'Tres Leche (NT)', es: 'Tres Leche (ST)' },
-    { key: 'tl_hershey', en: 'TL Hershey', es: 'TL Hershey' },
-    { key: 'tl_hershey_nt', en: 'TL Hershey (NT)', es: 'TL Hershey (ST)' },
+    { key: 'tl_hershey', en: 'Tres Leche Hershey', es: 'Tres Leche Hershey' },
+    { key: 'tl_hershey_nt', en: 'Tres Leche Hershey (NT)', es: 'Tres Leche Hershey (ST)' },
     { key: 'cuatro_leche', en: 'Cuatro Leche', es: 'Cuatro Leche' },
     { key: 'cuatro_leche_nt', en: 'Cuatro Leche (NT)', es: 'Cuatro Leche (ST)' },
-    { key: 'tl_straw', en: 'TL Strawberry', es: 'TL Fresa' },
-    { key: 'tl_straw_nt', en: 'TL Strawberry (NT)', es: 'TL Fresa (ST)' },
-    { key: 'tl_pina', en: 'TL Piña', es: 'TL Piña' },
-    { key: 'tl_pina_nt', en: 'TL Piña (NT)', es: 'TL Piña (ST)' },
+    { key: 'tl_straw', en: 'Tres Leche Strawberry', es: 'Tres Leche Fresa' },
+    { key: 'tl_straw_nt', en: 'Tres Leche Strawberry (NT)', es: 'Tres Leche Fresa (ST)' },
+    { key: 'tl_pina', en: 'Tres Leche Piña', es: 'Tres Leche Piña' },
+    { key: 'tl_pina_nt', en: 'Tres Leche Piña (NT)', es: 'Tres Leche Piña (ST)' },
   ]},
   { section: 'Pieces', sectionEs: 'Piezas', items: [
     { key: 'pz_rv', en: 'Red Velvet', es: 'Red Velvet' },
