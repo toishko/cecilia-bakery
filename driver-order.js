@@ -692,11 +692,22 @@ function openSummary() {
   summaryIdx = 0;
   renderSummaryOrder(0);
   document.getElementById('summary-overlay').classList.add('open');
+  document.body.dataset.scrollY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${window.scrollY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
   applyLang();
 }
 
 function closeSummary() {
   document.getElementById('summary-overlay').classList.remove('open');
+  const scrollY = document.body.dataset.scrollY || '0';
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  window.scrollTo(0, parseInt(scrollY));
 }
 
 function navigateSummary(dir) {
@@ -1325,12 +1336,23 @@ window.showOrderDetail = async function(orderId) {
     }
 
     overlay.classList.add('open');
+    document.body.dataset.scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${window.scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
     lucide.createIcons();
   } catch (e) { console.error('Order detail error:', e); }
 };
 
 function closeOrderDetail() {
   document.getElementById('order-detail-overlay').classList.remove('open');
+  const scrollY = document.body.dataset.scrollY || '0';
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  window.scrollTo(0, parseInt(scrollY));
 }
 
 // ── EDIT ORDER (30-MIN WINDOW) ──
@@ -1452,11 +1474,22 @@ window.showBalanceBreakdown = function() {
   }
 
   overlay.classList.add('open');
+  document.body.dataset.scrollY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${window.scrollY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
   lucide.createIcons();
 };
 
 function closeBalanceBreakdown() {
   document.getElementById('balance-modal-overlay').classList.remove('open');
+  const scrollY = document.body.dataset.scrollY || '0';
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  window.scrollTo(0, parseInt(scrollY));
 }
 
 // ── REALTIME SUBSCRIPTION ──
@@ -1676,6 +1709,11 @@ function openTimePicker() {
   }
 
   document.getElementById('tp-overlay').classList.add('open');
+  document.body.dataset.scrollY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${window.scrollY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
   applyLang();
 
   // Scroll to values after the modal is visible
@@ -1690,6 +1728,12 @@ function openTimePicker() {
 
 function closeTimePicker() {
   document.getElementById('tp-overlay').classList.remove('open');
+  const scrollY = document.body.dataset.scrollY || '0';
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  window.scrollTo(0, parseInt(scrollY));
 }
 
 function confirmTimePicker() {

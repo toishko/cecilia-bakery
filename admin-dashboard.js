@@ -646,7 +646,12 @@ window.openOrderDetail = async function(orderId) {
     detailTotalsVisible = true;
     renderOrderDetail();
     document.getElementById('detail-overlay').classList.add('open');
-    document.body.style.overflow = 'hidden';
+    // Lock body scroll (iOS-safe)
+    document.body.dataset.scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${window.scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
   } catch (e) { console.error(e); }
 };
 
@@ -1012,7 +1017,13 @@ window.savePaymentOnly = async function() {
 
 function closeDetailModal() {
   document.getElementById('detail-overlay').classList.remove('open');
-  document.body.style.overflow = '';
+  // Unlock body scroll
+  const scrollY = document.body.dataset.scrollY || '0';
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  window.scrollTo(0, parseInt(scrollY));
   detailOrder = null;
   detailItems = [];
 }
@@ -1740,7 +1751,11 @@ window.openOrderDetail = async function(orderId) {
   detailItems = items || [];
   renderOrderDetail();
   document.getElementById('detail-overlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  document.body.dataset.scrollY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${window.scrollY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
 };
 
 /* ═══════════════════════════════════
