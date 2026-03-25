@@ -17,14 +17,16 @@
 - [x] Verified
 
 ## Phase 2 — Driver Order Form → [IMPLEMENTATION_DRIVER_FORM.md](docs/IMPLEMENTATION_DRIVER_FORM.md)
-- [ ] Code entry screen (logo, input, validation, lockout)
-- [ ] Driver dashboard (dropdown nav, overview, my orders, settings)
-- [ ] Order form (all product sections, +/- inputs, quick search)
-- [ ] Multi-order support (tabs, add/delete orders)
-- [ ] Summary modal (left/right navigation)
-- [ ] Submit + 30-min edit window (edit + add new orders)
-- [ ] EN/ES + light/dark theme
-- [ ] Verified
+- [x] Code entry screen (logo, input, validation, lockout)
+- [x] Driver dashboard (animated hamburger nav, sticky dropdown, overview, settings)
+- [x] Order form (bilingual category names, standard row layouts, custom time picker, quick search)
+- [x] Multi-order support (tabs, add/delete orders)
+- [x] Summary modal (left/right navigation, per-order display)
+- [ ] My Orders page (history, payment badges, system order #)
+- [ ] 30-min edit window (edit + add new orders)
+- [x] EN/ES + light/dark theme
+- [x] In-app toast notifications (replaced browser alerts)
+- [x] Verified
 
 ## Phase 3 — Admin Dashboard → [IMPLEMENTATION_ADMIN_DASHBOARD.md](docs/IMPLEMENTATION_ADMIN_DASHBOARD.md)
 - [ ] Admin login screen (email/password, role check)
