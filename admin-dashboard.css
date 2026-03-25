@@ -78,6 +78,14 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   transition:border-color .2s,box-shadow .2s}
 .login-input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.12);outline:none}
 .login-input::placeholder{color:var(--tx-faint)}
+.pw-wrap .login-input{padding-right:48px}
+.pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:var(--tx-muted);cursor:pointer;padding:4px;
+  display:flex;align-items:center;transition:color .2s}
+.pw-eye:hover{color:var(--tx)}
+.remember-me{display:flex;align-items:center;gap:8px;margin-bottom:16px;
+  font-size:.82rem;color:var(--tx-muted);cursor:pointer;user-select:none}
+.remember-me input[type="checkbox"]{width:16px;height:16px;accent-color:var(--red);cursor:pointer}
 .login-btn{width:100%;padding:14px;border:none;border-radius:10px;background:var(--red);
   color:var(--tx-on-red);font-size:1rem;font-weight:600;font-family:inherit;cursor:pointer;
   transition:background .2s,transform .1s}

@@ -102,10 +102,17 @@ async function handleLogin() {
 
     currentUser = data.user;
 
+    // Save email if Remember Me is checked
+    const remember = document.getElementById('remember-me-check');
+    if (remember && remember.checked) {
+      localStorage.setItem('cecilia_admin_email', email);
+    } else {
+      localStorage.removeItem('cecilia_admin_email');
+    }
+
     // Check role — user_metadata or app_metadata
     const role = currentUser.user_metadata?.role || currentUser.app_metadata?.role || '';
     if (role !== 'admin' && role !== 'staff') {
-      // Still allow access but display a warning — the user said they think they have it set up
       console.warn('User role not set to admin/staff. Role:', role);
     }
 
@@ -1821,6 +1828,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ── Invite code generation ──
   document.getElementById('generate-invite-btn').addEventListener('click', generateInviteCode);
+
+  // ── Password eye toggle ──
+  document.querySelectorAll('.pw-eye').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.target);
+      const isHidden = input.type === 'password';
+      input.type = isHidden ? 'text' : 'password';
+      btn.innerHTML = `<i data-lucide="${isHidden ? 'eye' : 'eye-off'}" style="width:18px;height:18px"></i>`;
+      lucide.createIcons();
+    });
+  });
+
+  // ── Remember Me ──
+  const savedEmail = localStorage.getItem('cecilia_admin_email');
+  const rememberCheck = document.getElementById('remember-me-check');
+  if (savedEmail) {
+    document.getElementById('admin-email').value = savedEmail;
+    rememberCheck.checked = true;
+  }
+
   document.getElementById('login-lang-btn').addEventListener('click', () => {
     setLang(lang === 'en' ? 'es' : 'en');
   });

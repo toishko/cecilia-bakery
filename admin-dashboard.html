@@ -39,10 +39,17 @@
       <input type="email" id="admin-email" class="login-input" placeholder="Email"
         data-en-placeholder="Email" data-es-placeholder="Correo electrónico" autocomplete="email">
     </div>
-    <div class="login-input-wrap">
+    <div class="login-input-wrap pw-wrap">
       <input type="password" id="admin-password" class="login-input" placeholder="Password"
         data-en-placeholder="Password" data-es-placeholder="Contraseña" autocomplete="current-password">
+      <button type="button" class="pw-eye" data-target="admin-password" aria-label="Toggle password">
+        <i data-lucide="eye-off" style="width:18px;height:18px"></i>
+      </button>
     </div>
+    <label class="remember-me">
+      <input type="checkbox" id="remember-me-check">
+      <span data-en="Remember me" data-es="Recuérdame">Remember me</span>
+    </label>
     <button id="login-btn" class="login-btn" data-en="Sign In" data-es="Iniciar Sesión">Sign In</button>
     <div id="login-error" class="login-error"></div>
     <div class="login-divider"><span data-en="or" data-es="o">or</span></div>
@@ -53,9 +60,12 @@
         <input type="email" id="reg-email" class="login-input" placeholder="Email"
           data-en-placeholder="Email" data-es-placeholder="Correo electrónico" autocomplete="email">
       </div>
-      <div class="login-input-wrap">
+      <div class="login-input-wrap pw-wrap">
         <input type="password" id="reg-password" class="login-input" placeholder="Password"
           data-en-placeholder="Password" data-es-placeholder="Contraseña" autocomplete="new-password">
+        <button type="button" class="pw-eye" data-target="reg-password" aria-label="Toggle password">
+          <i data-lucide="eye-off" style="width:18px;height:18px"></i>
+        </button>
       </div>
       <div class="login-input-wrap">
         <input type="text" id="reg-invite-code" class="login-input" placeholder="Invite Code"
