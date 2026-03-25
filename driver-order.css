@@ -234,14 +234,24 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .qty-btn:hover{background:var(--bg-surface)}
 .qty-btn:active{background:rgba(200,16,46,.1)}
 .qty-input{width:36px;height:32px;border:none;background:transparent;text-align:center;
-  font-size:.85rem;font-family:inherit;color:var(--tx);-moz-appearance:textfield}
-.qty-input::-webkit-inner-spin-button,.qty-input::-webkit-outer-spin-button{-webkit-appearance:none}
+  font-size:.85rem;font-family:inherit;color:var(--tx);-moz-appearance:textfield;appearance:textfield}
+.qty-input::-webkit-inner-spin-button,.qty-input::-webkit-outer-spin-button{-webkit-appearance:none;appearance:none}
+.qty-placeholder{width:74px;text-align:center;color:var(--tx-faint);font-size:.85rem}
 
-/* Redondo 4-col layout */
-.redondo-header{display:flex;gap:8px;padding:4px 14px 0;align-items:center}
-.redondo-header span{font-size:.6rem;color:var(--tx-faint);text-transform:uppercase;text-align:center;
-  letter-spacing:.3px}
-.redondo-header .rh-name{flex:1}
+/* Redondo grouped column layout */
+.redondo-col-headers{display:flex;align-items:flex-end;gap:8px;padding:4px 14px 8px}
+.redondo-col-headers .rh-name{flex:1}
+.rh-group{display:flex;flex-direction:column;align-items:center;gap:2px;
+  background:var(--bg-surface);border-radius:8px;padding:6px 4px 4px;min-width:148px}
+.rh-group-title{font-size:.7rem;font-weight:700;color:var(--red);text-transform:uppercase;
+  letter-spacing:.5px}
+.rh-sub{display:flex;gap:4px}
+.rh-sub span{font-size:.6rem;color:var(--tx-faint);text-transform:uppercase;width:74px;
+  text-align:center;letter-spacing:.3px}
+.redondo-row{display:flex;align-items:center;gap:8px}
+.redondo-row .prod-name{flex:1;min-width:80px}
+.rh-qty-pair{display:flex;gap:4px;min-width:148px;justify-content:center;
+  padding:2px 4px;background:var(--bg-surface);border-radius:6px}
 
 /* Footer bar */
 .form-footer{position:fixed;bottom:0;left:0;right:0;background:var(--bg-card);
@@ -302,3 +312,29 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .confirm-sub{color:var(--tx-muted);font-size:.9rem;margin-bottom:24px}
 .confirm-btn{padding:14px 32px;border:none;border-radius:10px;background:var(--red);
   color:var(--tx-on-red);font-weight:600;font-family:inherit;cursor:pointer;font-size:1rem}
+
+/* ═══════════════════════════════════
+   IN-APP TOAST
+   ═══════════════════════════════════ */
+.app-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
+  z-index:999;background:var(--bg-card);border:1px solid var(--bd);border-radius:12px;
+  padding:14px 20px;box-shadow:0 8px 32px rgba(0,0,0,.2);display:flex;align-items:center;
+  gap:12px;min-width:280px;max-width:90vw;opacity:0;transition:opacity .3s,transform .3s;
+  font-size:.9rem;color:var(--tx)}
+.app-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.app-toast.error{border-color:var(--red);border-left:4px solid var(--red)}
+.app-toast.success{border-color:var(--green);border-left:4px solid var(--green)}
+.toast-close{background:none;border:none;color:var(--tx-muted);cursor:pointer;padding:4px;
+  font-size:.9rem;flex-shrink:0}
+
+/* ═══════════════════════════════════
+   MODERN DATE/TIME PICKERS
+   ═══════════════════════════════════ */
+.form-field input[type="date"],
+.form-field input[type="time"]{cursor:pointer;position:relative}
+.form-field input[type="date"]::-webkit-calendar-picker-indicator,
+.form-field input[type="time"]::-webkit-calendar-picker-indicator{
+  cursor:pointer;opacity:.5;filter:none;padding:4px}
+[data-theme="dark"] .form-field input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="dark"] .form-field input[type="time"]::-webkit-calendar-picker-indicator{
+  filter:invert(1);opacity:.6}

@@ -188,6 +188,26 @@ function applyLang() {
   document.querySelectorAll('.lang-opt').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.lang === lang);
   });
+  // Re-render product names if form is visible
+  document.querySelectorAll('.prod-name[data-en]').forEach(el => {
+    const text = el.getAttribute('data-' + lang);
+    if (text) el.textContent = text;
+  });
+  // Re-render section labels
+  document.querySelectorAll('.acc-title[data-en]').forEach(el => {
+    const text = el.getAttribute('data-' + lang);
+    if (text) el.textContent = text;
+  });
+  // Re-render qty group labels
+  document.querySelectorAll('.prod-qty-label[data-en]').forEach(el => {
+    const text = el.getAttribute('data-' + lang);
+    if (text) el.textContent = text;
+  });
+  // Redondo column headers
+  document.querySelectorAll('.redondo-col-label[data-en]').forEach(el => {
+    const text = el.getAttribute('data-' + lang);
+    if (text) el.textContent = text;
+  });
 }
 
 /* ═══════════════════════════════════
@@ -291,94 +311,97 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ═══════════════════════════════════
-   PRODUCT CATALOG
+   PRODUCT CATALOG (EN/ES)
    ═══════════════════════════════════ */
 const PRODUCTS = {
   redondo: {
-    label: 'Redondo', type: 'redondo',
+    en: 'Redondo', es: 'Redondo', type: 'redondo',
     items: [
-      { key: 'pina', label: 'Piña', cols: ['inside','inside_nt','top','top_nt'] },
-      { key: 'guava', label: 'Guava', cols: ['inside','inside_nt','top','top_nt'] },
-      { key: 'dulce', label: 'Dulce De Leche', cols: ['inside','inside_nt'] },
+      { key: 'pina', en: 'Piña', es: 'Piña', cols: ['inside','inside_nt','top','top_nt'] },
+      { key: 'guava', en: 'Guava', es: 'Guayaba', cols: ['inside','inside_nt','top','top_nt'] },
+      { key: 'dulce', en: 'Dulce De Leche', es: 'Dulce De Leche', cols: ['inside','inside_nt'] },
     ]
   },
   plain: {
-    label: 'Plain', type: 'standard',
+    en: 'Plain', es: 'Plain', type: 'standard',
     items: [
-      { key: 'plain', label: 'Plain' },
-      { key: 'raisin', label: 'Raisin' },
+      { key: 'plain', en: 'Plain', es: 'Plain' },
+      { key: 'raisin', en: 'Raisin', es: 'Pasas' },
     ]
   },
   tresleche: {
-    label: 'Tres Leche', type: 'standard',
+    en: 'Tres Leche', es: 'Tres Leche', type: 'standard',
     items: [
-      { key: 'tl', label: 'Tres Leche' },
-      { key: 'tl_hershey', label: 'Tres Hershey' },
-      { key: 'cuatro_leche', label: 'Cuatro Leche' },
-      { key: 'tl_straw', label: 'TL Strawberry' },
-      { key: 'tl_pina', label: 'TL Piña' },
+      { key: 'tl', en: 'Tres Leche', es: 'Tres Leche' },
+      { key: 'tl_hershey', en: 'Tres Leche Hershey', es: 'Tres Leche Hershey' },
+      { key: 'cuatro_leche', en: 'Cuatro Leche', es: 'Cuatro Leche' },
+      { key: 'tl_straw', en: 'Tres Leche Strawberry', es: 'Tres Leche Fresa' },
+      { key: 'tl_pina', en: 'Tres Leche Piña', es: 'Tres Leche Piña' },
     ]
   },
   piezas: {
-    label: 'Piezas', type: 'standard',
+    en: 'Piezas', es: 'Piezas', type: 'standard',
     items: [
-      { key: 'pz_rv', label: 'Red Velvet' },
-      { key: 'pz_carrot', label: 'Carrot Cake' },
-      { key: 'pz_cheese', label: 'Cheesecake' },
-      { key: 'pz_pudin', label: 'Pudin' },
-      { key: 'pz_pina', label: 'Piña' },
-      { key: 'pz_guava', label: 'Guava' },
-      { key: 'pz_chocoflan', label: 'Chocoflan' },
-      { key: 'pz_flan', label: 'Flan' },
+      { key: 'pz_rv', en: 'Red Velvet', es: 'Red Velvet' },
+      { key: 'pz_carrot', en: 'Carrot Cake', es: 'Pastel de Zanahoria' },
+      { key: 'pz_cheese', en: 'Cheesecake', es: 'Cheesecake' },
+      { key: 'pz_pudin', en: 'Pudin', es: 'Pudin' },
+      { key: 'pz_pina', en: 'Piña', es: 'Piña' },
+      { key: 'pz_guava', en: 'Guava', es: 'Guayaba' },
+      { key: 'pz_chocoflan', en: 'Chocoflan', es: 'Chocoflan' },
+      { key: 'pz_flan', en: 'Flan', es: 'Flan' },
     ]
   },
   frostin: {
-    label: 'Piezas Frostin', type: 'standard',
+    en: 'Piezas Frostin', es: 'Piezas Frostin', type: 'standard',
     items: [
-      { key: 'fr_guava', label: 'Guava' },
-      { key: 'fr_pina', label: 'Piña' },
-      { key: 'fr_dulce', label: 'Dulce De Leche' },
-      { key: 'fr_choco', label: 'Chocolate' },
+      { key: 'fr_guava', en: 'Guava', es: 'Guayaba' },
+      { key: 'fr_pina', en: 'Piña', es: 'Piña' },
+      { key: 'fr_dulce', en: 'Dulce De Leche', es: 'Dulce De Leche' },
+      { key: 'fr_choco', en: 'Chocolate', es: 'Chocolate' },
     ]
   },
   hb_big: {
-    label: 'Happy Birthday — BIG', type: 'standard',
+    en: 'Happy Birthday — BIG', es: 'Feliz Cumpleaños — GRANDE', type: 'standard',
     items: [
-      { key: 'hb_b_pina', label: 'Piña' },
-      { key: 'hb_b_guava', label: 'Guava' },
-      { key: 'hb_b_dulce', label: 'Dulce De Leche' },
-      { key: 'hb_b_choco', label: 'Chocolate' },
-      { key: 'hb_b_straw', label: 'Strawberry' },
+      { key: 'hb_b_pina', en: 'Piña', es: 'Piña' },
+      { key: 'hb_b_guava', en: 'Guava', es: 'Guayaba' },
+      { key: 'hb_b_dulce', en: 'Dulce De Leche', es: 'Dulce De Leche' },
+      { key: 'hb_b_choco', en: 'Chocolate', es: 'Chocolate' },
+      { key: 'hb_b_straw', en: 'Strawberry', es: 'Fresa' },
     ]
   },
   hb_small: {
-    label: 'Happy Birthday — SMALL', type: 'standard',
+    en: 'Happy Birthday — SMALL', es: 'Feliz Cumpleaños — PEQUEÑO', type: 'standard',
     items: [
-      { key: 'hb_s_pina', label: 'Piña' },
-      { key: 'hb_s_guava', label: 'Guava' },
-      { key: 'hb_s_dulce', label: 'Dulce De Leche' },
-      { key: 'hb_s_choco', label: 'Chocolate' },
-      { key: 'hb_s_straw', label: 'Strawberry' },
+      { key: 'hb_s_pina', en: 'Piña', es: 'Piña' },
+      { key: 'hb_s_guava', en: 'Guava', es: 'Guayaba' },
+      { key: 'hb_s_dulce', en: 'Dulce De Leche', es: 'Dulce De Leche' },
+      { key: 'hb_s_choco', en: 'Chocolate', es: 'Chocolate' },
+      { key: 'hb_s_straw', en: 'Strawberry', es: 'Fresa' },
     ]
   },
   cuadrao: {
-    label: 'Cuadrao', type: 'standard',
+    en: 'Cuadrao', es: 'Cuadrao', type: 'standard',
     items: [
-      { key: 'cdr_pudin', label: 'Pudin' },
-      { key: 'cdr_plain', label: 'Plain' },
-      { key: 'cdr_raisin', label: 'Raisin' },
-      { key: 'cdr_maiz', label: 'Maiz' },
+      { key: 'cdr_pudin', en: 'Pudin', es: 'Pudin' },
+      { key: 'cdr_pound', en: 'Pound', es: 'Pound' },
+      { key: 'cdr_raisin', en: 'Raisin', es: 'Pasas' },
+      { key: 'cdr_maiz', en: 'Maiz', es: 'Maiz' },
     ]
   },
   basos: {
-    label: 'Basos', type: 'standard',
+    en: 'Basos', es: 'Basos', type: 'standard',
     items: [
-      { key: 'bas_tl', label: 'Tres Leche' },
-      { key: 'bas_cl', label: 'Cuatro Leche' },
-      { key: 'bas_hershey', label: 'Hershey' },
+      { key: 'bas_tl', en: 'Tres Leche', es: 'Tres Leche' },
+      { key: 'bas_cl', en: 'Cuatro Leche', es: 'Cuatro Leche' },
+      { key: 'bas_hershey', en: 'Hershey', es: 'Hershey' },
     ]
   },
 };
+
+/* Helper to get product/section label */
+function L(obj) { return obj[lang] || obj.en; }
 
 /* ═══════════════════════════════════
    MULTI-ORDER STATE
@@ -398,7 +421,12 @@ function createBlankOrder() {
       }
     });
   });
-  return { business: '', date: '', time: '', ref: '', notes: '', qty };
+  return { business: '', date: getTodayStr(), time: '', ref: '', notes: '', qty };
+}
+
+function getTodayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
 function initOrderForm() {
@@ -480,31 +508,35 @@ function buildProductSections() {
 
   Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
     html += `<div class="acc-section" data-section-key="${secKey}" id="sec-${secKey}">`;
-    html += `<div class="acc-header"><span class="acc-title">${sec.label}</span><div style="display:flex;align-items:center;gap:8px"><span class="acc-badge" data-badge="${secKey}">0</span><svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div></div>`;
+    html += `<div class="acc-header"><span class="acc-title" data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</span><div style="display:flex;align-items:center;gap:8px"><span class="acc-badge" data-badge="${secKey}">0</span><svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div></div>`;
     html += `<div class="acc-body"><div class="prod-table">`;
 
     if (sec.type === 'redondo') {
-      html += `<div class="redondo-header"><span class="rh-name"></span>`;
-      html += `<span style="width:74px">Inside</span><span style="width:74px">No Tkt</span>`;
-      html += `<span style="width:74px">Top</span><span style="width:74px">No Tkt</span></div>`;
+      // Two grouped columns: INSIDE and TOP, each with Qty and No Tkt
+      html += `<div class="redondo-col-headers">`;
+      html += `<span class="rh-name"></span>`;
+      html += `<div class="rh-group"><span class="rh-group-title redondo-col-label" data-en="Inside" data-es="Adentro">${lang === 'es' ? 'Adentro' : 'Inside'}</span><div class="rh-sub"><span class="redondo-col-label" data-en="Qty" data-es="Cant">${lang === 'es' ? 'Cant' : 'Qty'}</span><span class="redondo-col-label" data-en="No Tkt" data-es="Sin Tkt">${lang === 'es' ? 'Sin Tkt' : 'No Tkt'}</span></div></div>`;
+      html += `<div class="rh-group"><span class="rh-group-title redondo-col-label" data-en="Top" data-es="Arriba">${lang === 'es' ? 'Arriba' : 'Top'}</span><div class="rh-sub"><span class="redondo-col-label" data-en="Qty" data-es="Cant">${lang === 'es' ? 'Cant' : 'Qty'}</span><span class="redondo-col-label" data-en="No Tkt" data-es="Sin Tkt">${lang === 'es' ? 'Sin Tkt' : 'No Tkt'}</span></div></div>`;
+      html += `</div>`;
       sec.items.forEach(item => {
-        html += `<div class="prod-row" data-product="${item.key}"><span class="prod-name">${item.label}</span>`;
-        const allCols = ['inside','inside_nt','top','top_nt'];
-        allCols.forEach(col => {
-          const k = item.key + '_' + col;
-          if (item.cols.includes(col)) {
-            html += qtyControl(k);
-          } else {
-            html += `<div style="width:74px;text-align:center;color:var(--tx-faint)">—</div>`;
-          }
-        });
+        html += `<div class="prod-row redondo-row" data-product="${item.key}"><span class="prod-name" data-en="${item.en}" data-es="${item.es}">${L(item)}</span>`;
+        // Inside group
+        html += `<div class="rh-qty-pair">`;
+        html += item.cols.includes('inside') ? qtyControl(item.key + '_inside') : `<div class="qty-placeholder">—</div>`;
+        html += item.cols.includes('inside_nt') ? qtyControl(item.key + '_inside_nt') : `<div class="qty-placeholder">—</div>`;
+        html += `</div>`;
+        // Top group
+        html += `<div class="rh-qty-pair">`;
+        html += item.cols.includes('top') ? qtyControl(item.key + '_top') : `<div class="qty-placeholder">—</div>`;
+        html += item.cols.includes('top_nt') ? qtyControl(item.key + '_top_nt') : `<div class="qty-placeholder">—</div>`;
+        html += `</div>`;
         html += `</div>`;
       });
     } else {
       sec.items.forEach(item => {
-        html += `<div class="prod-row" data-product="${item.key}"><span class="prod-name">${item.label}</span>`;
-        html += `<div class="prod-qty-group"><span class="prod-qty-label">Qty</span>${qtyControl(item.key)}</div>`;
-        html += `<div class="prod-qty-group"><span class="prod-qty-label">No Tkt</span>${qtyControl(item.key + '_nt')}</div>`;
+        html += `<div class="prod-row" data-product="${item.key}"><span class="prod-name" data-en="${item.en}" data-es="${item.es}">${L(item)}</span>`;
+        html += `<div class="prod-qty-group"><span class="prod-qty-label" data-en="Qty" data-es="Cant">${lang === 'es' ? 'Cant' : 'Qty'}</span>${qtyControl(item.key)}</div>`;
+        html += `<div class="prod-qty-group"><span class="prod-qty-label" data-en="No Tkt" data-es="Sin Tkt">${lang === 'es' ? 'Sin Tkt' : 'No Tkt'}</span>${qtyControl(item.key + '_nt')}</div>`;
         html += `</div>`;
       });
     }
@@ -667,23 +699,25 @@ function renderSummaryOrder(idx) {
           const k = item.key + '_' + col;
           const v = o.qty[k] || 0;
           if (v > 0) {
-            const colLabel = col.replace('_nt', ' NT').replace('inside', 'In').replace('top', 'Top');
+            const colEn = col.replace('_nt', '').replace('inside', 'Inside').replace('top', 'Top');
+            const colEs = col.replace('_nt', '').replace('inside', 'Adentro').replace('top', 'Arriba');
+            const colLabel = lang === 'es' ? colEs : colEn;
             const isNT = col.includes('nt');
-            items.push({ name: `${item.label} (${colLabel})`, qty: v, nt: isNT });
+            items.push({ name: `${L(item)} (${colLabel})`, qty: v, nt: isNT });
           }
         });
       } else {
         const v = o.qty[item.key] || 0;
         const vnt = o.qty[item.key + '_nt'] || 0;
-        if (v > 0) items.push({ name: item.label, qty: v, nt: false });
-        if (vnt > 0) items.push({ name: item.label, qty: vnt, nt: true });
+        if (v > 0) items.push({ name: L(item), qty: v, nt: false });
+        if (vnt > 0) items.push({ name: L(item), qty: vnt, nt: true });
       }
     });
 
     if (items.length > 0) {
-      html += `<div class="summary-section"><div class="summary-section-title">${sec.label}</div>`;
+      html += `<div class="summary-section"><div class="summary-section-title">${L(sec)}</div>`;
       items.forEach(it => {
-        html += `<div class="summary-item"><span class="summary-item-name">${it.name}${it.nt ? '<span class="no-ticket-tag">No Ticket</span>' : ''}</span><span class="summary-item-qty">×${it.qty}</span></div>`;
+        html += `<div class="summary-item"><span class="summary-item-name">${it.name}${it.nt ? `<span class="no-ticket-tag">${lang === 'es' ? 'Sin Ticket' : 'No Ticket'}</span>` : ''}</span><span class="summary-item-qty">×${it.qty}</span></div>`;
       });
       html += '</div>';
     }
@@ -721,13 +755,13 @@ async function submitAllOrders() {
             (item.cols || []).forEach(col => {
               const k = item.key + '_' + col;
               const v = o.qty[k] || 0;
-              if (v > 0) items.push({ product_key: k, product_label: `${item.label} (${col})`, quantity: v });
+              if (v > 0) items.push({ product_key: k, product_label: `${item.en} (${col})`, quantity: v });
             });
           } else {
             const v = o.qty[item.key] || 0;
             const vnt = o.qty[item.key + '_nt'] || 0;
-            if (v > 0) items.push({ product_key: item.key, product_label: item.label, quantity: v });
-            if (vnt > 0) items.push({ product_key: item.key + '_nt', product_label: item.label + ' (No Ticket)', quantity: vnt });
+            if (v > 0) items.push({ product_key: item.key, product_label: item.en, quantity: v });
+            if (vnt > 0) items.push({ product_key: item.key + '_nt', product_label: item.en + ' (No Ticket)', quantity: vnt });
           }
         });
       });
@@ -775,7 +809,7 @@ async function submitAllOrders() {
 
   } catch (e) {
     console.error('Submit error:', e);
-    alert(lang === 'es' ? 'Error al enviar los pedidos. Intenta de nuevo.' : 'Error submitting orders. Please try again.');
+    showToast(lang === 'es' ? 'Error al enviar los pedidos. Intenta de nuevo.' : 'Error submitting orders. Please try again.', 'error');
   }
 
   submitBtn.disabled = false;
@@ -807,4 +841,35 @@ function showConfirmation() {
     confirmDiv.style.display = 'none';
     showSection('overview');
   });
+}
+
+/* ═══════════════════════════════════
+   IN-APP TOAST NOTIFICATIONS
+   ═══════════════════════════════════ */
+function showToast(message, type = 'info') {
+  // Remove existing toast
+  const existing = document.getElementById('app-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'app-toast';
+  toast.className = 'app-toast ' + type;
+  toast.innerHTML = `<span>${message}</span><button class="toast-close">✕</button>`;
+  document.body.appendChild(toast);
+
+  // Trigger animation
+  requestAnimationFrame(() => toast.classList.add('show'));
+
+  toast.querySelector('.toast-close').addEventListener('click', () => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  });
+
+  // Auto-dismiss after 5s
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }
+  }, 5000);
 }
