@@ -328,13 +328,73 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   font-size:.9rem;flex-shrink:0}
 
 /* ═══════════════════════════════════
-   MODERN DATE/TIME PICKERS
+   MODERN DATE PICKER
    ═══════════════════════════════════ */
-.form-field input[type="date"],
-.form-field input[type="time"]{cursor:pointer;position:relative}
-.form-field input[type="date"]::-webkit-calendar-picker-indicator,
-.form-field input[type="time"]::-webkit-calendar-picker-indicator{
+.form-field input[type="date"]{cursor:pointer;position:relative}
+.form-field input[type="date"]::-webkit-calendar-picker-indicator{
   cursor:pointer;opacity:.5;filter:none;padding:4px}
-[data-theme="dark"] .form-field input[type="date"]::-webkit-calendar-picker-indicator,
-[data-theme="dark"] .form-field input[type="time"]::-webkit-calendar-picker-indicator{
+[data-theme="dark"] .form-field input[type="date"]::-webkit-calendar-picker-indicator{
   filter:invert(1);opacity:.6}
+
+/* ═══════════════════════════════════
+   CUSTOM SCROLL TIME PICKER
+   ═══════════════════════════════════ */
+/* The fake display field */
+.time-display{padding:10px 12px;border:1px solid var(--bd-input);border-radius:8px;
+  background:var(--bg-input);color:var(--tx);font-size:.9rem;font-family:inherit;
+  cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+  transition:border-color .2s;min-height:42px;user-select:none}
+.time-display:hover{border-color:var(--bd-hover)}
+.time-display.has-value{color:var(--tx)}
+.time-display:not(.has-value){color:var(--tx-faint)}
+.time-display svg{width:18px;height:18px;color:var(--tx-faint);flex-shrink:0}
+
+/* Modal overlay */
+.tp-overlay{position:fixed;inset:0;background:var(--bg-overlay);z-index:300;
+  display:none;align-items:flex-end;justify-content:center}
+.tp-overlay.open{display:flex}
+
+/* Modal card */
+.tp-modal{background:var(--bg-card);border-radius:20px 20px 0 0;width:100%;max-width:400px;
+  padding:16px 20px 24px;animation:slideUp .3s ease}
+.tp-handle{width:40px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 12px}
+.tp-title{text-align:center;font-size:1rem;font-weight:600;
+  font-family:'Cormorant Garamond',serif;margin-bottom:16px;color:var(--tx)}
+
+/* Scroll columns container */
+.tp-columns{display:flex;align-items:center;justify-content:center;gap:0;
+  position:relative;height:200px;overflow:hidden;margin-bottom:16px}
+
+/* Selection highlight band — sits behind the middle row */
+.tp-columns::before{content:'';position:absolute;top:50%;left:12px;right:12px;
+  height:40px;transform:translateY(-50%);background:var(--red);opacity:.12;
+  border-radius:8px;pointer-events:none;z-index:1}
+
+/* Separator colon */
+.tp-colon{font-size:1.6rem;font-weight:700;color:var(--tx);padding:0 2px;
+  align-self:center;z-index:2;margin-top:-2px}
+
+/* Individual scroll column */
+.tp-col{flex:1;max-width:80px;height:100%;overflow-y:auto;position:relative;
+  scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;z-index:2;
+  scrollbar-width:none}
+.tp-col::-webkit-scrollbar{display:none}
+
+/* Padding items to allow first/last to center */
+.tp-col-inner{padding:80px 0}
+
+/* Each item */
+.tp-item{height:40px;display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;font-weight:500;color:var(--tx-faint);scroll-snap-align:center;
+  cursor:pointer;transition:color .15s,transform .15s;user-select:none;
+  font-family:'Outfit',sans-serif}
+.tp-item.selected{color:var(--tx);font-weight:700;font-size:1.5rem}
+
+/* Action buttons */
+.tp-actions{display:flex;gap:8px}
+.tp-actions button{flex:1;padding:12px;border-radius:10px;font-weight:600;
+  font-family:inherit;cursor:pointer;font-size:.95rem;transition:background .2s}
+.tp-cancel{background:none;border:1px solid var(--bd);color:var(--tx)}
+.tp-cancel:hover{background:var(--bg-surface)}
+.tp-confirm{background:var(--red);border:none;color:var(--tx-on-red)}
+.tp-confirm:hover{background:var(--red-dk)}

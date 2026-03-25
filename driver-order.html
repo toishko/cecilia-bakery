@@ -141,7 +141,11 @@
         </div>
         <div class="form-field">
           <label data-en="Time" data-es="Hora">Time</label>
-          <input type="time" id="field-time">
+          <div class="time-display" id="field-time-display">
+            <span id="field-time-text" data-en-placeholder="Select time" data-es-placeholder="Seleccionar hora">Select time</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <input type="hidden" id="field-time">
         </div>
         <div class="form-field full">
           <label data-en="My Order #" data-es="Mi Pedido #">My Order #</label>
@@ -158,6 +162,24 @@
 
       <!-- Product Sections (dynamically built by JS) -->
       <div id="product-sections" style="padding-bottom:70px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOM TIME PICKER MODAL -->
+<div class="tp-overlay" id="tp-overlay">
+  <div class="tp-modal">
+    <div class="tp-handle"></div>
+    <div class="tp-title" data-en="Select Time" data-es="Seleccionar Hora">Select Time</div>
+    <div class="tp-columns">
+      <div class="tp-col" id="tp-hour"><div class="tp-col-inner" id="tp-hour-inner"></div></div>
+      <span class="tp-colon">:</span>
+      <div class="tp-col" id="tp-minute"><div class="tp-col-inner" id="tp-minute-inner"></div></div>
+      <div class="tp-col" id="tp-period"><div class="tp-col-inner" id="tp-period-inner"></div></div>
+    </div>
+    <div class="tp-actions">
+      <button class="tp-cancel" id="tp-cancel" data-en="Cancel" data-es="Cancelar">Cancel</button>
+      <button class="tp-confirm" id="tp-confirm" data-en="Confirm" data-es="Confirmar">Confirm</button>
     </div>
   </div>
 </div>

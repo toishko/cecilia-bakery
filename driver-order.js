@@ -308,6 +308,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('summary-next').addEventListener('click', () => navigateSummary(1));
   document.getElementById('product-search').addEventListener('input', handleSearch);
   document.getElementById('search-clear').addEventListener('click', clearSearch);
+
+  // ── Custom time picker ──
+  document.getElementById('field-time-display').addEventListener('click', openTimePicker);
+  document.getElementById('tp-cancel').addEventListener('click', closeTimePicker);
+  document.getElementById('tp-confirm').addEventListener('click', confirmTimePicker);
+  document.getElementById('tp-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeTimePicker();
+  });
+  initTimePickerColumns();
 });
 
 /* ═══════════════════════════════════
@@ -491,6 +500,8 @@ function loadOrderToForm(idx) {
   document.getElementById('field-business').value = o.business;
   document.getElementById('field-date').value = o.date;
   document.getElementById('field-time').value = o.time;
+  // Update the display text
+  updateTimeDisplay(o.time);
   document.getElementById('field-ref').value = o.ref;
   document.querySelectorAll('.qty-input').forEach(inp => {
     inp.value = o.qty[inp.dataset.key] || 0;
@@ -872,4 +883,161 @@ function showToast(message, type = 'info') {
       setTimeout(() => toast.remove(), 300);
     }
   }, 5000);
+}
+
+/* ═══════════════════════════════════
+   CUSTOM SCROLLABLE TIME PICKER
+   ═══════════════════════════════════ */
+let tpHour = 12, tpMinute = 0, tpPeriod = 'AM';
+
+function initTimePickerColumns() {
+  const hourInner = document.getElementById('tp-hour-inner');
+  const minuteInner = document.getElementById('tp-minute-inner');
+  const periodInner = document.getElementById('tp-period-inner');
+
+  // Build hours 1-12
+  let hHtml = '';
+  for (let h = 1; h <= 12; h++) {
+    hHtml += `<div class="tp-item" data-val="${h}">${h}</div>`;
+  }
+  hourInner.innerHTML = hHtml;
+
+  // Build minutes 00, 05, 10, ..., 55
+  let mHtml = '';
+  for (let m = 0; m < 60; m += 5) {
+    const label = String(m).padStart(2, '0');
+    mHtml += `<div class="tp-item" data-val="${m}">${label}</div>`;
+  }
+  minuteInner.innerHTML = mHtml;
+
+  // Build AM/PM
+  periodInner.innerHTML =
+    `<div class="tp-item" data-val="AM">AM</div>` +
+    `<div class="tp-item" data-val="PM">PM</div>`;
+
+  // Set up scroll listeners for selection highlighting
+  setupScrollHighlight(document.getElementById('tp-hour'), 'hour');
+  setupScrollHighlight(document.getElementById('tp-minute'), 'minute');
+  setupScrollHighlight(document.getElementById('tp-period'), 'period');
+}
+
+function setupScrollHighlight(colEl, type) {
+  let scrollTimer;
+  colEl.addEventListener('scroll', () => {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      updateSelectedItem(colEl, type);
+    }, 60);
+  });
+}
+
+function updateSelectedItem(colEl, type) {
+  const items = colEl.querySelectorAll('.tp-item');
+  const colRect = colEl.getBoundingClientRect();
+  const centerY = colRect.top + colRect.height / 2;
+  let closest = null;
+  let closestDist = Infinity;
+
+  items.forEach(item => {
+    const itemRect = item.getBoundingClientRect();
+    const itemCenter = itemRect.top + itemRect.height / 2;
+    const dist = Math.abs(itemCenter - centerY);
+    if (dist < closestDist) {
+      closestDist = dist;
+      closest = item;
+    }
+    item.classList.remove('selected');
+  });
+
+  if (closest) {
+    closest.classList.add('selected');
+    const val = closest.dataset.val;
+    if (type === 'hour') tpHour = parseInt(val);
+    else if (type === 'minute') tpMinute = parseInt(val);
+    else tpPeriod = val;
+  }
+}
+
+function scrollToValue(colEl, value) {
+  const items = colEl.querySelectorAll('.tp-item');
+  items.forEach(item => {
+    if (item.dataset.val === String(value)) {
+      // Scroll the item to center
+      const colHeight = colEl.clientHeight;
+      const itemOffset = item.offsetTop - colEl.querySelector('.tp-col-inner').offsetTop;
+      const scrollTarget = itemOffset - (colHeight / 2) + (item.clientHeight / 2);
+      colEl.scrollTop = scrollTarget;
+      item.classList.add('selected');
+    } else {
+      item.classList.remove('selected');
+    }
+  });
+}
+
+function openTimePicker() {
+  // Parse existing value from the hidden input
+  const currentVal = document.getElementById('field-time').value;
+  if (currentVal) {
+    const [hStr, mStr] = currentVal.split(':');
+    let h = parseInt(hStr);
+    const m = parseInt(mStr);
+    if (h === 0) { tpHour = 12; tpPeriod = 'AM'; }
+    else if (h === 12) { tpHour = 12; tpPeriod = 'PM'; }
+    else if (h > 12) { tpHour = h - 12; tpPeriod = 'PM'; }
+    else { tpHour = h; tpPeriod = 'AM'; }
+    // Round minute to nearest 5
+    tpMinute = Math.round(m / 5) * 5;
+    if (tpMinute >= 60) tpMinute = 55;
+  } else {
+    tpHour = 12; tpMinute = 0; tpPeriod = 'AM';
+  }
+
+  document.getElementById('tp-overlay').classList.add('open');
+  applyLang();
+
+  // Scroll to values after the modal is visible
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      scrollToValue(document.getElementById('tp-hour'), tpHour);
+      scrollToValue(document.getElementById('tp-minute'), tpMinute);
+      scrollToValue(document.getElementById('tp-period'), tpPeriod);
+    }, 50);
+  });
+}
+
+function closeTimePicker() {
+  document.getElementById('tp-overlay').classList.remove('open');
+}
+
+function confirmTimePicker() {
+  // Convert to 24h for the hidden input
+  let h24 = tpHour;
+  if (tpPeriod === 'AM' && tpHour === 12) h24 = 0;
+  else if (tpPeriod === 'PM' && tpHour !== 12) h24 = tpHour + 12;
+
+  const timeValue = String(h24).padStart(2, '0') + ':' + String(tpMinute).padStart(2, '0');
+  document.getElementById('field-time').value = timeValue;
+  updateTimeDisplay(timeValue);
+  closeTimePicker();
+}
+
+function updateTimeDisplay(timeValue) {
+  const displayEl = document.getElementById('field-time-display');
+  const textEl = document.getElementById('field-time-text');
+
+  if (!timeValue) {
+    textEl.textContent = textEl.getAttribute('data-' + lang + '-placeholder') || 'Select time';
+    displayEl.classList.remove('has-value');
+    return;
+  }
+
+  const [hStr, mStr] = timeValue.split(':');
+  let h = parseInt(hStr);
+  const m = parseInt(mStr);
+  const period = h >= 12 ? 'PM' : 'AM';
+  if (h === 0) h = 12;
+  else if (h > 12) h -= 12;
+
+  textEl.textContent = `${h}:${String(m).padStart(2, '0')} ${period}`;
+  displayEl.classList.add('has-value');
 }
