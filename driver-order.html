@@ -10,6 +10,13 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="/driver-order.css">
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#C8102E">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Cecilia">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
 </head>
 
 <body>
@@ -24,7 +31,7 @@
         <i data-lucide="sun" style="width:14px;height:14px"></i>
       </button>
     </div>
-    <img src="assets/logo.png" alt="Cecilia Bakery" class="login-logo">
+    <a href="/index.html" class="login-logo-link"><img src="assets/logo.png" alt="Cecilia Bakery" class="login-logo"></a>
     <h1 class="login-title" data-en="Driver Portal" data-es="Portal del Conductor">Driver Portal</h1>
     <p class="login-subtitle" data-en="Enter your code to continue" data-es="Ingresa tu codigo para continuar">Enter your code to continue</p>
     <div class="login-input-wrap">
@@ -34,13 +41,14 @@
     <button id="login-btn" class="login-btn" data-en="Enter" data-es="Entrar">Enter</button>
     <div id="login-error" class="login-error"></div>
     <div id="login-lockout" class="login-lockout"></div>
+    <a href="/index.html" class="login-website-link" data-en="← Back to Website" data-es="← Volver al Sitio Web">← Back to Website</a>
   </div>
 </div>
 
 <!-- ═══════════════ SCREEN 2: DASHBOARD ═══════════════ -->
 <div id="screen-dashboard" class="screen dash-screen">
   <div class="dash-header">
-    <img src="assets/logo.png" alt="Cecilia" class="dash-logo">
+    <a href="/index.html" class="dash-logo-link"><img src="assets/logo.png" alt="Cecilia" class="dash-logo"></a>
     <button class="dash-menu-btn" id="dash-menu-btn" aria-label="Menu">
       <span></span><span></span><span></span>
     </button>
@@ -72,9 +80,10 @@
         <h2 class="welcome-name" id="welcome-name">Welcome</h2>
         <p class="welcome-sub" data-en="Ready to place an order?" data-es="Listo para hacer un pedido?">Ready to place an order?</p>
       </div>
-      <div class="balance-banner">
+      <div class="balance-banner" id="balance-banner-overview" onclick="showBalanceBreakdown()" style="cursor:pointer">
         <div><div class="balance-label" data-en="Outstanding Balance" data-es="Saldo Pendiente">Outstanding Balance</div></div>
         <div class="balance-amount green" id="balance-amount">$0.00</div>
+        <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--tx-faint)"></i>
       </div>
       <button class="new-order-btn" id="new-order-cta">
         <i data-lucide="plus"></i>
@@ -88,6 +97,11 @@
 
     <!-- MY ORDERS -->
     <div id="section-my-orders" class="dash-section" style="display:none">
+      <div class="balance-banner" id="balance-banner-orders" onclick="showBalanceBreakdown()" style="cursor:pointer">
+        <div><div class="balance-label" data-en="Outstanding Balance" data-es="Saldo Pendiente">Outstanding Balance</div></div>
+        <div class="balance-amount green" id="balance-amount-orders">$0.00</div>
+        <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--tx-faint)"></i>
+      </div>
       <h3 class="section-title" data-en="My Orders" data-es="Mis Pedidos">My Orders</h3>
       <div id="all-orders">
         <div class="empty-state" data-en="No orders yet" data-es="Aun no hay pedidos">No orders yet</div>
@@ -121,6 +135,19 @@
           </label>
         </div>
       </div>
+      <div class="settings-group">
+        <div class="settings-row">
+          <div class="settings-label"><i data-lucide="bell"></i> <span data-en="Notifications" data-es="Notificaciones">Notifications</span></div>
+          <label class="toggle">
+            <input type="checkbox" id="notification-toggle" checked>
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+      </div>
+      <a href="/index.html" class="settings-website-link" data-en="Visit Website" data-es="Visitar Sitio Web">
+        <i data-lucide="external-link"></i> <span data-en="Visit Website" data-es="Visitar Sitio Web">Visit Website</span>
+      </a>
       <button class="logout-btn" id="logout-btn" data-en="Log Out" data-es="Cerrar Sesion">Log Out</button>
     </div>
 
@@ -211,6 +238,37 @@
   </div>
 </div>
 
+<!-- ORDER DETAIL MODAL -->
+<div class="order-detail-overlay" id="order-detail-overlay">
+  <div class="order-detail-modal">
+    <div class="order-detail-header">
+      <button class="order-detail-back" id="order-detail-back"><i data-lucide="arrow-left"></i></button>
+      <h3 class="order-detail-title" id="order-detail-title">Order #1</h3>
+      <span class="order-detail-badge" id="order-detail-badge"></span>
+    </div>
+    <div class="order-detail-meta" id="order-detail-meta"></div>
+    <div class="order-detail-items" id="order-detail-items"></div>
+    <div class="order-detail-notes" id="order-detail-notes" style="display:none"></div>
+  </div>
+</div>
+
+<!-- BALANCE BREAKDOWN MODAL -->
+<div class="balance-modal-overlay" id="balance-modal-overlay">
+  <div class="balance-modal">
+    <div class="balance-modal-header">
+      <h3 data-en="Balance Breakdown" data-es="Desglose de Saldo">Balance Breakdown</h3>
+      <button class="balance-modal-close" id="balance-modal-close"><i data-lucide="x"></i></button>
+    </div>
+    <div class="balance-modal-total" id="balance-modal-total"></div>
+    <div class="balance-modal-list" id="balance-modal-list"></div>
+  </div>
+</div>
+
 <script type="module" src="/driver-order.js"></script>
+<script>
+  if ('serviceWorker' in navigator && !location.hostname.includes('localhost')) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+</script>
 </body>
 </html>

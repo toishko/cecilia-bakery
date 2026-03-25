@@ -68,6 +68,10 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   padding:48px 32px;width:100%;max-width:380px;text-align:center;
   box-shadow:var(--shadow-card);backdrop-filter:blur(12px);position:relative}
 .login-logo{height:80px;width:auto;margin:0 auto 8px;display:block;object-fit:contain}
+.login-logo-link{display:block;text-align:center}
+.login-website-link{display:block;margin-top:16px;font-size:.82rem;color:var(--tx-muted);
+  text-decoration:none;text-align:center;transition:color .2s}
+.login-website-link:hover{color:var(--red)}
 [data-theme="dark"] .login-logo{filter:brightness(0) invert(1) sepia(1) saturate(2) hue-rotate(310deg)}
 .login-title{font-size:1.8rem;margin-bottom:4px;color:var(--tx)}
 .login-subtitle{font-size:.9rem;color:var(--tx-muted);margin-bottom:32px}
@@ -99,6 +103,13 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   padding:12px 16px;display:flex;align-items:center;justify-content:space-between;
   position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
 .dash-logo{height:36px;width:auto;object-fit:contain}
+.dash-logo-link{display:flex;align-items:center}
+.settings-website-link{display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:12px;border:1px solid var(--bd);border-radius:10px;background:none;
+  color:var(--tx-muted);font-size:.9rem;font-weight:500;text-decoration:none;
+  font-family:inherit;transition:border-color .2s,color .2s;margin-bottom:8px}
+.settings-website-link:hover{border-color:var(--red);color:var(--red)}
+.settings-website-link svg,.settings-website-link i{width:16px;height:16px}
 [data-theme="dark"] .dash-logo{filter:brightness(0) invert(1) sepia(1) saturate(2) hue-rotate(310deg)}
 .dash-menu-btn{background:none;border:none;cursor:pointer;padding:6px;
   display:flex;flex-direction:column;justify-content:center;gap:5px;width:36px;height:36px}
@@ -405,3 +416,168 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .tp-cancel:hover{background:var(--bg-surface)}
 .tp-confirm{background:var(--red);border:none;color:var(--tx-on-red)}
 .tp-confirm:hover{background:var(--red-dk)}
+
+/* ═══════════════════════════════════
+   PHASE 5 — ORDER CARDS & RECEIPTS
+   ═══════════════════════════════════ */
+
+/* ── Balance color states ── */
+.balance-amount.green{color:#2f8a4c}
+.balance-amount.yellow{color:#c09020}
+.balance-amount.red{color:#c0392b}
+.balance-banner{display:flex;align-items:center;gap:8px;transition:background .2s}
+.balance-banner:hover{background:var(--bg-surface)}
+
+/* ── Order Cards — Clean 3-row layout ── */
+.order-card{background:var(--bg-card,#fff);border-radius:12px;padding:14px 16px;
+  margin-bottom:10px;cursor:pointer;transition:transform .15s,box-shadow .15s;
+  border:1px solid var(--bd)}
+.order-card:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.order-card:active{transform:scale(.98)}
+/* Row 1: biz name + badges */
+.order-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.order-card-biz{font-weight:600;font-size:.95rem;color:var(--tx);line-height:1.2}
+.order-card-num{font-size:.72rem;color:var(--tx-faint);margin-top:1px;font-family:monospace}
+/* Row 2: date · time · count — compact single line */
+.order-card-meta{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:8px;
+  font-size:.78rem;color:var(--tx-muted)}
+.order-card-meta span{display:inline-flex;align-items:center;gap:3px}
+.order-card-meta i{width:12px;height:12px}
+/* Row 3: total + editability */
+.order-card-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:8px;
+  padding-top:6px;border-top:1px solid var(--bd)}
+.order-card-items{font-size:.78rem;color:var(--tx-faint)}
+.order-card-status{display:flex;gap:4px}
+
+/* Payment badges */
+.pay-badge{display:inline-block;padding:2px 8px;border-radius:99px;
+  font-size:.68rem;font-weight:600;letter-spacing:.02em}
+.pay-badge.paid{background:#e8f5e9;color:#2f8a4c}
+.pay-badge.not-paid{background:#ffebee;color:#c0392b}
+.pay-badge.partial{background:#fff8e1;color:#c09020}
+/* Status badges */
+.status-badge{display:inline-block;padding:2px 8px;border-radius:99px;
+  font-size:.68rem;font-weight:600}
+.status-badge.pending{background:#e3f2fd;color:#1565c0}
+.status-badge.sent{background:#e8f5e9;color:#2f8a4c}
+
+/* Dark mode badge overrides */
+[data-theme="dark"] .pay-badge.paid{background:rgba(47,138,76,.15);color:#6fcf97}
+[data-theme="dark"] .pay-badge.not-paid{background:rgba(192,57,43,.15);color:#e88a82}
+[data-theme="dark"] .pay-badge.partial{background:rgba(192,144,32,.15);color:#f0c050}
+[data-theme="dark"] .status-badge.pending{background:rgba(21,101,192,.15);color:#64b5f6}
+[data-theme="dark"] .status-badge.sent{background:rgba(47,138,76,.15);color:#6fcf97}
+
+/* ── Order Detail Modal ── */
+.order-detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;
+  display:none;align-items:flex-end;justify-content:center}
+.order-detail-overlay.open{display:flex}
+.order-detail-modal{background:var(--bg-card,#fff);border-radius:20px 20px 0 0;
+  width:100%;max-width:600px;max-height:85vh;overflow-y:auto;overflow-x:hidden;padding:0;
+  animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.order-detail-header{display:flex;align-items:center;gap:10px;padding:14px 18px;
+  border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--bg-card,#fff);z-index:1}
+.order-detail-back{background:none;border:none;cursor:pointer;padding:4px;color:var(--tx)}
+.order-detail-title{flex:1;font-size:1.05rem;font-weight:700;font-family:'Cormorant Garamond',serif;color:var(--tx)}
+.order-detail-badge{flex-shrink:0}
+/* Meta info — soft card */
+.order-detail-meta{padding:12px 18px}
+.order-detail-meta-inner{background:var(--bg-surface,#f5f3f0);border-radius:10px;padding:10px 14px;
+  display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.82rem;color:var(--tx-muted)}
+.order-detail-meta-inner span{display:inline-flex;align-items:center;gap:3px}
+.order-detail-meta i{width:13px;height:13px}
+/* Items */
+.order-detail-items{padding:8px 18px 12px}
+.order-detail-item{display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;border-bottom:1px solid var(--bd)}
+.order-detail-item:last-child{border-bottom:none}
+.order-detail-item-name{font-weight:500;color:var(--tx);font-size:.9rem}
+.order-detail-item-qty{font-weight:600;color:var(--tx);font-size:.88rem}
+.order-detail-item-adj{font-size:.72rem;color:var(--tx-faint);margin-left:4px}
+.order-detail-notes{padding:8px 18px 12px;border-top:1px solid var(--bd);
+  font-size:.85rem;color:var(--tx-muted);font-style:italic}
+.order-detail-notes strong{display:block;margin-bottom:4px;font-style:normal;color:var(--tx)}
+
+/* ── Balance Breakdown Modal ── */
+.balance-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;
+  display:none;align-items:center;justify-content:center}
+.balance-modal-overlay.open{display:flex}
+.balance-modal{background:var(--bg-card,#fff);border-radius:16px;width:92%;
+  max-width:500px;max-height:80vh;overflow-y:auto;animation:scaleIn .25s ease}
+@keyframes scaleIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.balance-modal-header{display:flex;justify-content:space-between;align-items:center;
+  padding:18px 20px;border-bottom:1px solid var(--bd)}
+.balance-modal-header h3{font-size:1.1rem;font-weight:700;font-family:'Cormorant Garamond',serif;color:var(--tx);margin:0}
+.balance-modal-close{background:none;border:none;cursor:pointer;padding:4px;color:var(--tx)}
+.balance-modal-total{padding:16px 20px;text-align:center;
+  font-size:2rem;font-weight:700;font-family:'Cormorant Garamond',serif}
+.balance-modal-list{padding:0 20px 20px}
+.balance-item{display:flex;justify-content:space-between;align-items:center;
+  padding:12px 0;border-bottom:1px solid var(--bd)}
+.balance-item:last-child{border-bottom:none}
+.balance-item-info{flex:1}
+.balance-item-biz{font-weight:600;font-size:.92rem;color:var(--tx)}
+.balance-item-date{font-size:.78rem;color:var(--tx-faint)}
+.balance-item-detail{font-size:.78rem;color:var(--tx-muted)}
+.balance-item-remaining{font-weight:700;font-size:1rem;color:#c0392b}
+.balance-empty{text-align:center;padding:30px 0;color:var(--tx-faint);font-size:.9rem}
+
+/* ── Edit indicators ── */
+.edit-indicator{display:inline-flex;align-items:center;gap:4px;font-size:.7rem;font-weight:600;
+  padding:2px 7px;border-radius:6px}
+.edit-indicator svg{width:11px;height:11px}
+.edit-indicator.active{color:#27ae60;background:rgba(39,174,96,.08)}
+.edit-indicator.locked{color:var(--tx-faint);background:rgba(128,128,128,.08)}
+
+/* ── Edit order button ── */
+.order-detail-actions{padding:8px 18px 12px;text-align:center}
+.edit-order-btn{display:inline-flex;align-items:center;gap:5px;padding:8px 20px;
+  border-radius:10px;font-size:.82rem;font-weight:600;cursor:pointer;
+  background:var(--red);color:#fff;border:none;font-family:inherit;
+  transition:background .2s,transform .15s}
+.edit-order-btn:hover{background:#a51c1c;transform:translateY(-1px)}
+.edit-order-btn:active{transform:scale(.97)}
+.edit-order-btn svg{width:14px;height:14px}
+
+/* ── Order total on card ── */
+.order-card-total{font-weight:700;font-size:.82rem;color:var(--red)}
+
+/* ── Grand total in detail ── */
+.order-detail-total{display:flex;justify-content:space-between;padding:8px 0;
+  margin-top:4px;border-top:2px solid var(--bd);font-weight:700;font-size:.92rem;color:var(--tx)}
+
+/* ── Responsive: mobile ── */
+@media (max-width:480px){
+  .order-detail-modal{max-height:90vh;border-radius:16px 16px 0 0}
+  .balance-modal{width:96%;max-height:85vh}
+}
+
+/* ═══════════════════════════════════
+   MICRO-ANIMATIONS
+   ═══════════════════════════════════ */
+.order-card{transition:transform .2s ease,box-shadow .2s ease}
+.order-card:hover{transform:translateY(-1px) scale(1.005);
+  box-shadow:0 4px 16px rgba(0,0,0,.08)}
+
+/* Badge pulse */
+@keyframes badgePulse{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+.badge-pulse{animation:badgePulse .4s ease}
+
+/* Balance banner pulse when amount > 0 */
+@keyframes balancePulse{0%,100%{opacity:1}50%{opacity:.85}}
+.balance-banner.has-balance{animation:balancePulse 3s ease-in-out infinite}
+
+/* Button press consistency */
+.submit-btn:active,.order-tab:active,.nav-item:active{transform:scale(.97)}
+
+/* Input focus glow (supplement existing) */
+.product-qty:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.1)}
+
+/* ═══════════════════════════════════
+   ACCESSIBILITY: REDUCED MOTION
+   ═══════════════════════════════════ */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;
+    transition-duration:0.01ms!important;scroll-behavior:auto!important}
+}

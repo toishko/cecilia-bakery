@@ -57,11 +57,11 @@
 ---
 
 ## Checklist
-- [ ] Create/source notification audio files
-- [ ] Admin: Realtime subscription for new orders → play sound + show notification
-- [ ] Driver: Realtime subscription for status changes → play sound + show notification
-- [ ] Browser Notification API integration (permission request, display)
-- [ ] Visual badges/indicators on nav items
-- [ ] Mute/unmute toggle in Settings
-- [ ] Handle browser autoplay restrictions
-- [ ] Verification: submit order → admin hears chime → admin confirms → driver hears chime
+- [x] Create/source notification audio files
+- [x] Admin: Realtime subscription for new orders → play sound + show notification
+- [x] Driver: Realtime subscription for status changes → play sound + show notification
+- [x] Browser Notification API integration (permission request, display)
+- [x] Visual badges/indicators on nav items
+- [x] Mute/unmute toggle in Settings
+- [x] Handle browser autoplay restrictions
+- [x] Verification: submit order → admin hears chime → admin confirms → driver hears chime

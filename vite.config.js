@@ -8,6 +8,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         menu: resolve(__dirname, 'menu.html'),
         driverOrder: resolve(__dirname, 'driver-order.html'),
+        adminDashboard: resolve(__dirname, 'admin-dashboard.html'),
       },
     },
   },

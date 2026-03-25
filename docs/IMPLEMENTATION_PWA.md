@@ -83,12 +83,12 @@ Both work as standalone apps. Each can be added separately.
 ---
 
 ## Checklist
-- [ ] Create `manifest.json`
-- [ ] Create `sw.js` (basic caching)
-- [ ] Add manifest + service worker registration to `driver-order.html`
-- [ ] Add manifest + service worker registration to `admin-dashboard.html`
-- [ ] Generate app icons (192px, 512px)
-- [ ] Add iOS meta tags
+- [x] Create `manifest.json`
+- [x] Create `sw.js` (basic caching)
+- [x] Add manifest + service worker registration to `driver-order.html`
+- [x] Add manifest + service worker registration to `admin-dashboard.html`
+- [x] Generate app icons (192px, 512px)
+- [x] Add iOS meta tags
 - [ ] Verify "Add to Home Screen" on iOS Safari
 - [ ] Verify "Add to Home Screen" on Android Chrome
-- [ ] Verify standalone display mode works
+- [x] Verify standalone display mode works

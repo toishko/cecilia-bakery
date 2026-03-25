@@ -48,7 +48,7 @@ What admin sees when they open the dashboard:
 
 - **Today's Orders**: count of orders submitted today
 - **Today's Revenue**: total amount from today's orders
-- **Outstanding Unpaid**: sum of all unpaid + partial remaining amounts across ALL drivers
+- **Outstanding Unpaid**: sum of all unpaid + partial remaining amounts across ALL drivers (clamped to $0.00 minimum per order, never negative)
 - **Recent Orders**: last 5 orders (cards with driver name, business, time, payment badge)
 - **Quick Action**: link to "View All Orders"
 
@@ -111,15 +111,17 @@ What admin sees when they open the dashboard:
     - `adjustment_note` = "(+2 added at pickup)" or "(-1 removed)"
     - `adjusted_at` = timestamp
   - Total recalculates based on adjusted quantities
-- Quick-adjust is available BEFORE confirming AND during the 30-min window after confirming
+- Quick-adjust is available BEFORE confirming AND during the rest of the day after confirming
 
 #### Payment Status (Per Order)
 - Three buttons: **Not Paid** / **Paid** / **Partial**
 - Each order has its **own** payment status — not a bulk status for the batch
+- **Payment is ALWAYS editable** — no time limit, no lock. Admin can update payment days/weeks later.
 - When "Partial" is selected:
   - Amount input appears: "Amount paid: $___"
   - Saves to `payment_amount` on `driver_orders`
-  - Shows remaining: "Remaining: $75.00"
+  - Shows remaining: "Remaining: $75.00" (clamped to $0.00 minimum, never negative)
+  - Amount is clamped to order total (can't enter more than owed)
 - When "Paid" is selected:
   - `payment_amount` auto-set to `total_amount`
 - Payment badges reflect in both admin view AND driver's dashboard
@@ -129,15 +131,16 @@ What admin sees when they open the dashboard:
 2. Admin clicks **"Confirm & Send"**
 3. Order `status` changes from `'pending'` → `'sent'`
 4. `confirmed_at` = now
-5. `admin_editable_until` = now + 30 minutes
+5. `admin_editable_until` = end of the same day (23:59:59)
 6. The confirmed/finalized order appears in the **driver's dashboard** under "My Orders"
 7. Driver gets a notification chime
 
-#### 30-Minute Admin Edit Window
-- After hitting "Confirm & Send", admin has 30 minutes to make corrections
-- Can change: quantities, payment status, payment amount
-- After 30 minutes: order is locked. Shows "This order can no longer be edited"
-- Visual countdown or timestamp showing when edit window expires
+#### Admin Edit Window (End of Day)
+- After hitting "Confirm & Send", admin can edit **quantities** for the rest of the day
+- Can change quantities until end of day
+- After midnight: quantities are locked. Shows "Quantities can no longer be edited (payment still can)"
+- **Payment status is NEVER locked** — always editable regardless of time
+- Visual countdown showing remaining edit time (e.g., "7h 10m")
 
 ---
 
@@ -192,24 +195,38 @@ Separate from "Incoming Orders" — this is the full historical archive.
 ---
 
 ## Checklist
-- [ ] Create `admin-dashboard.html` with base structure
-- [ ] Admin login screen (email/password, role check)
-- [ ] Sidebar navigation (desktop) + dropdown (mobile)
-- [ ] Overview page (stats cards, recent orders)
-- [ ] Incoming Orders page (live feed via Realtime)
-- [ ] Quick filter tabs (All / Today / Unpaid / Partial)
-- [ ] Order cards (separate per order, never merged)
-- [ ] Order detail (expandable, all line items)
-- [ ] Totals toggle (ON default, per-order toggle)
-- [ ] Smart date/time labels
-- [ ] System order number display
-- [ ] Quick-adjust quantities (editable, auto-log adjustments)
-- [ ] Payment status buttons (Not Paid / Paid / Partial + amount)
-- [ ] Confirm & Send flow
-- [ ] 30-min admin edit window with countdown
-- [ ] Notification sound on new order
-- [ ] Order History page (paginated, filterable, searchable)
-- [ ] Admin Settings page (language, text size, theme, notifications, logout)
-- [ ] EN/ES + Light/Dark theme
-- [ ] Add to `vite.config.js`
-- [ ] Browser verification
+- [x] Create `admin-dashboard.html` with base structure
+- [x] Admin login screen (email/password, role check)
+- [x] Sidebar navigation (desktop) + dropdown (mobile)
+- [x] Overview page (stats cards, recent orders)
+- [x] Incoming Orders page (live feed via Realtime)
+- [x] Quick filter tabs (All / Today / Unpaid / Partial)
+- [x] Order cards (separate per order, never merged)
+- [x] Order detail (expandable, all line items)
+- [x] Totals toggle (ON default, per-order toggle)
+- [x] Smart date/time labels
+- [x] System order number display
+- [x] Quick-adjust quantities (editable, auto-log adjustments)
+- [x] Payment status buttons (Not Paid / Paid / Partial + amount)
+- [x] Confirm & Send flow
+- [x] End-of-day admin edit window with countdown
+- [x] Notification sound on new order
+- [x] Order History page (paginated, filterable, searchable)
+- [x] Admin Settings page (language, text size, theme, notifications, logout)
+- [x] EN/ES + Light/Dark theme
+- [x] Add to `vite.config.js`
+- [x] Browser verification
+
+---
+
+## Post-Implementation Tweaks
+
+Changes made during verification testing:
+
+1. **Bug fix**: `driver-order.js` used `delivery_date`/`delivery_time` but schema has `pickup_date`/`pickup_time` — fixed, was blocking all order submissions
+2. **Edit window**: Changed from 30-min to **end of day** — admin can adjust quantities for the rest of the day after confirming
+3. **Payment always editable**: Payment status buttons (Not Paid / Paid / Partial) are **never disabled** — admin can update payment at any time, even weeks later
+4. **Negative remaining fix**: Outstanding Unpaid stat and partial remaining display now clamped to `$0.00` minimum — prevents confusing negative values when payment exceeds total
+5. **Partial amount clamp**: Can't enter a payment amount higher than the order total (auto-clamped)
+6. **Stat font fix**: Changed stat-value font from `Cormorant Garamond` to `Outfit` so numeral "1" doesn't look like capital "I"
+7. **Admin user created**: `admin@ceciliabakery.com` / `CeciliaAdmin2026!` (role: admin in user_metadata)

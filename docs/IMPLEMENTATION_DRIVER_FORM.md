@@ -201,7 +201,7 @@ Each section has a header you tap to expand/collapse.
 - [x] **Screen 1**: Code entry with validation + lockout
 - [x] **Screen 2**: Dashboard with dropdown nav + animated hamburger
 - [x] **Screen 2a**: Overview (balance, recent orders, new order button)
-- [ ] **Screen 2b**: My Orders (history, payment badges, system order #)
+- [x] **Screen 2b**: My Orders (history, payment badges, system order #)
 - [x] **Screen 2c**: Settings (language default, text size, theme, logout)
 - [x] **Screen 3**: Order form header fields (business, date defaults to today, custom time picker, ref)
 - [x] **Screen 3a**: Quick search
@@ -210,7 +210,7 @@ Each section has a header you tap to expand/collapse.
 - [x] **Screen 3d**: Multi-order (tabs, add/delete orders)
 - [x] **Screen 4**: Summary modal (left/right navigation, per-order display)
 - [x] **Screen 5**: Submit to Supabase + confirmation
-- [ ] **Screen 5a**: 30-min edit window (edit + add new orders)
+- [x] **Screen 5a**: 30-min edit window (edit + add new orders)
 - [x] EN/ES language toggle throughout (category names, labels, UI text)
 - [x] Light/dark theme throughout
 - [x] Add to `vite.config.js`

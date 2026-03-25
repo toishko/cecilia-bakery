@@ -127,14 +127,14 @@ Run through the complete flow:
 ---
 
 ## Checklist
-- [ ] Text size A−/A+ control (saved, live preview)
-- [ ] Language persistence (localStorage + Supabase)
-- [ ] Theme persistence (localStorage + fallback)
-- [ ] 5-attempt lockout with countdown
-- [ ] Responsive testing: phone, tablet, desktop (both sides)
-- [ ] Micro-animations (all listed above)
-- [ ] Input focus/blur behavior verified
-- [ ] `prefers-reduced-motion` respected
-- [ ] Final end-to-end flow tested
-- [ ] Dark mode contrast check
-- [ ] EN/ES completeness check
+- [x] Text size A−/A+ control (saved, live preview)
+- [x] Language persistence (localStorage + Supabase)
+- [x] Theme persistence (localStorage + fallback)
+- [x] 5-attempt lockout with countdown
+- [x] Responsive testing: phone, tablet, desktop (both sides)
+- [x] Micro-animations (all listed above)
+- [x] Input focus/blur behavior verified
+- [x] `prefers-reduced-motion` respected
+- [x] Final end-to-end flow tested
+- [x] Dark mode contrast check
+- [x] EN/ES completeness check

@@ -65,12 +65,12 @@ Each order card shows:
 ---
 
 ## Checklist
-- [ ] My Orders shows confirmed orders with all details
-- [ ] Order detail view (items, quantities, adjustments, smart date/time)
-- [ ] System order number visible in history only
-- [ ] Payment status badges on each order
-- [ ] Running balance banner (Overview + My Orders)
-- [ ] Balance breakdown on tap
-- [ ] Realtime notification when order is confirmed
-- [ ] Audio chime on confirmed order
-- [ ] End-to-end verification (submit → admin confirms → driver sees it + chime)
+- [x] My Orders shows confirmed orders with all details
+- [x] Order detail view (items, quantities, adjustments, smart date/time)
+- [x] System order number visible in history only
+- [x] Payment status badges on each order
+- [x] Running balance banner (Overview + My Orders)
+- [x] Balance breakdown on tap
+- [x] Realtime notification when order is confirmed
+- [x] Audio chime on confirmed order
+- [x] End-to-end verification (submit → admin confirms → driver sees it + chime)

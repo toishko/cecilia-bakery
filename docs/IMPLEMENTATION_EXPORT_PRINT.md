@@ -76,8 +76,8 @@ Total Items: 10
 ---
 
 ## Checklist
-- [ ] Print with totals (clean print stylesheet)
-- [ ] Print without totals (packing slip)
-- [ ] PDF download (respects totals toggle)
-- [ ] WhatsApp share (formatted message, respects totals + language)
-- [ ] Browser verification for all export methods
+- [x] Print with totals (clean print stylesheet)
+- [x] Print without totals (packing slip)
+- [x] PDF download (respects totals toggle)
+- [x] WhatsApp share (formatted message, respects totals + language)
+- [x] Browser verification for all export methods

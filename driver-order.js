@@ -48,6 +48,17 @@ function showSection(name) {
   } else {
     footer.style.display = 'none';
   }
+  // Phase 5: load My Orders when switching to that tab
+  if (name === 'my-orders') {
+    loadDriverBalance();
+    loadMyOrders();
+  }
+  if (name === 'overview') {
+    loadDriverBalance();
+    loadRecentOrders();
+  }
+  // Refresh icons for dynamically rendered content
+  requestAnimationFrame(() => lucide.createIcons());
 }
 
 /* ═══════════════════════════════════
@@ -154,6 +165,13 @@ function enterDashboard() {
     (lang === 'es' ? 'Bienvenido, ' : 'Welcome, ') + currentDriver.name;
   showScreen('dashboard');
   lucide.createIcons();
+  // Phase 5: load balance, recent orders, start realtime
+  loadDriverBalance();
+  loadRecentOrders();
+  setupDriverRealtime();
+  requestNotifPermission();
+  // Phase 9: sync language from Supabase
+  syncLangFromSupabase();
 }
 
 function handleLogout() {
@@ -303,6 +321,24 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('theme-toggle').addEventListener('change', toggleTheme);
   document.getElementById('logout-btn').addEventListener('click', handleLogout);
+
+  // ── Phase 5: Receipts & History ──
+  document.getElementById('order-detail-back').addEventListener('click', closeOrderDetail);
+  document.getElementById('order-detail-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeOrderDetail();
+  });
+  document.getElementById('balance-modal-close').addEventListener('click', closeBalanceBreakdown);
+  document.getElementById('balance-modal-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeBalanceBreakdown();
+  });
+  const notifToggle = document.getElementById('notification-toggle');
+  if (notifToggle) {
+    notifToggle.checked = notificationsEnabled;
+    notifToggle.addEventListener('change', (e) => {
+      notificationsEnabled = e.target.checked;
+      localStorage.setItem('cecilia_driver_notifications', notificationsEnabled);
+    });
+  }
 
   // ── Order form ──
   document.getElementById('footer-continue-btn').addEventListener('click', openSummary);
@@ -739,6 +775,67 @@ async function submitAllOrders() {
   submitBtn.textContent = lang === 'es' ? 'Enviando...' : 'Submitting...';
 
   try {
+    // ── EDIT MODE: update existing order ──
+    if (driverEditOrderId) {
+      const o = orders[0]; // In edit mode there's only one order
+
+      // Collect items with qty > 0
+      const items = [];
+      Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
+        sec.items.forEach(item => {
+          if (sec.type === 'redondo') {
+            (item.cols || []).forEach(col => {
+              const k = item.key + '_' + col;
+              const v = o.qty[k] || 0;
+              if (v > 0) items.push({ product_key: k, product_label: `${item.en} (${col})`, quantity: v });
+            });
+          } else {
+            const v = o.qty[item.key] || 0;
+            const vnt = o.qty[item.key + '_nt'] || 0;
+            if (v > 0) items.push({ product_key: item.key, product_label: item.en, quantity: v });
+            if (vnt > 0) items.push({ product_key: item.key + '_nt', product_label: item.en + ' (No Ticket)', quantity: vnt });
+          }
+        });
+      });
+
+      // Update order header
+      await sb.from('driver_orders').update({
+        business_name: o.business || null,
+        pickup_date: o.date || null,
+        pickup_time: o.time || null,
+        driver_ref: o.ref || null,
+        notes: o.notes || null,
+      }).eq('id', driverEditOrderId);
+
+      // Delete old items, insert new
+      await sb.from('driver_order_items').delete().eq('order_id', driverEditOrderId);
+      if (items.length > 0) {
+        const orderItems = items.map(it => ({
+          order_id: driverEditOrderId,
+          product_key: it.product_key,
+          product_label: it.product_label,
+          quantity: it.quantity,
+          price_at_order: 0,
+        }));
+        await sb.from('driver_order_items').insert(orderItems);
+      }
+
+      // Success
+      closeSummary();
+      document.getElementById('form-footer').style.display = 'none';
+      showToast(
+        lang === 'es'
+          ? `Pedido #${shortOrderId(driverEditOrderId)} actualizado`
+          : `Order #${shortOrderId(driverEditOrderId)} updated`,
+        'success'
+      );
+      driverEditOrderId = null;
+      orders = [];
+      showSection('my-orders');
+      return;
+    }
+
+    // ── NORMAL MODE: create new orders ──
     const batchId = crypto.randomUUID();
     const editableUntil = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
@@ -774,8 +871,8 @@ async function submitAllOrders() {
           batch_id: batchId,
           batch_index: i + 1,
           business_name: o.business || null,
-          delivery_date: o.date || null,
-          delivery_time: o.time || null,
+          pickup_date: o.date || null,
+          pickup_time: o.time || null,
           driver_ref: o.ref || null,
           notes: o.notes || null,
           status: 'pending',
@@ -870,6 +967,635 @@ function showToast(message, type = 'info') {
       setTimeout(() => toast.remove(), 300);
     }
   }, 5000);
+}
+
+/* ═══════════════════════════════════
+   PHASE 5 — DRIVER RECEIPTS & HISTORY
+   ═══════════════════════════════════ */
+let notificationsEnabled = localStorage.getItem('cecilia_driver_notifications') !== 'false';
+let balanceOrders = []; // cached for breakdown modal
+let driverRealtimeChannel = null;
+
+// ── PRODUCT LABEL MAP (reuse from order form) ──
+const PRODUCT_LABELS = {
+  redondo_inside_pina: 'Piña Inside', redondo_inside_pina_nt: 'Piña Inside (NT)',
+  redondo_top_pina: 'Piña Top', redondo_top_pina_nt: 'Piña Top (NT)',
+  redondo_inside_guava: 'Guava Inside', redondo_inside_guava_nt: 'Guava Inside (NT)',
+  redondo_top_guava: 'Guava Top', redondo_top_guava_nt: 'Guava Top (NT)',
+  redondo_inside_dulce: 'Dulce De Leche Inside', redondo_inside_dulce_nt: 'Dulce De Leche Inside (NT)',
+  plain: 'Plain', plain_nt: 'Plain (NT)',
+  raisin: 'Raisin', raisin_nt: 'Raisin (NT)',
+  cheese: 'Cheese', cheese_nt: 'Cheese (NT)',
+  guava_plain: 'Guava', guava_plain_nt: 'Guava (NT)',
+  coconut: 'Coconut', coconut_nt: 'Coconut (NT)',
+  ham: 'Ham', ham_nt: 'Ham (NT)',
+  tres_leche: 'Tres Leche', tres_leche_nt: 'Tres Leche (NT)',
+  cuatro_leche: 'Cuatro Leche', cuatro_leche_nt: 'Cuatro Leche (NT)',
+  tl_strawberry: 'TL Strawberry', tl_strawberry_nt: 'TL Strawberry (NT)',
+  tl_pina: 'TL Piña', tl_pina_nt: 'TL Piña (NT)',
+  red_velvet: 'Red Velvet', red_velvet_nt: 'Red Velvet (NT)',
+  carrot_cake: 'Carrot Cake', carrot_cake_nt: 'Carrot Cake (NT)',
+  cheesecake: 'Cheesecake', cheesecake_nt: 'Cheesecake (NT)',
+  pudin: 'Pudin', pudin_nt: 'Pudin (NT)',
+  pina_piece: 'Piña', pina_piece_nt: 'Piña (NT)',
+  guava_piece: 'Guava', guava_piece_nt: 'Guava (NT)',
+  chocoflan: 'Chocoflan', chocoflan_nt: 'Chocoflan (NT)',
+  flan: 'Flan', flan_nt: 'Flan (NT)',
+  strawberry_piece: 'Strawberry', strawberry_piece_nt: 'Strawberry (NT)',
+  sq_pudin: 'Pudin', sq_pudin_nt: 'Pudin (NT)',
+  pound: 'Pound', pound_nt: 'Pound (NT)',
+  sq_raisin: 'Raisin', sq_raisin_nt: 'Raisin (NT)',
+  maiz: 'Maiz', maiz_nt: 'Maiz (NT)',
+  cup_tres_leche: 'Tres Leche', cup_tres_leche_nt: 'Tres Leche (NT)',
+  cup_cuatro_leche: 'Cuatro Leche', cup_cuatro_leche_nt: 'Cuatro Leche (NT)',
+  cup_hershey: 'Hershey', cup_hershey_nt: 'Hershey (NT)',
+  hb_big_tres_leche: 'Tres Leche', hb_big_cuatro_leche: 'Cuatro Leche',
+  hb_small_tres_leche: 'Tres Leche', hb_small_cuatro_leche: 'Cuatro Leche'
+};
+
+function productLabel(key) {
+  return PRODUCT_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// ── SHORT ORDER ID (UUID → readable) ──
+function shortOrderId(uuid) {
+  return uuid ? uuid.split('-')[0].toUpperCase() : '???';
+}
+
+// ── SMART DATE / TIME LABELS ──
+function smartDateLabel(order) {
+  const dateVal = order.pickup_date;
+  const created = new Date(order.created_at);
+  if (dateVal) {
+    const d = new Date(dateVal + 'T00:00:00');
+    return { label: lang === 'es' ? 'Fecha de Recogida' : 'Pickup Date', value: formatDate(d) };
+  }
+  return { label: lang === 'es' ? 'Fecha del Pedido' : 'Date Ordered', value: formatDate(created) };
+}
+
+function smartTimeLabel(order) {
+  const timeVal = order.pickup_time;
+  if (timeVal) {
+    return { label: lang === 'es' ? 'Hora de Recogida' : 'Pickup Time', value: formatTime(timeVal) };
+  }
+  const created = new Date(order.created_at);
+  const h = created.getHours(), m = created.getMinutes();
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return { label: lang === 'es' ? 'Hora del Pedido' : 'Time Ordered', value: `${h12}:${String(m).padStart(2,'0')} ${period}` };
+}
+
+function formatDate(d) {
+  const months = lang === 'es'
+    ? ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+    : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+function formatTime(timeStr) {
+  const [hStr, mStr] = timeStr.split(':');
+  let h = parseInt(hStr);
+  const m = parseInt(mStr);
+  const period = h >= 12 ? 'PM' : 'AM';
+  if (h === 0) h = 12; else if (h > 12) h -= 12;
+  return `${h}:${String(m).padStart(2,'0')} ${period}`;
+}
+
+// ── LOAD DRIVER BALANCE ──
+async function loadDriverBalance() {
+  if (!sb || !currentDriver) return;
+  try {
+    const { data, error } = await sb
+      .from('driver_orders')
+      .select('id, total_amount, payment_status, payment_amount, business_name, pickup_date, created_at')
+      .eq('driver_id', currentDriver.id)
+      .in('payment_status', ['not_paid', 'partial']);
+
+    if (error) { console.error('Balance load error:', error); return; }
+
+    balanceOrders = data || [];
+    let total = 0;
+    balanceOrders.forEach(o => {
+      if (o.payment_status === 'not_paid') total += (o.total_amount || 0);
+      else if (o.payment_status === 'partial') total += Math.max(0, (o.total_amount || 0) - (o.payment_amount || 0));
+    });
+
+    // Update both banners
+    const fmt = '$' + total.toFixed(2);
+    const colorClass = total === 0 ? 'green' : total >= 100 ? 'red' : 'yellow';
+
+    const el1 = document.getElementById('balance-amount');
+    const el2 = document.getElementById('balance-amount-orders');
+    [el1, el2].forEach(el => {
+      if (!el) return;
+      el.textContent = fmt;
+      el.className = 'balance-amount ' + colorClass;
+    });
+  } catch (e) { console.error('Balance error:', e); }
+}
+
+// ── LOAD RECENT ORDERS (Overview) ──
+async function loadRecentOrders() {
+  if (!sb || !currentDriver) return;
+  const container = document.getElementById('recent-orders');
+  try {
+    const { data, error } = await sb
+      .from('driver_orders')
+      .select('*, driver_order_items(*)')
+      .eq('driver_id', currentDriver.id)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (error) { console.error('Recent orders error:', error); return; }
+    if (!data || data.length === 0) {
+      container.innerHTML = `<div class="empty-state" data-en="No orders yet" data-es="Aun no hay pedidos">${lang === 'es' ? 'Aún no hay pedidos' : 'No orders yet'}</div>`;
+      return;
+    }
+
+    container.innerHTML = data.map(o => renderOrderCard(o)).join('');
+  } catch (e) { console.error('Recent load error:', e); }
+}
+
+// ── LOAD MY ORDERS (Full list) ──
+async function loadMyOrders() {
+  if (!sb || !currentDriver) return;
+  const container = document.getElementById('all-orders');
+  try {
+    const { data, error } = await sb
+      .from('driver_orders')
+      .select('*, driver_order_items(*)')
+      .eq('driver_id', currentDriver.id)
+      .in('status', ['sent', 'pending'])
+      .order('created_at', { ascending: false });
+
+    if (error) { console.error('My orders error:', error); return; }
+    if (!data || data.length === 0) {
+      container.innerHTML = `<div class="empty-state" data-en="No orders yet" data-es="Aun no hay pedidos">${lang === 'es' ? 'Aún no hay pedidos' : 'No orders yet'}</div>`;
+      return;
+    }
+
+    container.innerHTML = data.map(o => renderOrderCard(o)).join('');
+    requestAnimationFrame(() => lucide.createIcons());
+  } catch (e) { console.error('My orders load error:', e); }
+}
+
+// ── EDIT WINDOW HELPERS ──
+function isOrderEditable(order) {
+  if (order.status !== 'pending') return false;
+  if (!order.editable_until) return false;
+  return new Date(order.editable_until) > new Date();
+}
+
+function getEditTimeRemaining(order) {
+  if (!order.editable_until) return null;
+  const until = new Date(order.editable_until);
+  const now = new Date();
+  if (until <= now) return null;
+  const ms = until - now;
+  const min = Math.ceil(ms / 60000);
+  return min;
+}
+
+// ── RENDER ORDER CARD ──
+function renderOrderCard(order) {
+  const dateInfo = smartDateLabel(order);
+  const timeInfo = smartTimeLabel(order);
+  const items = order.driver_order_items || [];
+  const itemCount = items.reduce((sum, i) => sum + (i.admin_qty ?? i.quantity), 0);
+
+  // Payment badge
+  let payBadge = '';
+  if (order.payment_status === 'paid') {
+    payBadge = `<span class="pay-badge paid">${lang === 'es' ? 'Pagado' : 'Paid'}</span>`;
+  } else if (order.payment_status === 'partial') {
+    payBadge = `<span class="pay-badge partial">${lang === 'es' ? 'Parcial' : 'Partial'}</span>`;
+  } else {
+    payBadge = `<span class="pay-badge not-paid">${lang === 'es' ? 'No Pagado' : 'Not Paid'}</span>`;
+  }
+
+  // Status badge
+  let statusBadge = '';
+  if (order.status === 'sent') {
+    statusBadge = `<span class="status-badge sent">${lang === 'es' ? 'Enviado' : 'Sent'}</span>`;
+  } else {
+    statusBadge = `<span class="status-badge pending">${lang === 'es' ? 'Pendiente' : 'Pending'}</span>`;
+  }
+
+  const bizName = order.business_name || (lang === 'es' ? 'Sin nombre' : 'No name');
+
+  // Edit window indicator
+  let editIndicator = '';
+  if (order.status === 'pending') {
+    const minLeft = getEditTimeRemaining(order);
+    if (minLeft !== null) {
+      editIndicator = `<div class="edit-indicator active"><i data-lucide="pencil"></i> ${lang === 'es' ? `${minLeft} min` : `${minLeft} min`}</div>`;
+    } else {
+      editIndicator = `<div class="edit-indicator locked"><i data-lucide="lock"></i> ${lang === 'es' ? 'Bloqueado' : 'Locked'}</div>`;
+    }
+  }
+
+  // Build compact meta items
+  let metaItems = `
+    <span><i data-lucide="calendar"></i>${dateInfo.value}</span>
+    <span><i data-lucide="clock"></i>${timeInfo.value}</span>
+    <span>${itemCount} ${lang === 'es' ? 'art.' : 'items'}</span>
+  `;
+  if (order.driver_ref) {
+    metaItems += `<span><i data-lucide="hash"></i>${order.driver_ref}</span>`;
+  }
+
+  return `
+    <div class="order-card" onclick="showOrderDetail('${order.id}')">
+      <div class="order-card-top">
+        <div>
+          <div class="order-card-biz">${bizName}</div>
+          <div class="order-card-num">#${shortOrderId(order.id)}</div>
+        </div>
+        <div class="order-card-status">${payBadge}${statusBadge}</div>
+      </div>
+      <div class="order-card-meta">${metaItems}</div>
+      <div class="order-card-bottom">
+        ${order.status === 'sent' && order.total_amount != null ? `<span class="order-card-total">$${parseFloat(order.total_amount).toFixed(2)}</span>` : `<span></span>`}
+        ${editIndicator}
+      </div>
+    </div>`;
+}
+
+// ── ORDER DETAIL MODAL ──
+let driverEditOrderId = null; // Track which order is being edited
+
+window.showOrderDetail = async function(orderId) {
+  if (!sb) return;
+  const overlay = document.getElementById('order-detail-overlay');
+
+  try {
+    const { data: order, error } = await sb
+      .from('driver_orders')
+      .select('*, driver_order_items(*)')
+      .eq('id', orderId)
+      .single();
+
+    if (error || !order) { console.error('Detail load error:', error); return; }
+
+    // Title
+    document.getElementById('order-detail-title').textContent =
+      `${lang === 'es' ? 'Pedido' : 'Order'} #${shortOrderId(order.id)}`;
+
+    // Badge
+    let badgeHtml = '';
+    if (order.payment_status === 'paid') {
+      badgeHtml = `<span class="pay-badge paid">${lang === 'es' ? 'Pagado' : 'Paid'}</span>`;
+    } else if (order.payment_status === 'partial') {
+      badgeHtml = `<span class="pay-badge partial">${lang === 'es' ? 'Parcial' : 'Partial'}</span>`;
+    } else {
+      badgeHtml = `<span class="pay-badge not-paid">${lang === 'es' ? 'No Pagado' : 'Not Paid'}</span>`;
+    }
+    document.getElementById('order-detail-badge').innerHTML = badgeHtml;
+
+    // Edit indicator
+    let editBannerHtml = '';
+    const editable = isOrderEditable(order);
+    if (order.status === 'pending') {
+      const minLeft = getEditTimeRemaining(order);
+      if (editable && minLeft !== null) {
+        editBannerHtml = `<div class="edit-indicator active" style="margin-bottom:10px">
+          <i data-lucide="pencil"></i> ${lang === 'es' ? `Editable por ${minLeft} min más` : `Editable for ${minLeft} more min`}
+        </div>`;
+      } else {
+        editBannerHtml = `<div class="edit-indicator locked" style="margin-bottom:10px">
+          <i data-lucide="lock"></i> ${lang === 'es' ? 'Este pedido ya no se puede editar' : 'This order can no longer be edited'}
+        </div>`;
+      }
+    }
+
+    // Meta
+    const dateInfo = smartDateLabel(order);
+    const timeInfo = smartTimeLabel(order);
+    const bizName = order.business_name || (lang === 'es' ? 'Sin nombre' : 'No name');
+    let metaHtml = `
+      <span><i data-lucide="store"></i>${bizName}</span>
+      <span><i data-lucide="calendar"></i>${dateInfo.label}: ${dateInfo.value}</span>
+      <span><i data-lucide="clock"></i>${timeInfo.label}: ${timeInfo.value}</span>
+    `;
+    if (order.driver_ref) {
+      metaHtml += `<span><i data-lucide="hash"></i>${lang === 'es' ? 'Ref' : 'Ref'}: ${order.driver_ref}</span>`;
+    }
+    document.getElementById('order-detail-meta').innerHTML = editBannerHtml + `<div class="order-detail-meta-inner">${metaHtml}</div>`;
+
+    // Items
+    const items = order.driver_order_items || [];
+    const showPrices = (order.status === 'sent'); // Show prices on confirmed orders
+    if (items.length === 0) {
+      document.getElementById('order-detail-items').innerHTML =
+        `<div class="empty-state">${lang === 'es' ? 'Sin artículos' : 'No items'}</div>`;
+    } else {
+      let itemsHtml = '';
+      let grandTotal = 0;
+      items.forEach(item => {
+        const label = productLabel(item.product_key);
+        const origQty = item.quantity;
+        const adminQty = item.admin_qty;
+        const effectiveQty = adminQty ?? origQty;
+        const price = parseFloat(item.price_at_order || 0);
+        const lineTotal = effectiveQty * price;
+        grandTotal += lineTotal;
+        let qtyDisplay = `×${effectiveQty}`;
+        let adjHtml = '';
+
+        if (adminQty != null && adminQty !== origQty) {
+          const diff = adminQty - origQty;
+          const sign = diff > 0 ? '+' : '';
+          adjHtml = `<span class="order-detail-item-adj">(${origQty} → ${adminQty}, ${sign}${diff} ${lang === 'es' ? 'en recogida' : 'at pickup'})</span>`;
+        }
+
+        itemsHtml += `
+          <div class="order-detail-item">
+            <span class="order-detail-item-name">${label}${adjHtml}</span>
+            <span class="order-detail-item-qty">${qtyDisplay}${showPrices ? ` · $${lineTotal.toFixed(2)}` : ''}</span>
+          </div>`;
+      });
+
+      // Grand total row for confirmed orders
+      if (showPrices) {
+        itemsHtml += `
+          <div class="order-detail-total">
+            <span>Total</span>
+            <span>$${grandTotal.toFixed(2)}</span>
+          </div>`;
+      }
+
+      document.getElementById('order-detail-items').innerHTML = itemsHtml;
+    }
+
+    // Notes
+    const notesEl = document.getElementById('order-detail-notes');
+    if (order.notes) {
+      notesEl.style.display = 'block';
+      notesEl.innerHTML = `<strong>${lang === 'es' ? 'Notas' : 'Notes'}</strong>${order.notes}`;
+    } else {
+      notesEl.style.display = 'none';
+    }
+
+    // Edit button (only for editable orders)
+    let actionsEl = document.getElementById('order-detail-actions');
+    if (!actionsEl) {
+      actionsEl = document.createElement('div');
+      actionsEl.id = 'order-detail-actions';
+      actionsEl.className = 'order-detail-actions';
+      const itemsContainer = document.getElementById('order-detail-items');
+      itemsContainer.parentNode.insertBefore(actionsEl, itemsContainer.nextSibling);
+    }
+    if (editable) {
+      actionsEl.innerHTML = `<button class="edit-order-btn" onclick="editOrder('${order.id}')">
+        <i data-lucide="pencil"></i> ${lang === 'es' ? 'Editar Pedido' : 'Edit Order'}
+      </button>`;
+      actionsEl.style.display = 'block';
+    } else {
+      actionsEl.style.display = 'none';
+    }
+
+    overlay.classList.add('open');
+    lucide.createIcons();
+  } catch (e) { console.error('Order detail error:', e); }
+};
+
+function closeOrderDetail() {
+  document.getElementById('order-detail-overlay').classList.remove('open');
+}
+
+// ── EDIT ORDER (30-MIN WINDOW) ──
+window.editOrder = async function(orderId) {
+  if (!sb) return;
+  closeOrderDetail();
+
+  try {
+    const { data: order, error } = await sb
+      .from('driver_orders')
+      .select('*, driver_order_items(*)')
+      .eq('id', orderId)
+      .single();
+
+    if (error || !order) { showToast(lang === 'es' ? 'Error cargando pedido' : 'Error loading order', 'error'); return; }
+    if (!isOrderEditable(order)) {
+      showToast(lang === 'es' ? 'Este pedido ya no se puede editar' : 'This order can no longer be edited', 'error');
+      return;
+    }
+
+    // Set edit mode
+    driverEditOrderId = orderId;
+
+    // Switch to order form
+    showSection('new-order');
+
+    // Pre-fill header fields
+    const bizInput = document.getElementById('business-name');
+    const dateInput = document.getElementById('order-date');
+    const timeInput = document.getElementById('time-display');
+    const refInput = document.getElementById('driver-ref');
+
+    if (bizInput) bizInput.value = order.business_name || '';
+    if (dateInput) dateInput.value = order.pickup_date || '';
+    if (timeInput && order.pickup_time) timeInput.textContent = formatTime12(order.pickup_time);
+    if (refInput) refInput.value = order.driver_ref || '';
+
+    // Pre-fill quantities — reset all to 0 first
+    document.querySelectorAll('.qty-input').forEach(inp => { inp.value = 0; });
+
+    // Set quantities from saved items
+    const items = order.driver_order_items || [];
+    items.forEach(item => {
+      const input = document.querySelector(`.qty-input[data-key="${item.product_key}"]`);
+      if (input) {
+        input.value = item.quantity;
+        // Highlight row
+        const row = input.closest('.product-row');
+        if (row) row.classList.toggle('has-value', item.quantity > 0);
+      }
+    });
+
+    // Update footer count
+    updateFooterCount();
+
+    // Show editing banner
+    showToast(
+      lang === 'es'
+        ? `Editando pedido #${shortOrderId(orderId)}. Haz cambios y presiona Continuar.`
+        : `Editing order #${shortOrderId(orderId)}. Make changes and press Continue.`,
+      'info'
+    );
+  } catch (e) {
+    console.error('Edit order error:', e);
+    showToast(lang === 'es' ? 'Error cargando pedido' : 'Error loading order', 'error');
+  }
+};
+
+function formatTime12(timeStr) {
+  if (!timeStr) return '';
+  const [h, m] = timeStr.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hr12 = h % 12 || 12;
+  return `${hr12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+// ── BALANCE BREAKDOWN MODAL ──
+window.showBalanceBreakdown = function() {
+  const overlay = document.getElementById('balance-modal-overlay');
+  const totalEl = document.getElementById('balance-modal-total');
+  const listEl = document.getElementById('balance-modal-list');
+
+  let total = 0;
+  balanceOrders.forEach(o => {
+    if (o.payment_status === 'not_paid') total += (o.total_amount || 0);
+    else if (o.payment_status === 'partial') total += Math.max(0, (o.total_amount || 0) - (o.payment_amount || 0));
+  });
+
+  const colorClass = total === 0 ? 'green' : total >= 100 ? 'red' : 'yellow';
+  totalEl.innerHTML = `<span class="balance-amount ${colorClass}">$${total.toFixed(2)}</span>`;
+
+  if (balanceOrders.length === 0) {
+    listEl.innerHTML = `<div class="balance-empty">${lang === 'es' ? 'No hay saldo pendiente' : 'No outstanding balance'}</div>`;
+  } else {
+    let html = '';
+    balanceOrders.forEach(o => {
+      const remaining = o.payment_status === 'not_paid'
+        ? (o.total_amount || 0)
+        : Math.max(0, (o.total_amount || 0) - (o.payment_amount || 0));
+      const dateVal = o.pickup_date || (o.created_at ? o.created_at.split('T')[0] : '');
+      const d = new Date(dateVal + 'T00:00:00');
+      const dateStr = formatDate(d);
+      const biz = o.business_name || (lang === 'es' ? 'Sin nombre' : 'No name');
+      const paidStr = o.payment_status === 'partial'
+        ? `${lang === 'es' ? 'Pagado' : 'Paid'}: $${(o.payment_amount || 0).toFixed(2)} / $${(o.total_amount || 0).toFixed(2)}`
+        : `${lang === 'es' ? 'Total' : 'Total'}: $${(o.total_amount || 0).toFixed(2)}`;
+
+      html += `
+        <div class="balance-item">
+          <div class="balance-item-info">
+            <div class="balance-item-biz">${biz} <span style="color:var(--tx-faint);font-weight:400">#${shortOrderId(o.id)}</span></div>
+            <div class="balance-item-date">${dateStr}</div>
+            <div class="balance-item-detail">${paidStr}</div>
+          </div>
+          <div class="balance-item-remaining">$${remaining.toFixed(2)}</div>
+        </div>`;
+    });
+    listEl.innerHTML = html;
+  }
+
+  overlay.classList.add('open');
+  lucide.createIcons();
+};
+
+function closeBalanceBreakdown() {
+  document.getElementById('balance-modal-overlay').classList.remove('open');
+}
+
+// ── REALTIME SUBSCRIPTION ──
+function setupDriverRealtime() {
+  if (!sb || !currentDriver) return;
+  // Clean up previous channel
+  if (driverRealtimeChannel) {
+    sb.removeChannel(driverRealtimeChannel);
+  }
+
+  driverRealtimeChannel = sb
+    .channel('driver-orders-' + currentDriver.id)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'driver_orders',
+      filter: 'driver_id=eq.' + currentDriver.id
+    }, (payload) => {
+      console.log('Driver realtime event:', payload);
+      // Refresh data
+      loadDriverBalance();
+      loadRecentOrders();
+      // If on My Orders tab, refresh that too
+      const myOrdersSection = document.getElementById('section-my-orders');
+      if (myOrdersSection && myOrdersSection.style.display !== 'none') {
+        loadMyOrders();
+      }
+
+      // Chime if order was just confirmed/sent
+      if (payload.eventType === 'UPDATE' && payload.new && payload.new.status === 'sent') {
+        if (notificationsEnabled) {
+          playChime();
+          const msg = lang === 'es'
+            ? `Pedido #${shortOrderId(payload.new.id)} confirmado`
+            : `Order #${shortOrderId(payload.new.id)} confirmed`;
+          showToast(msg, 'success');
+          showBrowserNotification(
+            lang === 'es' ? 'Pedido Confirmado' : 'Order Confirmed',
+            msg,
+            'my-orders'
+          );
+        }
+      }
+    })
+    .subscribe();
+}
+
+// ── AUDIO CHIME (Web Audio API) ──
+function playChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Two-note chime: E5 → G5
+    [659.25, 783.99].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.15 + 0.4);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + i * 0.15);
+      osc.stop(ctx.currentTime + i * 0.15 + 0.5);
+    });
+  } catch (e) { console.warn('Chime error:', e); }
+}
+
+// ── BROWSER NOTIFICATION API ──
+function requestNotifPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function showBrowserNotification(title, body, section) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (!notificationsEnabled) return;
+  try {
+    const n = new Notification(title, {
+      body,
+      icon: 'assets/logo.png',
+      badge: 'assets/logo.png',
+      tag: 'cecilia-driver-' + Date.now()
+    });
+    n.onclick = () => {
+      window.focus();
+      if (section) showTab(section);
+      n.close();
+    };
+    setTimeout(() => n.close(), 8000);
+  } catch (e) { console.warn('Browser notification failed:', e); }
+}
+
+// ── LANGUAGE SYNC TO SUPABASE ──
+async function syncLangFromSupabase() {
+  if (!sb || !currentDriver) return;
+  try {
+    const { data } = await sb.from('drivers').select('language').eq('id', currentDriver.id).single();
+    if (data && data.language && data.language !== lang) {
+      setLang(data.language);
+    }
+  } catch (e) { /* ignore */ }
+}
+
+async function saveLangToSupabase(newLang) {
+  if (!sb || !currentDriver) return;
+  try {
+    await sb.from('drivers').update({ language: newLang }).eq('id', currentDriver.id);
+  } catch (e) { /* ignore */ }
 }
 
 /* ═══════════════════════════════════

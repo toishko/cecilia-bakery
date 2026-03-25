@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cecilia Bakery — Admin Dashboard</title>
+  <meta name="description" content="Admin dashboard for managing driver orders at Cecilia Bakery">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="/admin-dashboard.css">
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#C8102E">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Cecilia">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+</head>
+
+<body>
+<div class="bg-blob"></div>
+
+<!-- ═══════════════ SCREEN 1: ADMIN LOGIN ═══════════════ -->
+<div id="screen-login" class="screen login-screen active">
+  <div class="login-card">
+    <div class="corner-controls">
+      <button class="corner-btn lang-switch" id="login-lang-btn">EN</button>
+      <button class="corner-btn" id="login-theme-btn">
+        <i data-lucide="sun" style="width:14px;height:14px"></i>
+      </button>
+    </div>
+    <img src="assets/logo.png" alt="Cecilia Bakery" class="login-logo">
+    <h1 class="login-title" data-en="Admin Portal" data-es="Portal Administrativo">Admin Portal</h1>
+    <p class="login-subtitle" data-en="Sign in to manage orders" data-es="Inicia sesión para gestionar pedidos">Sign in to manage orders</p>
+    <div class="login-input-wrap">
+      <input type="email" id="admin-email" class="login-input" placeholder="Email"
+        data-en-placeholder="Email" data-es-placeholder="Correo electrónico" autocomplete="email">
+    </div>
+    <div class="login-input-wrap">
+      <input type="password" id="admin-password" class="login-input" placeholder="Password"
+        data-en-placeholder="Password" data-es-placeholder="Contraseña" autocomplete="current-password">
+    </div>
+    <button id="login-btn" class="login-btn" data-en="Sign In" data-es="Iniciar Sesión">Sign In</button>
+    <div id="login-error" class="login-error"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ SCREEN 2: DASHBOARD ═══════════════ -->
+<div id="screen-dashboard" class="screen dash-screen">
+
+  <!-- SIDEBAR (Desktop) -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand" style="cursor:pointer" onclick="document.querySelector('.sidebar-nav-item[data-section=overview]').click()">
+      <img src="assets/logo.png" alt="Cecilia" class="sidebar-logo">
+      <span class="sidebar-title">Cecilia Bakery</span>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-nav-item active" data-section="overview">
+        <i data-lucide="bar-chart-3"></i>
+        <span data-en="Overview" data-es="Resumen">Overview</span>
+      </button>
+      <button class="sidebar-nav-item" data-section="incoming">
+        <i data-lucide="inbox"></i>
+        <span data-en="Incoming Orders" data-es="Pedidos Entrantes">Incoming Orders</span>
+        <span class="nav-badge" id="incoming-badge" style="display:none">0</span>
+      </button>
+      <button class="sidebar-nav-item" data-section="drivers">
+        <i data-lucide="truck"></i>
+        <span data-en="Drivers" data-es="Conductores">Drivers</span>
+      </button>
+      <button class="sidebar-nav-item" data-section="history">
+        <i data-lucide="archive"></i>
+        <span data-en="Order History" data-es="Historial de Pedidos">Order History</span>
+      </button>
+      <button class="sidebar-nav-item" data-section="settings">
+        <i data-lucide="settings"></i>
+        <span data-en="Settings" data-es="Configuración">Settings</span>
+      </button>
+    </nav>
+  </aside>
+
+  <!-- MOBILE HEADER -->
+  <header class="mobile-header" id="mobile-header">
+    <img src="assets/logo.png" alt="Cecilia" class="mobile-logo" style="cursor:pointer" onclick="document.querySelector('.mobile-nav-item[data-section=overview]').click()">
+    <span class="mobile-section-name" id="mobile-section-name" data-en="Overview" data-es="Resumen">Overview</span>
+    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </header>
+
+  <!-- MOBILE NAV DROPDOWN -->
+  <nav id="mobile-nav" class="mobile-nav">
+    <button class="mobile-nav-item active" data-section="overview">
+      <i data-lucide="bar-chart-3"></i>
+      <span data-en="Overview" data-es="Resumen">Overview</span>
+    </button>
+    <button class="mobile-nav-item" data-section="incoming">
+      <i data-lucide="inbox"></i>
+      <span data-en="Incoming Orders" data-es="Pedidos Entrantes">Incoming Orders</span>
+      <span class="nav-badge mobile-badge" id="incoming-badge-mobile" style="display:none">0</span>
+    </button>
+    <button class="mobile-nav-item" data-section="drivers">
+      <i data-lucide="truck"></i>
+      <span data-en="Drivers" data-es="Conductores">Drivers</span>
+    </button>
+    <button class="mobile-nav-item" data-section="history">
+      <i data-lucide="archive"></i>
+      <span data-en="Order History" data-es="Historial de Pedidos">Order History</span>
+    </button>
+    <button class="mobile-nav-item" data-section="settings">
+      <i data-lucide="settings"></i>
+      <span data-en="Settings" data-es="Configuración">Settings</span>
+    </button>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" id="main-content">
+
+    <!-- ── OVERVIEW ── -->
+    <div id="section-overview" class="dash-section active">
+      <h2 class="page-title" data-en="Overview" data-es="Resumen">Overview</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon"><i data-lucide="shopping-bag"></i></div>
+          <div class="stat-info">
+            <span class="stat-value" id="stat-today-orders">0</span>
+            <span class="stat-label" data-en="Today's Orders" data-es="Pedidos de Hoy">Today's Orders</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon revenue"><i data-lucide="dollar-sign"></i></div>
+          <div class="stat-info">
+            <span class="stat-value" id="stat-today-revenue">$0.00</span>
+            <span class="stat-label" data-en="Today's Revenue" data-es="Ingresos de Hoy">Today's Revenue</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon unpaid"><i data-lucide="alert-circle"></i></div>
+          <div class="stat-info">
+            <span class="stat-value" id="stat-outstanding">$0.00</span>
+            <span class="stat-label" data-en="Outstanding Unpaid" data-es="Saldo Pendiente">Outstanding Unpaid</span>
+          </div>
+        </div>
+      </div>
+      <div class="section-header">
+        <h3 class="section-title" data-en="Recent Orders" data-es="Pedidos Recientes">Recent Orders</h3>
+        <button class="link-btn" id="view-all-orders-btn" data-en="View All" data-es="Ver Todos">View All</button>
+      </div>
+      <div id="recent-orders-list">
+        <div class="empty-state" data-en="No orders yet" data-es="Aún no hay pedidos">No orders yet</div>
+      </div>
+    </div>
+
+    <!-- ── INCOMING ORDERS ── -->
+    <div id="section-incoming" class="dash-section" style="display:none">
+      <h2 class="page-title" data-en="Incoming Orders" data-es="Pedidos Entrantes">Incoming Orders</h2>
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-filter="all" data-en="All" data-es="Todos">All</button>
+        <button class="filter-tab" data-filter="today" data-en="Today" data-es="Hoy">Today</button>
+        <button class="filter-tab" data-filter="unpaid" data-en="Unpaid" data-es="Sin Pagar">Unpaid</button>
+        <button class="filter-tab" data-filter="partial" data-en="Partial" data-es="Parcial">Partial</button>
+      </div>
+      <div id="incoming-orders-list">
+        <div class="empty-state" data-en="No incoming orders" data-es="No hay pedidos entrantes">No incoming orders</div>
+      </div>
+    </div>
+
+    <!-- ── DRIVERS ── -->
+    <div id="section-drivers" class="dash-section" style="display:none">
+
+      <!-- Sub-view 1: DRIVER LIST -->
+      <div id="drivers-list-view">
+        <div class="section-header">
+          <h2 class="page-title" data-en="Drivers" data-es="Conductores">Drivers</h2>
+          <button class="btn-add-driver" id="btn-add-driver">
+            <i data-lucide="plus" style="width:16px;height:16px"></i>
+            <span data-en="Add Driver" data-es="Agregar Conductor">Add Driver</span>
+          </button>
+        </div>
+        <div class="driver-search-wrap">
+          <i data-lucide="search" style="width:16px;height:16px"></i>
+          <input type="text" id="driver-search" class="driver-search"
+            placeholder="Search by name or code..." data-en-placeholder="Search by name or code..." data-es-placeholder="Buscar por nombre o código...">
+        </div>
+        <div class="driver-table-wrap" id="driver-table-wrap">
+          <table class="driver-table" id="driver-table">
+            <thead>
+              <tr>
+                <th class="sortable" data-sort="name"><span data-en="Name" data-es="Nombre">Name</span> <i data-lucide="chevrons-up-down" style="width:12px;height:12px"></i></th>
+                <th class="sortable" data-sort="code"><span data-en="Code" data-es="Código">Code</span> <i data-lucide="chevrons-up-down" style="width:12px;height:12px"></i></th>
+                <th class="hide-mobile"><span data-en="Phone" data-es="Teléfono">Phone</span></th>
+                <th><span data-en="Status" data-es="Estado">Status</span></th>
+                <th class="sortable" data-sort="balance"><span data-en="Balance" data-es="Saldo">Balance</span> <i data-lucide="chevrons-up-down" style="width:12px;height:12px"></i></th>
+              </tr>
+            </thead>
+            <tbody id="driver-table-body"></tbody>
+          </table>
+          <div class="empty-state" id="drivers-empty" style="display:none" data-en="No drivers yet" data-es="Aún no hay conductores">No drivers yet</div>
+        </div>
+      </div>
+
+      <!-- Sub-view 2: DRIVER FORM (Add/Edit) -->
+      <div id="drivers-form-view" style="display:none">
+        <div class="form-back-row">
+          <button class="btn-back" id="btn-back-to-list">
+            <i data-lucide="arrow-left" style="width:16px;height:16px"></i>
+            <span data-en="Back to Drivers" data-es="Volver a Conductores">Back to Drivers</span>
+          </button>
+        </div>
+        <h2 class="page-title" id="driver-form-title" data-en="Add New Driver" data-es="Agregar Nuevo Conductor">Add New Driver</h2>
+
+        <div class="driver-form-card">
+          <div class="driver-form-fields">
+            <div class="form-row">
+              <div class="form-field">
+                <label data-en="Name" data-es="Nombre">Name</label>
+                <input type="text" id="df-name" placeholder="Driver name" data-en-placeholder="Driver name" data-es-placeholder="Nombre del conductor">
+              </div>
+              <div class="form-field">
+                <label data-en="Code" data-es="Código">Code</label>
+                <input type="text" id="df-code" placeholder="e.g. carlos01" data-en-placeholder="e.g. carlos01" data-es-placeholder="ej. carlos01">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label data-en="Phone" data-es="Teléfono">Phone</label>
+                <input type="tel" id="df-phone" placeholder="Optional" data-en-placeholder="Optional" data-es-placeholder="Opcional">
+              </div>
+              <div class="form-field" id="df-status-wrap" style="display:none">
+                <label data-en="Status" data-es="Estado">Status</label>
+                <div class="status-toggle-wrap">
+                  <label class="toggle">
+                    <input type="checkbox" id="df-active" checked>
+                    <span class="toggle-track"></span>
+                    <span class="toggle-thumb"></span>
+                  </label>
+                  <span id="df-active-label" data-en="Active" data-es="Activo">Active</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PRICE TABLE -->
+        <div class="driver-form-card">
+          <div class="price-table-header">
+            <h3 data-en="Prices" data-es="Precios">Prices</h3>
+            <div class="copy-prices-wrap">
+              <label data-en="Copy prices from:" data-es="Copiar precios de:">Copy prices from:</label>
+              <select id="copy-prices-select">
+                <option value="" data-en="— Select —" data-es="— Seleccionar —">— Select —</option>
+              </select>
+            </div>
+          </div>
+          <div id="price-table-container"></div>
+        </div>
+
+        <div class="driver-form-actions">
+          <button class="btn-cancel" id="btn-cancel-driver" data-en="Cancel" data-es="Cancelar">Cancel</button>
+          <button class="btn-save-driver" id="btn-save-driver" data-en="Save Driver" data-es="Guardar Conductor">Save Driver</button>
+        </div>
+      </div>
+
+      <!-- Sub-view 3: DRIVER PROFILE -->
+      <div id="drivers-profile-view" style="display:none">
+        <div class="form-back-row">
+          <button class="btn-back" id="btn-back-from-profile">
+            <i data-lucide="arrow-left" style="width:16px;height:16px"></i>
+            <span data-en="Back to Drivers" data-es="Volver a Conductores">Back to Drivers</span>
+          </button>
+        </div>
+
+        <div class="driver-profile-header" id="driver-profile-header"></div>
+
+        <div class="profile-section">
+          <div class="section-header">
+            <h3 data-en="Balance Breakdown" data-es="Desglose de Saldo">Balance Breakdown</h3>
+          </div>
+          <div id="profile-balance-list"></div>
+        </div>
+
+        <div class="profile-section">
+          <div class="section-header">
+            <h3 data-en="Recent Orders" data-es="Pedidos Recientes">Recent Orders</h3>
+          </div>
+          <div id="profile-recent-orders"></div>
+        </div>
+
+        <div class="profile-section">
+          <div class="section-header">
+            <h3 data-en="Price Table" data-es="Tabla de Precios">Price Table</h3>
+            <button class="link-btn" id="btn-edit-driver-from-profile" data-en="Edit Driver" data-es="Editar Conductor">Edit Driver</button>
+          </div>
+          <div id="profile-prices"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── ORDER HISTORY ── -->
+    <div id="section-history" class="dash-section" style="display:none">
+      <h2 class="page-title" data-en="Order History" data-es="Historial de Pedidos">Order History</h2>
+      <div class="history-filters">
+        <div class="history-filter-row">
+          <div class="filter-field">
+            <label data-en="From" data-es="Desde">From</label>
+            <input type="date" id="filter-date-from">
+          </div>
+          <div class="filter-field">
+            <label data-en="To" data-es="Hasta">To</label>
+            <input type="date" id="filter-date-to">
+          </div>
+        </div>
+        <div class="history-filter-row">
+          <div class="filter-field grow">
+            <label data-en="Driver" data-es="Conductor">Driver</label>
+            <select id="filter-driver">
+              <option value="" data-en="All Drivers" data-es="Todos los Conductores">All Drivers</option>
+            </select>
+          </div>
+          <div class="filter-field grow">
+            <label data-en="Payment" data-es="Pago">Payment</label>
+            <select id="filter-payment">
+              <option value="" data-en="All" data-es="Todos">All</option>
+              <option value="not_paid" data-en="Not Paid" data-es="Sin Pagar">Not Paid</option>
+              <option value="paid" data-en="Paid" data-es="Pagado">Paid</option>
+              <option value="partial" data-en="Partial" data-es="Parcial">Partial</option>
+            </select>
+          </div>
+        </div>
+        <div class="history-filter-row">
+          <div class="filter-field grow">
+            <label data-en="Search" data-es="Buscar">Search</label>
+            <input type="text" id="filter-search" placeholder="Business name or #order number"
+              data-en-placeholder="Business name or #order number" data-es-placeholder="Nombre del negocio o #número de pedido">
+          </div>
+          <button class="filter-apply-btn" id="filter-apply-btn" data-en="Search" data-es="Buscar">Search</button>
+        </div>
+      </div>
+      <div id="history-orders-list">
+        <div class="empty-state" data-en="No orders found" data-es="No se encontraron pedidos">No orders found</div>
+      </div>
+      <button class="load-more-btn" id="load-more-btn" style="display:none" data-en="Load More" data-es="Cargar Más">Load More</button>
+    </div>
+
+    <!-- ── SETTINGS ── -->
+    <div id="section-settings" class="dash-section" style="display:none">
+      <h2 class="page-title" data-en="Settings" data-es="Configuración">Settings</h2>
+      <div class="settings-group">
+        <div class="settings-row">
+          <div class="settings-label"><i data-lucide="globe"></i> <span data-en="Language" data-es="Idioma">Language</span></div>
+          <div class="lang-toggle">
+            <button class="lang-opt active" data-lang="en">EN</button>
+            <button class="lang-opt" data-lang="es">ES</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label"><i data-lucide="type"></i> <span data-en="Text Size" data-es="Tamaño de Texto">Text Size</span></div>
+          <div class="size-btns">
+            <button class="size-btn" data-size="-2">A-</button>
+            <button class="size-btn" data-size="2">A+</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label"><i data-lucide="moon"></i> <span data-en="Dark Mode" data-es="Modo Oscuro">Dark Mode</span></div>
+          <label class="toggle">
+            <input type="checkbox" id="theme-toggle">
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label"><i data-lucide="bell"></i> <span data-en="Notification Sounds" data-es="Sonidos de Notificación">Notification Sounds</span></div>
+          <label class="toggle">
+            <input type="checkbox" id="notification-toggle" checked>
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+      </div>
+      <div class="admin-info" id="admin-info"></div>
+      <button class="logout-btn" id="logout-btn" data-en="Log Out" data-es="Cerrar Sesión">Log Out</button>
+    </div>
+
+  </main>
+</div>
+
+<!-- ORDER DETAIL MODAL -->
+<div class="detail-overlay" id="detail-overlay">
+  <div class="detail-modal">
+    <div class="detail-handle"></div>
+    <div class="detail-header">
+      <h3 class="detail-title" id="detail-title">Order #0000</h3>
+      <button class="detail-close" id="detail-close">✕</button>
+    </div>
+    <div id="detail-content"></div>
+    <div class="detail-actions" id="detail-actions"></div>
+  </div>
+</div>
+
+<!-- PRINT CONTAINER (hidden, used for @media print) -->
+<div id="print-container" style="display:none"></div>
+
+<!-- NOTIFICATION SOUND -->
+<audio id="notification-sound" preload="auto">
+  <source src="data:audio/wav;base64,UklGRl9vT19teleXBlfm10LQBAAAASUREWAEAAQCAkAAAbvAAAAAAHDAdoAAAA=" type="audio/wav">
+</audio>
+
+<script type="module" src="/admin-dashboard.js"></script>
+<script>
+  if ('serviceWorker' in navigator && !location.hostname.includes('localhost')) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>

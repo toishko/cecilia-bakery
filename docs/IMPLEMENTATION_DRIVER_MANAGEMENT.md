@@ -91,12 +91,12 @@
 ---
 
 ## Checklist
-- [ ] Driver list table (sortable, searchable)
-- [ ] Add New Driver form (name, code, phone)
-- [ ] Price table for new driver (all products, no defaults)
-- [ ] "Copy Prices From..." dropdown
-- [ ] Edit driver (name, code, phone, enable/disable)
-- [ ] Edit driver prices (future orders only)
-- [ ] Driver profile page (balance breakdown, recent orders)
-- [ ] Validation (unique code, all prices filled)
-- [ ] Browser verification
+- [x] Driver list table (sortable, searchable)
+- [x] Add New Driver form (name, code, phone)
+- [x] Price table for new driver (all products, no defaults)
+- [x] "Copy Prices From..." dropdown
+- [x] Edit driver (name, code, phone, enable/disable)
+- [x] Edit driver prices (future orders only)
+- [x] Driver profile page (balance breakdown, recent orders)
+- [x] Validation (unique code, all prices filled)
+- [x] Browser verification
