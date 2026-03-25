@@ -7,6 +7,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         menu: resolve(__dirname, 'menu.html'),
+        driverOrder: resolve(__dirname, 'driver-order.html'),
       },
     },
   },

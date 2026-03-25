@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cecilia Bakery — Driver Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="/driver-order.css">
+</head>
+
+<body>
+<div class="bg-blob"></div>
+
+<!-- ═══════════════ SCREEN 1: CODE ENTRY ═══════════════ -->
+<div id="screen-login" class="screen login-screen active">
+  <div class="login-card">
+    <div class="corner-controls">
+      <button class="corner-btn lang-switch" id="login-lang-btn">EN</button>
+      <button class="corner-btn" id="login-theme-btn">
+        <i data-lucide="sun" style="width:14px;height:14px"></i>
+      </button>
+    </div>
+    <img src="assets/logo.png" alt="Cecilia Bakery" class="login-logo">
+    <h1 class="login-title" data-en="Driver Portal" data-es="Portal del Conductor">Driver Portal</h1>
+    <p class="login-subtitle" data-en="Enter your code to continue" data-es="Ingresa tu codigo para continuar">Enter your code to continue</p>
+    <div class="login-input-wrap">
+      <input type="text" id="code-input" class="login-input" placeholder="Your code" autocomplete="off"
+        data-en-placeholder="Your code" data-es-placeholder="Tu codigo">
+    </div>
+    <button id="login-btn" class="login-btn" data-en="Enter" data-es="Entrar">Enter</button>
+    <div id="login-error" class="login-error"></div>
+    <div id="login-lockout" class="login-lockout"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ SCREEN 2: DASHBOARD ═══════════════ -->
+<div id="screen-dashboard" class="screen dash-screen">
+  <div class="dash-header">
+    <img src="assets/logo.png" alt="Cecilia" class="dash-logo">
+    <button class="dash-menu-btn" id="dash-menu-btn">
+      <i data-lucide="menu"></i>
+    </button>
+  </div>
+
+  <nav id="dash-nav" class="dash-nav">
+    <button class="dash-nav-item active" data-section="overview">
+      <i data-lucide="layout-dashboard"></i>
+      <span data-en="Overview" data-es="Resumen">Overview</span>
+    </button>
+    <button class="dash-nav-item" data-section="new-order">
+      <i data-lucide="plus-circle"></i>
+      <span data-en="New Order" data-es="Nuevo Pedido">New Order</span>
+    </button>
+    <button class="dash-nav-item" data-section="my-orders">
+      <i data-lucide="package"></i>
+      <span data-en="My Orders" data-es="Mis Pedidos">My Orders</span>
+    </button>
+    <button class="dash-nav-item" data-section="settings">
+      <i data-lucide="settings"></i>
+      <span data-en="Settings" data-es="Configuracion">Settings</span>
+    </button>
+  </nav>
+
+  <div class="dash-content">
+    <!-- OVERVIEW -->
+    <div id="section-overview" class="dash-section active">
+      <div class="welcome-card">
+        <h2 class="welcome-name" id="welcome-name">Welcome</h2>
+        <p class="welcome-sub" data-en="Ready to place an order?" data-es="Listo para hacer un pedido?">Ready to place an order?</p>
+      </div>
+      <div class="balance-banner">
+        <div><div class="balance-label" data-en="Outstanding Balance" data-es="Saldo Pendiente">Outstanding Balance</div></div>
+        <div class="balance-amount green" id="balance-amount">$0.00</div>
+      </div>
+      <button class="new-order-btn" id="new-order-cta">
+        <i data-lucide="plus"></i>
+        <span data-en="New Order" data-es="Nuevo Pedido">New Order</span>
+      </button>
+      <h3 class="section-title" data-en="Recent Orders" data-es="Pedidos Recientes">Recent Orders</h3>
+      <div id="recent-orders">
+        <div class="empty-state" data-en="No orders yet" data-es="Aun no hay pedidos">No orders yet</div>
+      </div>
+    </div>
+
+    <!-- MY ORDERS -->
+    <div id="section-my-orders" class="dash-section" style="display:none">
+      <h3 class="section-title" data-en="My Orders" data-es="Mis Pedidos">My Orders</h3>
+      <div id="all-orders">
+        <div class="empty-state" data-en="No orders yet" data-es="Aun no hay pedidos">No orders yet</div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="section-settings" class="dash-section" style="display:none">
+      <h3 class="section-title" data-en="Settings" data-es="Configuracion">Settings</h3>
+      <div class="settings-group">
+        <div class="settings-row">
+          <div class="settings-label"><i data-lucide="globe"></i> <span data-en="Language" data-es="Idioma">Language</span></div>
+          <div class="lang-toggle">
+            <button class="lang-opt active" data-lang="en">EN</button>
+            <button class="lang-opt" data-lang="es">ES</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label"><i data-lucide="type"></i> <span data-en="Text Size" data-es="Tamano de Texto">Text Size</span></div>
+          <div class="size-btns">
+            <button class="size-btn" data-size="-2">A-</button>
+            <button class="size-btn" data-size="2">A+</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label"><i data-lucide="moon"></i> <span data-en="Dark Mode" data-es="Modo Oscuro">Dark Mode</span></div>
+          <label class="toggle">
+            <input type="checkbox" id="theme-toggle">
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+      </div>
+      <button class="logout-btn" id="logout-btn" data-en="Log Out" data-es="Cerrar Sesion">Log Out</button>
+    </div>
+
+    <!-- NEW ORDER FORM -->
+    <div id="section-new-order" class="dash-section" style="display:none">
+      <!-- Order Tabs -->
+      <div class="order-tabs" id="order-tabs"></div>
+
+      <!-- Header Fields -->
+      <div class="form-fields">
+        <div class="form-field full">
+          <label data-en="Business / Delivery To" data-es="Negocio / Entregar a">Business / Delivery To</label>
+          <input type="text" id="field-business" data-en-placeholder="Where is this order going?" data-es-placeholder="A donde va este pedido?" placeholder="Where is this order going?">
+        </div>
+        <div class="form-field">
+          <label data-en="Date" data-es="Fecha">Date</label>
+          <input type="date" id="field-date">
+        </div>
+        <div class="form-field">
+          <label data-en="Time" data-es="Hora">Time</label>
+          <input type="time" id="field-time">
+        </div>
+        <div class="form-field full">
+          <label data-en="My Order #" data-es="Mi Pedido #">My Order #</label>
+          <input type="text" id="field-ref" data-en-placeholder="Your reference (optional)" data-es-placeholder="Tu referencia (opcional)" placeholder="Your reference (optional)">
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="form-search">
+        <i data-lucide="search"></i>
+        <input type="text" id="product-search" data-en-placeholder="Search products..." data-es-placeholder="Buscar productos..." placeholder="Search products...">
+        <button class="form-search-clear" id="search-clear">✕</button>
+      </div>
+
+      <!-- Product Sections (dynamically built by JS) -->
+      <div id="product-sections" style="padding-bottom:70px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER BAR (only visible during order form) -->
+<div class="form-footer" id="form-footer" style="display:none">
+  <div class="form-footer-count"><span data-en="Items:" data-es="Articulos:">Items:</span> <strong id="footer-item-count">0</strong></div>
+  <button class="form-footer-btn" id="footer-continue-btn" disabled data-en="Continue" data-es="Continuar">Continue</button>
+</div>
+
+<!-- SUMMARY MODAL -->
+<div class="summary-overlay" id="summary-overlay">
+  <div class="summary-modal">
+    <div class="summary-handle"></div>
+    <div class="summary-nav">
+      <button class="summary-nav-btn" id="summary-prev">←</button>
+      <h3 class="summary-title" id="summary-title">Order 1 of 1</h3>
+      <button class="summary-nav-btn" id="summary-next">→</button>
+    </div>
+    <div id="summary-content"></div>
+    <div class="summary-notes">
+      <label data-en="Notes" data-es="Notas">Notes</label>
+      <textarea id="summary-notes" data-en-placeholder="Any special instructions..." data-es-placeholder="Instrucciones especiales..." placeholder="Any special instructions..."></textarea>
+    </div>
+    <div class="summary-actions">
+      <button class="btn-back" id="summary-back" data-en="Go Back" data-es="Regresar">Go Back</button>
+      <button class="btn-submit" id="summary-submit" data-en="Submit All Orders" data-es="Enviar Todos los Pedidos">Submit All Orders</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/driver-order.js"></script>
+</body>
+</html>
