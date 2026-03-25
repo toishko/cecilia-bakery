@@ -523,25 +523,30 @@ function buildProductSections() {
     html += `<div class="acc-body"><div class="prod-table">`;
 
     if (sec.type === 'redondo') {
-      // Two grouped columns: INSIDE and TOP, each with Qty and No Tkt
-      html += `<div class="redondo-col-headers">`;
-      html += `<span class="rh-name"></span>`;
-      html += `<div class="rh-group"><span class="rh-group-title redondo-col-label" data-en="Inside" data-es="Adentro">${lang === 'es' ? 'Adentro' : 'Inside'}</span><div class="rh-sub"><span class="redondo-col-label" data-en="Qty" data-es="Cant">${lang === 'es' ? 'Cant' : 'Qty'}</span><span class="redondo-col-label" data-en="No Tkt" data-es="Sin Tkt">${lang === 'es' ? 'Sin Tkt' : 'No Tkt'}</span></div></div>`;
-      html += `<div class="rh-group"><span class="rh-group-title redondo-col-label" data-en="Top" data-es="Arriba">${lang === 'es' ? 'Arriba' : 'Top'}</span><div class="rh-sub"><span class="redondo-col-label" data-en="Qty" data-es="Cant">${lang === 'es' ? 'Cant' : 'Qty'}</span><span class="redondo-col-label" data-en="No Tkt" data-es="Sin Tkt">${lang === 'es' ? 'Sin Tkt' : 'No Tkt'}</span></div></div>`;
-      html += `</div>`;
+      // Render as standard rows — split Inside/Top into separate sub-rows
       sec.items.forEach(item => {
-        html += `<div class="prod-row redondo-row" data-product="${item.key}"><span class="prod-name" data-en="${item.en}" data-es="${item.es}">${L(item)}</span>`;
-        // Inside group
-        html += `<div class="rh-qty-pair">`;
-        html += item.cols.includes('inside') ? qtyControl(item.key + '_inside') : `<div class="qty-placeholder">—</div>`;
-        html += item.cols.includes('inside_nt') ? qtyControl(item.key + '_inside_nt') : `<div class="qty-placeholder">—</div>`;
-        html += `</div>`;
-        // Top group
-        html += `<div class="rh-qty-pair">`;
-        html += item.cols.includes('top') ? qtyControl(item.key + '_top') : `<div class="qty-placeholder">—</div>`;
-        html += item.cols.includes('top_nt') ? qtyControl(item.key + '_top_nt') : `<div class="qty-placeholder">—</div>`;
-        html += `</div>`;
-        html += `</div>`;
+        const hasInside = item.cols.includes('inside');
+        const hasTop = item.cols.includes('top');
+
+        if (hasInside) {
+          const insideLabel = hasTop
+            ? `${L(item)} — ${lang === 'es' ? 'Adentro' : 'Inside'}`
+            : L(item);
+          const insideLabelEN = hasTop ? `${item.en} — Inside` : item.en;
+          const insideLabelES = hasTop ? `${item.es} — Adentro` : item.es;
+          html += `<div class="prod-row" data-product="${item.key}"><span class="prod-name" data-en="${insideLabelEN}" data-es="${insideLabelES}">${insideLabel}</span>`;
+          html += `<div class="prod-qty-group"><span class="prod-qty-label" data-en="Qty" data-es="Cant">${lang === 'es' ? 'Cant' : 'Qty'}</span>${qtyControl(item.key + '_inside')}</div>`;
+          html += `<div class="prod-qty-group"><span class="prod-qty-label" data-en="No Tkt" data-es="Sin Tkt">${lang === 'es' ? 'Sin Tkt' : 'No Tkt'}</span>${qtyControl(item.key + '_inside_nt')}</div>`;
+          html += `</div>`;
+        }
+
+        if (hasTop) {
+          const topLabel = `${L(item)} — ${lang === 'es' ? 'Arriba' : 'Top'}`;
+          html += `<div class="prod-row" data-product="${item.key}"><span class="prod-name" data-en="${item.en} — Top" data-es="${item.es} — Arriba">${topLabel}</span>`;
+          html += `<div class="prod-qty-group"><span class="prod-qty-label" data-en="Qty" data-es="Cant">${lang === 'es' ? 'Cant' : 'Qty'}</span>${qtyControl(item.key + '_top')}</div>`;
+          html += `<div class="prod-qty-group"><span class="prod-qty-label" data-en="No Tkt" data-es="Sin Tkt">${lang === 'es' ? 'Sin Tkt' : 'No Tkt'}</span>${qtyControl(item.key + '_top_nt')}</div>`;
+          html += `</div>`;
+        }
       });
     } else {
       sec.items.forEach(item => {
