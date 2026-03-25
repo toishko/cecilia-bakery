@@ -100,8 +100,16 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
 .dash-logo{height:36px;width:auto;object-fit:contain}
 [data-theme="dark"] .dash-logo{filter:brightness(0) invert(1) sepia(1) saturate(2) hue-rotate(310deg)}
-.dash-menu-btn{background:none;border:none;color:var(--tx);cursor:pointer;padding:8px}
-.dash-menu-btn svg{width:24px;height:24px}
+.dash-menu-btn{background:none;border:none;cursor:pointer;padding:6px;
+  display:flex;flex-direction:column;justify-content:center;gap:5px;width:36px;height:36px}
+.dash-menu-btn span{display:block;height:2px;border-radius:2px;background:var(--tx);
+  transition:transform .3s,opacity .3s,width .3s}
+.dash-menu-btn span:nth-child(1){width:22px}
+.dash-menu-btn span:nth-child(2){width:16px}
+.dash-menu-btn span:nth-child(3){width:22px}
+.dash-menu-btn.open span:nth-child(1){transform:translateY(7px) rotate(45deg);width:22px}
+.dash-menu-btn.open span:nth-child(2){opacity:0;width:0}
+.dash-menu-btn.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);width:22px}
 .dash-nav{background:var(--bg-card);border-bottom:1px solid var(--bd);
   overflow:hidden;max-height:0;transition:max-height .3s ease,padding .3s ease;padding:0 16px;
   position:sticky;top:61px;z-index:99}
