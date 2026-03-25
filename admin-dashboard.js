@@ -760,14 +760,14 @@ function renderOrderDetail() {
   // Actions
   let actionsHtml = '';
   if (order.status === 'pending' || (order.status === 'sent' && canEditOrder(order))) {
+    // Fully editable: one "Save Changes" button that saves everything including payment
     actionsHtml += `<button class="btn-save" onclick="saveOrderChanges()" data-en="Save Changes" data-es="Guardar Cambios">${lang === 'es' ? 'Guardar Cambios' : 'Save Changes'}</button>`;
+  } else if (order.status === 'sent') {
+    // Not fully editable, but payment is always editable
+    actionsHtml += `<button class="btn-save" onclick="savePaymentOnly()" data-en="Update Payment" data-es="Actualizar Pago">${lang === 'es' ? 'Actualizar Pago' : 'Update Payment'}</button>`;
   }
   if (order.status === 'pending') {
     actionsHtml += `<button class="btn-confirm" onclick="confirmAndSend()" data-en="Confirm & Send" data-es="Confirmar y Enviar">${lang === 'es' ? 'Confirmar y Enviar' : 'Confirm & Send'}</button>`;
-  }
-  // Always show Update Payment on sent orders (payment is always editable)
-  if (order.status === 'sent') {
-    actionsHtml += `<button class="btn-save" onclick="savePaymentOnly()" data-en="Update Payment" data-es="Actualizar Pago">${lang === 'es' ? 'Actualizar Pago' : 'Update Payment'}</button>`;
   }
   // Export bar
   actionsHtml += `<div class="export-bar">
