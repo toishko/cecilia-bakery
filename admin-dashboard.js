@@ -69,6 +69,7 @@ function showSection(name) {
   if (name === 'incoming') loadIncomingOrders();
   if (name === 'history') loadHistoryOrders(true);
   if (name === 'drivers') { showDriversListView(); loadDriverList(); }
+  if (name === 'settings') loadActiveInvites();
 }
 
 /* ═══════════════════════════════════
@@ -1796,6 +1797,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('admin-password').addEventListener('keydown', e => {
     if (e.key === 'Enter') handleLogin();
   });
+
+  // ── Login/Register toggle ──
+  document.getElementById('toggle-register').addEventListener('click', () => {
+    document.getElementById('register-form').style.display = 'block';
+    document.getElementById('toggle-register').style.display = 'none';
+    document.querySelector('.login-divider').style.display = 'none';
+    document.getElementById('login-btn').style.display = 'none';
+    document.querySelectorAll('#screen-login .login-input-wrap').forEach((el, i) => {
+      if (i < 2) el.style.display = 'none'; // hide email/password inputs
+    });
+  });
+  document.getElementById('toggle-login').addEventListener('click', () => {
+    document.getElementById('register-form').style.display = 'none';
+    document.getElementById('toggle-register').style.display = '';
+    document.querySelector('.login-divider').style.display = '';
+    document.getElementById('login-btn').style.display = '';
+    document.querySelectorAll('#screen-login .login-input-wrap').forEach(el => {
+      el.style.display = '';
+    });
+  });
+  document.getElementById('register-btn').addEventListener('click', handleRegister);
+
+  // ── Invite code generation ──
+  document.getElementById('generate-invite-btn').addEventListener('click', generateInviteCode);
   document.getElementById('login-lang-btn').addEventListener('click', () => {
     setLang(lang === 'en' ? 'es' : 'en');
   });
@@ -1886,3 +1911,181 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ── Check existing session ──
   await checkSession();
 });
+
+// ═══════════════════════════════════
+//  ADMIN INVITE CODE SYSTEM
+// ═══════════════════════════════════
+
+async function handleRegister() {
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const code = document.getElementById('reg-invite-code').value.trim().toUpperCase();
+  const errorEl = document.getElementById('register-error');
+  const btn = document.getElementById('register-btn');
+
+  if (!email || !password || !code) {
+    errorEl.textContent = lang === 'es' ? 'Completa todos los campos' : 'Fill in all fields';
+    return;
+  }
+  if (password.length < 6) {
+    errorEl.textContent = lang === 'es' ? 'La contraseña debe tener al menos 6 caracteres' : 'Password must be at least 6 characters';
+    return;
+  }
+
+  btn.disabled = true;
+  errorEl.textContent = '';
+
+  try {
+    // 1. Validate invite code
+    const { data: invite, error: invErr } = await sb
+      .from('admin_invite_codes')
+      .select('*')
+      .eq('code', code)
+      .eq('is_used', false)
+      .single();
+
+    if (invErr || !invite) {
+      errorEl.textContent = lang === 'es' ? 'Código de invitación no válido' : 'Invalid invite code';
+      btn.disabled = false;
+      return;
+    }
+
+    // Check expiry
+    if (new Date(invite.expires_at) < new Date()) {
+      errorEl.textContent = lang === 'es' ? 'Este código ha expirado' : 'This code has expired';
+      btn.disabled = false;
+      return;
+    }
+
+    // 2. Create user
+    const { data: signUpData, error: signUpErr } = await sb.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { role: 'admin' }
+      }
+    });
+
+    if (signUpErr) {
+      errorEl.textContent = signUpErr.message || (lang === 'es' ? 'Error al registrarse' : 'Registration error');
+      btn.disabled = false;
+      return;
+    }
+
+    // 3. Mark invite code as used
+    await sb.from('admin_invite_codes').update({
+      is_used: true,
+      used_by: email,
+      used_at: new Date().toISOString()
+    }).eq('id', invite.id);
+
+    // 4. Auto sign in
+    const { data: loginData, error: loginErr } = await sb.auth.signInWithPassword({ email, password });
+    if (loginErr) {
+      errorEl.textContent = lang === 'es' ? 'Cuenta creada. Inicia sesión manualmente.' : 'Account created. Please sign in manually.';
+      errorEl.style.color = 'var(--green)';
+      document.getElementById('toggle-login').click();
+      btn.disabled = false;
+      return;
+    }
+
+    currentUser = loginData.user;
+    enterDashboard();
+
+  } catch (e) {
+    errorEl.textContent = lang === 'es' ? 'Error de conexión' : 'Connection error';
+    console.error('Register error:', e);
+  }
+  btn.disabled = false;
+}
+
+async function generateInviteCode() {
+  if (!sb || !currentUser) return;
+
+  const btn = document.getElementById('generate-invite-btn');
+  btn.disabled = true;
+
+  try {
+    // Generate random 8-char code
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no confusing chars (I/O/0/1)
+    let code = '';
+    for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+
+    // Insert into DB (expires in 24h)
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    const { error } = await sb.from('admin_invite_codes').insert({
+      code,
+      created_by: currentUser.email,
+      expires_at: expiresAt
+    });
+
+    if (error) {
+      console.error('Invite code error:', error);
+      btn.disabled = false;
+      return;
+    }
+
+    // Display the code
+    const display = document.getElementById('invite-code-display');
+    display.style.display = 'block';
+    display.innerHTML = `
+      <div class="invite-code-card">
+        <div style="font-size:.78rem;color:var(--tx-muted)">${lang === 'es' ? 'Código de invitación' : 'Invite Code'}</div>
+        <div class="invite-code-value">${code}</div>
+        <button class="invite-code-copy" onclick="navigator.clipboard.writeText('${code}').then(()=>this.textContent='✓ ${lang === 'es' ? 'Copiado' : 'Copied'}')">
+          <i data-lucide="copy" style="width:12px;height:12px"></i> ${lang === 'es' ? 'Copiar' : 'Copy'}
+        </button>
+        <div class="invite-code-expires">${lang === 'es' ? 'Expira en 24 horas' : 'Expires in 24 hours'}</div>
+      </div>`;
+    lucide.createIcons();
+
+    // Reload active invites
+    loadActiveInvites();
+
+  } catch (e) {
+    console.error('Generate invite error:', e);
+  }
+  btn.disabled = false;
+}
+
+async function loadActiveInvites() {
+  if (!sb || !currentUser) return;
+
+  const container = document.getElementById('active-invites');
+  try {
+    const { data, error } = await sb
+      .from('admin_invite_codes')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (error || !data || data.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+
+    const now = new Date();
+    container.innerHTML = data.map(inv => {
+      let statusClass, statusLabel;
+      if (inv.is_used) {
+        statusClass = 'used';
+        statusLabel = lang === 'es' ? 'Usado' : 'Used';
+      } else if (new Date(inv.expires_at) < now) {
+        statusClass = 'expired';
+        statusLabel = lang === 'es' ? 'Expirado' : 'Expired';
+      } else {
+        statusClass = 'active';
+        statusLabel = lang === 'es' ? 'Activo' : 'Active';
+      }
+
+      const usedInfo = inv.used_by ? ` · ${inv.used_by}` : '';
+      return `
+        <div class="invite-item">
+          <span class="invite-item-code">${inv.code}</span>
+          <span>${usedInfo}</span>
+          <span class="invite-item-status ${statusClass}">${statusLabel}</span>
+        </div>`;
+    }).join('');
+
+  } catch (e) { console.error('Load invites error:', e); }
+}

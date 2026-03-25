@@ -45,6 +45,26 @@
     </div>
     <button id="login-btn" class="login-btn" data-en="Sign In" data-es="Iniciar Sesión">Sign In</button>
     <div id="login-error" class="login-error"></div>
+    <div class="login-divider"><span data-en="or" data-es="o">or</span></div>
+    <button type="button" class="login-toggle-btn" id="toggle-register" data-en="Register with Invite Code" data-es="Registrarse con Código de Invitación">Register with Invite Code</button>
+    <!-- Register form (hidden by default) -->
+    <div id="register-form" style="display:none">
+      <div class="login-input-wrap">
+        <input type="email" id="reg-email" class="login-input" placeholder="Email"
+          data-en-placeholder="Email" data-es-placeholder="Correo electrónico" autocomplete="email">
+      </div>
+      <div class="login-input-wrap">
+        <input type="password" id="reg-password" class="login-input" placeholder="Password"
+          data-en-placeholder="Password" data-es-placeholder="Contraseña" autocomplete="new-password">
+      </div>
+      <div class="login-input-wrap">
+        <input type="text" id="reg-invite-code" class="login-input" placeholder="Invite Code"
+          data-en-placeholder="Invite Code" data-es-placeholder="Código de Invitación" autocomplete="off" style="text-transform:uppercase">
+      </div>
+      <button id="register-btn" class="login-btn" data-en="Create Account" data-es="Crear Cuenta">Create Account</button>
+      <div id="register-error" class="login-error"></div>
+      <button type="button" class="login-toggle-btn" id="toggle-login" data-en="← Back to Sign In" data-es="← Volver a Iniciar Sesión">← Back to Sign In</button>
+    </div>
   </div>
 </div>
 
@@ -380,6 +400,21 @@
             <span class="toggle-thumb"></span>
           </label>
         </div>
+      </div>
+      <!-- Invite Admin Section -->
+      <h3 class="settings-section-title" data-en="Invite Admin" data-es="Invitar Admin">
+        <i data-lucide="user-plus" style="width:18px;height:18px"></i> Invite Admin
+      </h3>
+      <div class="settings-group">
+        <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:10px">
+          <p class="invite-desc" data-en="Generate a one-time invite code. Share it with the new admin so they can register." data-es="Genera un código de invitación de un solo uso. Compártelo con el nuevo admin para que se registre.">Generate a one-time invite code. Share it with the new admin so they can register.</p>
+          <button class="invite-gen-btn" id="generate-invite-btn">
+            <i data-lucide="key"></i>
+            <span data-en="Generate Invite Code" data-es="Generar Código de Invitación">Generate Invite Code</span>
+          </button>
+          <div id="invite-code-display" style="display:none"></div>
+        </div>
+        <div id="active-invites" class="active-invites"></div>
       </div>
       <div class="admin-info" id="admin-info"></div>
       <button class="logout-btn" id="logout-btn" data-en="Log Out" data-es="Cerrar Sesión">Log Out</button>

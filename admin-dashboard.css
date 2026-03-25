@@ -609,6 +609,50 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .export-btn.whatsapp:hover{background:#1da855}
 
 /* ═══════════════════════════════════
+   ADMIN INVITE SYSTEM
+   ═══════════════════════════════════ */
+/* Login page: divider + toggle */
+.login-divider{display:flex;align-items:center;gap:12px;margin:16px 0 8px;color:var(--tx-muted);font-size:.8rem}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--bd)}
+.login-toggle-btn{background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit;
+  font-size:.85rem;font-weight:500;padding:8px 0;transition:opacity .2s}
+.login-toggle-btn:hover{opacity:.7}
+
+/* Settings: invite section */
+.settings-section-title{font-size:1rem;font-weight:600;margin:20px 0 10px;color:var(--tx);
+  display:flex;align-items:center;gap:8px}
+.invite-desc{font-size:.82rem;color:var(--tx-muted);line-height:1.4;margin:0}
+.invite-gen-btn{display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:12px;border:none;border-radius:10px;background:var(--red);
+  color:var(--tx-on-red);font-size:.9rem;font-weight:600;font-family:inherit;
+  cursor:pointer;transition:background .2s,transform .1s}
+.invite-gen-btn:hover{background:var(--red-dk)}
+.invite-gen-btn:active{transform:scale(.97)}
+.invite-gen-btn i{width:18px;height:18px}
+
+/* Generated code display */
+.invite-code-card{background:var(--bg-surface);border:2px dashed var(--red);border-radius:10px;
+  padding:14px;text-align:center;margin-top:8px}
+.invite-code-value{font-family:monospace;font-size:1.4rem;font-weight:700;letter-spacing:3px;
+  color:var(--red);margin:6px 0}
+.invite-code-copy{display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--bd);
+  border-radius:6px;padding:5px 12px;font-size:.78rem;cursor:pointer;color:var(--tx-muted);
+  font-family:inherit;transition:all .2s}
+.invite-code-copy:hover{border-color:var(--red);color:var(--red)}
+.invite-code-expires{font-size:.72rem;color:var(--tx-faint);margin-top:6px}
+
+/* Active invites list */
+.active-invites{padding:4px 0}
+.invite-item{display:flex;justify-content:space-between;align-items:center;
+  padding:10px 12px;border-bottom:1px solid var(--bd);font-size:.82rem}
+.invite-item:last-child{border-bottom:none}
+.invite-item-code{font-family:monospace;font-weight:600;color:var(--tx)}
+.invite-item-status{font-size:.72rem;padding:2px 8px;border-radius:99px;font-weight:600}
+.invite-item-status.active{background:rgba(47,138,76,.12);color:#2f8a4c}
+.invite-item-status.used{background:rgba(200,16,46,.10);color:var(--red)}
+.invite-item-status.expired{background:rgba(150,150,150,.12);color:var(--tx-faint)}
+
+/* ═══════════════════════════════════
    MICRO-ANIMATIONS
    ═══════════════════════════════════ */
 .order-card:hover{transform:translateY(-1px) scale(1.005);
