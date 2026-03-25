@@ -198,22 +198,23 @@ Each section has a header you tap to expand/collapse. Matches the layout from th
 ---
 
 ## Checklist
-- [ ] Create `driver-order.html` with base structure
-- [ ] Implement design system (CSS variables, fonts, glassmorphic cards, light/dark)
-- [ ] **Screen 1**: Code entry with validation + lockout
-- [ ] **Screen 2**: Dashboard with dropdown nav
-- [ ] **Screen 2a**: Overview (balance, recent orders, new order button)
+- [x] Create `driver-order.html` with base structure
+- [x] Implement design system (CSS variables, fonts, glassmorphic cards, light/dark)
+- [x] **Screen 1**: Code entry with validation + lockout
+- [x] **Screen 2**: Dashboard with dropdown nav
+- [x] **Screen 2a**: Overview (balance, recent orders, new order button)
 - [ ] **Screen 2b**: My Orders (history, payment badges, system order #)
-- [ ] **Screen 2c**: Settings (language default, text size, theme, logout)
-- [ ] **Screen 3**: Order form header fields (business, date, time, ref)
-- [ ] **Screen 3a**: Quick search
-- [ ] **Screen 3b**: All product sections with correct layouts
-- [ ] **Screen 3c**: Input UX (focus/blur, +/-, highlights)
-- [ ] **Screen 3d**: Multi-order (tabs, add/delete orders)
-- [ ] **Screen 4**: Summary modal (left/right navigation, per-order display)
-- [ ] **Screen 5**: Submit to Supabase + confirmation
+- [x] **Screen 2c**: Settings (language default, text size, theme, logout)
+- [x] **Screen 3**: Order form header fields (business, date, time, ref)
+- [x] **Screen 3a**: Quick search
+- [x] **Screen 3b**: All product sections with correct layouts
+- [x] **Screen 3c**: Input UX (focus/blur, +/-, highlights)
+- [x] **Screen 3d**: Multi-order (tabs, add/delete orders)
+- [x] **Screen 4**: Summary modal (left/right navigation, per-order display)
+- [x] **Screen 5**: Submit to Supabase + confirmation
 - [ ] **Screen 5a**: 30-min edit window (edit + add new orders)
-- [ ] EN/ES language toggle throughout
-- [ ] Light/dark theme throughout
-- [ ] Add to `vite.config.js`
-- [ ] Full flow browser verification
+- [x] EN/ES language toggle throughout
+- [x] Light/dark theme throughout
+- [x] Add to `vite.config.js`
+- [x] Full flow browser verification
+
