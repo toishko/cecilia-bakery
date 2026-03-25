@@ -103,7 +103,8 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .dash-menu-btn{background:none;border:none;color:var(--tx);cursor:pointer;padding:8px}
 .dash-menu-btn svg{width:24px;height:24px}
 .dash-nav{background:var(--bg-card);border-bottom:1px solid var(--bd);
-  overflow:hidden;max-height:0;transition:max-height .3s ease;padding:0 16px}
+  overflow:hidden;max-height:0;transition:max-height .3s ease,padding .3s ease;padding:0 16px;
+  position:sticky;top:61px;z-index:99}
 .dash-nav.open{max-height:300px;padding:8px 16px 16px}
 .dash-nav-item{display:flex;align-items:center;gap:12px;padding:14px 12px;
   border-radius:10px;cursor:pointer;transition:background .15s;font-size:.95rem;
