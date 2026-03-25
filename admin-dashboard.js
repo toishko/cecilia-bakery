@@ -646,6 +646,7 @@ window.openOrderDetail = async function(orderId) {
     detailTotalsVisible = true;
     renderOrderDetail();
     document.getElementById('detail-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
   } catch (e) { console.error(e); }
 };
 
@@ -1011,6 +1012,7 @@ window.savePaymentOnly = async function() {
 
 function closeDetailModal() {
   document.getElementById('detail-overlay').classList.remove('open');
+  document.body.style.overflow = '';
   detailOrder = null;
   detailItems = [];
 }
@@ -1738,6 +1740,7 @@ window.openOrderDetail = async function(orderId) {
   detailItems = items || [];
   renderOrderDetail();
   document.getElementById('detail-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
 };
 
 /* ═══════════════════════════════════
