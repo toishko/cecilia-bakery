@@ -33,6 +33,7 @@ function showScreen(id) {
 
 function showSection(name) {
   document.getElementById('dash-nav').classList.remove('open');
+  document.getElementById('dash-menu-btn').classList.remove('open');
   document.querySelectorAll('.dash-section').forEach(s => s.style.display = 'none');
   const target = document.getElementById('section-' + name);
   if (target) target.style.display = 'block';
