@@ -1,6 +1,7 @@
 // ═══════════════════════════════════
 //  Pull-to-Refresh for PWA
 //  Adds native-feeling refresh gesture
+//  Disabled when any modal/overlay is open
 // ═══════════════════════════════════
 (function() {
   // Only enable in standalone PWA mode
@@ -12,6 +13,18 @@
   let pulling = false;
   let pullDistance = 0;
   const THRESHOLD = 80;
+
+  // Check if any modal/overlay is open
+  function isModalOpen() {
+    // Body is position:fixed when a modal is open (our scroll lock)
+    if (document.body.style.position === 'fixed') return true;
+    // Also check for any overlay with .open class
+    const openOverlay = document.querySelector(
+      '.detail-overlay.open, .summary-overlay.open, ' +
+      '[id$="-overlay"].open, [id$="-modal-overlay"].open'
+    );
+    return !!openOverlay;
+  }
 
   // Create indicator
   const indicator = document.createElement('div');
@@ -37,7 +50,8 @@
   document.body.appendChild(indicator);
 
   document.addEventListener('touchstart', (e) => {
-    // Only trigger when scrolled to top
+    // Don't activate if a modal is open or not at top
+    if (isModalOpen()) return;
     if (window.scrollY > 5) return;
     startY = e.touches[0].clientY;
     pulling = true;
