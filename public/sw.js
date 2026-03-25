@@ -3,7 +3,7 @@
 //  Basic caching for PWA install
 // ═══════════════════════════════════
 
-const CACHE_NAME = 'cecilia-v1';
+const CACHE_NAME = 'cecilia-v2';
 const STATIC_ASSETS = [
   '/',
   '/driver-order.html',
@@ -12,6 +12,8 @@ const STATIC_ASSETS = [
   '/driver-order.js',
   '/admin-dashboard.css',
   '/admin-dashboard.js',
+  '/manifest.json',
+  '/manifest-admin.json',
   '/assets/logo.png',
   '/assets/icon-192.png',
   '/assets/icon-512.png',
