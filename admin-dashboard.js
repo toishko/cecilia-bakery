@@ -1686,12 +1686,12 @@ async function saveDriver() {
   let allFilled = true;
   priceInputs.forEach(input => {
     const val = input.value.trim();
-    if (!val) { allFilled = false; return; }
+    if (!val && !editingDriverId) { allFilled = false; return; }
     const product = ADMIN_PRODUCTS.flatMap(s => s.items).find(i => i.key === input.dataset.key);
     prices.push({
       product_key: input.dataset.key,
       product_label: product ? product.en : input.dataset.key,
-      price: parseFloat(val)
+      price: parseFloat(val) || 0
     });
   });
 
