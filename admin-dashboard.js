@@ -1185,6 +1185,14 @@ function openPrintWindow(showTotals, isPDF) {
     showToast(lang === 'es' ? 'Permite ventanas emergentes' : 'Please allow popups', 'error');
     return;
   }
+
+  // Temporarily unlock body scroll so app isn't frozen when user returns
+  const savedTop = document.body.style.top;
+  const scrollY = parseInt(savedTop || '0', 10) * -1;
+  document.body.style.position = '';
+  document.body.style.top = '';
+  window.scrollTo(0, scrollY);
+
   printWin.document.write(fullHTML);
   printWin.document.close();
 
@@ -1196,6 +1204,17 @@ function openPrintWindow(showTotals, isPDF) {
       'info'
     );
   }
+
+  // When user returns to the app, re-lock body if modal is still open
+  const onReturn = () => {
+    window.removeEventListener('focus', onReturn);
+    const overlay = document.getElementById('detail-overlay');
+    if (overlay && overlay.classList.contains('open')) {
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${window.scrollY}px`;
+    }
+  };
+  window.addEventListener('focus', onReturn);
 }
 
 window.printOrder = function() {
