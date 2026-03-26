@@ -302,8 +302,8 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .summary-item{display:flex;justify-content:space-between;padding:4px 0;font-size:.9rem;gap:8px}
 .summary-item-name{color:var(--tx);min-width:0;overflow-wrap:break-word}
 .summary-item-qty{font-weight:600;color:var(--tx);flex-shrink:0}
-.summary-item .no-ticket-tag{font-size:.65rem;color:var(--red);background:rgba(200,16,46,.08);
-  padding:1px 6px;border-radius:4px;margin-left:6px}
+.summary-item .no-ticket-tag{font-size:9px;color:var(--red);background:rgba(200,16,46,.08);
+  padding:1px 5px;border-radius:4px;margin-left:4px;white-space:nowrap}
 .summary-meta{background:var(--bg-surface);border-radius:8px;padding:10px 12px;margin-bottom:12px;
   font-size:.85rem;color:var(--tx-muted)}
 .summary-meta strong{color:var(--tx)}
@@ -453,8 +453,9 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .order-card-edit{margin-top:8px;padding-top:6px;border-top:1px solid var(--bd)}
 
 /* Payment badges — fixed width for consistency */
-.pay-badge{display:inline-block;padding:3px 10px;border-radius:99px;
-  font-size:.68rem;font-weight:600;letter-spacing:.02em;min-width:60px;text-align:center}
+.pay-badge{display:inline-block;padding:2px 8px;border-radius:99px;
+  font-size:10px;font-weight:600;letter-spacing:.02em;min-width:50px;text-align:center;
+  white-space:nowrap;line-height:1.4}
 .pay-badge.paid{background:#e8f5e9;color:#2f8a4c}
 .pay-badge.not-paid{background:#ffebee;color:#c0392b}
 .pay-badge.partial{background:#fff8e1;color:#c09020}
@@ -525,10 +526,10 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   text-transform:uppercase;letter-spacing:.5px;color:var(--red);padding:6px 10px;
   border-left:3px solid var(--red);border-bottom:1px solid var(--bd);margin:0 -18px;
   padding-left:18px}
-.order-detail-items .no-ticket-tag{display:inline-block;font-size:.65rem;font-weight:700;
+.order-detail-items .no-ticket-tag{display:inline-block;font-size:9px;font-weight:700;
   text-transform:uppercase;letter-spacing:.3px;color:var(--red);
-  background:rgba(200,16,46,.08);padding:2px 6px;border-radius:4px;margin-left:6px;
-  vertical-align:middle}
+  background:rgba(200,16,46,.08);padding:1px 5px;border-radius:4px;margin-left:4px;
+  vertical-align:middle;white-space:nowrap;line-height:1.4}
 .order-detail-notes{padding:8px 18px 12px;border-top:1px solid var(--bd);
   font-size:.85rem;color:var(--tx-muted);font-style:italic}
 .order-detail-notes strong{display:block;margin-bottom:4px;font-style:normal;color:var(--tx)}
