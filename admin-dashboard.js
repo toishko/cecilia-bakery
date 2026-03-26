@@ -2271,6 +2271,7 @@ async function loadActiveInvites() {
           <span class="invite-item-status ${statusClass}">${statusLabel}</span>
         </div>`;
     }).join('');
+    lucide.createIcons();
 
   } catch (e) { console.error('Load invites error:', e); }
 }
