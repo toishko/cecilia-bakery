@@ -283,7 +283,7 @@
 <script type="module" src="/driver-order.js"></script>
 <script>
 (function() {
-  if (!('serviceWorker' in navigator) || location.hostname.includes('localhost')) return;
+  if (!('serviceWorker' in navigator)) return;
 
   function showUpdateBanner() {
     const banner = document.getElementById('update-banner');

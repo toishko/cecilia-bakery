@@ -298,6 +298,10 @@ function setupRealtime() {
     })
     .subscribe((status) => {
       console.log('Realtime subscription status:', status);
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn('Realtime disconnected, reconnecting in 3s...');
+        setTimeout(() => setupRealtime(), 3000);
+      }
     });
 }
 
@@ -400,17 +404,27 @@ async function showBrowserNotification(title, body, section) {
 
 // ── WEB PUSH SUBSCRIPTION ──
 async function subscribeToPush(userType, userId) {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.log('Push not supported in this browser');
+    return;
+  }
   if (!sb) return;
 
   try {
-    const reg = await navigator.serviceWorker.ready;
+    // Wait for SW with a timeout (5 seconds)
+    const reg = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 5000))
+    ]);
+
+    console.log('Service Worker ready, checking push subscription...');
 
     // Check existing subscription
     let sub = await reg.pushManager.getSubscription();
 
     if (!sub) {
       const perm = await Notification.requestPermission();
+      console.log('Notification permission:', perm);
       if (perm !== 'granted') return;
 
       // Convert VAPID key from base64url to Uint8Array
@@ -425,6 +439,9 @@ async function subscribeToPush(userType, userId) {
         userVisibleOnly: true,
         applicationServerKey
       });
+      console.log('Push subscription created');
+    } else {
+      console.log('Existing push subscription found');
     }
 
     // Save subscription to Supabase
@@ -438,8 +455,8 @@ async function subscribeToPush(userType, userId) {
     }, { onConflict: 'user_type,user_id,endpoint' });
 
     if (error) console.error('Push sub save error:', error);
-    else console.log('Push subscription saved for', userType);
-  } catch (e) { console.warn('Push subscription failed:', e); }
+    else console.log('✅ Push subscription saved for', userType);
+  } catch (e) { console.warn('Push subscription failed:', e.message || e); }
 }
 
 /* ═══════════════════════════════════
