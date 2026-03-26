@@ -705,37 +705,54 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   *,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;
     transition-duration:0.01ms!important;scroll-behavior:auto!important}
 }
+/* ── Print Preview Overlay ── */
+#print-preview-overlay{position:fixed;inset:0;z-index:99999;background:#fff;
+  display:flex;flex-direction:column;animation:ppFadeIn .2s ease}
+@keyframes ppFadeIn{from{opacity:0}to{opacity:1}}
+.pp-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px}
+.pp-page{max-width:600px;margin:0 auto;font-family:'Outfit','Segoe UI',sans-serif;color:#1a1a1a}
+.pp-page .print-logo{display:block;max-width:140px;height:auto;margin:0 auto 8px}
+.pp-page .print-header{text-align:center;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #C8102E}
+.pp-page .print-order-num{font-size:1rem;font-weight:600;margin-top:4px;color:#333}
+.pp-page .print-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:20px;font-size:.88rem}
+.pp-page .print-meta-item{display:flex;gap:6px}
+.pp-page .print-meta-label{font-weight:700;min-width:80px;color:#555}
+.pp-page .print-items{width:100%;border-collapse:collapse;margin-bottom:16px}
+.pp-page .print-items th{text-align:left;border-bottom:2px solid #C8102E;padding:8px;
+  font-size:.82rem;text-transform:uppercase;letter-spacing:.5px;color:#888}
+.pp-page .print-items td{border-bottom:1px solid #eee;padding:8px;font-size:.88rem}
+.pp-page .print-items .col-r{text-align:right}
+.pp-page .print-items tbody tr:nth-child(even){background:#fafafa}
+.pp-page .print-total{text-align:right;font-size:1.15rem;font-weight:700;margin-top:8px;
+  padding-top:10px;border-top:2px solid #C8102E;color:#C8102E}
+.pp-page .print-payment{margin-top:14px;font-size:.88rem;padding:10px 14px;
+  border:1px solid #ddd;border-radius:8px;background:#f9f9f9}
+.pp-page .print-notes{margin-top:12px;font-size:.85rem;font-style:italic;padding:10px 14px;
+  border:1px solid #ddd;border-radius:8px;background:#fffbe6}
+.pp-footer{margin-top:24px;text-align:center;font-size:.75rem;color:#aaa;
+  border-top:1px solid #eee;padding-top:12px}
+
+.pp-actions{display:flex;gap:10px;padding:16px 20px;border-top:1px solid #eee;
+  background:#fff;flex-shrink:0}
+.pp-btn{flex:1;padding:14px;border:none;border-radius:10px;font-size:.95rem;
+  font-weight:600;font-family:inherit;cursor:pointer;letter-spacing:.5px}
+.pp-print{background:#C8102E;color:#fff}
+.pp-print:active{background:#a00d24}
+.pp-share{background:#2563eb;color:#fff}
+.pp-share:active{background:#1d4ed8}
+.pp-close{background:#eee;color:#333}
+.pp-close:active{background:#ddd}
 
 /* ── Print Stylesheet ── */
 @media print{
-  /* Hide everything */
   body>*{display:none!important}
-  /* Show only the print container */
-  #print-container{display:block!important;position:static!important;
-    width:100%!important;padding:20px!important}
-
-  /* Print layout */
-  .print-header{text-align:center;margin-bottom:20px;border-bottom:2px solid #000;padding-bottom:10px}
-  .print-header h1{font-size:1.4rem;font-family:'Cormorant Garamond',serif;margin:0}
-  .print-header .print-order-num{font-size:1rem;font-weight:600;margin-top:4px}
-
-  .print-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:16px;
-    font-size:.85rem}
-  .print-meta-item{display:flex;gap:6px}
-  .print-meta-label{font-weight:700;min-width:80px}
-
-  .print-items{width:100%;border-collapse:collapse;margin-bottom:16px}
-  .print-items th{text-align:left;border-bottom:2px solid #000;padding:6px 8px;font-size:.8rem}
-  .print-items td{border-bottom:1px solid #ccc;padding:6px 8px;font-size:.85rem}
-  .print-items .col-r{text-align:right}
-
-  .print-total{text-align:right;font-size:1.1rem;font-weight:700;margin-top:8px;
-    padding-top:8px;border-top:2px solid #000}
-
-  .print-payment{margin-top:12px;font-size:.85rem;padding:8px;border:1px solid #ccc;border-radius:4px}
-  .print-notes{margin-top:12px;font-size:.85rem;font-style:italic;
-    padding:8px;border:1px solid #ccc;border-radius:4px}
-
-  /* Force colors for print */
-  *{color:#000!important;background:#fff!important;box-shadow:none!important}
+  #print-preview-overlay{display:block!important;position:static!important}
+  #print-preview-overlay .pp-actions{display:none!important}
+  #print-preview-overlay .pp-scroll{padding:0}
+  .pp-page{max-width:100%}
+  .pp-page .print-items th{border-bottom-color:#000}
+  .pp-page .print-total{border-top-color:#000;color:#000}
+  .pp-page .print-header{border-bottom-color:#000}
+  *{box-shadow:none!important}
+  @page{margin:15mm}
 }

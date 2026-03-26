@@ -1059,7 +1059,6 @@ function buildPrintHTML(showTotals) {
   const logoUrl = window.location.origin + '/assets/logo.png';
   let html = `<div class="print-header">
     <img src="${logoUrl}" alt="Cecilia Bakery" class="print-logo" onerror="this.style.display='none'">
-    <h1>Cecilia Bakery</h1>
     <div class="print-order-num">${lang === 'es' ? 'Pedido' : 'Order'} ${orderNum}</div>
   </div>`;
 
@@ -1126,108 +1125,75 @@ function buildPrintHTML(showTotals) {
 }
 
 function openPrintWindow(showTotals) {
-  // Open window IMMEDIATELY to preserve user gesture (Safari requirement)
-  const printWin = window.open('', '_blank', 'width=700,height=900');
-  if (!printWin) {
-    showToast(lang === 'es' ? 'Permite ventanas emergentes' : 'Please allow popups', 'error');
-    return;
-  }
-
   const content = buildPrintHTML(showTotals);
-  if (!content) { printWin.close(); return; }
+  if (!content) return;
 
-  const fullHTML = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Cecilia Bakery - ${lang === 'es' ? 'Pedido' : 'Order'}</title>
-<style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Outfit','Segoe UI',sans-serif;padding:24px;color:#1a1a1a;max-width:700px;margin:0 auto}
-  .print-logo{display:block;max-width:140px;height:auto;margin:0 auto 8px}
-  .print-header{text-align:center;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #C8102E}
-  .print-header h1{font-family:'Cormorant Garamond',Georgia,serif;font-size:1.5rem;margin:0;color:#C8102E;letter-spacing:1px}
-  .print-order-num{font-size:1rem;font-weight:600;margin-top:4px;color:#333}
-  .print-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:20px;font-size:.88rem}
-  .print-meta-item{display:flex;gap:6px}
-  .print-meta-label{font-weight:700;min-width:80px;color:#555}
-  .print-items{width:100%;border-collapse:collapse;margin-bottom:16px}
-  .print-items th{text-align:left;border-bottom:2px solid #C8102E;padding:8px;font-size:.82rem;
-    text-transform:uppercase;letter-spacing:.5px;color:#888}
-  .print-items td{border-bottom:1px solid #eee;padding:8px;font-size:.88rem}
-  .print-items .col-r{text-align:right}
-  .print-items tbody tr:nth-child(even){background:#fafafa}
-  .print-total{text-align:right;font-size:1.15rem;font-weight:700;margin-top:8px;
-    padding-top:10px;border-top:2px solid #C8102E;color:#C8102E}
-  .print-payment{margin-top:14px;font-size:.88rem;padding:10px 14px;border:1px solid #ddd;
-    border-radius:8px;background:#f9f9f9}
-  .print-notes{margin-top:12px;font-size:.85rem;font-style:italic;padding:10px 14px;
-    border:1px solid #ddd;border-radius:8px;background:#fffbe6}
-  .print-footer{margin-top:24px;text-align:center;font-size:.75rem;color:#aaa;
-    border-top:1px solid #eee;padding-top:12px}
-  .btn-row{display:flex;gap:10px;margin-top:20px}
-  .print-btn,.pdf-btn,.close-btn{flex:1;padding:14px;border:none;border-radius:10px;
-    font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer;letter-spacing:.5px}
-  .print-btn{background:#C8102E;color:#fff}
-  .print-btn:hover{background:#a00d24}
-  .pdf-btn{background:#2563eb;color:#fff}
-  .pdf-btn:hover{background:#1d4ed8}
-  .close-btn{background:#eee;color:#333}
-  .close-btn:hover{background:#ddd}
-  @media print{body{padding:12px}.btn-row{display:none!important}@page{margin:15mm}}
-</style></head><body>
-  ${content}
-  <div class="print-footer">Cecilia Bakery · ceciliabakery.com</div>
-  <div class="btn-row">
-    <button class="print-btn" onclick="window.print()">
-      🖨 ${lang === 'es' ? 'Imprimir' : 'Print'}
-    </button>
-    <button class="pdf-btn" onclick="
-      if(navigator.share){
-        var items=document.querySelectorAll('.print-items td');
-        var text='Cecilia Bakery\\n';
-        text+=document.querySelector('.print-order-num').textContent+'\\n\\n';
-        document.querySelectorAll('.print-meta-item').forEach(function(m){text+=m.textContent.trim()+'\\n'});
-        text+='\\n';
-        var rows=document.querySelectorAll('.print-items tbody tr');
-        rows.forEach(function(r){var cells=r.querySelectorAll('td');var line='';cells.forEach(function(c){line+=c.textContent+'  '});text+=line.trim()+'\\n'});
-        var total=document.querySelector('.print-total');if(total)text+='\\n'+total.textContent;
-        var pay=document.querySelector('.print-payment');if(pay)text+='\\n'+pay.textContent;
-        navigator.share({title:'Cecilia Bakery Order',text:text}).catch(function(){});
-      }else{window.print()}
-    ">
-      📤 ${lang === 'es' ? 'Compartir' : 'Share'}
-    </button>
-    <button class="close-btn" onclick="window.close()">
-      ✕ ${lang === 'es' ? 'Cerrar' : 'Close'}
-    </button>
-  </div>
-</body></html>`;
+  // Remove any existing print overlay
+  const existing = document.getElementById('print-preview-overlay');
+  if (existing) existing.remove();
 
+  const overlay = document.createElement('div');
+  overlay.id = 'print-preview-overlay';
+  overlay.innerHTML = `
+    <div class="pp-scroll">
+      <div class="pp-page">
+        ${content}
+        <div class="pp-footer">ceciliabakery.com</div>
+      </div>
+      <div class="pp-actions">
+        <button class="pp-btn pp-print" id="pp-print-btn">🖨 ${lang === 'es' ? 'Imprimir' : 'Print'}</button>
+        <button class="pp-btn pp-share" id="pp-share-btn">📤 ${lang === 'es' ? 'Compartir' : 'Share'}</button>
+        <button class="pp-btn pp-close" id="pp-close-btn">✕ ${lang === 'es' ? 'Cerrar' : 'Close'}</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
 
-  // Temporarily unlock body scroll so app isn't frozen when user returns
-  const savedTop = document.body.style.top;
-  const scrollY = parseInt(savedTop || '0', 10) * -1;
-  document.body.style.position = '';
-  document.body.style.top = '';
-  window.scrollTo(0, scrollY);
+  // Close button
+  document.getElementById('pp-close-btn').addEventListener('click', () => {
+    overlay.remove();
+  });
 
-  printWin.document.write(fullHTML);
-  printWin.document.close();
+  // Print button — calls window.print() from main page (no Safari blocking)
+  document.getElementById('pp-print-btn').addEventListener('click', () => {
+    overlay.classList.add('printing');
+    window.print();
+    // Remove printing class after dialog closes
+    const removePrinting = () => {
+      overlay.classList.remove('printing');
+      window.removeEventListener('focus', removePrinting);
+    };
+    window.addEventListener('focus', removePrinting);
+  });
 
-  // When user returns to the app, re-lock body if modal is still open
-  const onReturn = () => {
-    window.removeEventListener('focus', onReturn);
-    const overlay = document.getElementById('detail-overlay');
-    if (overlay && overlay.classList.contains('open')) {
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${window.scrollY}px`;
+  // Share button
+  document.getElementById('pp-share-btn').addEventListener('click', () => {
+    if (navigator.share) {
+      let text = 'Cecilia Bakery\n';
+      const orderNum = overlay.querySelector('.print-order-num');
+      if (orderNum) text += orderNum.textContent + '\n\n';
+      overlay.querySelectorAll('.print-meta-item').forEach(m => { text += m.textContent.trim() + '\n'; });
+      text += '\n';
+      overlay.querySelectorAll('.print-items tbody tr').forEach(r => {
+        let line = '';
+        r.querySelectorAll('td').forEach(c => { line += c.textContent + '  '; });
+        text += line.trim() + '\n';
+      });
+      const total = overlay.querySelector('.print-total');
+      if (total) text += '\n' + total.textContent;
+      const pay = overlay.querySelector('.print-payment');
+      if (pay) text += '\n' + pay.textContent;
+      navigator.share({ title: 'Cecilia Bakery Order', text }).catch(() => {});
+    } else {
+      showToast(lang === 'es' ? 'Compartir no disponible' : 'Share not available', 'info');
     }
-  };
-  window.addEventListener('focus', onReturn);
+  });
 }
 
 window.printOrder = function() {
   openPrintWindow(detailTotalsVisible);
 };
+
 
 window.shareWhatsApp = function() {
   if (!detailOrder) return;
