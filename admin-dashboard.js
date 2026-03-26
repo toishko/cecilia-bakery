@@ -779,10 +779,7 @@ function renderOrderDetail() {
   // Export bar
   actionsHtml += `<div class="export-bar">
     <button class="export-btn" onclick="printOrder()">
-      <i data-lucide="printer"></i> ${lang === 'es' ? 'Imprimir' : 'Print'}
-    </button>
-    <button class="export-btn" onclick="downloadPDF()">
-      <i data-lucide="download"></i> PDF
+      <i data-lucide="printer"></i> ${lang === 'es' ? 'Imprimir / Guardar' : 'Print / Save'}
     </button>
     <button class="export-btn whatsapp" onclick="shareWhatsApp()">
       <i data-lucide="message-circle"></i> WhatsApp
@@ -1128,7 +1125,7 @@ function buildPrintHTML(showTotals) {
   return html;
 }
 
-function openPrintWindow(showTotals, isPDF) {
+function openPrintWindow(showTotals) {
   const content = buildPrintHTML(showTotals);
   if (!content) return;
 
@@ -1160,10 +1157,12 @@ function openPrintWindow(showTotals, isPDF) {
   .print-footer{margin-top:24px;text-align:center;font-size:.75rem;color:#aaa;
     border-top:1px solid #eee;padding-top:12px}
   .btn-row{display:flex;gap:10px;margin-top:20px}
-  .print-btn,.close-btn{flex:1;padding:14px;border:none;border-radius:10px;
+  .print-btn,.pdf-btn,.close-btn{flex:1;padding:14px;border:none;border-radius:10px;
     font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer;letter-spacing:.5px}
   .print-btn{background:#C8102E;color:#fff}
   .print-btn:hover{background:#a00d24}
+  .pdf-btn{background:#2563eb;color:#fff}
+  .pdf-btn:hover{background:#1d4ed8}
   .close-btn{background:#eee;color:#333}
   .close-btn:hover{background:#ddd}
   @media print{body{padding:12px}.btn-row{display:none!important}@page{margin:15mm}}
@@ -1173,6 +1172,22 @@ function openPrintWindow(showTotals, isPDF) {
   <div class="btn-row">
     <button class="print-btn" onclick="window.print();window.onafterprint=function(){window.close()}">
       🖨 ${lang === 'es' ? 'Imprimir' : 'Print'}
+    </button>
+    <button class="pdf-btn" onclick="
+      if(navigator.share){
+        var items=document.querySelectorAll('.print-items td');
+        var text='Cecilia Bakery\\n';
+        text+=document.querySelector('.print-order-num').textContent+'\\n\\n';
+        document.querySelectorAll('.print-meta-item').forEach(function(m){text+=m.textContent.trim()+'\\n'});
+        text+='\\n';
+        var rows=document.querySelectorAll('.print-items tbody tr');
+        rows.forEach(function(r){var cells=r.querySelectorAll('td');var line='';cells.forEach(function(c){line+=c.textContent+'  '});text+=line.trim()+'\\n'});
+        var total=document.querySelector('.print-total');if(total)text+='\\n'+total.textContent;
+        var pay=document.querySelector('.print-payment');if(pay)text+='\\n'+pay.textContent;
+        navigator.share({title:'Cecilia Bakery Order',text:text}).catch(function(){});
+      }else{window.print()}
+    ">
+      📤 ${lang === 'es' ? 'Compartir' : 'Share'}
     </button>
     <button class="close-btn" onclick="window.close()">
       ✕ ${lang === 'es' ? 'Cerrar' : 'Close'}
@@ -1196,15 +1211,6 @@ function openPrintWindow(showTotals, isPDF) {
   printWin.document.write(fullHTML);
   printWin.document.close();
 
-  if (isPDF) {
-    showToast(
-      lang === 'es'
-        ? 'Selecciona "Guardar como PDF" en el diálogo de impresión'
-        : 'Select "Save as PDF" in the print dialog',
-      'info'
-    );
-  }
-
   // When user returns to the app, re-lock body if modal is still open
   const onReturn = () => {
     window.removeEventListener('focus', onReturn);
@@ -1218,11 +1224,7 @@ function openPrintWindow(showTotals, isPDF) {
 }
 
 window.printOrder = function() {
-  openPrintWindow(detailTotalsVisible, false);
-};
-
-window.downloadPDF = function() {
-  openPrintWindow(detailTotalsVisible, true);
+  openPrintWindow(detailTotalsVisible);
 };
 
 window.shareWhatsApp = function() {
