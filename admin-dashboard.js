@@ -1032,6 +1032,7 @@ function closeDetailModal() {
   detailOrder = null;
   detailItems = [];
 }
+window.closeDetailModal = closeDetailModal;  // expose for swipe-dismiss.js
 
 /* ═══════════════════════════════════
    PHASE 6 — EXPORT, PRINT & SHARE

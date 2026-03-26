@@ -710,6 +710,7 @@ function closeSummary() {
   document.body.style.right = '';
   window.scrollTo(0, parseInt(scrollY));
 }
+window.closeSummary = closeSummary;
 
 function navigateSummary(dir) {
   // Save notes
@@ -1372,6 +1373,7 @@ function closeOrderDetail() {
   document.body.style.right = '';
   window.scrollTo(0, parseInt(scrollY));
 }
+window.closeOrderDetail = closeOrderDetail;
 
 // ── EDIT ORDER (30-MIN WINDOW) ──
 window.editOrder = async function(orderId) {
@@ -1510,6 +1512,7 @@ function closeBalanceBreakdown() {
   document.body.style.right = '';
   window.scrollTo(0, parseInt(scrollY));
 }
+window.closeBalanceBreakdown = closeBalanceBreakdown;
 
 // ── REALTIME SUBSCRIPTION ──
 function setupDriverRealtime() {
@@ -1754,6 +1757,7 @@ function closeTimePicker() {
   document.body.style.right = '';
   window.scrollTo(0, parseInt(scrollY));
 }
+window.closeTimePicker = closeTimePicker;
 
 function confirmTimePicker() {
   // Convert to 24h for the hidden input
