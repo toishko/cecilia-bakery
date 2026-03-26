@@ -5,6 +5,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cecilia Bakery — Los Mejores Bizcochos Dominicanos</title>
+  <link rel="manifest" href="/manifest-website.json">
+  <meta name="theme-color" content="#C8102E">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cecilia">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -5246,6 +5252,12 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
   </script>
 
   <script>if(typeof lucide !== 'undefined') lucide.createIcons();</script>
+<script>
+(function() {
+  if (!('serviceWorker' in navigator) || location.hostname.includes('localhost')) return;
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+})();
+</script>
 </body>
 
 </html>
