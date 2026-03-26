@@ -1126,8 +1126,15 @@ function buildPrintHTML(showTotals) {
 }
 
 function openPrintWindow(showTotals) {
+  // Open window IMMEDIATELY to preserve user gesture (Safari requirement)
+  const printWin = window.open('', '_blank', 'width=700,height=900');
+  if (!printWin) {
+    showToast(lang === 'es' ? 'Permite ventanas emergentes' : 'Please allow popups', 'error');
+    return;
+  }
+
   const content = buildPrintHTML(showTotals);
-  if (!content) return;
+  if (!content) { printWin.close(); return; }
 
   const fullHTML = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1170,7 +1177,7 @@ function openPrintWindow(showTotals) {
   ${content}
   <div class="print-footer">Cecilia Bakery · ceciliabakery.com</div>
   <div class="btn-row">
-    <button class="print-btn" onclick="window.print();window.onafterprint=function(){window.close()}">
+    <button class="print-btn" onclick="window.print()">
       🖨 ${lang === 'es' ? 'Imprimir' : 'Print'}
     </button>
     <button class="pdf-btn" onclick="
@@ -1195,11 +1202,6 @@ function openPrintWindow(showTotals) {
   </div>
 </body></html>`;
 
-  const printWin = window.open('', '_blank', 'width=700,height=900');
-  if (!printWin) {
-    showToast(lang === 'es' ? 'Permite ventanas emergentes' : 'Please allow popups', 'error');
-    return;
-  }
 
   // Temporarily unlock body scroll so app isn't frozen when user returns
   const savedTop = document.body.style.top;
