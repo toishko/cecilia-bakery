@@ -787,6 +787,14 @@ async function submitAllOrders() {
   submitBtn.textContent = lang === 'es' ? 'Enviando...' : 'Submitting...';
 
   try {
+    // ── Fetch driver's prices for price snapshot ──
+    const { data: driverPrices } = await sb
+      .from('driver_prices')
+      .select('product_key, price')
+      .eq('driver_id', currentDriver.id);
+    const priceMap = {};
+    if (driverPrices) driverPrices.forEach(p => priceMap[p.product_key] = parseFloat(p.price));
+
     // ── EDIT MODE: update existing order ──
     if (driverEditOrderId) {
       const o = orders[0]; // In edit mode there's only one order
@@ -827,9 +835,13 @@ async function submitAllOrders() {
           product_key: it.product_key,
           product_label: it.product_label,
           quantity: it.quantity,
-          price_at_order: 0,
+          price_at_order: priceMap[it.product_key] || 0,
         }));
         await sb.from('driver_order_items').insert(orderItems);
+
+        // Recalculate and update total_amount
+        const editTotal = orderItems.reduce((sum, it) => sum + it.quantity * it.price_at_order, 0);
+        await sb.from('driver_orders').update({ total_amount: editTotal }).eq('id', driverEditOrderId);
       }
 
       // Success
@@ -895,16 +907,20 @@ async function submitAllOrders() {
 
       if (orderErr) throw orderErr;
 
-      // Insert items
+      // Insert items with price snapshot
       const orderItems = items.map(it => ({
         order_id: orderData.id,
         product_key: it.product_key,
         product_label: it.product_label,
         quantity: it.quantity,
-        price_at_order: 0,
+        price_at_order: priceMap[it.product_key] || 0,
       }));
 
       const { error: itemsErr } = await sb.from('driver_order_items').insert(orderItems);
+
+      // Calculate and set total_amount on the order
+      const orderTotal = orderItems.reduce((sum, it) => sum + it.quantity * it.price_at_order, 0);
+      await sb.from('driver_orders').update({ total_amount: orderTotal }).eq('id', orderData.id);
       if (itemsErr) throw itemsErr;
     }
 

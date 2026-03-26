@@ -398,19 +398,22 @@ function showToast(message, type = 'success') {
    OVERVIEW PAGE
    ═══════════════════════════════════ */
 async function loadOverview() {
-  const todayStr = getTodayStr();
+  // Use timezone-aware boundaries for "today" in the user's local timezone
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
   try {
     // Today's orders
     const { data: todayOrders, error: e1 } = await sb
       .from('driver_orders')
       .select('id, total_amount, payment_status, payment_amount, driver_id, business_name, submitted_at, status, order_number')
-      .gte('submitted_at', todayStr + 'T00:00:00')
-      .lte('submitted_at', todayStr + 'T23:59:59');
+      .gte('submitted_at', startOfDay.toISOString())
+      .lte('submitted_at', endOfDay.toISOString());
 
     if (!e1 && todayOrders) {
       document.getElementById('stat-today-orders').textContent = todayOrders.length;
-      const revenue = todayOrders.reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
+      const revenue = todayOrders.reduce((sum, o) => sum + parseFloat(o.payment_amount || 0), 0);
       document.getElementById('stat-today-revenue').textContent = formatCurrency(revenue);
     }
 
@@ -653,6 +656,8 @@ window.openOrderDetail = async function(orderId) {
     document.body.style.top = `-${window.scrollY}px`;
     document.body.style.left = '0';
     document.body.style.right = '0';
+    document.body.style.overflow = 'hidden';
+    document.body.style.width = '100%';
   } catch (e) { console.error(e); }
 };
 
@@ -1015,12 +1020,14 @@ window.savePaymentOnly = async function() {
 
 function closeDetailModal() {
   document.getElementById('detail-overlay').classList.remove('open');
-  // Unlock body scroll
+  // Unlock body scroll (iOS-safe)
   const scrollY = document.body.dataset.scrollY || '0';
   document.body.style.position = '';
   document.body.style.top = '';
   document.body.style.left = '';
   document.body.style.right = '';
+  document.body.style.overflow = '';
+  document.body.style.width = '';
   window.scrollTo(0, parseInt(scrollY));
   detailOrder = null;
   detailItems = [];
@@ -1820,6 +1827,8 @@ window.openOrderDetail = async function(orderId) {
   document.body.style.top = `-${window.scrollY}px`;
   document.body.style.left = '0';
   document.body.style.right = '0';
+  document.body.style.overflow = 'hidden';
+  document.body.style.width = '100%';
 };
 
 /* ═══════════════════════════════════
