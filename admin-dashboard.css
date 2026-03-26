@@ -246,7 +246,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .detail-overlay.open{display:flex}
 .detail-overlay.open .detail-modal{animation:slideUp .3s ease}
 .detail-modal{background:var(--bg-card);border-radius:20px 20px 0 0;width:100%;
-  max-width:640px;max-height:90vh;overflow-y:auto;overflow-x:hidden;padding:16px 24px 28px;
+  max-width:640px;max-height:90vh;overflow-y:auto;overflow-x:hidden;padding:16px 12px 28px;
   box-shadow:0 -8px 40px rgba(0,0,0,.2)}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .detail-handle{width:40px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 12px}
@@ -275,10 +275,10 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .line-items-table thead,.line-items-table tbody,.line-items-table tr{display:table;
   width:100%;table-layout:auto}
-.line-items-table th{text-align:left;padding:8px 6px;font-size:.72rem;text-transform:uppercase;
-  letter-spacing:.5px;color:var(--tx-faint);border-bottom:1px solid var(--bd);font-weight:500;
+.line-items-table th{text-align:left;padding:8px 4px;font-size:.72rem;text-transform:uppercase;
+  letter-spacing:.3px;color:var(--tx-faint);border-bottom:1px solid var(--bd);font-weight:500;
   white-space:nowrap}
-.line-items-table td{padding:10px 6px;border-bottom:1px solid rgba(200,16,46,.06);color:var(--tx);
+.line-items-table td{padding:10px 4px;border-bottom:1px solid rgba(200,16,46,.06);color:var(--tx);
   overflow-wrap:break-word}
 .line-items-table .adj-note{font-size:.72rem;color:var(--red);font-weight:500;display:block;margin-top:2px}
 .line-items-table .col-qty{text-align:center;min-width:45px;white-space:nowrap}
