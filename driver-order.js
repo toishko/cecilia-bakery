@@ -496,13 +496,14 @@ function renderOrderTabs() {
     const es = `Pedido ${i + 1}`;
     html += `<button class="order-tab${i === activeOrderIdx ? ' active' : ''}" data-idx="${i}" data-en="${en}" data-es="${es}">${lang === 'es' ? es : en}</button>`;
   });
-  html += `<button class="order-tab-add" id="add-order-btn">+</button>`;
+  if (!driverEditOrderId) html += `<button class="order-tab-add" id="add-order-btn">+</button>`;
   container.innerHTML = html;
 
   container.querySelectorAll('.order-tab').forEach(btn => {
     btn.addEventListener('click', () => switchOrder(parseInt(btn.dataset.idx)));
   });
-  document.getElementById('add-order-btn').addEventListener('click', addOrder);
+  const addBtn = document.getElementById('add-order-btn');
+  if (addBtn) addBtn.addEventListener('click', addOrder);
 }
 
 function switchOrder(idx) {
@@ -609,14 +610,18 @@ function buildProductSections() {
 
   // Bind qty buttons
   container.querySelectorAll('.qty-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
       const inp = btn.parentElement.querySelector('.qty-input');
       const cur = parseInt(inp.value) || 0;
       const delta = btn.dataset.dir === '+' ? 1 : -1;
       inp.value = Math.max(0, cur + delta);
       updateRowHighlight(inp);
-
       updateFooterCount();
+      // Prevent browser from scrolling input into view
+      if (document.activeElement && document.activeElement !== document.body) {
+        document.activeElement.blur();
+      }
     });
   });
 
@@ -1431,16 +1436,15 @@ window.editOrder = async function(orderId) {
     // Switch to order form
     showSection('new-order');
 
-    // Pre-fill header fields
-    const bizInput = document.getElementById('business-name');
-    const dateInput = document.getElementById('order-date');
-    const timeInput = document.getElementById('time-display');
-    const refInput = document.getElementById('driver-ref');
-
-    if (bizInput) bizInput.value = order.business_name || '';
-    if (dateInput) dateInput.value = order.pickup_date || '';
-    if (timeInput && order.pickup_time) timeInput.textContent = formatTime12(order.pickup_time);
-    if (refInput) refInput.value = order.driver_ref || '';
+    // Pre-fill header fields (use correct IDs matching the form)
+    document.getElementById('field-business').value = order.business_name || '';
+    document.getElementById('field-date').value = order.pickup_date || '';
+    document.getElementById('field-ref').value = order.driver_ref || '';
+    // Set time hidden input + display
+    if (order.pickup_time) {
+      document.getElementById('field-time').value = order.pickup_time;
+      updateTimeDisplay(order.pickup_time);
+    }
 
     // Pre-fill quantities — reset all to 0 first
     document.querySelectorAll('.qty-input').forEach(inp => { inp.value = 0; });
@@ -1451,11 +1455,12 @@ window.editOrder = async function(orderId) {
       const input = document.querySelector(`.qty-input[data-key="${item.product_key}"]`);
       if (input) {
         input.value = item.quantity;
-        // Highlight row
-        const row = input.closest('.product-row');
-        if (row) row.classList.toggle('has-value', item.quantity > 0);
+        updateRowHighlight(input);
       }
     });
+
+    // Save populated data into orders[0] so saveFormToOrder captures it
+    saveFormToOrder(0);
 
     // Update footer count
     updateFooterCount();
