@@ -3,6 +3,7 @@
    ═══════════════════════════════════ */
 const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
+const VAPID_PUBLIC_KEY = 'BPK9nQfqIXaf-kc5HHJ5G6trkWxjAX9MzeYwLTUfcnk4jWVYVO6gpzXS-d0tNgGTmHp0ntzYe3xRKT0Ud3t5a3Q';
 
 let sb = null;
 try {
@@ -170,6 +171,7 @@ function enterDashboard() {
   loadRecentOrders();
   setupDriverRealtime();
   requestNotifPermission();
+  subscribeToPush('driver', currentDriver.id);
   // Phase 9: sync language from Supabase
   syncLangFromSupabase();
 }
@@ -1752,6 +1754,46 @@ async function showBrowserNotification(title, body, section) {
       setTimeout(() => n.close(), 8000);
     }
   } catch (e) { console.warn('Notification failed:', e); }
+}
+
+// ── WEB PUSH SUBSCRIPTION ──
+async function subscribeToPush(userType, userId) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (!sb) return;
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+
+    if (!sub) {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') return;
+
+      const urlBase64 = VAPID_PUBLIC_KEY;
+      const padding = '='.repeat((4 - urlBase64.length % 4) % 4);
+      const base64 = (urlBase64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = atob(base64);
+      const applicationServerKey = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; i++) applicationServerKey[i] = rawData.charCodeAt(i);
+
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey
+      });
+    }
+
+    const subJson = sub.toJSON();
+    const { error } = await sb.from('push_subscriptions').upsert({
+      user_type: userType,
+      user_id: userId,
+      endpoint: subJson.endpoint,
+      p256dh: subJson.keys.p256dh,
+      auth: subJson.keys.auth
+    }, { onConflict: 'user_type,user_id,endpoint' });
+
+    if (error) console.error('Push sub save error:', error);
+    else console.log('Push subscription saved for', userType);
+  } catch (e) { console.warn('Push subscription failed:', e); }
 }
 
 // ── LANGUAGE SYNC TO SUPABASE ──
