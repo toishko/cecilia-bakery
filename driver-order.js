@@ -862,7 +862,7 @@ async function submitAllOrders() {
         const items = collectItems(o);
         if (items.length === 0) continue;
 
-        const { data: newOrder, error: newErr } = await sb.from('driver_orders').insert({
+        const payload = {
           driver_id: currentDriver.id,
           batch_id: editBatchId,
           business_name: o.business || null,
@@ -872,7 +872,14 @@ async function submitAllOrders() {
           notes: o.notes || null,
           status: 'pending',
           editable_until: editableUntil,
-        }).select('id').single();
+        };
+
+        let newOrder, newErr;
+        ({ data: newOrder, error: newErr } = await sb.from('driver_orders').insert(payload).select('id').single());
+        if (newErr) {
+          delete payload.batch_id;
+          ({ data: newOrder, error: newErr } = await sb.from('driver_orders').insert(payload).select('id').single());
+        }
 
         if (newErr) { console.error('Edit add-order error:', newErr); continue; }
 
@@ -925,12 +932,23 @@ async function submitAllOrders() {
         editable_until: editableUntil,
       };
 
-      // Insert order
-      const { data: orderData, error: orderErr } = await sb
+      // Insert order (fallback: retry without batch_id if column doesn't exist)
+      let orderData, orderErr;
+      ({ data: orderData, error: orderErr } = await sb
         .from('driver_orders')
         .insert(orderPayload)
         .select('id')
-        .single();
+        .single());
+
+      if (orderErr) {
+        // Retry without batch_id in case column doesn't exist
+        delete orderPayload.batch_id;
+        ({ data: orderData, error: orderErr } = await sb
+          .from('driver_orders')
+          .insert(orderPayload)
+          .select('id')
+          .single());
+      }
 
       if (orderErr) {
         console.error(`Order ${i+1} insert error:`, orderErr);
