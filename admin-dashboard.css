@@ -165,7 +165,8 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 /* ═══════════════════════════════════
    MAIN CONTENT AREA
    ═══════════════════════════════════ */
-.main-content{flex:1;margin-left:var(--sidebar-w);padding:28px 32px;max-width:960px;width:100%}
+.main-content{flex:1;margin-left:var(--sidebar-w);padding:28px 32px;max-width:960px;width:100%;
+  overflow-x:hidden;box-sizing:border-box}
 .page-title{font-size:1.8rem;font-weight:300;margin-bottom:24px;color:var(--tx)}
 .page-title em{color:var(--red);font-style:italic}
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -208,8 +209,8 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
    ORDER CARDS
    ═══════════════════════════════════ */
 .order-card{background:var(--bg-card);border:1px solid var(--bd);border-radius:12px;
-  padding:16px 18px;margin-bottom:10px;cursor:pointer;transition:background .15s,
-  transform .15s,box-shadow .15s;box-shadow:var(--shadow-card)}
+  padding:16px;margin-bottom:10px;cursor:pointer;overflow:hidden;box-sizing:border-box;max-width:100%;
+  transition:background .15s,transform .15s,box-shadow .15s;box-shadow:var(--shadow-card)}
 .order-card:hover{background:var(--bg-card-hover);transform:translateY(-1px);
   box-shadow:0 8px 28px rgba(200,16,46,.12)}
 .order-card-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -326,8 +327,9 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   padding:16px;margin-bottom:20px;box-shadow:var(--shadow-card)}
 .history-filter-row{display:flex;gap:10px;margin-bottom:10px;align-items:flex-end}
 .history-filter-row:last-child{margin-bottom:0}
-.filter-field{display:flex;flex-direction:column;gap:4px}
-.filter-field.grow{flex:1}
+.filter-field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.filter-field.grow{flex:1;min-width:0}
+.filter-field input,.filter-field select{width:100%;box-sizing:border-box}
 .filter-field label{font-size:.72rem;color:var(--tx-muted);text-transform:uppercase;letter-spacing:.5px}
 .filter-field input,.filter-field select{padding:9px 12px;border:1px solid var(--bd-input);
   border-radius:8px;background:var(--bg-input);color:var(--tx);font-size:.85rem;font-family:inherit}
