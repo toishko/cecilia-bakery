@@ -378,6 +378,7 @@ const PRODUCTS = {
     items: [
       { key: 'plain', en: 'Plain', es: 'Plain' },
       { key: 'raisin', en: 'Raisin', es: 'Pasas' },
+      { key: 'pudin', en: 'Pudin', es: 'Pudín' },
     ]
   },
   tresleche: {
@@ -447,6 +448,13 @@ const PRODUCTS = {
       { key: 'bas_tl', en: 'Tres Leche', es: 'Tres Leche' },
       { key: 'bas_cl', en: 'Cuatro Leche', es: 'Cuatro Leche' },
       { key: 'bas_hershey', en: 'Hershey', es: 'Hershey' },
+    ]
+  },
+  familiar: {
+    en: 'Family Size', es: 'Familiar', type: 'standard',
+    items: [
+      { key: 'fam_tl', en: 'Tres Leche', es: 'Tres Leche' },
+      { key: 'fam_cl', en: 'Cuatro Leche', es: 'Cuatro Leche' },
     ]
   },
 };

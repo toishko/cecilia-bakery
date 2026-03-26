@@ -705,7 +705,7 @@ const PRODUCT_CAT = {};
 (function() {
   const cats = {
     redondo: { en:'Round', es:'Redondo', keys:['pina','guava','dulce'] },
-    plain:   { en:'Plain', es:'Plain', keys:['plain','raisin'] },
+    plain:   { en:'Plain', es:'Plain', keys:['plain','raisin','pudin'] },
     tresleche:{ en:'Tres Leche', es:'Tres Leche', keys:['tl','tl_hershey','cuatro_leche','tl_straw','tl_pina'] },
     piezas:  { en:'Pieces', es:'Piezas', keys:['pz_rv','pz_carrot','pz_cheese','pz_pudin','pz_pina','pz_guava','pz_chocoflan','pz_flan'] },
     frostin: { en:'Frosted Pieces', es:'Piezas Frostin', keys:['fr_guava','fr_pina','fr_dulce','fr_choco'] },
@@ -713,6 +713,7 @@ const PRODUCT_CAT = {};
     hb_small:{ en:'Happy Birthday — SMALL', es:'Feliz Cumpleaños — PEQUEÑO', keys:['hb_s_pina','hb_s_guava','hb_s_dulce','hb_s_choco','hb_s_straw'] },
     cuadrao: { en:'Square', es:'Cuadrao', keys:['cdr_pudin','cdr_pound','cdr_raisin','cdr_maiz'] },
     basos:   { en:'Cups', es:'Basos', keys:['bas_tl','bas_cl','bas_hershey'] },
+    familiar:{ en:'Family Size', es:'Familiar', keys:['fam_tl','fam_cl'] },
   };
   const redondoCols = ['inside','inside_nt','top','top_nt'];
   Object.values(cats).forEach(c => {
@@ -1418,6 +1419,8 @@ const ADMIN_PRODUCTS = [
     { key: 'plain_nt', en: 'Plain (NT)', es: 'Plain (ST)' },
     { key: 'raisin', en: 'Raisin', es: 'Pasas' },
     { key: 'raisin_nt', en: 'Raisin (NT)', es: 'Pasas (ST)' },
+    { key: 'pudin', en: 'Pudin', es: 'Pudín' },
+    { key: 'pudin_nt', en: 'Pudin (NT)', es: 'Pudín (ST)' },
   ]},
   { section: 'Tres Leche', sectionEs: 'Tres Leche', items: [
     { key: 'tl', en: 'Tres Leche', es: 'Tres Leche' },
@@ -1500,6 +1503,12 @@ const ADMIN_PRODUCTS = [
     { key: 'bas_cl_nt', en: 'Cuatro Leche (NT)', es: 'Cuatro Leche (ST)' },
     { key: 'bas_hershey', en: 'Hershey', es: 'Hershey' },
     { key: 'bas_hershey_nt', en: 'Hershey (NT)', es: 'Hershey (ST)' },
+  ]},
+  { section: 'Family Size', sectionEs: 'Familiar', items: [
+    { key: 'fam_tl', en: 'Tres Leche', es: 'Tres Leche' },
+    { key: 'fam_tl_nt', en: 'Tres Leche (NT)', es: 'Tres Leche (ST)' },
+    { key: 'fam_cl', en: 'Cuatro Leche', es: 'Cuatro Leche' },
+    { key: 'fam_cl_nt', en: 'Cuatro Leche (NT)', es: 'Cuatro Leche (ST)' },
   ]},
 ];
 
