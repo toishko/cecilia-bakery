@@ -1960,6 +1960,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ── Overview ──
   document.getElementById('view-all-orders-btn').addEventListener('click', () => showSection('incoming'));
+  document.getElementById('stat-outstanding-card').addEventListener('click', () => {
+    // Pre-select the "unpaid" filter tab before navigating
+    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+    const unpaidTab = document.querySelector('.filter-tab[data-filter="unpaid"]');
+    if (unpaidTab) unpaidTab.classList.add('active');
+    showSection('incoming');
+  });
 
   // ── Filter tabs (incoming) ──
   document.querySelectorAll('.filter-tab').forEach(btn => {
