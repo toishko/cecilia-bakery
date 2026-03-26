@@ -622,6 +622,7 @@ let detailItems = [];
 let detailTotalsVisible = true;
 
 window.openOrderDetail = async function(orderId) {
+  if (window._swipeDismissCooldown) return;
   try {
     // Fetch order
     const { data: order, error: e1 } = await sb
@@ -1744,6 +1745,7 @@ window.showDriverProfile = async function(driverId) {
 // Open order detail from profile
 window.openOrderDetail = async function(orderId) {
   // Switch to incoming section and open the detail
+  if (window._swipeDismissCooldown) return;
   const { data: order } = await sb.from('driver_orders').select('*').eq('id', orderId).single();
   if (!order) return;
   const { data: items } = await sb.from('driver_order_items').select('*').eq('order_id', orderId);

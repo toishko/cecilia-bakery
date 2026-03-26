@@ -47,18 +47,20 @@
       modal.style.transition = 'transform .3s ease';
 
       if (currentTranslate > DISMISS_THRESHOLD) {
-        // Dismiss — flag to prevent re-trigger
+        // Dismiss — set global cooldown to prevent touch-through reopen
         dismissing = true;
+        window._swipeDismissCooldown = true;
         modal.style.transform = `translateY(100%)`;
         setTimeout(() => {
           closeFn();
-          // Reset after close
           setTimeout(() => {
             modal.style.transform = '';
             modal.style.transition = '';
             overlay.style.backgroundColor = '';
             dismissing = false;
           }, 50);
+          // Clear cooldown after a delay
+          setTimeout(() => { window._swipeDismissCooldown = false; }, 500);
         }, 280);
       } else {
         // Snap back

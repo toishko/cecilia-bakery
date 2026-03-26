@@ -688,6 +688,7 @@ function clearSearch() {
 let summaryIdx = 0;
 
 function openSummary() {
+  if (window._swipeDismissCooldown) return;
   saveFormToOrder(activeOrderIdx);
   summaryIdx = 0;
   renderSummaryOrder(0);
@@ -1206,6 +1207,7 @@ function renderOrderCard(order) {
 let driverEditOrderId = null; // Track which order is being edited
 
 window.showOrderDetail = async function(orderId) {
+  if (window._swipeDismissCooldown) return;
   if (!sb) return;
   const overlay = document.getElementById('order-detail-overlay');
 
@@ -1431,6 +1433,7 @@ function formatTime12(timeStr) {
 
 // ── BALANCE BREAKDOWN MODAL ──
 window.showBalanceBreakdown = function() {
+  if (window._swipeDismissCooldown) return;
   const overlay = document.getElementById('balance-modal-overlay');
   const totalEl = document.getElementById('balance-modal-total');
   const listEl = document.getElementById('balance-modal-list');
