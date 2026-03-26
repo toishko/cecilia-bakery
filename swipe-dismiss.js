@@ -1,10 +1,26 @@
 // ═══════════════════════════════════
 //  Swipe-to-Dismiss for Modals
 //  Drag anywhere near top of modal to dismiss
-//  Handle keeps its original small pill look
 // ═══════════════════════════════════
 (function() {
   const DISMISS_THRESHOLD = 100;
+
+  // Block ALL clicks/taps for 500ms after swipe dismiss
+  // This prevents touch-through from reopening modals
+  let blockClicks = false;
+  document.addEventListener('click', (e) => {
+    if (blockClicks) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, true); // capture phase — fires before any other handlers
+
+  document.addEventListener('touchend', (e) => {
+    if (blockClicks) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, true);
 
   function initSwipeDismiss(overlay, modal, closeFn) {
     if (!modal || !overlay) return;
@@ -12,16 +28,14 @@
     let startY = 0;
     let currentTranslate = 0;
     let dragging = false;
-    let dismissing = false;
 
-    // The drag zone: top ~60px of the modal
     function isInDragZone(touchY) {
       const modalRect = modal.getBoundingClientRect();
       return touchY < (modalRect.top + 60);
     }
 
     modal.addEventListener('touchstart', (e) => {
-      if (dismissing) return;
+      if (blockClicks) return;
       if (!isInDragZone(e.touches[0].clientY)) return;
       dragging = true;
       startY = e.touches[0].clientY;
@@ -45,80 +59,99 @@
     modal.addEventListener('touchend', () => {
       if (!dragging) return;
       dragging = false;
-      modal.style.transition = 'transform .3s ease';
 
       if (currentTranslate > DISMISS_THRESHOLD) {
-        // Dismiss — set global cooldown to prevent touch-through reopen
-        dismissing = true;
+        // DISMISS
+        // Block all clicks immediately
+        blockClicks = true;
         window._swipeDismissCooldown = true;
-        modal.style.transform = `translateY(100%)`;
+
+        // Animate out
+        modal.style.transition = 'transform .25s ease-out';
+        modal.style.transform = `translateY(100vh)`;
+
+        // After animation, clean up
         setTimeout(() => {
+          // Close the modal
           closeFn();
+
+          // Reset styles
+          modal.style.transform = '';
+          modal.style.transition = '';
+          modal.style.animation = '';
+          overlay.style.backgroundColor = '';
+
+          // Unblock after a generous delay
           setTimeout(() => {
-            modal.style.transform = '';
-            modal.style.transition = '';
-            modal.style.animation = '';
-            overlay.style.backgroundColor = '';
-            dismissing = false;
-          }, 50);
-          // Clear cooldown after a delay
-          setTimeout(() => { window._swipeDismissCooldown = false; }, 500);
-        }, 280);
+            blockClicks = false;
+            window._swipeDismissCooldown = false;
+          }, 400);
+        }, 260);
+
       } else {
-        // Snap back
+        // SNAP BACK
+        modal.style.transition = 'transform .2s ease';
         modal.style.transform = '';
         overlay.style.backgroundColor = '';
-        setTimeout(() => { modal.style.transition = ''; modal.style.animation = ''; }, 300);
+        setTimeout(() => {
+          modal.style.transition = '';
+          modal.style.animation = '';
+        }, 200);
       }
       currentTranslate = 0;
     }, { passive: true });
   }
 
-  // Wait for DOM then attach to all modals
+  // Attach to all modals on DOM ready
   document.addEventListener('DOMContentLoaded', () => {
     // Admin: detail modal
     const adminOverlay = document.getElementById('detail-overlay');
     if (adminOverlay) {
-      const modal = adminOverlay.querySelector('.detail-modal');
-      initSwipeDismiss(adminOverlay, modal, () => {
-        if (typeof closeDetailModal === 'function') closeDetailModal();
-      });
+      initSwipeDismiss(
+        adminOverlay,
+        adminOverlay.querySelector('.detail-modal'),
+        () => { if (typeof closeDetailModal === 'function') closeDetailModal(); }
+      );
     }
 
     // Driver: summary overlay
     const summaryOverlay = document.getElementById('summary-overlay');
     if (summaryOverlay) {
-      const modal = summaryOverlay.querySelector('.summary-modal');
-      initSwipeDismiss(summaryOverlay, modal, () => {
-        if (typeof closeSummary === 'function') closeSummary();
-      });
+      initSwipeDismiss(
+        summaryOverlay,
+        summaryOverlay.querySelector('.summary-modal'),
+        () => { if (typeof closeSummary === 'function') closeSummary(); }
+      );
     }
 
     // Driver: order detail overlay
     const orderDetailOverlay = document.getElementById('order-detail-overlay');
     if (orderDetailOverlay) {
-      const modal = orderDetailOverlay.querySelector('.order-detail-modal');
-      initSwipeDismiss(orderDetailOverlay, modal, () => {
-        if (typeof closeOrderDetail === 'function') closeOrderDetail();
-      });
+      initSwipeDismiss(
+        orderDetailOverlay,
+        orderDetailOverlay.querySelector('.order-detail-modal'),
+        () => { if (typeof closeOrderDetail === 'function') closeOrderDetail(); }
+      );
     }
 
     // Driver: balance modal overlay
     const balanceOverlay = document.getElementById('balance-modal-overlay');
     if (balanceOverlay) {
-      const modal = balanceOverlay.querySelector('.balance-modal');
-      initSwipeDismiss(balanceOverlay, modal, () => {
-        if (typeof closeBalanceBreakdown === 'function') closeBalanceBreakdown();
-      });
+      initSwipeDismiss(
+        balanceOverlay,
+        balanceOverlay.querySelector('.balance-modal'),
+        () => { if (typeof closeBalanceBreakdown === 'function') closeBalanceBreakdown(); }
+      );
     }
 
     // Driver: time picker overlay
     const tpOverlay = document.getElementById('tp-overlay');
     if (tpOverlay) {
-      const modal = tpOverlay.querySelector('.tp-modal');
-      initSwipeDismiss(tpOverlay, modal, () => {
-        if (typeof closeTimePicker === 'function') closeTimePicker();
-      });
+      initSwipeDismiss(
+        tpOverlay,
+        tpOverlay.querySelector('.tp-modal'),
+        () => { if (typeof closeTimePicker === 'function') closeTimePicker(); }
+      );
     }
   });
 })();
