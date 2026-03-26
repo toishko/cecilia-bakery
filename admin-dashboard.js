@@ -39,6 +39,7 @@ function showScreen(id) {
 
 function showSection(name) {
   currentSection = name;
+  sessionStorage.setItem('admin_section', name);
   // Close mobile nav
   document.getElementById('mobile-nav').classList.remove('open');
   document.getElementById('mobile-menu-btn').classList.remove('open');
@@ -68,7 +69,14 @@ function showSection(name) {
   if (name === 'overview') loadOverview();
   if (name === 'incoming') loadIncomingOrders();
   if (name === 'history') loadHistoryOrders(true);
-  if (name === 'drivers') { showDriversListView(); loadDriverList(); }
+  if (name === 'drivers') {
+    const subview = sessionStorage.getItem('driver_subview');
+    if (subview === 'form') {
+      _restoreDriverForm().then(restored => { if (!restored) { showDriversListView(); loadDriverList(); } });
+    } else {
+      showDriversListView(); loadDriverList();
+    }
+  }
   if (name === 'settings') loadActiveInvites();
 }
 
@@ -139,7 +147,8 @@ async function checkSession() {
 function enterDashboard() {
   applyLang();
   showScreen('dashboard');
-  showSection('overview');
+  const savedSection = sessionStorage.getItem('admin_section') || 'overview';
+  showSection(savedSection);
   loadDriversCache();
   setupRealtime();
   requestNotifPermission();
@@ -1432,13 +1441,68 @@ function showDriversListView() {
   document.getElementById('drivers-list-view').style.display = 'block';
   document.getElementById('drivers-form-view').style.display = 'none';
   document.getElementById('drivers-profile-view').style.display = 'none';
+  sessionStorage.removeItem('driver_form');
+  sessionStorage.setItem('driver_subview', 'list');
 }
 
 function showDriversFormView() {
   document.getElementById('drivers-list-view').style.display = 'none';
   document.getElementById('drivers-form-view').style.display = 'block';
   document.getElementById('drivers-profile-view').style.display = 'none';
+  sessionStorage.setItem('driver_subview', 'form');
   lucide.createIcons();
+  // Auto-save form on any input change
+  setTimeout(() => {
+    document.getElementById('drivers-form-view').querySelectorAll('input, select').forEach(el => {
+      el.removeEventListener('input', _autoSaveDriverForm);
+      el.addEventListener('input', _autoSaveDriverForm);
+    });
+  }, 100);
+}
+
+function _autoSaveDriverForm() {
+  const prices = {};
+  document.querySelectorAll('.price-input').forEach(inp => {
+    prices[inp.dataset.key] = inp.value;
+  });
+  const formState = {
+    editingDriverId,
+    name: document.getElementById('df-name')?.value || '',
+    code: document.getElementById('df-code')?.value || '',
+    phone: document.getElementById('df-phone')?.value || '',
+    active: document.getElementById('df-active')?.checked ?? true,
+    prices
+  };
+  sessionStorage.setItem('driver_form', JSON.stringify(formState));
+}
+
+async function _restoreDriverForm() {
+  const raw = sessionStorage.getItem('driver_form');
+  if (!raw) return false;
+  try {
+    const s = JSON.parse(raw);
+    editingDriverId = s.editingDriverId || null;
+
+    // Update title
+    const titleEl = document.getElementById('driver-form-title');
+    if (editingDriverId) {
+      titleEl.textContent = lang === 'es' ? 'Editar Conductor' : 'Edit Driver';
+      document.getElementById('df-status-wrap').style.display = 'flex';
+    } else {
+      titleEl.textContent = lang === 'es' ? 'Agregar Nuevo Conductor' : 'Add New Driver';
+      document.getElementById('df-status-wrap').style.display = 'none';
+    }
+
+    document.getElementById('df-name').value = s.name || '';
+    document.getElementById('df-code').value = s.code || '';
+    document.getElementById('df-phone').value = s.phone || '';
+    document.getElementById('df-active').checked = s.active ?? true;
+
+    renderPriceTable(s.prices || {});
+    populateCopyDropdown(editingDriverId || undefined);
+    showDriversFormView();
+    return true;
+  } catch (e) { return false; }
 }
 
 function showDriversProfileView() {
