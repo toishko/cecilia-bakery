@@ -2209,7 +2209,10 @@ async function generateInviteCode() {
     display.innerHTML = `
       <div class="invite-code-card">
         <div style="font-size:.78rem;color:var(--tx-muted)">${lang === 'es' ? 'Código de invitación' : 'Invite Code'}</div>
-        <div class="invite-code-value">${code}</div>
+        <div class="invite-code-value">
+          <span class="code-masked" data-code="${code}">${'•'.repeat(code.length)}</span>
+          <button class="code-eye-btn" onclick="const s=this.previousElementSibling;const c=s.dataset.code;s.textContent=s.textContent.includes('•')?c:'•'.repeat(c.length)" aria-label="Toggle code visibility"><i data-lucide="eye" style="width:14px;height:14px"></i></button>
+        </div>
         <button class="invite-code-copy" onclick="navigator.clipboard.writeText('${code}').then(()=>this.textContent='✓ ${lang === 'es' ? 'Copiado' : 'Copied'}')">
           <i data-lucide="copy" style="width:12px;height:12px"></i> ${lang === 'es' ? 'Copiar' : 'Copy'}
         </button>
@@ -2257,9 +2260,13 @@ async function loadActiveInvites() {
       }
 
       const usedInfo = inv.used_by ? ` · ${inv.used_by}` : '';
+      const masked = '•'.repeat(inv.code.length);
       return `
         <div class="invite-item">
-          <span class="invite-item-code">${inv.code}</span>
+          <span class="invite-item-code">
+            <span class="code-masked" data-code="${inv.code}">${masked}</span>
+            <button class="code-eye-btn" onclick="const s=this.previousElementSibling;const c=s.dataset.code;s.textContent=s.textContent.includes('•')?c:'•'.repeat(c.length)" aria-label="Toggle"><i data-lucide="eye" style="width:14px;height:14px"></i></button>
+          </span>
           <span>${usedInfo}</span>
           <span class="invite-item-status ${statusClass}">${statusLabel}</span>
         </div>`;
