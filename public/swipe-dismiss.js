@@ -5,21 +5,13 @@
 (function() {
   const DISMISS_THRESHOLD = 100;
 
-  // Block ALL clicks/taps for 500ms after swipe dismiss
-  // This prevents touch-through from reopening modals
-  let blockClicks = false;
+  // Block ALL interactions briefly after dismiss
+  let blockAll = false;
   document.addEventListener('click', (e) => {
-    if (blockClicks) {
-      e.stopPropagation();
-      e.preventDefault();
-    }
-  }, true); // capture phase — fires before any other handlers
-
-  document.addEventListener('touchend', (e) => {
-    if (blockClicks) {
-      e.stopPropagation();
-      e.preventDefault();
-    }
+    if (blockAll) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
+  document.addEventListener('touchstart', (e) => {
+    if (blockAll) { e.stopPropagation(); e.preventDefault(); }
   }, true);
 
   function initSwipeDismiss(overlay, modal, closeFn) {
@@ -35,25 +27,23 @@
     }
 
     modal.addEventListener('touchstart', (e) => {
-      if (blockClicks) return;
+      if (blockAll) return;
       if (!isInDragZone(e.touches[0].clientY)) return;
       dragging = true;
       startY = e.touches[0].clientY;
       currentTranslate = 0;
-      modal.style.transition = 'none';
+      // Kill any CSS animation and transition immediately
       modal.style.animation = 'none';
+      modal.style.transition = 'none';
     }, { passive: true });
 
     modal.addEventListener('touchmove', (e) => {
       if (!dragging) return;
       const deltaY = e.touches[0].clientY - startY;
       currentTranslate = Math.max(0, deltaY);
-
-      if (currentTranslate > 0) {
-        modal.style.transform = `translateY(${currentTranslate}px)`;
-        const opacity = Math.max(0, 1 - (currentTranslate / 300));
-        overlay.style.backgroundColor = `rgba(0,0,0,${opacity * 0.5})`;
-      }
+      modal.style.transform = `translateY(${currentTranslate}px)`;
+      const opacity = Math.max(0, 1 - (currentTranslate / 300));
+      overlay.style.backgroundColor = `rgba(0,0,0,${opacity * 0.5})`;
     }, { passive: true });
 
     modal.addEventListener('touchend', () => {
@@ -61,42 +51,51 @@
       dragging = false;
 
       if (currentTranslate > DISMISS_THRESHOLD) {
-        // DISMISS
-        // Block all clicks immediately
-        blockClicks = true;
+        // === DISMISS ===
+        blockAll = true;
         window._swipeDismissCooldown = true;
 
-        // Animate out
+        // 1) Remove .open FIRST so CSS animation rule no longer applies
+        overlay.classList.remove('open');
+
+        // 2) But keep it visible with inline display:flex
+        overlay.style.display = 'flex';
+
+        // 3) Slide modal out
         modal.style.transition = 'transform .25s ease-out';
-        modal.style.transform = `translateY(100vh)`;
+        modal.style.transform = 'translateY(100vh)';
 
-        // After animation, clean up
+        // 4) After slide-out animation, fully close
         setTimeout(() => {
-          // Close the modal
-          closeFn();
+          // Hide overlay
+          overlay.style.display = '';
+          overlay.style.backgroundColor = '';
 
-          // Reset styles
+          // Reset modal styles
           modal.style.transform = '';
           modal.style.transition = '';
           modal.style.animation = '';
-          overlay.style.backgroundColor = '';
 
-          // Unblock after a generous delay
+          // Call close to clean up state (body scroll, etc.)
+          // But .open is already removed, so no animation re-trigger
+          closeFn();
+
+          // Unblock after generous delay
           setTimeout(() => {
-            blockClicks = false;
+            blockAll = false;
             window._swipeDismissCooldown = false;
           }, 400);
         }, 260);
 
       } else {
-        // SNAP BACK
+        // === SNAP BACK ===
         modal.style.transition = 'transform .2s ease';
         modal.style.transform = '';
         overlay.style.backgroundColor = '';
         setTimeout(() => {
           modal.style.transition = '';
           modal.style.animation = '';
-        }, 200);
+        }, 220);
       }
       currentTranslate = 0;
     }, { passive: true });
