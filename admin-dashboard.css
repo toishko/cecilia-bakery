@@ -746,9 +746,10 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 /* ── Print Stylesheet ── */
 @media print{
   body>*{display:none!important}
-  #print-preview-overlay{display:block!important;position:static!important}
+  #print-preview-overlay{display:block!important;position:static!important;
+    height:auto!important;min-height:0!important;overflow:visible!important}
   #print-preview-overlay .pp-actions{display:none!important}
-  #print-preview-overlay .pp-scroll{padding:0}
+  #print-preview-overlay .pp-scroll{padding:0;overflow:visible!important;height:auto!important}
   .pp-page{max-width:100%}
   .pp-page .print-items th{border-bottom-color:#000}
   .pp-page .print-total{border-top-color:#000;color:#000}
