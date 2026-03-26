@@ -618,6 +618,43 @@ function renderOrderCards(orders, containerId, showLive = false) {
 }
 
 /* ═══════════════════════════════════
+   PRODUCT → CATEGORY MAP  (for order detail)
+   ═══════════════════════════════════ */
+const PRODUCT_CAT = {};
+(function() {
+  const cats = {
+    redondo: { en:'Round', es:'Redondo', keys:['pina','guava','dulce'] },
+    plain:   { en:'Plain', es:'Plain', keys:['plain','raisin'] },
+    tresleche:{ en:'Tres Leche', es:'Tres Leche', keys:['tl','tl_hershey','cuatro_leche','tl_straw','tl_pina'] },
+    piezas:  { en:'Pieces', es:'Piezas', keys:['pz_rv','pz_carrot','pz_cheese','pz_pudin','pz_pina','pz_guava','pz_chocoflan','pz_flan'] },
+    frostin: { en:'Frosted Pieces', es:'Piezas Frostin', keys:['fr_guava','fr_pina','fr_dulce','fr_choco'] },
+    hb_big:  { en:'Happy Birthday — BIG', es:'Feliz Cumpleaños — GRANDE', keys:['hb_b_pina','hb_b_guava','hb_b_dulce','hb_b_choco','hb_b_straw'] },
+    hb_small:{ en:'Happy Birthday — SMALL', es:'Feliz Cumpleaños — PEQUEÑO', keys:['hb_s_pina','hb_s_guava','hb_s_dulce','hb_s_choco','hb_s_straw'] },
+    cuadrao: { en:'Square', es:'Cuadrao', keys:['cdr_pudin','cdr_pound','cdr_raisin','cdr_maiz'] },
+    basos:   { en:'Cups', es:'Basos', keys:['bas_tl','bas_cl','bas_hershey'] },
+  };
+  const redondoCols = ['inside','inside_nt','top','top_nt'];
+  Object.values(cats).forEach(c => {
+    c.keys.forEach(k => {
+      // Direct key
+      PRODUCT_CAT[k] = c;
+      // No-ticket variant
+      PRODUCT_CAT[k + '_nt'] = c;
+      // Redondo column variants
+      if (c.en === 'Round') {
+        redondoCols.forEach(col => { PRODUCT_CAT[k + '_' + col] = c; });
+      }
+    });
+  });
+})();
+
+function getCategoryLabel(productKey) {
+  const cat = PRODUCT_CAT[productKey];
+  if (!cat) return '';
+  return lang === 'es' ? cat.es : cat.en;
+}
+
+/* ═══════════════════════════════════
    ORDER DETAIL MODAL
    ═══════════════════════════════════ */
 let detailOrder = null;
@@ -719,13 +756,28 @@ function renderOrderDetail() {
   html += '</tr></thead><tbody>';
 
   let grandTotal = 0;
+  let lastCat = '';
+  const colSpan = 3 + (detailTotalsVisible ? 2 : 0);
   detailItems.forEach((item, idx) => {
     const effectiveQty = item.adjusted_quantity !== null ? item.adjusted_quantity : item.quantity;
     const lineTotal = effectiveQty * parseFloat(item.price_at_order || 0);
     grandTotal += lineTotal;
 
+    // Category header row
+    const cat = getCategoryLabel(item.product_key);
+    if (cat && cat !== lastCat) {
+      html += `<tr class="cat-header-row"><td colspan="${colSpan}">${cat}</td></tr>`;
+      lastCat = cat;
+    }
+
+    // Clean label: strip "(No Ticket)" from text, show as tag
+    let label = item.product_label || '';
+    const isNoTicket = label.includes('(No Ticket)') || (item.product_key && item.product_key.endsWith('_nt'));
+    if (isNoTicket) label = label.replace(/\s*\(No Ticket\)/i, '');
+
     html += '<tr>';
-    html += `<td>${item.product_label}`;
+    html += `<td>${label}`;
+    if (isNoTicket) html += `<span class="no-ticket-tag">✕ No Ticket</span>`;
     if (item.adjustment_note) html += `<span class="adj-note">${item.adjustment_note}</span>`;
     html += '</td>';
     html += `<td class="col-qty">${item.quantity}</td>`;

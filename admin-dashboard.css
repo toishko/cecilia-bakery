@@ -277,6 +277,12 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .line-items-table .col-qty{text-align:center;width:60px}
 .line-items-table .col-price{text-align:right;width:80px}
 .line-items-table .col-total{text-align:right;width:80px;font-weight:600}
+.cat-header-row td{background:var(--bg-surface);font-size:.72rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.5px;color:var(--red);padding:6px 10px !important;
+  border-bottom:1px solid var(--bd);border-left:3px solid var(--red)}
+.no-ticket-tag{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.3px;color:var(--red);background:rgba(200,16,46,.08);padding:2px 6px;
+  border-radius:4px;margin-left:6px;vertical-align:middle}
 .grand-total-row{display:flex;justify-content:space-between;padding:8px 0;
   border-top:2px solid var(--bd);font-weight:700;font-size:.95rem;margin-top:4px}
 
