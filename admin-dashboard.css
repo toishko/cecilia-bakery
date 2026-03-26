@@ -242,9 +242,10 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .detail-overlay{position:fixed;inset:0;background:var(--bg-overlay);z-index:300;
   display:none;align-items:flex-end;justify-content:center}
 .detail-overlay.open{display:flex}
+.detail-overlay.open .detail-modal{animation:slideUp .3s ease}
 .detail-modal{background:var(--bg-card);border-radius:20px 20px 0 0;width:100%;
   max-width:640px;max-height:90vh;overflow-y:auto;overflow-x:hidden;padding:16px 24px 28px;
-  animation:slideUp .3s ease;box-shadow:0 -8px 40px rgba(0,0,0,.2)}
+  box-shadow:0 -8px 40px rgba(0,0,0,.2)}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .detail-handle{width:40px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 12px}
 .detail-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}

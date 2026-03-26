@@ -27,6 +27,7 @@
       startY = e.touches[0].clientY;
       currentTranslate = 0;
       modal.style.transition = 'none';
+      modal.style.animation = 'none';
     }, { passive: true });
 
     modal.addEventListener('touchmove', (e) => {
@@ -56,6 +57,7 @@
           setTimeout(() => {
             modal.style.transform = '';
             modal.style.transition = '';
+            modal.style.animation = '';
             overlay.style.backgroundColor = '';
             dismissing = false;
           }, 50);
@@ -66,7 +68,7 @@
         // Snap back
         modal.style.transform = '';
         overlay.style.backgroundColor = '';
-        setTimeout(() => { modal.style.transition = ''; }, 300);
+        setTimeout(() => { modal.style.transition = ''; modal.style.animation = ''; }, 300);
       }
       currentTranslate = 0;
     }, { passive: true });
