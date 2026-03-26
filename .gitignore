@@ -17,3 +17,5 @@ dist/
 .idea/
 *.local.md
 supabase/.temp/
+.vercel
+.env*.local
