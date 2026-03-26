@@ -774,6 +774,7 @@ function renderOrderDetail() {
     let label = item.product_label || '';
     const isNoTicket = label.includes('(No Ticket)') || (item.product_key && item.product_key.endsWith('_nt'));
     if (isNoTicket) label = label.replace(/\s*\(No Ticket\)/i, '');
+    label = label.replace(/_nt\b/g, '');  // clean redondo column suffixes
 
     html += '<tr>';
     html += `<td>${label}`;

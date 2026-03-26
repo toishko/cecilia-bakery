@@ -808,7 +808,7 @@ async function submitAllOrders() {
             (item.cols || []).forEach(col => {
               const k = item.key + '_' + col;
               const v = o.qty[k] || 0;
-              if (v > 0) items.push({ product_key: k, product_label: `${item.en} (${col})`, quantity: v });
+              if (v > 0) { const colClean = col.replace('_nt',''); items.push({ product_key: k, product_label: `${item.en} (${colClean})`, quantity: v }); }
             });
           } else {
             const v = o.qty[item.key] || 0;
@@ -875,7 +875,7 @@ async function submitAllOrders() {
             (item.cols || []).forEach(col => {
               const k = item.key + '_' + col;
               const v = o.qty[k] || 0;
-              if (v > 0) items.push({ product_key: k, product_label: `${item.en} (${col})`, quantity: v });
+              if (v > 0) { const colClean = col.replace('_nt',''); items.push({ product_key: k, product_label: `${item.en} (${colClean})`, quantity: v }); }
             });
           } else {
             const v = o.qty[item.key] || 0;
@@ -1331,7 +1331,7 @@ window.showOrderDetail = async function(orderId) {
         }
 
         // Clean label & no-ticket tag
-        let cleanLabel = label.replace(/\s*\(No Ticket\)/i, '');
+        let cleanLabel = label.replace(/\s*\(No Ticket\)/i, '').replace(/_nt\b/g, '');
         const isNT = (item.product_key && item.product_key.endsWith('_nt')) || label.includes('(No Ticket)');
 
         itemsHtml += `
