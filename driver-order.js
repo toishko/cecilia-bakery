@@ -24,6 +24,9 @@ let lang = localStorage.getItem('cecilia_lang') || 'en';
 let failedAttempts = parseInt(localStorage.getItem('cecilia_code_attempts') || '0');
 let lockoutUntil = parseInt(localStorage.getItem('cecilia_lockout_until') || '0');
 
+// My Products — hidden product keys
+let hiddenProducts = new Set(JSON.parse(localStorage.getItem('cecilia_hidden_products') || '[]'));
+
 /* ═══════════════════════════════════
    SCREEN MANAGEMENT
    ═══════════════════════════════════ */
@@ -324,6 +327,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('theme-toggle').addEventListener('change', toggleTheme);
   document.getElementById('logout-btn').addEventListener('click', handleLogout);
 
+  // ── My Products ──
+  document.getElementById('my-products-btn').addEventListener('click', openMyProducts);
+  document.getElementById('mp-back').addEventListener('click', closeMyProducts);
+
   // ── Phase 5: Receipts & History ──
   document.getElementById('order-detail-back').addEventListener('click', closeOrderDetail);
   document.getElementById('order-detail-overlay').addEventListener('click', (e) => {
@@ -561,6 +568,138 @@ function loadOrderToForm(idx) {
 }
 
 /* ═══════════════════════════════════
+   MY PRODUCTS — HIDE / SHOW
+   ═══════════════════════════════════ */
+function getAllProductKeys(secKey, sec) {
+  return sec.items.map(i => i.key);
+}
+
+function getTotalProductCount() {
+  let count = 0;
+  Object.values(PRODUCTS).forEach(sec => { count += sec.items.length; });
+  return count;
+}
+
+function getVisibleProductCount() {
+  let count = 0;
+  Object.values(PRODUCTS).forEach(sec => {
+    sec.items.forEach(item => { if (!hiddenProducts.has(item.key)) count++; });
+  });
+  return count;
+}
+
+function saveHiddenProducts() {
+  localStorage.setItem('cecilia_hidden_products', JSON.stringify([...hiddenProducts]));
+}
+
+function updateMpCounter() {
+  const total = getTotalProductCount();
+  const visible = getVisibleProductCount();
+  const el = document.getElementById('mp-counter');
+  if (el) el.textContent = `${visible} / ${total}`;
+}
+
+function openMyProducts() {
+  const body = document.getElementById('mp-body');
+  let html = '';
+
+  Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
+    const keys = getAllProductKeys(secKey, sec);
+    const allVisible = keys.every(k => !hiddenProducts.has(k));
+
+    html += `<div class="mp-category">`;
+    html += `<div class="mp-cat-header">`;
+    html += `<span class="mp-cat-title" data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</span>`;
+    html += `<div class="mp-cat-right">`;
+    html += `<span class="mp-cat-toggle-label" data-en="All" data-es="Todo">${lang === 'es' ? 'Todo' : 'All'}</span>`;
+    html += `<label class="toggle"><input type="checkbox" data-cat="${secKey}" class="mp-cat-toggle" ${allVisible ? 'checked' : ''}><span class="toggle-track"></span><span class="toggle-thumb"></span></label>`;
+    html += `</div></div>`;
+
+    sec.items.forEach(item => {
+      const isHidden = hiddenProducts.has(item.key);
+      html += `<div class="mp-item${isHidden ? ' hidden' : ''}" data-key="${item.key}">`;
+      html += `<span class="mp-item-name" data-en="${item.en}" data-es="${item.es}">${L(item)}</span>`;
+      html += `<label class="toggle"><input type="checkbox" class="mp-item-toggle" data-key="${item.key}" ${!isHidden ? 'checked' : ''}><span class="toggle-track"></span><span class="toggle-thumb"></span></label>`;
+      html += `</div>`;
+    });
+
+    html += `</div>`;
+  });
+
+  body.innerHTML = html;
+  updateMpCounter();
+
+  // Bind individual product toggles
+  body.querySelectorAll('.mp-item-toggle').forEach(toggle => {
+    toggle.addEventListener('change', (e) => {
+      const key = e.target.dataset.key;
+      if (e.target.checked) {
+        hiddenProducts.delete(key);
+      } else {
+        hiddenProducts.add(key);
+      }
+      saveHiddenProducts();
+      updateMpCounter();
+
+      // Update row visual
+      const row = e.target.closest('.mp-item');
+      if (row) row.classList.toggle('hidden', !e.target.checked);
+
+      // Update category toggle
+      const cat = e.target.closest('.mp-category');
+      if (cat) {
+        const catToggle = cat.querySelector('.mp-cat-toggle');
+        const allChecked = [...cat.querySelectorAll('.mp-item-toggle')].every(t => t.checked);
+        if (catToggle) catToggle.checked = allChecked;
+      }
+    });
+  });
+
+  // Bind category toggle-all
+  body.querySelectorAll('.mp-cat-toggle').forEach(toggle => {
+    toggle.addEventListener('change', (e) => {
+      const secKey = e.target.dataset.cat;
+      const sec = PRODUCTS[secKey];
+      if (!sec) return;
+      const show = e.target.checked;
+
+      sec.items.forEach(item => {
+        if (show) {
+          hiddenProducts.delete(item.key);
+        } else {
+          hiddenProducts.add(item.key);
+        }
+      });
+      saveHiddenProducts();
+      updateMpCounter();
+
+      // Update all item toggles within this category
+      const cat = e.target.closest('.mp-category');
+      if (cat) {
+        cat.querySelectorAll('.mp-item-toggle').forEach(t => {
+          t.checked = show;
+          const row = t.closest('.mp-item');
+          if (row) row.classList.toggle('hidden', !show);
+        });
+      }
+    });
+  });
+
+  // Slide in
+  const view = document.getElementById('settings-products-view');
+  view.classList.add('open');
+}
+
+function closeMyProducts() {
+  const view = document.getElementById('settings-products-view');
+  view.classList.remove('open');
+  // Rebuild product sections so hidden changes take effect
+  buildProductSections();
+  // Re-sync any existing order quantities
+  if (orders.length > 0) loadOrderIntoForm(currentOrderIdx);
+}
+
+/* ═══════════════════════════════════
    BUILD PRODUCT SECTIONS
    ═══════════════════════════════════ */
 function buildProductSections() {
@@ -568,6 +707,11 @@ function buildProductSections() {
   let html = '';
 
   Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
+    // Check if entire section is hidden
+    const allKeys = getAllProductKeys(secKey, sec);
+    const visibleKeys = allKeys.filter(k => !hiddenProducts.has(k));
+    if (visibleKeys.length === 0) return; // skip entire section
+
     html += `<div class="acc-section" data-section-key="${secKey}" id="sec-${secKey}">`;
     html += `<div class="acc-header"><span class="acc-title" data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</span><svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>`;
     html += `<div class="acc-body"><div class="prod-table">`;
@@ -575,6 +719,7 @@ function buildProductSections() {
     if (sec.type === 'redondo') {
       // Render as standard rows — split Inside/Top into separate sub-rows
       sec.items.forEach(item => {
+        if (hiddenProducts.has(item.key)) return;
         const hasInside = item.cols.includes('inside');
         const hasTop = item.cols.includes('top');
 
@@ -600,6 +745,7 @@ function buildProductSections() {
       });
     } else {
       sec.items.forEach(item => {
+        if (hiddenProducts.has(item.key)) return;
         html += `<div class="prod-row" data-product="${item.key}"><span class="prod-name" data-en="${item.en}" data-es="${item.es}">${L(item)}</span>`;
         html += `<div class="prod-qty-group"><span class="prod-qty-label" data-en="Qty" data-es="Cant">${lang === 'es' ? 'Cant' : 'Qty'}</span>${qtyControl(item.key)}</div>`;
         html += `<div class="prod-qty-group"><span class="prod-qty-label" data-en="No Tkt" data-es="Sin Tkt">${lang === 'es' ? 'Sin Tkt' : 'No Tkt'}</span>${qtyControl(item.key + '_nt')}</div>`;
@@ -820,7 +966,7 @@ async function submitAllOrders() {
             (item.cols || []).forEach(col => {
               const k = item.key + '_' + col;
               const v = o.qty[k] || 0;
-              if (v > 0) { const colClean = col.replace('_nt',''); items.push({ product_key: k, product_label: `${item.en} (${colClean})`, quantity: v }); }
+              if (v > 0) { const colClean = col.replace('_nt',''); const ntTag = col.endsWith('_nt') ? ' (No Ticket)' : ''; items.push({ product_key: k, product_label: `${item.en} (${colClean})${ntTag}`, quantity: v }); }
             });
           } else {
             const v = o.qty[item.key] || 0;

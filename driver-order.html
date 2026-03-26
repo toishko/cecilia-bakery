@@ -134,6 +134,10 @@
             <span class="toggle-thumb"></span>
           </label>
         </div>
+        <div class="settings-row settings-nav-row" id="my-products-btn">
+          <div class="settings-label"><i data-lucide="package"></i> <span data-en="My Products" data-es="Mis Productos">My Products</span></div>
+          <svg class="settings-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
       </div>
       <div class="settings-group">
         <div class="settings-row">
@@ -149,6 +153,18 @@
         <i data-lucide="external-link"></i> <span data-en="Visit Website" data-es="Visitar Sitio Web">Visit Website</span>
       </a>
       <button class="logout-btn" id="logout-btn" data-en="Log Out" data-es="Cerrar Sesion">Log Out</button>
+    </div>
+
+    <!-- MY PRODUCTS SUB-VIEW -->
+    <div class="settings-subview" id="settings-products-view">
+      <div class="settings-subview-header">
+        <button class="settings-subview-back" id="mp-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <span class="settings-subview-title" data-en="My Products" data-es="Mis Productos">My Products</span>
+        <span class="mp-counter" id="mp-counter"></span>
+      </div>
+      <div class="settings-subview-body" id="mp-body"></div>
     </div>
 
     <!-- NEW ORDER FORM -->

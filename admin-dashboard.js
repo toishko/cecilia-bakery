@@ -1380,7 +1380,12 @@ window.shareWhatsApp = function() {
     grandTotal += lineTotal;
     totalItems += effectiveQty;
 
-    let line = `• ${item.product_label} × ${effectiveQty}`;
+    let label = item.product_label || item.product_key;
+    // Ensure no-ticket items show the tag even for old data
+    if (item.product_key && item.product_key.endsWith('_nt') && !/no ticket|NT\)|ST\)/i.test(label)) {
+      label += ' (No Ticket)';
+    }
+    let line = `• ${label} × ${effectiveQty}`;
     if (detailTotalsVisible) {
       line += ` — ${formatCurrency(lineTotal)}`;
     }
