@@ -34,7 +34,7 @@
 html{scroll-padding-top:80px}
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--tx);
   overflow-x:hidden;transition:background .3s ease,color .3s ease;
-  min-height:100vh;min-height:100dvh;overflow-wrap:break-word;word-break:break-word}
+  min-height:100vh;min-height:100dvh;overflow-wrap:break-word}
 h1,h2,h3{font-family:'Cormorant Garamond',serif;font-weight:600}
 :focus-visible{outline:2px solid var(--red);outline-offset:2px;border-radius:var(--r)}
 i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height:1.1em;
@@ -274,7 +274,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .line-items-table th{text-align:left;padding:8px 10px;font-size:.72rem;text-transform:uppercase;
   letter-spacing:.5px;color:var(--tx-faint);border-bottom:1px solid var(--bd);font-weight:500}
 .line-items-table td{padding:10px 10px;border-bottom:1px solid rgba(200,16,46,.06);color:var(--tx);
-  overflow-wrap:break-word;word-break:break-word}
+  overflow-wrap:break-word}
 .line-items-table .adj-note{font-size:.72rem;color:var(--red);font-weight:500;display:block;margin-top:2px}
 .line-items-table .col-qty{text-align:center;width:60px}
 .line-items-table .col-price{text-align:right;width:80px}
