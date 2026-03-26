@@ -496,14 +496,13 @@ function renderOrderTabs() {
     const es = `Pedido ${i + 1}`;
     html += `<button class="order-tab${i === activeOrderIdx ? ' active' : ''}" data-idx="${i}" data-en="${en}" data-es="${es}">${lang === 'es' ? es : en}</button>`;
   });
-  if (!driverEditOrderId) html += `<button class="order-tab-add" id="add-order-btn">+</button>`;
+  html += `<button class="order-tab-add" id="add-order-btn">+</button>`;
   container.innerHTML = html;
 
   container.querySelectorAll('.order-tab').forEach(btn => {
     btn.addEventListener('click', () => switchOrder(parseInt(btn.dataset.idx)));
   });
-  const addBtn = document.getElementById('add-order-btn');
-  if (addBtn) addBtn.addEventListener('click', addOrder);
+  document.getElementById('add-order-btn').addEventListener('click', addOrder);
 }
 
 function switchOrder(idx) {
@@ -802,10 +801,8 @@ async function submitAllOrders() {
     if (driverPrices) driverPrices.forEach(p => priceMap[p.product_key] = parseFloat(p.price));
 
     // ── EDIT MODE: update existing order ──
-    if (driverEditOrderId) {
-      const o = orders[0]; // In edit mode there's only one order
-
-      // Collect items with qty > 0
+    // Helper: collect items from an order object
+    function collectItems(o) {
       const items = [];
       Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
         sec.items.forEach(item => {
@@ -823,20 +820,26 @@ async function submitAllOrders() {
           }
         });
       });
+      return items;
+    }
 
-      // Update order header
+    // ── EDIT MODE ──
+    if (driverEditOrderId) {
+      // Update the original order (orders[0])
+      const o0 = orders[0];
+      const items0 = collectItems(o0);
+
       await sb.from('driver_orders').update({
-        business_name: o.business || null,
-        pickup_date: o.date || null,
-        pickup_time: o.time || null,
-        driver_ref: o.ref || null,
-        notes: o.notes || null,
+        business_name: o0.business || null,
+        pickup_date: o0.date || null,
+        pickup_time: o0.time || null,
+        driver_ref: o0.ref || null,
+        notes: o0.notes || null,
       }).eq('id', driverEditOrderId);
 
-      // Delete old items, insert new
       await sb.from('driver_order_items').delete().eq('order_id', driverEditOrderId);
-      if (items.length > 0) {
-        const orderItems = items.map(it => ({
+      if (items0.length > 0) {
+        const orderItems = items0.map(it => ({
           order_id: driverEditOrderId,
           product_key: it.product_key,
           product_label: it.product_label,
@@ -844,13 +847,47 @@ async function submitAllOrders() {
           price_at_order: priceMap[it.product_key] || 0,
         }));
         await sb.from('driver_order_items').insert(orderItems);
-
-        // Recalculate and update total_amount
         const editTotal = orderItems.reduce((sum, it) => sum + it.quantity * it.price_at_order, 0);
         await sb.from('driver_orders').update({ total_amount: editTotal }).eq('id', driverEditOrderId);
       }
 
-      // Success
+      // Get the batch_id from the original order so new orders join the same batch
+      const { data: origOrder } = await sb.from('driver_orders').select('batch_id, editable_until').eq('id', driverEditOrderId).single();
+      const editBatchId = origOrder?.batch_id || driverEditOrderId;
+      const editableUntil = origOrder?.editable_until || new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+      // Insert any additional orders (orders[1..n]) as new orders in the same batch
+      for (let i = 1; i < orders.length; i++) {
+        const o = orders[i];
+        const items = collectItems(o);
+        if (items.length === 0) continue;
+
+        const { data: newOrder, error: newErr } = await sb.from('driver_orders').insert({
+          driver_id: currentDriver.id,
+          batch_id: editBatchId,
+          business_name: o.business || null,
+          pickup_date: o.date || null,
+          pickup_time: o.time || null,
+          driver_ref: o.ref || null,
+          notes: o.notes || null,
+          status: 'pending',
+          editable_until: editableUntil,
+        }).select('id').single();
+
+        if (newErr) { console.error('Edit add-order error:', newErr); continue; }
+
+        const newItems = items.map(it => ({
+          order_id: newOrder.id,
+          product_key: it.product_key,
+          product_label: it.product_label,
+          quantity: it.quantity,
+          price_at_order: priceMap[it.product_key] || 0,
+        }));
+        await sb.from('driver_order_items').insert(newItems);
+        const newTotal = newItems.reduce((sum, it) => sum + it.quantity * it.price_at_order, 0);
+        await sb.from('driver_orders').update({ total_amount: newTotal }).eq('id', newOrder.id);
+      }
+
       closeSummary();
       document.getElementById('form-footer').style.display = 'none';
       showToast(
@@ -866,35 +903,19 @@ async function submitAllOrders() {
     }
 
     // ── NORMAL MODE: create new orders ──
+    const batchId = crypto.randomUUID();
     const editableUntil = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
     for (let i = 0; i < orders.length; i++) {
       const o = orders[i];
-
-      // Collect items with qty > 0
-      const items = [];
-      Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
-        sec.items.forEach(item => {
-          if (sec.type === 'redondo') {
-            (item.cols || []).forEach(col => {
-              const k = item.key + '_' + col;
-              const v = o.qty[k] || 0;
-              if (v > 0) { const colClean = col.replace('_nt',''); items.push({ product_key: k, product_label: `${item.en} (${colClean})`, quantity: v }); }
-            });
-          } else {
-            const v = o.qty[item.key] || 0;
-            const vnt = o.qty[item.key + '_nt'] || 0;
-            if (v > 0) items.push({ product_key: item.key, product_label: item.en, quantity: v });
-            if (vnt > 0) items.push({ product_key: item.key + '_nt', product_label: item.en + ' (No Ticket)', quantity: vnt });
-          }
-        });
-      });
+      const items = collectItems(o);
 
       if (items.length === 0) continue;
 
       // Build order payload
       const orderPayload = {
         driver_id: currentDriver.id,
+        batch_id: batchId,
         business_name: o.business || null,
         pickup_date: o.date || null,
         pickup_time: o.time || null,
@@ -1121,6 +1142,22 @@ async function loadDriverBalance() {
   } catch (e) { console.error('Balance error:', e); }
 }
 
+// ── GROUP ORDERS BY BATCH ──
+function groupOrdersByBatch(orders) {
+  const groups = [];
+  const batchMap = {};
+  orders.forEach(o => {
+    const batchKey = o.batch_id || o.id; // solo orders use their own id
+    if (batchMap[batchKey]) {
+      batchMap[batchKey].push(o);
+    } else {
+      batchMap[batchKey] = [o];
+      groups.push(batchKey);
+    }
+  });
+  return groups.map(key => batchMap[key]);
+}
+
 // ── LOAD RECENT ORDERS (Overview) ──
 async function loadRecentOrders() {
   if (!sb || !currentDriver) return;
@@ -1131,7 +1168,7 @@ async function loadRecentOrders() {
       .select('*, driver_order_items(*)')
       .eq('driver_id', currentDriver.id)
       .order('created_at', { ascending: false })
-      .limit(5);
+      .limit(10);
 
     if (error) { console.error('Recent orders error:', error); return; }
     if (!data || data.length === 0) {
@@ -1139,7 +1176,8 @@ async function loadRecentOrders() {
       return;
     }
 
-    container.innerHTML = data.map(o => renderOrderCard(o)).join('');
+    const batches = groupOrdersByBatch(data);
+    container.innerHTML = batches.slice(0, 5).map(batch => renderOrderCard(batch)).join('');
   } catch (e) { console.error('Recent load error:', e); }
 }
 
@@ -1161,7 +1199,8 @@ async function loadMyOrders() {
       return;
     }
 
-    container.innerHTML = data.map(o => renderOrderCard(o)).join('');
+    const batches = groupOrdersByBatch(data);
+    container.innerHTML = batches.map(batch => renderOrderCard(batch)).join('');
     requestAnimationFrame(() => lucide.createIcons());
   } catch (e) { console.error('My orders load error:', e); }
 }
@@ -1184,27 +1223,40 @@ function getEditTimeRemaining(order) {
 }
 
 // ── RENDER ORDER CARD ──
-function renderOrderCard(order) {
-  const dateInfo = smartDateLabel(order);
-  const timeInfo = smartTimeLabel(order);
+// `batch` is an array of orders (1 for solo, N for batch)
+function renderOrderCard(batch) {
+  const primary = batch[0];
+  const isBatch = batch.length > 1;
+  const dateInfo = smartDateLabel(primary);
+  const timeInfo = smartTimeLabel(primary);
 
-  // Single payment badge only
+  // Payment badge — use worst status in batch
+  let payStatus = 'paid';
+  batch.forEach(o => {
+    if (o.payment_status !== 'paid' && o.payment_status !== 'partial') payStatus = 'not_paid';
+    if (o.payment_status === 'partial' && payStatus === 'paid') payStatus = 'partial';
+  });
   let payBadge = '';
-  if (order.payment_status === 'paid') {
+  if (payStatus === 'paid') {
     payBadge = `<span class="pay-badge paid">${lang === 'es' ? 'Pagado' : 'Paid'}</span>`;
-  } else if (order.payment_status === 'partial') {
+  } else if (payStatus === 'partial') {
     payBadge = `<span class="pay-badge partial">${lang === 'es' ? 'Parcial' : 'Partial'}</span>`;
   } else {
     payBadge = `<span class="pay-badge not-paid">${lang === 'es' ? 'No Pagado' : 'Not Paid'}</span>`;
   }
 
-  const bizName = order.business_name || (lang === 'es' ? 'Sin nombre' : 'No name');
-  const total = order.total_amount != null ? `$${parseFloat(order.total_amount).toFixed(2)}` : '';
+  // Business names
+  const bizNames = batch.map(o => o.business_name || (lang === 'es' ? 'Sin nombre' : 'No name'));
+  const bizDisplay = isBatch ? bizNames.join(' · ') : bizNames[0];
 
-  // Edit window indicator (for pending orders)
+  // Combined total
+  const combinedTotal = batch.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
+  const totalStr = combinedTotal > 0 ? `$${combinedTotal.toFixed(2)}` : '';
+
+  // Edit indicator (use primary)
   let editIndicator = '';
-  if (order.status === 'pending') {
-    const minLeft = getEditTimeRemaining(order);
+  if (primary.status === 'pending') {
+    const minLeft = getEditTimeRemaining(primary);
     if (minLeft !== null) {
       editIndicator = `<div class="edit-indicator active"><i data-lucide="pencil"></i> ${minLeft} min</div>`;
     } else {
@@ -1212,19 +1264,20 @@ function renderOrderCard(order) {
     }
   }
 
-  // Status dot for pending (subtle, no full badge)
-  const statusDot = order.status === 'pending'
-    ? `<span class="status-dot pending"></span>`
-    : '';
+  const statusDot = primary.status === 'pending'
+    ? `<span class="status-dot pending"></span>` : '';
+
+  const orderIds = batch.map(o => o.id).join(',');
+  const batchLabel = isBatch ? `<span class="batch-count">${batch.length} ${lang === 'es' ? 'pedidos' : 'orders'}</span>` : '';
 
   return `
-    <div class="order-card" onclick="showOrderDetail('${order.id}')">
+    <div class="order-card" onclick="showOrderDetail('${orderIds}')">
       <div class="order-card-row1">
-        <div class="order-card-name">${bizName}</div>
-        <div class="order-card-total">${total}</div>
+        <div class="order-card-name">${bizDisplay}</div>
+        <div class="order-card-total">${totalStr}</div>
       </div>
       <div class="order-card-row2">
-        <div class="order-card-left">${statusDot}${payBadge}<span class="order-card-id">#${shortOrderId(order.id)}</span></div>
+        <div class="order-card-left">${statusDot}${payBadge}${batchLabel}<span class="order-card-id">#${shortOrderId(primary.id)}</span></div>
         <div class="order-card-date">${dateInfo.value} · ${timeInfo.value}</div>
       </div>
       ${editIndicator ? `<div class="order-card-edit">${editIndicator}</div>` : ''}
@@ -1234,162 +1287,33 @@ function renderOrderCard(order) {
 // ── ORDER DETAIL MODAL ──
 let driverEditOrderId = null; // Track which order is being edited
 
-window.showOrderDetail = async function(orderId) {
+// Batch detail state
+let _batchOrders = [];
+let _batchIdx = 0;
+
+window.showOrderDetail = async function(orderIdStr) {
   if (window._swipeDismissCooldown) return;
   if (!sb) return;
   const overlay = document.getElementById('order-detail-overlay');
+  const ids = orderIdStr.split(',');
 
   try {
-    const { data: order, error } = await sb
+    // Fetch all orders in batch
+    const { data: fetchedOrders, error } = await sb
       .from('driver_orders')
       .select('*, driver_order_items(*)')
-      .eq('id', orderId)
-      .single();
+      .in('id', ids);
 
-    if (error || !order) { console.error('Detail load error:', error); return; }
-
-    // Title
-    document.getElementById('order-detail-title').textContent =
-      `${lang === 'es' ? 'Pedido' : 'Order'} #${shortOrderId(order.id)}`;
-
-    // Badge
-    let badgeHtml = '';
-    if (order.payment_status === 'paid') {
-      badgeHtml = `<span class="pay-badge paid">${lang === 'es' ? 'Pagado' : 'Paid'}</span>`;
-    } else if (order.payment_status === 'partial') {
-      badgeHtml = `<span class="pay-badge partial">${lang === 'es' ? 'Parcial' : 'Partial'}</span>`;
-    } else {
-      badgeHtml = `<span class="pay-badge not-paid">${lang === 'es' ? 'No Pagado' : 'Not Paid'}</span>`;
-    }
-    document.getElementById('order-detail-badge').innerHTML = badgeHtml;
-
-    // Edit indicator
-    let editBannerHtml = '';
-    const editable = isOrderEditable(order);
-    if (order.status === 'pending') {
-      const minLeft = getEditTimeRemaining(order);
-      if (editable && minLeft !== null) {
-        editBannerHtml = `<div class="edit-indicator active" style="margin-bottom:10px">
-          <i data-lucide="pencil"></i> ${lang === 'es' ? `Editable por ${minLeft} min más` : `Editable for ${minLeft} more min`}
-        </div>`;
-      } else {
-        editBannerHtml = `<div class="edit-indicator locked" style="margin-bottom:10px">
-          <i data-lucide="lock"></i> ${lang === 'es' ? 'Este pedido ya no se puede editar' : 'This order can no longer be edited'}
-        </div>`;
-      }
+    if (error || !fetchedOrders || fetchedOrders.length === 0) {
+      console.error('Detail load error:', error);
+      return;
     }
 
-    // Meta
-    const dateInfo = smartDateLabel(order);
-    const timeInfo = smartTimeLabel(order);
-    const bizName = order.business_name || (lang === 'es' ? 'Sin nombre' : 'No name');
-    let metaHtml = `
-      <span><i data-lucide="store"></i>${bizName}</span>
-      <span><i data-lucide="calendar"></i>${dateInfo.label}: ${dateInfo.value}</span>
-      <span><i data-lucide="clock"></i>${timeInfo.label}: ${timeInfo.value}</span>
-    `;
-    if (order.driver_ref) {
-      metaHtml += `<span><i data-lucide="hash"></i>${lang === 'es' ? 'Ref' : 'Ref'}: ${order.driver_ref}</span>`;
-    }
-    document.getElementById('order-detail-meta').innerHTML = editBannerHtml + `<div class="order-detail-meta-inner">${metaHtml}</div>`;
+    // Preserve the same order as the IDs
+    _batchOrders = ids.map(id => fetchedOrders.find(o => o.id === id)).filter(Boolean);
+    _batchIdx = 0;
 
-    // Items
-    const items = order.driver_order_items || [];
-    const showPrices = (order.status === 'sent'); // Show prices on confirmed orders
-    if (items.length === 0) {
-      document.getElementById('order-detail-items').innerHTML =
-        `<div class="empty-state">${lang === 'es' ? 'Sin artículos' : 'No items'}</div>`;
-    } else {
-      let itemsHtml = '';
-      let grandTotal = 0;
-
-      // Build product_key → category label map from PRODUCTS
-      const keyCat = {};
-      Object.values(PRODUCTS).forEach(sec => {
-        sec.items.forEach(item => {
-          keyCat[item.key] = sec;
-          keyCat[item.key + '_nt'] = sec;
-          if (sec.type === 'redondo') {
-            (item.cols || []).forEach(col => { keyCat[item.key + '_' + col] = sec; });
-          }
-        });
-      });
-
-      let lastCat = '';
-      items.forEach(item => {
-        const label = productLabel(item.product_key, item.product_label);
-        const origQty = item.quantity;
-        const adminQty = item.admin_qty;
-        const effectiveQty = adminQty ?? origQty;
-        const price = parseFloat(item.price_at_order || 0);
-        const lineTotal = effectiveQty * price;
-        grandTotal += lineTotal;
-        let qtyDisplay = `×${effectiveQty}`;
-        let adjHtml = '';
-
-        if (adminQty != null && adminQty !== origQty) {
-          const diff = adminQty - origQty;
-          const sign = diff > 0 ? '+' : '';
-          adjHtml = `<span class="order-detail-item-adj">(${origQty} → ${adminQty}, ${sign}${diff} ${lang === 'es' ? 'en recogida' : 'at pickup'})</span>`;
-        }
-
-        // Category header
-        const cat = keyCat[item.product_key];
-        const catLabel = cat ? L(cat) : '';
-        if (catLabel && catLabel !== lastCat) {
-          itemsHtml += `<div class="order-detail-cat-header">${catLabel}</div>`;
-          lastCat = catLabel;
-        }
-
-        // Clean label & no-ticket tag
-        let cleanLabel = label.replace(/\s*\(No Ticket\)/i, '').replace(/_nt\b/g, '');
-        const isNT = (item.product_key && item.product_key.endsWith('_nt')) || label.includes('(No Ticket)');
-
-        itemsHtml += `
-          <div class="order-detail-item">
-            <span class="order-detail-item-name">${cleanLabel}${isNT ? `<span class="no-ticket-tag">✕ ${lang === 'es' ? 'Sin Ticket' : 'No Ticket'}</span>` : ''}${adjHtml}</span>
-            <span class="order-detail-item-qty">${qtyDisplay}${showPrices ? ` · $${lineTotal.toFixed(2)}` : ''}</span>
-          </div>`;
-      });
-
-      // Grand total row for confirmed orders
-      if (showPrices) {
-        itemsHtml += `
-          <div class="order-detail-total">
-            <span>Total</span>
-            <span>$${grandTotal.toFixed(2)}</span>
-          </div>`;
-      }
-
-      document.getElementById('order-detail-items').innerHTML = itemsHtml;
-    }
-
-    // Notes
-    const notesEl = document.getElementById('order-detail-notes');
-    if (order.notes) {
-      notesEl.style.display = 'block';
-      notesEl.innerHTML = `<strong>${lang === 'es' ? 'Notas' : 'Notes'}</strong>${order.notes}`;
-    } else {
-      notesEl.style.display = 'none';
-    }
-
-    // Edit button (only for editable orders)
-    let actionsEl = document.getElementById('order-detail-actions');
-    if (!actionsEl) {
-      actionsEl = document.createElement('div');
-      actionsEl.id = 'order-detail-actions';
-      actionsEl.className = 'order-detail-actions';
-      const itemsContainer = document.getElementById('order-detail-items');
-      itemsContainer.parentNode.insertBefore(actionsEl, itemsContainer.nextSibling);
-    }
-    if (editable) {
-      actionsEl.innerHTML = `<button class="edit-order-btn" onclick="editOrder('${order.id}')">
-        <i data-lucide="pencil"></i> ${lang === 'es' ? 'Editar Pedido' : 'Edit Order'}
-      </button>`;
-      actionsEl.style.display = 'block';
-    } else {
-      actionsEl.style.display = 'none';
-    }
+    renderOrderInDetail(_batchIdx);
 
     overlay.classList.add('open');
     document.body.dataset.scrollY = window.scrollY;
@@ -1397,9 +1321,170 @@ window.showOrderDetail = async function(orderId) {
     document.body.style.top = `-${window.scrollY}px`;
     document.body.style.left = '0';
     document.body.style.right = '0';
-    lucide.createIcons();
   } catch (e) { console.error('Order detail error:', e); }
 };
+
+window.batchDetailNav = function(dir) {
+  _batchIdx = Math.max(0, Math.min(_batchOrders.length - 1, _batchIdx + dir));
+  renderOrderInDetail(_batchIdx);
+};
+
+function renderOrderInDetail(idx) {
+  const order = _batchOrders[idx];
+  if (!order) return;
+  const isBatch = _batchOrders.length > 1;
+
+  // Batch nav bar
+  let batchNavHtml = '';
+  if (isBatch) {
+    batchNavHtml = `<div class="batch-nav">
+      <button class="batch-nav-btn" onclick="batchDetailNav(-1)" ${idx === 0 ? 'disabled' : ''}>‹</button>
+      <span>${lang === 'es' ? 'Pedido' : 'Order'} ${idx + 1} ${lang === 'es' ? 'de' : 'of'} ${_batchOrders.length}</span>
+      <button class="batch-nav-btn" onclick="batchDetailNav(1)" ${idx === _batchOrders.length - 1 ? 'disabled' : ''}>›</button>
+    </div>`;
+  }
+
+  // Title
+  document.getElementById('order-detail-title').textContent =
+    `${lang === 'es' ? 'Pedido' : 'Order'} #${shortOrderId(order.id)}`;
+
+  // Badge
+  let badgeHtml = '';
+  if (order.payment_status === 'paid') {
+    badgeHtml = `<span class="pay-badge paid">${lang === 'es' ? 'Pagado' : 'Paid'}</span>`;
+  } else if (order.payment_status === 'partial') {
+    badgeHtml = `<span class="pay-badge partial">${lang === 'es' ? 'Parcial' : 'Partial'}</span>`;
+  } else {
+    badgeHtml = `<span class="pay-badge not-paid">${lang === 'es' ? 'No Pagado' : 'Not Paid'}</span>`;
+  }
+  document.getElementById('order-detail-badge').innerHTML = badgeHtml;
+
+  // Edit indicator
+  let editBannerHtml = '';
+  const editable = isOrderEditable(order);
+  if (order.status === 'pending') {
+    const minLeft = getEditTimeRemaining(order);
+    if (editable && minLeft !== null) {
+      editBannerHtml = `<div class="edit-indicator active" style="margin-bottom:10px">
+        <i data-lucide="pencil"></i> ${lang === 'es' ? `Editable por ${minLeft} min más` : `Editable for ${minLeft} more min`}
+      </div>`;
+    } else {
+      editBannerHtml = `<div class="edit-indicator locked" style="margin-bottom:10px">
+        <i data-lucide="lock"></i> ${lang === 'es' ? 'Este pedido ya no se puede editar' : 'This order can no longer be edited'}
+      </div>`;
+    }
+  }
+
+  // Meta
+  const dateInfo = smartDateLabel(order);
+  const timeInfo = smartTimeLabel(order);
+  const bizName = order.business_name || (lang === 'es' ? 'Sin nombre' : 'No name');
+  let metaHtml = `
+    <span><i data-lucide="store"></i>${bizName}</span>
+    <span><i data-lucide="calendar"></i>${dateInfo.label}: ${dateInfo.value}</span>
+    <span><i data-lucide="clock"></i>${timeInfo.label}: ${timeInfo.value}</span>
+  `;
+  if (order.driver_ref) {
+    metaHtml += `<span><i data-lucide="hash"></i>${lang === 'es' ? 'Ref' : 'Ref'}: ${order.driver_ref}</span>`;
+  }
+  document.getElementById('order-detail-meta').innerHTML = batchNavHtml + editBannerHtml + `<div class="order-detail-meta-inner">${metaHtml}</div>`;
+
+  // Items
+  const items = order.driver_order_items || [];
+  const showPrices = (order.status === 'sent');
+  if (items.length === 0) {
+    document.getElementById('order-detail-items').innerHTML =
+      `<div class="empty-state">${lang === 'es' ? 'Sin artículos' : 'No items'}</div>`;
+  } else {
+    let itemsHtml = '';
+    let grandTotal = 0;
+
+    const keyCat = {};
+    Object.values(PRODUCTS).forEach(sec => {
+      sec.items.forEach(item => {
+        keyCat[item.key] = sec;
+        keyCat[item.key + '_nt'] = sec;
+        if (sec.type === 'redondo') {
+          (item.cols || []).forEach(col => { keyCat[item.key + '_' + col] = sec; });
+        }
+      });
+    });
+
+    let lastCat = '';
+    items.forEach(item => {
+      const label = productLabel(item.product_key, item.product_label);
+      const origQty = item.quantity;
+      const adminQty = item.admin_qty;
+      const effectiveQty = adminQty ?? origQty;
+      const price = parseFloat(item.price_at_order || 0);
+      const lineTotal = effectiveQty * price;
+      grandTotal += lineTotal;
+      let qtyDisplay = `×${effectiveQty}`;
+      let adjHtml = '';
+
+      if (adminQty != null && adminQty !== origQty) {
+        const diff = adminQty - origQty;
+        const sign = diff > 0 ? '+' : '';
+        adjHtml = `<span class="order-detail-item-adj">(${origQty} → ${adminQty}, ${sign}${diff} ${lang === 'es' ? 'en recogida' : 'at pickup'})</span>`;
+      }
+
+      const cat = keyCat[item.product_key];
+      const catLabel = cat ? L(cat) : '';
+      if (catLabel && catLabel !== lastCat) {
+        itemsHtml += `<div class="order-detail-cat-header">${catLabel}</div>`;
+        lastCat = catLabel;
+      }
+
+      let cleanLabel = label.replace(/\s*\(No Ticket\)/i, '').replace(/_nt\b/g, '');
+      const isNT = (item.product_key && item.product_key.endsWith('_nt')) || label.includes('(No Ticket)');
+
+      itemsHtml += `
+        <div class="order-detail-item">
+          <span class="order-detail-item-name">${cleanLabel}${isNT ? `<span class="no-ticket-tag">✕ ${lang === 'es' ? 'Sin Ticket' : 'No Ticket'}</span>` : ''}${adjHtml}</span>
+          <span class="order-detail-item-qty">${qtyDisplay}${showPrices ? ` · $${lineTotal.toFixed(2)}` : ''}</span>
+        </div>`;
+    });
+
+    if (showPrices) {
+      itemsHtml += `
+        <div class="order-detail-total">
+          <span>Total</span>
+          <span>$${grandTotal.toFixed(2)}</span>
+        </div>`;
+    }
+
+    document.getElementById('order-detail-items').innerHTML = itemsHtml;
+  }
+
+  // Notes
+  const notesEl = document.getElementById('order-detail-notes');
+  if (order.notes) {
+    notesEl.style.display = 'block';
+    notesEl.innerHTML = `<strong>${lang === 'es' ? 'Notas' : 'Notes'}</strong>${order.notes}`;
+  } else {
+    notesEl.style.display = 'none';
+  }
+
+  // Edit button
+  let actionsEl = document.getElementById('order-detail-actions');
+  if (!actionsEl) {
+    actionsEl = document.createElement('div');
+    actionsEl.id = 'order-detail-actions';
+    actionsEl.className = 'order-detail-actions';
+    const itemsContainer = document.getElementById('order-detail-items');
+    itemsContainer.parentNode.insertBefore(actionsEl, itemsContainer.nextSibling);
+  }
+  if (editable) {
+    actionsEl.innerHTML = `<button class="edit-order-btn" onclick="editOrder('${order.id}')">
+      <i data-lucide="pencil"></i> ${lang === 'es' ? 'Editar Pedido' : 'Edit Order'}
+    </button>`;
+    actionsEl.style.display = 'block';
+  } else {
+    actionsEl.style.display = 'none';
+  }
+
+  lucide.createIcons();
+}
 
 function closeOrderDetail() {
   document.getElementById('order-detail-overlay').classList.remove('open');

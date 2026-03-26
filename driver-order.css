@@ -464,6 +464,21 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .status-badge.pending{background:#e3f2fd;color:#1565c0}
 .status-badge.sent{background:#e8f5e9;color:#2f8a4c}
 
+/* Batch count badge */
+.batch-count{display:inline-block;font-size:.65rem;font-weight:600;
+  background:var(--red);color:#fff;padding:1px 7px;border-radius:99px;margin-left:4px;
+  vertical-align:middle}
+
+/* Batch nav in detail modal */
+.batch-nav{display:flex;align-items:center;justify-content:center;gap:12px;
+  margin-bottom:10px;padding:6px 0}
+.batch-nav span{font-size:.82rem;font-weight:600;color:var(--tx)}
+.batch-nav-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--bd);
+  background:var(--bg-card);color:var(--tx);font-size:1.1rem;display:flex;
+  align-items:center;justify-content:center;cursor:pointer;transition:all .2s}
+.batch-nav-btn:hover:not(:disabled){background:var(--red);color:#fff;border-color:var(--red)}
+.batch-nav-btn:disabled{opacity:.3;cursor:not-allowed}
+
 /* Dark mode badge overrides */
 [data-theme="dark"] .pay-badge.paid{background:rgba(47,138,76,.15);color:#6fcf97}
 [data-theme="dark"] .pay-badge.not-paid{background:rgba(192,57,43,.15);color:#e88a82}
