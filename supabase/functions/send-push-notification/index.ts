@@ -14,18 +14,29 @@ const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 serve(async (req) => {
   try {
-    const payload = await req.json()
-    const { type, table, record, old_record } = payload
+    const raw = await req.json()
+    console.log('Webhook payload received:', JSON.stringify(raw).slice(0, 500))
+
+    // Handle both webhook formats:
+    // Format 1 (direct): { type, table, record, old_record }
+    // Format 2 (DB webhook): { type, table, record, old_record } (same but type might be uppercase)
+    // Format 3 (trigger-based): { old_data, data, ... } wrapped in trigger_name etc.
+    const type = (raw.type || '').toUpperCase()
+    const table = raw.table || ''
+    const record = raw.record || raw.data || raw.new || null
+    const old_record = raw.old_record || raw.old_data || raw.old || null
+
+    console.log(`Event: ${type} on ${table}`)
 
     if (table !== 'driver_orders') {
+      console.log('Not driver_orders, skipping')
       return new Response('Not relevant', { status: 200 })
     }
 
-    // Determine who to notify and what happened
+    // Determine who to notify
     let targets: { user_type: string; user_id?: string; title: string; body: string; url: string }[] = []
 
     if (type === 'INSERT' && record) {
-      // New order → notify all admins
       const driverName = record.business_name || 'Driver'
       targets.push({
         user_type: 'admin',
@@ -36,7 +47,6 @@ serve(async (req) => {
     }
 
     if (type === 'UPDATE' && record) {
-      // Order status changed to 'sent' → notify the driver
       if (record.status === 'sent' && old_record?.status !== 'sent') {
         targets.push({
           user_type: 'driver',
@@ -47,9 +57,8 @@ serve(async (req) => {
         })
       }
 
-      // Payment status changed → notify the driver
       if (record.payment_status && record.payment_status !== old_record?.payment_status) {
-        const statusLabel = record.payment_status === 'paid' ? 'Paid' : 
+        const statusLabel = record.payment_status === 'paid' ? 'Paid' :
                            record.payment_status === 'partial' ? 'Partially Paid' : 'Updated'
         targets.push({
           user_type: 'driver',
@@ -60,8 +69,7 @@ serve(async (req) => {
         })
       }
 
-      // Admin qty adjusted → notify the driver
-      if (type === 'UPDATE' && record.admin_notes && record.admin_notes !== old_record?.admin_notes) {
+      if (record.admin_notes && record.admin_notes !== old_record?.admin_notes) {
         targets.push({
           user_type: 'driver',
           user_id: record.driver_id,
@@ -72,17 +80,20 @@ serve(async (req) => {
       }
     }
 
+    console.log(`Targets: ${targets.length}`, targets.map(t => `${t.user_type}:${t.user_id || 'all'}`))
+
     // Send push to each target
     let sent = 0
     let failed = 0
 
     for (const target of targets) {
-      // Look up push subscriptions
       let query = sb.from('push_subscriptions').select('*').eq('user_type', target.user_type)
       if (target.user_id) query = query.eq('user_id', target.user_id)
 
       const { data: subs, error } = await query
-      if (error || !subs) continue
+      console.log(`Found ${subs?.length || 0} subscriptions for ${target.user_type}`)
+      if (error) { console.error('Sub lookup error:', error); continue }
+      if (!subs || subs.length === 0) continue
 
       for (const sub of subs) {
         const pushPayload = JSON.stringify({
@@ -99,18 +110,20 @@ serve(async (req) => {
 
         try {
           await webpush.sendNotification(pushSub, pushPayload)
+          console.log(`✅ Push sent to ${target.user_type}:${sub.id}`)
           sent++
         } catch (err: any) {
           console.error('Push send error:', err.statusCode, err.body)
           failed++
-          // Remove expired/invalid subscriptions
           if (err.statusCode === 404 || err.statusCode === 410) {
             await sb.from('push_subscriptions').delete().eq('id', sub.id)
+            console.log(`Removed expired subscription ${sub.id}`)
           }
         }
       }
     }
 
+    console.log(`Done: sent=${sent}, failed=${failed}`)
     return new Response(JSON.stringify({ sent, failed }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
