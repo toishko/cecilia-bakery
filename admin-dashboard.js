@@ -364,27 +364,36 @@ function playNotification() {
 // ── BROWSER NOTIFICATION API ──
 function requestNotifPermission() {
   if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
+    Notification.requestPermission().then(perm => {
+      console.log('Notification permission:', perm);
+    });
   }
 }
 
-function showBrowserNotification(title, body, section) {
+async function showBrowserNotification(title, body, section) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   if (!notificationsEnabled) return;
+
+  const options = {
+    body,
+    icon: '/assets/logo.png',
+    badge: '/assets/logo.png',
+    tag: 'cecilia-admin-' + Date.now(),
+    data: { url: '/admin-dashboard.html', section }
+  };
+
   try {
-    const n = new Notification(title, {
-      body,
-      icon: 'assets/logo.png',
-      badge: 'assets/logo.png',
-      tag: 'cecilia-admin-' + Date.now()
-    });
-    n.onclick = () => {
-      window.focus();
-      if (section) showSection(section);
-      n.close();
-    };
-    setTimeout(() => n.close(), 8000);
-  } catch (e) { console.warn('Browser notification failed:', e); }
+    // Use service worker notification (required for iOS PWA standalone)
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification(title, options);
+    } else {
+      // Fallback for browsers without service worker
+      const n = new Notification(title, options);
+      n.onclick = () => { window.focus(); if (section) showSection(section); n.close(); };
+      setTimeout(() => n.close(), 8000);
+    }
+  } catch (e) { console.warn('Notification failed:', e); }
 }
 
 /* ═══════════════════════════════════
