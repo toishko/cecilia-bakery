@@ -1159,17 +1159,25 @@ function openPrintWindow(showTotals, isPDF) {
     border:1px solid #ddd;border-radius:8px;background:#fffbe6}
   .print-footer{margin-top:24px;text-align:center;font-size:.75rem;color:#aaa;
     border-top:1px solid #eee;padding-top:12px}
-  .close-btn{display:block;width:100%;margin-top:20px;padding:12px;border:none;border-radius:10px;
-    background:#C8102E;color:#fff;font-size:.95rem;font-weight:600;font-family:inherit;
-    cursor:pointer;letter-spacing:.5px}
-  .close-btn:hover{background:#a00d24}
-  @media print{body{padding:12px}.close-btn{display:none!important}@page{margin:15mm}}
+  .btn-row{display:flex;gap:10px;margin-top:20px}
+  .print-btn,.close-btn{flex:1;padding:14px;border:none;border-radius:10px;
+    font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer;letter-spacing:.5px}
+  .print-btn{background:#C8102E;color:#fff}
+  .print-btn:hover{background:#a00d24}
+  .close-btn{background:#eee;color:#333}
+  .close-btn:hover{background:#ddd}
+  @media print{body{padding:12px}.btn-row{display:none!important}@page{margin:15mm}}
 </style></head><body>
   ${content}
   <div class="print-footer">Cecilia Bakery · ceciliabakery.com</div>
-  <button class="close-btn" onclick="window.close()">
-    ${lang === 'es' ? '✕ Cerrar Ventana' : '✕ Close Window'}
-  </button>
+  <div class="btn-row">
+    <button class="print-btn" onclick="window.print();window.onafterprint=function(){window.close()}">
+      🖨 ${lang === 'es' ? 'Imprimir' : 'Print'}
+    </button>
+    <button class="close-btn" onclick="window.close()">
+      ✕ ${lang === 'es' ? 'Cerrar' : 'Close'}
+    </button>
+  </div>
 </body></html>`;
 
   const printWin = window.open('', '_blank', 'width=700,height=900');
@@ -1188,15 +1196,6 @@ function openPrintWindow(showTotals, isPDF) {
       'info'
     );
   }
-
-  // Wait for logo to load then print, auto-close after
-  printWin.onload = () => {
-    setTimeout(() => {
-      printWin.print();
-      // Auto-close after print dialog is dismissed
-      printWin.onafterprint = () => { printWin.close(); };
-    }, 300);
-  };
 }
 
 window.printOrder = function() {
