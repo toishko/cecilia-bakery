@@ -1149,9 +1149,21 @@ function openPrintWindow(showTotals) {
   `;
   document.body.appendChild(overlay);
 
-  // Close button
+  // Unlock the body scroll so the overlay can scroll freely
+  const savedTop = document.body.style.top;
+  const savedScrollY = parseInt(savedTop || '0', 10) * -1;
+  document.body.style.position = '';
+  document.body.style.top = '';
+  window.scrollTo(0, savedScrollY);
+
+  // Close button — re-lock body if modal is still open
   document.getElementById('pp-close-btn').addEventListener('click', () => {
     overlay.remove();
+    const detailOverlay = document.getElementById('detail-overlay');
+    if (detailOverlay && detailOverlay.classList.contains('open')) {
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${window.scrollY}px`;
+    }
   });
 
   // Print button — calls window.print() from main page (no Safari blocking)
