@@ -1342,7 +1342,7 @@ window.showOrderDetail = async function(orderId) {
 
         itemsHtml += `
           <div class="order-detail-item">
-            <span class="order-detail-item-name">${cleanLabel}${isNT ? `<span class="no-ticket-tag">${lang === 'es' ? 'Sin Ticket' : 'No Ticket'}</span>` : ''}${adjHtml}</span>
+            <span class="order-detail-item-name">${cleanLabel}${isNT ? `<span class="no-ticket-tag">✕ ${lang === 'es' ? 'Sin Ticket' : 'No Ticket'}</span>` : ''}${adjHtml}</span>
             <span class="order-detail-item-qty">${qtyDisplay}${showPrices ? ` · $${lineTotal.toFixed(2)}` : ''}</span>
           </div>`;
       });
