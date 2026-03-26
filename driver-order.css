@@ -498,6 +498,14 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .order-detail-item-name{font-weight:500;color:var(--tx);font-size:.9rem}
 .order-detail-item-qty{font-weight:600;color:var(--tx);font-size:.88rem}
 .order-detail-item-adj{font-size:.72rem;color:var(--tx-faint);margin-left:4px}
+.order-detail-cat-header{font-size:.72rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.5px;color:var(--red);padding:8px 0 4px;border-left:3px solid var(--red);
+  padding-left:8px;margin-top:6px}
+.order-detail-cat-header:first-child{margin-top:0}
+.order-detail-items .no-ticket-tag{display:inline-block;font-size:.6rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.3px;color:var(--red);
+  background:rgba(200,16,46,.08);padding:1px 5px;border-radius:3px;margin-left:5px;
+  vertical-align:middle}
 .order-detail-notes{padding:8px 18px 12px;border-top:1px solid var(--bd);
   font-size:.85rem;color:var(--tx-muted);font-style:italic}
 .order-detail-notes strong{display:block;margin-bottom:4px;font-style:normal;color:var(--tx)}

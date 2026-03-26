@@ -1291,6 +1291,20 @@ window.showOrderDetail = async function(orderId) {
     } else {
       let itemsHtml = '';
       let grandTotal = 0;
+
+      // Build product_key → category label map from PRODUCTS
+      const keyCat = {};
+      Object.values(PRODUCTS).forEach(sec => {
+        sec.items.forEach(item => {
+          keyCat[item.key] = sec;
+          keyCat[item.key + '_nt'] = sec;
+          if (sec.type === 'redondo') {
+            (item.cols || []).forEach(col => { keyCat[item.key + '_' + col] = sec; });
+          }
+        });
+      });
+
+      let lastCat = '';
       items.forEach(item => {
         const label = productLabel(item.product_key, item.product_label);
         const origQty = item.quantity;
@@ -1308,9 +1322,21 @@ window.showOrderDetail = async function(orderId) {
           adjHtml = `<span class="order-detail-item-adj">(${origQty} → ${adminQty}, ${sign}${diff} ${lang === 'es' ? 'en recogida' : 'at pickup'})</span>`;
         }
 
+        // Category header
+        const cat = keyCat[item.product_key];
+        const catLabel = cat ? L(cat) : '';
+        if (catLabel && catLabel !== lastCat) {
+          itemsHtml += `<div class="order-detail-cat-header">${catLabel}</div>`;
+          lastCat = catLabel;
+        }
+
+        // Clean label & no-ticket tag
+        let cleanLabel = label.replace(/\s*\(No Ticket\)/i, '');
+        const isNT = (item.product_key && item.product_key.endsWith('_nt')) || label.includes('(No Ticket)');
+
         itemsHtml += `
           <div class="order-detail-item">
-            <span class="order-detail-item-name">${label}${adjHtml}</span>
+            <span class="order-detail-item-name">${cleanLabel}${isNT ? `<span class="no-ticket-tag">${lang === 'es' ? 'Sin Ticket' : 'No Ticket'}</span>` : ''}${adjHtml}</span>
             <span class="order-detail-item-qty">${qtyDisplay}${showPrices ? ` · $${lineTotal.toFixed(2)}` : ''}</span>
           </div>`;
       });
