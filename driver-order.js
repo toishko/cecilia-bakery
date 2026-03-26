@@ -861,7 +861,6 @@ async function submitAllOrders() {
     }
 
     // ── NORMAL MODE: create new orders ──
-    const batchId = crypto.randomUUID();
     const editableUntil = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
     for (let i = 0; i < orders.length; i++) {
@@ -888,25 +887,29 @@ async function submitAllOrders() {
 
       if (items.length === 0) continue;
 
+      // Build order payload
+      const orderPayload = {
+        driver_id: currentDriver.id,
+        business_name: o.business || null,
+        pickup_date: o.date || null,
+        pickup_time: o.time || null,
+        driver_ref: o.ref || null,
+        notes: o.notes || null,
+        status: 'pending',
+        editable_until: editableUntil,
+      };
+
       // Insert order
       const { data: orderData, error: orderErr } = await sb
         .from('driver_orders')
-        .insert({
-          driver_id: currentDriver.id,
-          batch_id: batchId,
-          batch_index: i + 1,
-          business_name: o.business || null,
-          pickup_date: o.date || null,
-          pickup_time: o.time || null,
-          driver_ref: o.ref || null,
-          notes: o.notes || null,
-          status: 'pending',
-          editable_until: editableUntil,
-        })
+        .insert(orderPayload)
         .select('id')
         .single();
 
-      if (orderErr) throw orderErr;
+      if (orderErr) {
+        console.error(`Order ${i+1} insert error:`, orderErr);
+        throw orderErr;
+      }
 
       // Insert items with price snapshot
       const orderItems = items.map(it => ({
@@ -918,11 +921,14 @@ async function submitAllOrders() {
       }));
 
       const { error: itemsErr } = await sb.from('driver_order_items').insert(orderItems);
+      if (itemsErr) {
+        console.error(`Order ${i+1} items insert error:`, itemsErr);
+        throw itemsErr;
+      }
 
       // Calculate and set total_amount on the order
       const orderTotal = orderItems.reduce((sum, it) => sum + it.quantity * it.price_at_order, 0);
       await sb.from('driver_orders').update({ total_amount: orderTotal }).eq('id', orderData.id);
-      if (itemsErr) throw itemsErr;
     }
 
     // Success
