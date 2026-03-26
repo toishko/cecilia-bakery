@@ -1059,7 +1059,9 @@ function buildPrintHTML(showTotals) {
     timeStr = formatTime(order.submitted_at);
   }
 
+  const logoUrl = window.location.origin + '/assets/logo.png';
   let html = `<div class="print-header">
+    <img src="${logoUrl}" alt="Cecilia Bakery" class="print-logo" onerror="this.style.display='none'">
     <h1>Cecilia Bakery</h1>
     <div class="print-order-num">${lang === 'es' ? 'Pedido' : 'Order'} ${orderNum}</div>
   </div>`;
@@ -1126,23 +1128,72 @@ function buildPrintHTML(showTotals) {
   return html;
 }
 
+function openPrintWindow(showTotals, isPDF) {
+  const content = buildPrintHTML(showTotals);
+  if (!content) return;
+
+  const fullHTML = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cecilia Bakery - ${lang === 'es' ? 'Pedido' : 'Order'}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Outfit','Segoe UI',sans-serif;padding:24px;color:#1a1a1a;max-width:700px;margin:0 auto}
+  .print-logo{display:block;max-width:140px;height:auto;margin:0 auto 8px}
+  .print-header{text-align:center;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #C8102E}
+  .print-header h1{font-family:'Cormorant Garamond',Georgia,serif;font-size:1.5rem;margin:0;color:#C8102E;letter-spacing:1px}
+  .print-order-num{font-size:1rem;font-weight:600;margin-top:4px;color:#333}
+  .print-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:20px;font-size:.88rem}
+  .print-meta-item{display:flex;gap:6px}
+  .print-meta-label{font-weight:700;min-width:80px;color:#555}
+  .print-items{width:100%;border-collapse:collapse;margin-bottom:16px}
+  .print-items th{text-align:left;border-bottom:2px solid #C8102E;padding:8px;font-size:.82rem;
+    text-transform:uppercase;letter-spacing:.5px;color:#888}
+  .print-items td{border-bottom:1px solid #eee;padding:8px;font-size:.88rem}
+  .print-items .col-r{text-align:right}
+  .print-items tbody tr:nth-child(even){background:#fafafa}
+  .print-total{text-align:right;font-size:1.15rem;font-weight:700;margin-top:8px;
+    padding-top:10px;border-top:2px solid #C8102E;color:#C8102E}
+  .print-payment{margin-top:14px;font-size:.88rem;padding:10px 14px;border:1px solid #ddd;
+    border-radius:8px;background:#f9f9f9}
+  .print-notes{margin-top:12px;font-size:.85rem;font-style:italic;padding:10px 14px;
+    border:1px solid #ddd;border-radius:8px;background:#fffbe6}
+  .print-footer{margin-top:24px;text-align:center;font-size:.75rem;color:#aaa;
+    border-top:1px solid #eee;padding-top:12px}
+  @media print{body{padding:12px}@page{margin:15mm}}
+</style></head><body>
+  ${content}
+  <div class="print-footer">Cecilia Bakery · ceciliabakery.com</div>
+</body></html>`;
+
+  const printWin = window.open('', '_blank', 'width=700,height=900');
+  if (!printWin) {
+    showToast(lang === 'es' ? 'Permite ventanas emergentes' : 'Please allow popups', 'error');
+    return;
+  }
+  printWin.document.write(fullHTML);
+  printWin.document.close();
+
+  if (isPDF) {
+    showToast(
+      lang === 'es'
+        ? 'Selecciona "Guardar como PDF" en el diálogo de impresión'
+        : 'Select "Save as PDF" in the print dialog',
+      'info'
+    );
+  }
+
+  // Wait for logo to load then print
+  printWin.onload = () => {
+    setTimeout(() => { printWin.print(); }, 300);
+  };
+}
+
 window.printOrder = function() {
-  const container = document.getElementById('print-container');
-  container.innerHTML = buildPrintHTML(detailTotalsVisible);
-  window.print();
+  openPrintWindow(detailTotalsVisible, false);
 };
 
 window.downloadPDF = function() {
-  // Uses browser print-to-PDF functionality
-  const container = document.getElementById('print-container');
-  container.innerHTML = buildPrintHTML(detailTotalsVisible);
-  showToast(
-    lang === 'es'
-      ? 'Selecciona "Guardar como PDF" en el diálogo de impresión'
-      : 'Select "Save as PDF" in the print dialog',
-    'info'
-  );
-  window.print();
+  openPrintWindow(detailTotalsVisible, true);
 };
 
 window.shareWhatsApp = function() {
