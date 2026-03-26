@@ -1159,10 +1159,17 @@ function openPrintWindow(showTotals, isPDF) {
     border:1px solid #ddd;border-radius:8px;background:#fffbe6}
   .print-footer{margin-top:24px;text-align:center;font-size:.75rem;color:#aaa;
     border-top:1px solid #eee;padding-top:12px}
-  @media print{body{padding:12px}@page{margin:15mm}}
+  .close-btn{display:block;width:100%;margin-top:20px;padding:12px;border:none;border-radius:10px;
+    background:#C8102E;color:#fff;font-size:.95rem;font-weight:600;font-family:inherit;
+    cursor:pointer;letter-spacing:.5px}
+  .close-btn:hover{background:#a00d24}
+  @media print{body{padding:12px}.close-btn{display:none!important}@page{margin:15mm}}
 </style></head><body>
   ${content}
   <div class="print-footer">Cecilia Bakery · ceciliabakery.com</div>
+  <button class="close-btn" onclick="window.close()">
+    ${lang === 'es' ? '✕ Cerrar Ventana' : '✕ Close Window'}
+  </button>
 </body></html>`;
 
   const printWin = window.open('', '_blank', 'width=700,height=900');
@@ -1182,9 +1189,13 @@ function openPrintWindow(showTotals, isPDF) {
     );
   }
 
-  // Wait for logo to load then print
+  // Wait for logo to load then print, auto-close after
   printWin.onload = () => {
-    setTimeout(() => { printWin.print(); }, 300);
+    setTimeout(() => {
+      printWin.print();
+      // Auto-close after print dialog is dismissed
+      printWin.onafterprint = () => { printWin.close(); };
+    }, 300);
   };
 }
 
