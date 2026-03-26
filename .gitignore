@@ -16,3 +16,4 @@ dist/
 .vscode/
 .idea/
 *.local.md
+supabase/.temp/
