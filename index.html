@@ -5407,6 +5407,26 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       }
     }
 
+    /* Hide product cards for products not returned by Supabase (available=false) */
+    function applyHiddenProducts() {
+      if (!Object.keys(PRODUCTS).length) return;
+      document.querySelectorAll('.atc-trigger').forEach(btn => {
+        const onclick = btn.getAttribute('onclick') || '';
+        const match = onclick.match(/openATC\('([^']+)'/);
+        if (!match) return;
+        const name = match[1];
+        if (!PRODUCTS[name]) {
+          const card = btn.closest('.product-card');
+          if (card) card.style.display = 'none';
+        }
+      });
+      document.querySelectorAll('.menu-section').forEach(section => {
+        const cards = section.querySelectorAll('.product-card');
+        const allHidden = cards.length > 0 && [...cards].every(c => c.style.display === 'none');
+        if (allHidden) section.style.display = 'none';
+      });
+    }
+
     /* Apply sold-out state to all rendered ATC buttons */
     function applySOldOutState() {
       document.querySelectorAll('.atc-trigger').forEach(btn => {
@@ -5441,6 +5461,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         setLang(savedLang);
       } catch (e) { }
       await loadProductsFromSupabase();
+      applyHiddenProducts();
       applySOldOutState();
     });
 

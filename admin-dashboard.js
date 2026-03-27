@@ -2552,33 +2552,33 @@ async function loadActiveInvites() {
 
 /* ── Seed data (mirrored from menu.html PRODUCTS const) ── */
 const PM_SEED_DATA = [
-  { name_en:'Tres Leches',                    name_es:'Tres Leches',                tag_en:'Tres Leches',           tag_es:'Tres Leches',             price:4.99 },
-  { name_en:'Tres Leche Piña',                name_es:'Tres Leche Piña',            tag_en:'Tres Leches',           tag_es:'Tres Leches',             price:4.99 },
-  { name_en:'Tres Leche Strawberry',          name_es:'Tres Leche Fresa',           tag_en:'Tres Leches',           tag_es:'Tres Leches',             price:4.99 },
-  { name_en:'Tres Leche Hershey',             name_es:'Tres Leche Hershey',         tag_en:'Tres Leches',           tag_es:'Tres Leches',             price:4.99 },
-  { name_en:'Cuatro Leche',                   name_es:'Cuatro Leche',               tag_en:'Tres Leches · Premium', tag_es:'Tres Leches · Premium',   price:4.99 },
-  { name_en:'Piña',          name_es:'Piña',          tag_en:'Birthday Cake', tag_es:'Bizcocho de Cumpleaños', prices:{ Small:'$17.99', Medium:'$25.99' } },
-  { name_en:'Guava',         name_es:'Guava',         tag_en:'Birthday Cake', tag_es:'Bizcocho de Cumpleaños', prices:{ Small:'$17.99', Medium:'$25.99' } },
-  { name_en:'Dulce de Leche',name_es:'Dulce de Leche',tag_en:'Birthday Cake', tag_es:'Bizcocho de Cumpleaños', prices:{ Small:'$17.99', Medium:'$25.99' } },
-  { name_en:'Chocolate',     name_es:'Chocolate',     tag_en:'Birthday Cake', tag_es:'Bizcocho de Cumpleaños', prices:{ Small:'$17.99', Medium:'$25.99' } },
-  { name_en:'Strawberry',    name_es:'Fresa',         tag_en:'Birthday Cake', tag_es:'Bizcocho de Cumpleaños', prices:{ Small:'$17.99', Medium:'$25.99' } },
-  { name_en:'Pudin',                          name_es:'Pudín',                      tag_en:'Square Cake',           tag_es:'Bizcocho Cuadrado',       price:9.99 },
-  { name_en:'Plain',                          name_es:'Plain',                      tag_en:'Square Cake',           tag_es:'Bizcocho Cuadrado',       price:9.99 },
-  { name_en:'Maiz',                           name_es:'Maíz',                       tag_en:'Square Cake',           tag_es:'Bizcocho Cuadrado',       price:9.99 },
-  { name_en:'Red Velvet',                     name_es:'Red Velvet',                 tag_en:'Square Cake',           tag_es:'Bizcocho Cuadrado',       price:9.99 },
-  { name_en:'Carrot Cake',                    name_es:'Bizcocho de Zanahoria',      tag_en:'Square Cake',           tag_es:'Bizcocho Cuadrado',       price:9.99 },
-  { name_en:'Cheesecake',                     name_es:'Cheesecake',                 tag_en:'Slice',                 tag_es:'Pieza',                   price:4.99 },
-  { name_en:'Pudin (Slice)',                  name_es:'Pudín (Pieza)',              tag_en:'Slice',                 tag_es:'Pieza',                   price:4.99 },
-  { name_en:'Piña (Slice)',                   name_es:'Piña (Pieza)',               tag_en:'Slice',                 tag_es:'Pieza',                   price:4.99 },
-  { name_en:'Guava (Slice)',                  name_es:'Guava (Pieza)',              tag_en:'Slice',                 tag_es:'Pieza',                   price:4.99 },
-  { name_en:'Whipping Cream Piña',            name_es:'Crema Piña',                 tag_en:'Whipping Cream Slice',  tag_es:'Crema · Pieza',           price:4.99 },
-  { name_en:'Whipping Cream Guava',           name_es:'Crema Guava',                tag_en:'Whipping Cream Slice',  tag_es:'Crema · Pieza',           price:4.99 },
-  { name_en:'Whipping Cream Dulce de Leche',  name_es:'Crema Dulce de Leche',       tag_en:'Whipping Cream Slice',  tag_es:'Crema · Pieza',           price:4.99 },
-  { name_en:'Whipping Cream Chocolate',       name_es:'Crema Chocolate',            tag_en:'Whipping Cream Slice',  tag_es:'Crema · Pieza',           price:4.99 },
-  { name_en:'Chocoflan',                      name_es:'Chocoflan',                  tag_en:'Slice · New',           tag_es:'Pieza · Nuevo',           price:4.99 },
-  { name_en:'Tres Leche (Cup)',               name_es:'Tres Leche',                 tag_en:'Cup',                   tag_es:'Baso',                    price:4.99 },
-  { name_en:'Cuatro Leche (Cup)',             name_es:'Cuatro Leche',               tag_en:'Cup · Premium',         tag_es:'Baso · Premium',          price:4.99 },
-  { name_en:'Hershey (Cup)',                  name_es:'Hershey',                    tag_en:'Cup',                   tag_es:'Baso',                    price:4.99 },
+  { name_en:'Tres Leches',                   name_es:'Tres Leches',                tag_en:'Tres Leches',           tag_es:'Tres Leches',             price:4.99,  icon_name:'star' },
+  { name_en:'Tres Leche Piña',               name_es:'Tres Leche Piña',            tag_en:'Tres Leches',           tag_es:'Tres Leches',             price:4.99,  icon_name:'star' },
+  { name_en:'Tres Leche Strawberry',         name_es:'Tres Leche Fresa',           tag_en:'Tres Leches',           tag_es:'Tres Leches',             price:4.99,  icon_name:'star' },
+  { name_en:'Tres Leche Hershey',            name_es:'Tres Leche Hershey',         tag_en:'Tres Leches',           tag_es:'Tres Leches',             price:4.99,  icon_name:'star' },
+  { name_en:'Cuatro Leche',                  name_es:'Cuatro Leche',               tag_en:'Tres Leches · Premium', tag_es:'Tres Leches · Premium',   price:4.99,  icon_name:'star' },
+  { name_en:'Piña',          name_es:'Piña',          tag_en:'Birthday Cake', tag_es:'Bizcocho de Cumpleaños', prices:{ Small:'$17.99', Medium:'$25.99' }, icon_name:'cake' },
+  { name_en:'Guava',         name_es:'Guava',         tag_en:'Birthday Cake', tag_es:'Bizcocho de Cumpleaños', prices:{ Small:'$17.99', Medium:'$25.99' }, icon_name:'cake' },
+  { name_en:'Dulce de Leche',name_es:'Dulce de Leche',tag_en:'Birthday Cake', tag_es:'Bizcocho de Cumpleaños', prices:{ Small:'$17.99', Medium:'$25.99' }, icon_name:'cake' },
+  { name_en:'Chocolate',     name_es:'Chocolate',     tag_en:'Birthday Cake', tag_es:'Bizcocho de Cumpleaños', prices:{ Small:'$17.99', Medium:'$25.99' }, icon_name:'cake' },
+  { name_en:'Strawberry',    name_es:'Fresa',         tag_en:'Birthday Cake', tag_es:'Bizcocho de Cumpleaños', prices:{ Small:'$17.99', Medium:'$25.99' }, icon_name:'cake' },
+  { name_en:'Pudin',                         name_es:'Pudín',                      tag_en:'Square Cake',           tag_es:'Bizcocho Cuadrado',       price:9.99,  icon_name:'square' },
+  { name_en:'Plain',                         name_es:'Plain',                      tag_en:'Square Cake',           tag_es:'Bizcocho Cuadrado',       price:9.99,  icon_name:'square' },
+  { name_en:'Maiz',                          name_es:'Maíz',                       tag_en:'Square Cake',           tag_es:'Bizcocho Cuadrado',       price:9.99,  icon_name:'square' },
+  { name_en:'Red Velvet',                    name_es:'Red Velvet',                 tag_en:'Square Cake',           tag_es:'Bizcocho Cuadrado',       price:9.99,  icon_name:'square' },
+  { name_en:'Carrot Cake',                   name_es:'Bizcocho de Zanahoria',      tag_en:'Square Cake',           tag_es:'Bizcocho Cuadrado',       price:9.99,  icon_name:'square' },
+  { name_en:'Cheesecake',                    name_es:'Cheesecake',                 tag_en:'Slice',                 tag_es:'Pieza',                   price:4.99,  icon_name:'cake-slice' },
+  { name_en:'Pudin (Slice)',                 name_es:'Pudín (Pieza)',              tag_en:'Slice',                 tag_es:'Pieza',                   price:4.99,  icon_name:'cake-slice' },
+  { name_en:'Piña (Slice)',                  name_es:'Piña (Pieza)',               tag_en:'Slice',                 tag_es:'Pieza',                   price:4.99,  icon_name:'cake-slice' },
+  { name_en:'Guava (Slice)',                 name_es:'Guava (Pieza)',              tag_en:'Slice',                 tag_es:'Pieza',                   price:4.99,  icon_name:'cake-slice' },
+  { name_en:'Whipping Cream Piña',           name_es:'Crema Piña',                 tag_en:'Whipping Cream Slice',  tag_es:'Crema · Pieza',           price:4.99,  icon_name:'layers' },
+  { name_en:'Whipping Cream Guava',          name_es:'Crema Guava',                tag_en:'Whipping Cream Slice',  tag_es:'Crema · Pieza',           price:4.99,  icon_name:'layers' },
+  { name_en:'Whipping Cream Dulce de Leche', name_es:'Crema Dulce de Leche',       tag_en:'Whipping Cream Slice',  tag_es:'Crema · Pieza',           price:4.99,  icon_name:'layers' },
+  { name_en:'Whipping Cream Chocolate',      name_es:'Crema Chocolate',            tag_en:'Whipping Cream Slice',  tag_es:'Crema · Pieza',           price:4.99,  icon_name:'layers' },
+  { name_en:'Chocoflan',                     name_es:'Chocoflan',                  tag_en:'Slice · New',           tag_es:'Pieza · Nuevo',           price:4.99,  icon_name:'cake-slice' },
+  { name_en:'Tres Leche (Cup)',              name_es:'Tres Leche',                 tag_en:'Cup',                   tag_es:'Baso',                    price:4.99,  icon_name:'cup-soda' },
+  { name_en:'Cuatro Leche (Cup)',            name_es:'Cuatro Leche',               tag_en:'Cup · Premium',         tag_es:'Baso · Premium',          price:4.99,  icon_name:'cup-soda' },
+  { name_en:'Hershey (Cup)',                 name_es:'Hershey',                    tag_en:'Cup',                   tag_es:'Baso',                    price:4.99,  icon_name:'cup-soda' },
 ];
 
 /* ── Module state ── */
@@ -2704,6 +2704,17 @@ textarea.pm-input{resize:vertical;min-height:68px}
   color:var(--red);padding:2px 8px;border-radius:20px;font-family:'Outfit',sans-serif;white-space:nowrap}
 .pm-search-results-lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--tx-faint);
   font-weight:600;padding:4px 0 10px;display:block}
+.pm-icon-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:6px}
+.pm-icon-opt{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;padding:8px 4px;border:1.5px solid var(--bd-input);border-radius:8px;cursor:pointer;
+  background:none;font-family:inherit;transition:border-color .15s,background .15s;min-width:0}
+.pm-icon-opt:hover{border-color:var(--red);background:rgba(200,16,46,.04)}
+.pm-icon-opt.selected{border-color:var(--red);background:rgba(200,16,46,.08)}
+.pm-icon-opt svg,.pm-icon-opt i{width:20px;height:20px;color:var(--tx-muted)}
+.pm-icon-opt.selected svg,.pm-icon-opt.selected i{color:var(--red)}
+.pm-icon-lbl{font-size:9px;color:var(--tx-faint);text-align:center;line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:block}
+@media(max-width:400px){.pm-icon-grid{grid-template-columns:repeat(4,1fr)}}
   `;
   document.head.appendChild(s);
 }
@@ -2795,6 +2806,16 @@ function _pmModalHTML() {
             <label class="pm-form-label">Description (ES)</label>
             <textarea class="pm-input" id="pm-f-desc-es" placeholder="Descripción corta…"></textarea>
           </div>
+          <div class="pm-form-field full">
+            <label class="pm-form-label">Category Icon</label>
+            <div class="pm-icon-grid" id="pm-icon-grid">
+              ${['star','cake','square','cake-slice','cup-soda','layers','cookie','gift','heart','sparkles','flame','leaf','droplets','zap','package','tag','box','shopping-bag']
+                .map(ic => `<button type="button" class="pm-icon-opt" data-icon="${ic}" onclick="window._pmSelectIcon('${ic}')">
+                  <i data-lucide="${ic}"></i>
+                  <span class="pm-icon-lbl">${ic}</span>
+                </button>`).join('')}
+            </div>
+          </div>
         </div>
       </div>
       <div class="pm-panel" id="pm-panel-pricing">
@@ -2873,6 +2894,7 @@ function _pmBindModal() {
   window._pmSetPriceMode = _pmSetPriceMode;
   window._pmAddUrl       = _pmAddUrl;
   window._pmRemoveImg    = _pmRemoveImg;
+  window._pmSelectIcon   = _pmSelectIcon;
 }
 
 function _pmSwitchTab(name) {
@@ -2887,6 +2909,15 @@ function _pmSetPriceMode(mode) {
   document.getElementById('pm-pt-sized').classList.toggle('active', mode === 'sized');
   document.getElementById('pm-price-single').style.display = mode === 'single' ? 'block' : 'none';
   document.getElementById('pm-price-sized').style.display  = mode === 'sized'  ? 'grid'  : 'none';
+}
+
+function _pmSelectIcon(iconName) {
+  const grid = document.getElementById('pm-icon-grid');
+  if (!grid) return;
+  grid.querySelectorAll('.pm-icon-opt').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.icon === iconName);
+  });
+  lucide.createIcons();
 }
 
 /* ── Image helpers ── */
@@ -2956,6 +2987,8 @@ function _pmOpenModal(product) {
   document.getElementById('pm-f-desc-es').value    = product?.description_es  || '';
   document.getElementById('pm-f-price').value      = product?.price           || '';
   document.getElementById('pm-url-input').value    = '';
+  // Set icon picker selection
+  window._pmSelectIcon(product?.icon_name || 'package');
 
   if (_pmPriceMode === 'sized' && product && product.prices) {
     document.getElementById('pm-f-sm').value = product.prices.Small  ? product.prices.Small.replace('$','')  : '';
@@ -3012,6 +3045,7 @@ async function _pmSave() {
     name_en: nameEn, name_es: nameEs, tag_en: tagEn, tag_es: tagEs,
     description_en: document.getElementById('pm-f-desc-en').value.trim() || null,
     description_es: document.getElementById('pm-f-desc-es').value.trim() || null,
+    icon_name: (document.querySelector('#pm-icon-grid .pm-icon-opt.selected')?.dataset.icon) || 'package',
     price, prices, images: _pmImages,
     updated_at: new Date().toISOString(),
   };
@@ -3266,6 +3300,7 @@ async function _pmSeed() {
       tag_en:  p.tag_en,  tag_es:  p.tag_es,
       price:   p.price  || null,
       prices:  p.prices || null,
+      icon_name: p.icon_name || 'package',
       images:  [],
       available:  true,
       sold_out:   false,

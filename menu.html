@@ -5758,8 +5758,34 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       } catch (e) { }
       // Load live products from Supabase (silent fallback to hardcoded if unavailable)
       await loadProductsFromSupabase();
+      applyHiddenProducts();
       applySOldOutState();
     });
+
+    /* Hide product cards for products not returned by Supabase (available=false) */
+    function applyHiddenProducts() {
+      // Only run if Supabase actually overwrote PRODUCTS (non-empty)
+      if (!Object.keys(PRODUCTS).length) return;
+
+      document.querySelectorAll('.atc-trigger').forEach(btn => {
+        const onclick = btn.getAttribute('onclick') || '';
+        const match = onclick.match(/openATC\('([^']+)'/);
+        if (!match) return;
+        const name = match[1];
+        if (!PRODUCTS[name]) {
+          // Product not in live data → hide its card
+          const card = btn.closest('.product-card');
+          if (card) card.style.display = 'none';
+        }
+      });
+
+      // If every card in a section is hidden, hide the whole section
+      document.querySelectorAll('.menu-section').forEach(section => {
+        const cards = section.querySelectorAll('.product-card');
+        const allHidden = cards.length > 0 && [...cards].every(c => c.style.display === 'none');
+        if (allHidden) section.style.display = 'none';
+      });
+    }
 
     /* Apply sold-out state to all rendered ATC buttons */
     function applySOldOutState() {
