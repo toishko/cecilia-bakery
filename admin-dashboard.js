@@ -2696,6 +2696,15 @@ textarea.pm-input{resize:vertical;min-height:68px}
 .pm-upload-area:hover,.pm-upload-area:focus{border-color:var(--red);background:rgba(200,16,46,.03)}
 .pm-upload-area p{font-size:.8rem;color:var(--tx-muted);margin-top:8px}
 .pm-url-row{display:flex;gap:8px;align-items:center}
+.pm-img-preview-wrap{display:none;margin:12px 0}
+.pm-img-preview-label{font-size:.72rem;color:var(--tx-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;display:block}
+.pm-img-preview-square{width:200px;height:200px;border-radius:8px;overflow:hidden;border:2px solid var(--bd)}
+.pm-img-preview-square img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+.pm-img-preview-actions{display:flex;gap:8px;margin-top:10px}
+.pm-btn-confirm{padding:9px 18px;border:none;border-radius:8px;background:var(--red);color:#fff;font-size:.82rem;font-weight:600;font-family:inherit;cursor:pointer;transition:background .2s}
+.pm-btn-confirm:hover{background:var(--red-dk)}
+.pm-btn-repick{padding:9px 16px;border:1.5px solid var(--bd);border-radius:8px;background:none;color:var(--tx-muted);font-size:.82rem;font-weight:600;font-family:inherit;cursor:pointer;transition:var(--transition)}
+.pm-btn-repick:hover{border-color:var(--red);color:var(--red)}
 .pm-divider{border:none;border-top:1px solid var(--bd);margin:14px 0}
 .pm-modal-footer{padding:14px 20px;border-top:1px solid var(--bd);display:flex;
   justify-content:flex-end;gap:8px;flex-shrink:0;background:var(--bg-card)}
@@ -2865,6 +2874,17 @@ function _pmModalHTML() {
           <p>Tap to choose photos<br><small>JPEG · PNG · WebP · max 5 MB each</small></p>
         </label>
         <input type="file" id="pm-file-input" accept="image/*" multiple style="display:none">
+        <!-- Upload preview (shown after file pick, before Supabase upload) -->
+        <div class="pm-img-preview-wrap" id="pm-preview-wrap">
+          <span class="pm-img-preview-label">Preview — this is how it appears on the menu</span>
+          <div class="pm-img-preview-square">
+            <img id="pm-preview-img" src="" alt="preview">
+          </div>
+          <div class="pm-img-preview-actions">
+            <button class="pm-btn-confirm" id="pm-btn-confirm-upload">Upload this photo</button>
+            <button class="pm-btn-repick"  id="pm-btn-repick">Choose different</button>
+          </div>
+        </div>
         <div class="pm-progress-wrap" id="pm-progress-wrap">
           <div class="pm-progress-bar" id="pm-progress-bar"></div>
         </div>
@@ -2892,10 +2912,50 @@ function _pmBindModal() {
     if (e.target === document.getElementById('pm-overlay')) _pmCloseModal();
   });
   document.getElementById('pm-btn-save').addEventListener('click', _pmSave);
-  document.getElementById('pm-file-input').addEventListener('change', async e => {
-    await _pmUploadFiles(Array.from(e.target.files));
-    e.target.value = '';
+  // Upload preview state
+  let _pmPendingFiles = [];
+
+  const fileInput   = document.getElementById('pm-file-input');
+  const previewWrap = document.getElementById('pm-preview-wrap');
+  const previewImg  = document.getElementById('pm-preview-img');
+  const uploadArea  = document.querySelector('.pm-upload-area');
+  const confirmBtn  = document.getElementById('pm-btn-confirm-upload');
+  const repickBtn   = document.getElementById('pm-btn-repick');
+
+  function _pmResetPreview() {
+    _pmPendingFiles = [];
+    previewWrap.style.display = 'none';
+    previewImg.src = '';
+    fileInput.value = '';
+    if (uploadArea) uploadArea.style.display = '';
+  }
+  window._pmResetPreview = _pmResetPreview;
+
+  fileInput.addEventListener('change', (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    _pmPendingFiles = files;
+    // Show square preview of first selected file
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      previewImg.src = ev.target.result;
+      previewWrap.style.display = 'block';
+      if (uploadArea) uploadArea.style.display = 'none';
+    };
+    reader.readAsDataURL(files[0]);
   });
+
+  confirmBtn.addEventListener('click', async () => {
+    const files = _pmPendingFiles;
+    _pmResetPreview();
+    await _pmUploadFiles(files);
+  });
+
+  repickBtn.addEventListener('click', () => {
+    _pmResetPreview();
+    fileInput.click();
+  });
+
   document.querySelectorAll('.pm-tab').forEach(t => {
     t.addEventListener('click', () => _pmSwitchTab(t.dataset.tab));
   });
@@ -3010,6 +3070,7 @@ function _pmOpenModal(product) {
   _pmSetPriceMode(_pmPriceMode);
   _pmSwitchTab('info');
   _pmRenderImages();
+  if (typeof window._pmResetPreview === 'function') window._pmResetPreview();
   document.getElementById('pm-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
   lucide.createIcons();

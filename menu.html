@@ -1053,12 +1053,10 @@
     .pc-image-wrap {
       width: calc(100% + 48px);
       margin: -28px -24px 18px;
-      aspect-ratio: 4 / 3;
+      aspect-ratio: 1 / 1;
       overflow: hidden;
+      position: relative;
       flex-shrink: 0;
-    }
-    .product-card.featured .pc-image-wrap {
-      aspect-ratio: 3 / 4;
     }
     .pc-image-wrap img {
       width: 100%;
@@ -1066,10 +1064,10 @@
       object-fit: cover;
       object-position: center;
       display: block;
-      transition: transform .45s ease;
+      transition: transform 0.3s ease;
     }
     .product-card:hover .pc-image-wrap img {
-      transform: scale(1.04);
+      transform: scale(1.03);
     }
 
     .product-card.featured .pc-order {
