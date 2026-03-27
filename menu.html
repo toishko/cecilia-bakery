@@ -411,6 +411,9 @@
     /* ── PAGE HERO ── */
     .page-hero {
       padding: 160px 52px 60px;
+      padding-top: 160px;
+      padding-top: calc(160px + constant(safe-area-inset-top));
+      padding-top: calc(160px + env(safe-area-inset-top));
       border-bottom: 1px solid var(--bd);
       position: relative;
       overflow: hidden;
@@ -1683,6 +1686,9 @@
 
       .page-hero {
         padding: 130px 24px 48px;
+        padding-top: 130px;
+        padding-top: calc(130px + constant(safe-area-inset-top));
+        padding-top: calc(130px + env(safe-area-inset-top));
       }
 
       .cat-nav {
