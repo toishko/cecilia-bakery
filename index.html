@@ -158,7 +158,6 @@
       color: var(--tx);
       overflow-x: hidden;
       transition: background .3s ease, color .3s ease;
-      padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
     }
 
@@ -224,6 +223,7 @@
       width: 100%;
       z-index: 501;
       padding: 18px 52px;
+      padding-top: calc(18px + env(safe-area-inset-top));
       display: flex;
       justify-content: space-between;
       align-items: center;
