@@ -100,7 +100,7 @@ serve(async (req) => {
           title: target.title,
           body: target.body,
           url: target.url,
-          tag: `cecilia-${target.user_type}-${Date.now()}`
+          tag: `cecilia-order-${record?.id || Date.now()}`
         })
 
         const pushSub = {

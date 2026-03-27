@@ -440,12 +440,15 @@ function handleNewOrder(order) {
   const msgEs = `Nuevo pedido de ${driverName}` + (items ? ` (${items} artículos)` : '');
   showToast(lang === 'es' ? msgEs : msgEn, 'info');
 
-  // Browser notification
-  showBrowserNotification(
-    lang === 'es' ? 'Nuevo Pedido' : 'New Order',
-    lang === 'es' ? msgEs : msgEn,
-    'incoming'
-  );
+  // Browser notification (skip if app is in background — push notification handles that)
+  if (document.visibilityState === 'visible') {
+    showBrowserNotification(
+      lang === 'es' ? 'Nuevo Pedido' : 'New Order',
+      lang === 'es' ? msgEs : msgEn,
+      'incoming',
+      order.id
+    );
+  }
 
   // Update badge
   updateIncomingBadge();
@@ -495,7 +498,7 @@ function requestNotifPermission() {
   }
 }
 
-async function showBrowserNotification(title, body, section) {
+async function showBrowserNotification(title, body, section, orderId) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   if (!notificationsEnabled) return;
 
@@ -503,7 +506,7 @@ async function showBrowserNotification(title, body, section) {
     body,
     icon: '/assets/logo.png',
     badge: '/assets/logo.png',
-    tag: 'cecilia-admin-' + Date.now(),
+    tag: 'cecilia-order-' + (orderId || Date.now()),
     data: { url: '/admin-dashboard.html', section }
   };
 
