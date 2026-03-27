@@ -223,6 +223,8 @@
       width: 100%;
       z-index: 501;
       padding: 18px 52px;
+      padding-top: 18px;
+      padding-top: calc(18px + constant(safe-area-inset-top));
       padding-top: calc(18px + env(safe-area-inset-top));
       display: flex;
       justify-content: space-between;
@@ -236,6 +238,9 @@
       -webkit-backdrop-filter: blur(10px);
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), 0 1px 0 var(--bd);
       padding: 12px 52px;
+      padding-top: 12px;
+      padding-top: calc(12px + constant(safe-area-inset-top));
+      padding-top: calc(12px + env(safe-area-inset-top));
     }
 
     .nav-brand {
@@ -1945,10 +1950,16 @@
     @media(max-width:900px) {
       nav {
         padding: 14px 24px;
+        padding-top: 14px;
+        padding-top: calc(14px + constant(safe-area-inset-top));
+        padding-top: calc(14px + env(safe-area-inset-top));
       }
 
       nav.scrolled {
         padding: 10px 24px;
+        padding-top: 10px;
+        padding-top: calc(10px + constant(safe-area-inset-top));
+        padding-top: calc(10px + env(safe-area-inset-top));
       }
 
       .nav-links {
