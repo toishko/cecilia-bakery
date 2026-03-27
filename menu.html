@@ -5810,32 +5810,34 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       try {
         const { eventType, new: n, old: o } = payload;
 
+        // ── DELETE ──
         if (eventType === 'DELETE') {
-          // Remove card from DOM
-          const card = findCard(o?.name_en);
+          const key  = o?.name_en || n?.name_en;
+          const card = findCard(key);
           if (card) {
             const section = card.closest('.menu-section');
             card.style.display = 'none';
             cleanupSection(section);
           }
-          delete PRODUCTS[o?.name_en];
+          delete PRODUCTS[key];
           return;
         }
 
+        // ── INSERT ──
         if (eventType === 'INSERT') {
-          // Reload all to pick up the new card (it's static HTML, can't inject)
+          // Can't inject into static HTML, but update the PRODUCTS dict
           await loadProductsFromSupabase();
-          // New products won't appear in static DOM, but PRODUCTS is updated
           return;
         }
 
-        // UPDATE — surgical handling
+        // ── UPDATE — use DOM state as primary signal, payload.old as fallback ──
         if (eventType === 'UPDATE') {
           const nameEn = n.name_en;
           const card   = findCard(nameEn);
+          const btn    = card?.querySelector('.atc-trigger');
 
-          // ── available toggled off → hide card ──
-          if (o.available === true && n.available === false) {
+          // ── available toggled OFF → hide card immediately ──
+          if (n.available === false) {
             if (card) {
               const section = card.closest('.menu-section');
               card.style.display = 'none';
@@ -5845,62 +5847,54 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
             return;
           }
 
-          // ── available toggled on → reload to restore ──
-          if (o.available === false && n.available === true) {
+          // ── available toggled ON → reload to restore the card ──
+          if (n.available === true && (o?.available === false || !card)) {
             await loadProductsFromSupabase();
             applyHiddenProducts();
             applySOldOutState();
             return;
           }
 
-          // ── sold_out toggled on ──
-          if (!o.sold_out && n.sold_out) {
-            if (card) {
-              const btn = card.querySelector('.atc-trigger');
-              if (btn) {
-                btn.disabled = true;
-                btn.textContent = lang === 'es' ? 'Agotado' : 'Sold Out';
-                btn.style.opacity = '0.5';
-                btn.style.cursor  = 'not-allowed';
-              }
-              if (!card.querySelector('.sold-out-ribbon')) {
-                const ribbon = document.createElement('div');
-                ribbon.className = 'sold-out-ribbon';
-                ribbon.textContent = lang === 'es' ? 'AGOTADO' : 'SOLD OUT';
-                card.style.position = 'relative';
-                card.appendChild(ribbon);
-              }
-              flashCard(card);
+          // ── sold_out ON — use DOM state: button currently enabled → should be disabled ──
+          if (n.sold_out && btn && !btn.disabled) {
+            btn.disabled = true;
+            btn.textContent = lang === 'es' ? 'Agotado' : 'Sold Out';
+            btn.style.opacity = '0.5';
+            btn.style.cursor  = 'not-allowed';
+            if (card && !card.querySelector('.sold-out-ribbon')) {
+              const ribbon = document.createElement('div');
+              ribbon.className = 'sold-out-ribbon';
+              ribbon.textContent = lang === 'es' ? 'AGOTADO' : 'SOLD OUT';
+              card.style.position = 'relative';
+              card.appendChild(ribbon);
             }
+            flashCard(card);
             if (PRODUCTS[nameEn]) PRODUCTS[nameEn].sold_out = true;
             return;
           }
 
-          // ── sold_out toggled off ──
-          if (o.sold_out && !n.sold_out) {
-            if (card) {
-              const btn = card.querySelector('.atc-trigger');
-              if (btn) {
-                btn.disabled = false;
-                btn.textContent = lang === 'es' ? 'Agregar' : 'Add to Cart';
-                btn.style.opacity = '';
-                btn.style.cursor  = '';
-              }
-              const ribbon = card.querySelector('.sold-out-ribbon');
-              if (ribbon) ribbon.remove();
-              flashCard(card);
-            }
+          // ── sold_out OFF — use DOM state: button currently disabled → should be enabled ──
+          if (!n.sold_out && btn && btn.disabled) {
+            btn.disabled = false;
+            btn.textContent = lang === 'es' ? 'Agregar' : 'Add to Cart';
+            btn.style.opacity = '1';
+            btn.style.cursor  = 'pointer';
+            const ribbon = card?.querySelector('.sold-out-ribbon');
+            if (ribbon) ribbon.remove();
+            flashCard(card);
             if (PRODUCTS[nameEn]) PRODUCTS[nameEn].sold_out = false;
             return;
           }
 
           // ── price / prices changed ──
-          if (o.price !== n.price || JSON.stringify(o.prices) !== JSON.stringify(n.prices)) {
+          const priceChanged = (o?.price !== n.price) ||
+                               (JSON.stringify(o?.prices) !== JSON.stringify(n.prices));
+          if (priceChanged) {
             if (card) {
               const priceEl = card.querySelector('.pc-price');
               if (priceEl) {
                 if (n.prices && Object.keys(n.prices).length) {
-                  const vals = Object.values(n.prices).map(v => parseFloat(String(v).replace('$','')));
+                  const vals = Object.values(n.prices).map(v => parseFloat(String(v).replace('$', '')));
                   priceEl.textContent = `From $${Math.min(...vals).toFixed(2)}`;
                 } else if (n.price) {
                   priceEl.textContent = `$${parseFloat(n.price).toFixed(2)}`;
@@ -5915,8 +5909,9 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
             return;
           }
 
-          // ── name or images changed → full section reload ──
-          if (o.name_en !== n.name_en || JSON.stringify(o.images) !== JSON.stringify(n.images)) {
+          // ── name or images changed → full reload ──
+          if ((o?.name_en && o.name_en !== n.name_en) ||
+              JSON.stringify(o?.images) !== JSON.stringify(n.images)) {
             await loadProductsFromSupabase();
             applyHiddenProducts();
             applySOldOutState();
