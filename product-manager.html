@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Product Manager — Cecilia Bakery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    /* ════════════════════════════════
+       DESIGN TOKENS (mirrors menu.html)
+       ════════════════════════════════ */
+    :root {
+      --red: #C8102E;
+      --red-dk: #9B0B22;
+      --red-lt: #E8213F;
+      --blue: #002D62;
+
+      --bg: #FAFAF8;
+      --bg-card: #FFFFFF;
+      --bg-input: #FFFFFF;
+      --bg-surface: #EDE0CC;
+      --bg-overlay: rgba(0,0,0,.50);
+
+      --tx: #18080D;
+      --tx-muted: #6B5057;
+      --tx-faint: #A08088;
+
+      --bd: rgba(200,16,46,.22);
+      --bd-hover: rgba(200,16,46,.55);
+      --bd-input: rgba(200,16,46,.25);
+
+      --shadow-card: 0 6px 28px rgba(200,16,46,.10);
+      --shadow-lg: 0 24px 80px rgba(0,0,0,.20);
+
+      --r: 3px;
+      --transition: color .25s, background .25s, border-color .25s;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0E0507;
+      --bg-card: #1A0A10;
+      --bg-input: #1A0A10;
+      --bg-surface: #2A1218;
+      --tx: #F8F0EE;
+      --tx-muted: #B09098;
+      --tx-faint: #7A5058;
+      --bd: rgba(200,16,46,.28);
+      --bd-input: rgba(200,16,46,.30);
+      --shadow-card: 0 6px 28px rgba(0,0,0,.40);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 400;
+      background: var(--bg);
+      color: var(--tx);
+      min-height: 100vh;
+    }
+
+    /* ── TOP NAV ── */
+    .pm-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 60px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--bd);
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    }
+
+    .pm-nav-brand {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--tx);
+    }
+
+    .pm-nav-brand span { color: var(--red); font-style: italic; }
+
+    .pm-nav-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .pm-nav-email {
+      font-size: .78rem;
+      color: var(--tx-muted);
+    }
+
+    .btn { 
+      display: inline-flex; 
+      align-items: center; 
+      gap: 6px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+
+    .btn-ghost {
+      background: none;
+      border: 1px solid var(--bd);
+      color: var(--tx-muted);
+      padding: 7px 14px;
+      font-size: .78rem;
+    }
+    .btn-ghost:hover { border-color: var(--red); color: var(--red); }
+
+    .btn-primary {
+      background: var(--red);
+      color: #fff;
+      padding: 9px 18px;
+      font-size: .82rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+    }
+    .btn-primary:hover { background: var(--red-lt); transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    .btn-seed {
+      background: var(--blue);
+      color: #fff;
+      padding: 9px 18px;
+      font-size: .82rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+    }
+    .btn-seed:hover { background: #1a4a8a; }
+
+    /* ── TOOLBAR ── */
+    .pm-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 20px 24px;
+      flex-wrap: wrap;
+    }
+
+    .pm-toolbar-left { display: flex; gap: 10px; align-items: center; }
+
+    .pm-search {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .pm-search input {
+      background: var(--bg-card);
+      border: 1.5px solid var(--bd-input);
+      border-radius: 8px;
+      padding: 9px 14px 9px 38px;
+      font-family: 'Outfit', sans-serif;
+      font-size: .85rem;
+      color: var(--tx);
+      width: 240px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    .pm-search input:focus {
+      outline: none;
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px rgba(200,16,46,.10);
+    }
+
+    .pm-search input::placeholder { color: var(--tx-faint); }
+
+    .pm-search-icon {
+      position: absolute;
+      left: 11px;
+      color: var(--tx-faint);
+      pointer-events: none;
+      width: 16px;
+      height: 16px;
+    }
+
+    /* ── PRODUCT LIST ── */
+    .pm-list {
+      padding: 0 24px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 920px;
+    }
+
+    .pm-empty {
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--tx-muted);
+    }
+
+    .pm-empty i { font-size: 3rem; opacity: .3; display: block; margin-bottom: 12px; }
+
+    /* ── PRODUCT CARD ── */
+    .pm-card {
+      background: var(--bg-card);
+      border: 1px solid var(--bd);
+      border-radius: 12px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      transition: box-shadow .2s;
+    }
+
+    .pm-card:hover { box-shadow: 0 8px 32px rgba(200,16,46,.14); }
+
+    .pm-card-thumb {
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: var(--bg-surface);
+      border: 1px solid var(--bd);
+    }
+
+    .pm-card-thumb-placeholder {
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
+      background: var(--bg-surface);
+      border: 1px solid var(--bd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--tx-faint);
+      flex-shrink: 0;
+    }
+
+    .pm-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .pm-card-name {
+      font-size: .97rem;
+      font-weight: 600;
+      color: var(--tx);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pm-card-tag {
+      font-size: .72rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--tx-muted);
+      margin-top: 2px;
+    }
+
+    .pm-card-price {
+      font-size: .85rem;
+      color: var(--red);
+      font-weight: 600;
+      margin-top: 5px;
+    }
+
+    /* Status badge */
+    .pm-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .65rem;
+      font-weight: 700;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 20px;
+      margin-top: 6px;
+    }
+
+    .pm-status-live { background: rgba(34,197,94,.12); color: #16a34a; }
+    .pm-status-soldout { background: rgba(234,179,8,.12); color: #ca8a04; }
+    .pm-status-hidden { background: rgba(239,68,68,.12); color: #dc2626; }
+    .pm-status::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Controls */
+    .pm-card-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Sort arrows */
+    .pm-sort-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .btn-icon {
+      background: none;
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--tx-muted);
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+
+    .btn-icon:hover { border-color: var(--red); color: var(--red); }
+    .btn-icon.danger:hover { border-color: #dc2626; color: #dc2626; }
+
+    /* Toggle switch */
+    .toggle-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .toggle-label {
+      font-size: .6rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--tx-faint);
+      font-weight: 500;
+    }
+
+    .toggle {
+      position: relative;
+      width: 42px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .toggle input { opacity: 0; width: 0; height: 0; }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-surface);
+      border: 1.5px solid var(--bd);
+      border-radius: 12px;
+      transition: background .2s, border-color .2s;
+      cursor: pointer;
+    }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--tx-faint);
+      transition: transform .2s, background .2s;
+      pointer-events: none;
+    }
+
+    .toggle input:checked ~ .toggle-track { background: var(--red); border-color: var(--red); }
+    .toggle input:checked ~ .toggle-thumb { transform: translateX(18px); background: #fff; }
+    .toggle input:not(:checked) ~ .toggle-thumb { background: var(--tx-faint); }
+
+    /* ── MODAL OVERLAY ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-overlay);
+      z-index: 200;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--bg-card);
+      width: 100%;
+      max-width: 620px;
+      max-height: 92vh;
+      border-radius: 20px 20px 0 0;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(100%);
+      transition: transform .3s cubic-bezier(.4,0,.2,1);
+      overflow: hidden;
+    }
+
+    @media (min-width: 680px) {
+      .modal-overlay {
+        align-items: center;
+      }
+      .modal {
+        border-radius: 16px;
+        max-height: 88vh;
+        transform: scale(.96) translateY(8px);
+      }
+      .modal-overlay.open .modal {
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .modal-overlay.open .modal {
+      transform: translateY(0);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid var(--bd);
+      flex-shrink: 0;
+    }
+
+    .modal-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--tx);
+    }
+
+    .modal-title span { color: var(--red); font-style: italic; }
+
+    /* Tabs */
+    .modal-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--bd);
+      flex-shrink: 0;
+      background: var(--bg-card);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 12px 8px;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      font-family: 'Outfit', sans-serif;
+      font-size: .8rem;
+      font-weight: 500;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--tx-muted);
+      cursor: pointer;
+      transition: color .2s, border-color .2s;
+    }
+
+    .tab-btn.active {
+      color: var(--red);
+      border-bottom-color: var(--red);
+    }
+
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 22px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Form fields */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 520px) {
+      .form-grid { grid-template-columns: 1fr; }
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-field.full { grid-column: span 2; }
+    @media (max-width: 520px) { .form-field.full { grid-column: span 1; } }
+
+    .form-label {
+      font-size: .68rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      font-weight: 500;
+      color: var(--tx-muted);
+    }
+
+    .form-label .req { color: var(--red); }
+
+    .form-input {
+      background: var(--bg-input);
+      border: 1.5px solid var(--bd-input);
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-family: 'Outfit', sans-serif;
+      font-size: .88rem;
+      color: var(--tx);
+      transition: border-color .2s, box-shadow .2s;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px rgba(200,16,46,.10);
+    }
+
+    .form-input::placeholder { color: var(--tx-faint); }
+
+    textarea.form-input {
+      resize: vertical;
+      min-height: 72px;
+    }
+
+    /* Pricing toggle */
+    .pricing-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .pricing-toggle button {
+      flex: 1;
+      padding: 9px;
+      border: 1.5px solid var(--bd-input);
+      border-radius: 8px;
+      background: none;
+      font-family: 'Outfit', sans-serif;
+      font-size: .82rem;
+      font-weight: 500;
+      color: var(--tx-muted);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .pricing-toggle button.active {
+      border-color: var(--red);
+      background: rgba(200,16,46,.06);
+      color: var(--red);
+    }
+
+    /* Images tab */
+    .img-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .img-thumb {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1.5px solid var(--bd);
+      background: var(--bg-surface);
+    }
+
+    .img-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .img-remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(0,0,0,.65);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .8rem;
+      line-height: 1;
+      transition: background .15s;
+    }
+
+    .img-remove:hover { background: var(--red); }
+
+    .upload-area {
+      border: 2px dashed var(--bd-input);
+      border-radius: 10px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      margin-bottom: 12px;
+    }
+
+    .upload-area:hover {
+      border-color: var(--red);
+      background: rgba(200,16,46,.03);
+    }
+
+    .upload-area p {
+      font-size: .82rem;
+      color: var(--tx-muted);
+      margin-top: 8px;
+    }
+
+    .progress-bar-wrap {
+      height: 4px;
+      background: var(--bg-surface);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--red);
+      border-radius: 2px;
+      transition: width .2s;
+      width: 0%;
+    }
+
+    .url-input-wrap {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .url-input-wrap input {
+      flex: 1;
+    }
+
+    /* Modal footer */
+    .modal-footer {
+      padding: 16px 22px;
+      border-top: 1px solid var(--bd);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      background: var(--bg-card);
+      flex-shrink: 0;
+    }
+
+    /* Toast */
+    .pm-toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--tx);
+      color: var(--bg);
+      padding: 12px 22px;
+      border-radius: 8px;
+      font-size: .82rem;
+      font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s, transform .25s;
+      white-space: nowrap;
+    }
+
+    .pm-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .pm-toast.error { background: #dc2626; color: #fff; }
+    .pm-toast.success { background: #16a34a; color: #fff; }
+
+    /* Loading skeleton */
+    .pm-loading {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 0 24px 40px;
+      max-width: 920px;
+    }
+
+    .skeleton {
+      background: var(--bg-surface);
+      border-radius: 12px;
+      height: 96px;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .5; }
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--bd);
+      margin: 18px 0;
+    }
+
+    .section-note {
+      font-size: .78rem;
+      color: var(--tx-muted);
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="pm-nav">
+  <div class="pm-nav-brand">Cecilia Bakery — <span>Product Manager</span></div>
+  <div class="pm-nav-right">
+    <span class="pm-nav-email" id="nav-email"></span>
+    <button class="btn btn-ghost" id="btn-logout">
+      <i data-lucide="log-out" style="width:14px;height:14px"></i> Logout
+    </button>
+  </div>
+</nav>
+
+<!-- TOOLBAR -->
+<div class="pm-toolbar">
+  <div class="pm-toolbar-left">
+    <button class="btn btn-primary" id="btn-add">
+      <i data-lucide="plus" style="width:15px;height:15px"></i> Add New Product
+    </button>
+    <button class="btn btn-seed" id="btn-seed" title="Insert all hardcoded products into Supabase">
+      <i data-lucide="database-zap" style="width:15px;height:15px"></i> Seed from Code
+    </button>
+  </div>
+  <div class="pm-search">
+    <i data-lucide="search" class="pm-search-icon"></i>
+    <input type="text" id="search-input" placeholder="Search products…">
+  </div>
+</div>
+
+<!-- PRODUCT LIST -->
+<div id="pm-loading" class="pm-loading">
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+</div>
+<div class="pm-list" id="pm-list" style="display:none"></div>
+
+<!-- EDIT / ADD MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Edit <span>Product</span></div>
+      <button class="btn btn-ghost" id="modal-close" style="padding:6px 10px">
+        <i data-lucide="x" style="width:16px;height:16px"></i>
+      </button>
+    </div>
+    <div class="modal-tabs">
+      <button class="tab-btn active" data-tab="info">Basic Info</button>
+      <button class="tab-btn" data-tab="pricing">Pricing</button>
+      <button class="tab-btn" data-tab="images">Images</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- TAB 1: Basic Info -->
+      <div class="tab-panel active" id="tab-info">
+        <div class="form-grid">
+          <div class="form-field">
+            <label class="form-label">Name (English) <span class="req">*</span></label>
+            <input class="form-input" id="f-name-en" type="text" placeholder="e.g. Tres Leches">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Name (Español) <span class="req">*</span></label>
+            <input class="form-input" id="f-name-es" type="text" placeholder="e.g. Tres Leches">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Tag (English) <span class="req">*</span></label>
+            <input class="form-input" id="f-tag-en" type="text" placeholder="e.g. Tres Leches">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Tag (Español) <span class="req">*</span></label>
+            <input class="form-input" id="f-tag-es" type="text" placeholder="e.g. Tres Leches">
+          </div>
+          <div class="form-field full">
+            <label class="form-label">Description (English)</label>
+            <textarea class="form-input" id="f-desc-en" placeholder="Short description in English…"></textarea>
+          </div>
+          <div class="form-field full">
+            <label class="form-label">Description (Español)</label>
+            <textarea class="form-input" id="f-desc-es" placeholder="Descripción corta en español…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: Pricing -->
+      <div class="tab-panel" id="tab-pricing">
+        <p class="section-note">Choose single price for one-size products, or size-based for Small / Medium / Large.</p>
+        <div class="pricing-toggle">
+          <button id="pt-single" class="active" onclick="setPricingMode('single')">Single Price</button>
+          <button id="pt-sized" onclick="setPricingMode('sized')">Size-Based</button>
+        </div>
+        <div id="price-single">
+          <div class="form-field">
+            <label class="form-label">Price ($)</label>
+            <input class="form-input" id="f-price" type="number" step="0.01" min="0" placeholder="4.99">
+          </div>
+        </div>
+        <div id="price-sized" style="display:none">
+          <div class="form-grid">
+            <div class="form-field">
+              <label class="form-label">Small ($)</label>
+              <input class="form-input" id="f-price-sm" type="number" step="0.01" min="0" placeholder="17.99">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Medium ($)</label>
+              <input class="form-input" id="f-price-md" type="number" step="0.01" min="0" placeholder="25.99">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Large ($)</label>
+              <input class="form-input" id="f-price-lg" type="number" step="0.01" min="0" placeholder="">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: Images -->
+      <div class="tab-panel" id="tab-images">
+        <p class="section-note">Up to 5 images. First image is used as the thumbnail. Upload files or paste a URL (Unsplash URLs work during migration).</p>
+        <div class="img-grid" id="img-grid"></div>
+        <div id="upload-area" class="upload-area">
+          <i data-lucide="upload-cloud" style="width:28px;height:28px;color:var(--tx-faint)"></i>
+          <p>Click to upload or drag & drop<br><small>JPEG · PNG · WebP · max 5 MB</small></p>
+          <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" multiple style="display:none">
+        </div>
+        <div class="progress-bar-wrap" id="progress-wrap" style="display:none">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <hr class="divider">
+        <p class="section-note">Or paste an image URL:</p>
+        <div class="url-input-wrap">
+          <input class="form-input" id="url-input" type="url" placeholder="https://images.unsplash.com/...">
+          <button class="btn btn-ghost" onclick="addImageUrl()">Add URL</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btn-cancel">Cancel</button>
+      <button class="btn btn-primary" id="btn-save">Save Product</button>
+    </div>
+  </div>
+</div>
+
+<div class="pm-toast" id="pm-toast"></div>
+
+<script>
+/* ═══════════════════════════════════
+   SUPABASE INIT (copied from admin-dashboard.js)
+   ═══════════════════════════════════ */
+const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
+
+let sb = null;
+try {
+  const supabaseLib = window.supabase;
+  if (supabaseLib && supabaseLib.createClient) {
+    sb = supabaseLib.createClient(SUPABASE_URL, SUPABASE_KEY);
+    window.__supabase = sb;
+  } else {
+    console.error('Supabase JS not loaded');
+  }
+} catch (e) { console.error('Supabase init failed:', e); }
+
+/* ═══════════════════════════════════
+   STATE
+   ═══════════════════════════════════ */
+let currentUser = null;
+let products = [];
+let editingId = null;       // null = new product
+let editImages = [];        // current image URLs in editor
+let pricingMode = 'single'; // 'single' | 'sized'
+
+/* ═══════════════════════════════════
+   AUTH CHECK
+   ═══════════════════════════════════ */
+async function checkAuth() {
+  if (!sb) { showToast('Supabase not initialized', 'error'); return; }
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      window.location.href = '/admin-dashboard.html';
+      return;
+    }
+    currentUser = session.user;
+    document.getElementById('nav-email').textContent = currentUser.email;
+    await loadProducts();
+  } catch (e) {
+    console.error('Auth error', e);
+    window.location.href = '/admin-dashboard.html';
+  }
+}
+
+/* ═══════════════════════════════════
+   LOAD PRODUCTS
+   ═══════════════════════════════════ */
+async function loadProducts() {
+  document.getElementById('pm-loading').style.display = 'flex';
+  document.getElementById('pm-list').style.display = 'none';
+
+  const { data, error } = await sb
+    .from('products')
+    .select('*')
+    .order('sort_order', { ascending: true });
+
+  document.getElementById('pm-loading').style.display = 'none';
+  document.getElementById('pm-list').style.display = 'flex';
+
+  if (error) { showToast('Failed to load products', 'error'); return; }
+  products = data || [];
+  renderList(products);
+}
+
+/* ═══════════════════════════════════
+   RENDER PRODUCT LIST
+   ═══════════════════════════════════ */
+function renderList(list) {
+  const container = document.getElementById('pm-list');
+  if (!list.length) {
+    container.innerHTML = `<div class="pm-empty">
+      <i data-lucide="package-open" style="width:48px;height:48px;margin-bottom:12px;opacity:.3"></i>
+      <p style="font-size:.95rem;font-weight:500">No products yet</p>
+      <p style="font-size:.82rem;margin-top:6px">Click "+ Add New Product" or "Seed from Code" to get started.</p>
+    </div>`;
+    lucide.createIcons();
+    return;
+  }
+
+  container.innerHTML = list.map((p, i) => {
+    const thumb = p.images && p.images[0]
+      ? `<img class="pm-card-thumb" src="${escHtml(p.images[0])}" alt="">`
+      : `<div class="pm-card-thumb-placeholder"><i data-lucide="image-off" style="width:22px;height:22px"></i></div>`;
+
+    const priceStr = p.prices
+      ? `From $${Math.min(...Object.values(p.prices).map(v => parseFloat(v.replace('$',''))))}`
+      : (p.price ? `$${parseFloat(p.price).toFixed(2)}` : '—');
+
+    let statusLabel, statusClass;
+    if (!p.available) { statusLabel = 'Hidden'; statusClass = 'pm-status-hidden'; }
+    else if (p.sold_out) { statusLabel = 'Sold Out'; statusClass = 'pm-status-soldout'; }
+    else { statusLabel = 'Live'; statusClass = 'pm-status-live'; }
+
+    // find index in master products for sort
+    const masterIdx = products.findIndex(x => x.id === p.id);
+
+    return `
+      <div class="pm-card" data-id="${p.id}">
+        ${thumb}
+        <div class="pm-card-info">
+          <div class="pm-card-name">${escHtml(p.name_en)}</div>
+          <div class="pm-card-tag">${escHtml(p.tag_en)}</div>
+          <div class="pm-card-price">${priceStr}</div>
+          <span class="pm-status ${statusClass}">${statusLabel}</span>
+        </div>
+        <div class="pm-card-controls">
+          <div class="pm-sort-btns">
+            <button class="btn-icon" title="Move up" onclick="moveProduct('${p.id}', 'up')" ${masterIdx === 0 ? 'disabled style="opacity:.3"' : ''}>
+              <i data-lucide="chevron-up" style="width:14px;height:14px"></i>
+            </button>
+            <button class="btn-icon" title="Move down" onclick="moveProduct('${p.id}', 'down')" ${masterIdx === products.length - 1 ? 'disabled style="opacity:.3"' : ''}>
+              <i data-lucide="chevron-down" style="width:14px;height:14px"></i>
+            </button>
+          </div>
+          <div class="toggle-wrap">
+            <span class="toggle-label">Sold Out</span>
+            <label class="toggle">
+              <input type="checkbox" ${p.sold_out ? 'checked' : ''} onchange="toggleSoldOut('${p.id}', this.checked)">
+              <span class="toggle-track"></span>
+              <span class="toggle-thumb"></span>
+            </label>
+          </div>
+          <div class="toggle-wrap">
+            <span class="toggle-label">Hidden</span>
+            <label class="toggle">
+              <input type="checkbox" ${!p.available ? 'checked' : ''} onchange="toggleHidden('${p.id}', this.checked)">
+              <span class="toggle-track"></span>
+              <span class="toggle-thumb"></span>
+            </label>
+          </div>
+          <button class="btn-icon" title="Edit" onclick="openEdit('${p.id}')">
+            <i data-lucide="pencil" style="width:15px;height:15px"></i>
+          </button>
+          <button class="btn-icon danger" title="Delete" onclick="deleteProduct('${p.id}', '${escAttr(p.name_en)}')">
+            <i data-lucide="trash-2" style="width:15px;height:15px"></i>
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+
+  lucide.createIcons();
+}
+
+/* ═══════════════════════════════════
+   SEARCH
+   ═══════════════════════════════════ */
+document.getElementById('search-input').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase().trim();
+  const filtered = q
+    ? products.filter(p => p.name_en.toLowerCase().includes(q) || p.tag_en.toLowerCase().includes(q))
+    : products;
+  renderList(filtered);
+});
+
+/* ═══════════════════════════════════
+   INSTANT TOGGLES
+   ═══════════════════════════════════ */
+async function toggleSoldOut(id, checked) {
+  const { error } = await sb.from('products').update({ sold_out: checked, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) { showToast('Update failed', 'error'); return; }
+  const p = products.find(x => x.id === id);
+  if (p) p.sold_out = checked;
+  showToast(checked ? 'Marked as Sold Out' : 'Marked as Available', 'success');
+  renderList(getCurrentFilteredList());
+}
+
+async function toggleHidden(id, checked) {
+  const { error } = await sb.from('products').update({ available: !checked, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) { showToast('Update failed', 'error'); return; }
+  const p = products.find(x => x.id === id);
+  if (p) p.available = !checked;
+  showToast(checked ? 'Product hidden from menu' : 'Product visible on menu', 'success');
+  renderList(getCurrentFilteredList());
+}
+
+function getCurrentFilteredList() {
+  const q = document.getElementById('search-input').value.toLowerCase().trim();
+  return q ? products.filter(p => p.name_en.toLowerCase().includes(q) || p.tag_en.toLowerCase().includes(q)) : [...products];
+}
+
+/* ═══════════════════════════════════
+   SORT ORDER
+   ═══════════════════════════════════ */
+async function moveProduct(id, direction) {
+  const idx = products.findIndex(p => p.id === id);
+  const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if (swapIdx < 0 || swapIdx >= products.length) return;
+
+  const a = products[idx], b = products[swapIdx];
+  const aOrder = a.sort_order, bOrder = b.sort_order;
+
+  // swap in-memory
+  products[idx] = b;
+  products[swapIdx] = a;
+
+  // Update sort_order values to the swapped values if different
+  const newAOrder = bOrder;
+  const newBOrder = aOrder;
+
+  await Promise.all([
+    sb.from('products').update({ sort_order: newAOrder, updated_at: new Date().toISOString() }).eq('id', a.id),
+    sb.from('products').update({ sort_order: newBOrder, updated_at: new Date().toISOString() }).eq('id', b.id),
+  ]);
+
+  a.sort_order = newAOrder;
+  b.sort_order = newBOrder;
+
+  renderList(getCurrentFilteredList());
+}
+
+/* ═══════════════════════════════════
+   MODAL: OPEN / CLOSE
+   ═══════════════════════════════════ */
+function openAdd() {
+  editingId = null;
+  editImages = [];
+  document.getElementById('modal-title').innerHTML = 'Add <span>Product</span>';
+  resetForm();
+  openModal();
+}
+
+function openEdit(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  editingId = id;
+  editImages = [...(p.images || [])];
+  document.getElementById('modal-title').innerHTML = 'Edit <span>Product</span>';
+
+  // Fill form
+  document.getElementById('f-name-en').value = p.name_en || '';
+  document.getElementById('f-name-es').value = p.name_es || '';
+  document.getElementById('f-tag-en').value = p.tag_en || '';
+  document.getElementById('f-tag-es').value = p.tag_es || '';
+  document.getElementById('f-desc-en').value = p.description_en || '';
+  document.getElementById('f-desc-es').value = p.description_es || '';
+
+  if (p.prices && typeof p.prices === 'object' && Object.keys(p.prices).length > 0) {
+    setPricingMode('sized');
+    document.getElementById('f-price-sm').value = p.prices.Small ? p.prices.Small.replace('$','') : '';
+    document.getElementById('f-price-md').value = p.prices.Medium ? p.prices.Medium.replace('$','') : '';
+    document.getElementById('f-price-lg').value = p.prices.Large ? p.prices.Large.replace('$','') : '';
+  } else {
+    setPricingMode('single');
+    document.getElementById('f-price').value = p.price || '';
+  }
+
+  renderImageGrid();
+  openModal();
+}
+
+function resetForm() {
+  ['f-name-en','f-name-es','f-tag-en','f-tag-es','f-desc-en','f-desc-es','f-price','f-price-sm','f-price-md','f-price-lg','url-input'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  setPricingMode('single');
+  renderImageGrid();
+  switchTab('info');
+}
+
+function openModal() {
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  lucide.createIcons();
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+/* Tab switching */
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+  lucide.createIcons();
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+/* Pricing mode */
+function setPricingMode(mode) {
+  pricingMode = mode;
+  document.getElementById('pt-single').classList.toggle('active', mode === 'single');
+  document.getElementById('pt-sized').classList.toggle('active', mode === 'sized');
+  document.getElementById('price-single').style.display = mode === 'single' ? 'block' : 'none';
+  document.getElementById('price-sized').style.display = mode === 'sized' ? 'grid' : 'none';
+}
+
+/* ═══════════════════════════════════
+   IMAGE MANAGEMENT
+   ═══════════════════════════════════ */
+function renderImageGrid() {
+  const grid = document.getElementById('img-grid');
+  if (!editImages.length) {
+    grid.innerHTML = '';
+    return;
+  }
+  grid.innerHTML = editImages.map((url, i) => `
+    <div class="img-thumb">
+      <img src="${escHtml(url)}" alt="" onerror="this.parentElement.style.background='var(--bg-surface)'">
+      <button class="img-remove" onclick="removeImage(${i})" title="Remove">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeImage(idx) {
+  editImages.splice(idx, 1);
+  renderImageGrid();
+}
+
+function addImageUrl() {
+  const urlEl = document.getElementById('url-input');
+  const url = urlEl.value.trim();
+  if (!url) return;
+  if (editImages.length >= 5) { showToast('Max 5 images allowed', 'error'); return; }
+  editImages.push(url);
+  renderImageGrid();
+  urlEl.value = '';
+}
+
+// File upload
+document.getElementById('upload-area').addEventListener('click', () => {
+  document.getElementById('file-input').click();
+});
+
+document.getElementById('upload-area').addEventListener('dragover', e => {
+  e.preventDefault();
+  e.currentTarget.style.borderColor = 'var(--red)';
+});
+
+document.getElementById('upload-area').addEventListener('dragleave', e => {
+  e.currentTarget.style.borderColor = '';
+});
+
+document.getElementById('upload-area').addEventListener('drop', async e => {
+  e.preventDefault();
+  e.currentTarget.style.borderColor = '';
+  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+  await uploadFiles(files);
+});
+
+document.getElementById('file-input').addEventListener('change', async e => {
+  await uploadFiles(Array.from(e.target.files));
+  e.target.value = '';
+});
+
+async function uploadFiles(files) {
+  if (!files.length) return;
+  if (editImages.length + files.length > 5) {
+    showToast(`You can only add ${5 - editImages.length} more image(s)`, 'error');
+    files = files.slice(0, 5 - editImages.length);
+  }
+
+  // Need a product ID to upload under — for new products, use a temp UUID
+  const productId = editingId || (window._tempProductId = window._tempProductId || crypto.randomUUID());
+
+  const progressWrap = document.getElementById('progress-wrap');
+  const progressBar = document.getElementById('progress-bar');
+  progressWrap.style.display = 'block';
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+
+    // Validate
+    if (file.size > 5 * 1024 * 1024) { showToast(`${file.name} exceeds 5MB limit`, 'error'); continue; }
+    if (!['image/jpeg','image/png','image/webp'].includes(file.type)) { showToast(`${file.name} is not a supported type`, 'error'); continue; }
+
+    const ext = file.name.split('.').pop();
+    const path = `${productId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+
+    progressBar.style.width = Math.round(((i + 0.5) / files.length) * 100) + '%';
+
+    const { error } = await sb.storage.from('product-images').upload(path, file, { upsert: true });
+
+    if (error) { showToast(`Upload failed: ${error.message}`, 'error'); continue; }
+
+    const { data: urlData } = sb.storage.from('product-images').getPublicUrl(path);
+    editImages.push(urlData.publicUrl);
+    renderImageGrid();
+
+    progressBar.style.width = Math.round(((i + 1) / files.length) * 100) + '%';
+  }
+
+  setTimeout(() => {
+    progressWrap.style.display = 'none';
+    progressBar.style.width = '0%';
+  }, 600);
+}
+
+/* ═══════════════════════════════════
+   SAVE PRODUCT
+   ═══════════════════════════════════ */
+async function saveProduct() {
+  const nameEn = document.getElementById('f-name-en').value.trim();
+  const nameEs = document.getElementById('f-name-es').value.trim();
+  const tagEn  = document.getElementById('f-tag-en').value.trim();
+  const tagEs  = document.getElementById('f-tag-es').value.trim();
+
+  if (!nameEn || !nameEs || !tagEn || !tagEs) {
+    showToast('Please fill in all required fields', 'error');
+    switchTab('info');
+    return;
+  }
+
+  let price = null;
+  let prices = null;
+
+  if (pricingMode === 'single') {
+    const v = document.getElementById('f-price').value;
+    price = v ? parseFloat(v) : null;
+  } else {
+    const sm = document.getElementById('f-price-sm').value;
+    const md = document.getElementById('f-price-md').value;
+    const lg = document.getElementById('f-price-lg').value;
+    prices = {};
+    if (sm) prices.Small = `$${parseFloat(sm).toFixed(2)}`;
+    if (md) prices.Medium = `$${parseFloat(md).toFixed(2)}`;
+    if (lg) prices.Large = `$${parseFloat(lg).toFixed(2)}`;
+    if (!Object.keys(prices).length) prices = null;
+  }
+
+  const payload = {
+    name_en: nameEn,
+    name_es: nameEs,
+    tag_en: tagEn,
+    tag_es: tagEs,
+    description_en: document.getElementById('f-desc-en').value.trim() || null,
+    description_es: document.getElementById('f-desc-es').value.trim() || null,
+    price,
+    prices,
+    images: editImages,
+    updated_at: new Date().toISOString(),
+  };
+
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    let error;
+    if (editingId) {
+      // If there was a temp ID used for uploads and we're now saving a new product
+      // (this branch handles edits)
+      ({ error } = await sb.from('products').update(payload).eq('id', editingId));
+    } else {
+      // New product
+      payload.available = true;
+      payload.sold_out = false;
+      payload.sort_order = 999;
+
+      const tempId = window._tempProductId;
+      const { data: inserted, error: insErr } = await sb
+        .from('products')
+        .insert(payload)
+        .select('id')
+        .single();
+      error = insErr;
+
+      // If we uploaded under a temp UUID, move files to real product ID
+      if (!insErr && inserted && tempId && tempId !== inserted.id) {
+        // Best-effort rename: re-upload listed images that contain the temp path
+        // (Storage doesn't support move, so we'll just update the URLs in-place)
+        // Images already uploaded are already accessible via tempId folder — URLs still work
+        // Update images array to use real id path if needed (optional future polish)
+        window._tempProductId = null;
+      }
+    }
+
+    if (error) {
+      showToast(error.message || 'Save failed', 'error');
+    } else {
+      showToast(editingId ? 'Product updated' : 'Product added', 'success');
+      closeModal();
+      await loadProducts();
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Product';
+  }
+}
+
+/* ═══════════════════════════════════
+   DELETE PRODUCT
+   ═══════════════════════════════════ */
+async function deleteProduct(id, name) {
+  const result = await Swal.fire({
+    title: 'Delete Product',
+    html: `<p style="font-size:.92rem;color:#6B5057;margin-bottom:16px">Type <strong>${escHtml(name)}</strong> to confirm deletion. This cannot be undone.</p>
+           <input id="swal-confirm-input" class="swal2-input" placeholder="${escHtml(name)}" style="font-size:.9rem">`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Delete',
+    confirmButtonColor: '#C8102E',
+    cancelButtonText: 'Cancel',
+    focusConfirm: false,
+    preConfirm: () => {
+      const val = document.getElementById('swal-confirm-input').value.trim();
+      if (val !== name) {
+        Swal.showValidationMessage(`Type the product name exactly: "${name}"`);
+        return false;
+      }
+      return true;
+    }
+  });
+
+  if (!result.isConfirmed) return;
+
+  // Delete storage files
+  try {
+    const { data: files } = await sb.storage.from('product-images').list(id);
+    if (files && files.length) {
+      const paths = files.map(f => `${id}/${f.name}`);
+      await sb.storage.from('product-images').remove(paths);
+    }
+  } catch (e) {
+    console.warn('Storage cleanup skipped:', e);
+  }
+
+  const { error } = await sb.from('products').delete().eq('id', id);
+  if (error) { showToast('Delete failed', 'error'); return; }
+
+  showToast('Product deleted', 'success');
+  await loadProducts();
+}
+
+/* ═══════════════════════════════════
+   SEED FROM CODE
+   ═══════════════════════════════════ */
+async function seedFromCode() {
+  const hardcoded = window.__HARDCODED_PRODUCTS;
+  if (!hardcoded || !Object.keys(hardcoded).length) {
+    showToast('No hardcoded products found. Make sure menu.html sets window.__HARDCODED_PRODUCTS.', 'error');
+    return;
+  }
+
+  const result = await Swal.fire({
+    title: 'Seed Products',
+    html: `<p style="font-size:.92rem;color:#6B5057">This will insert <strong>${Object.keys(hardcoded).length} products</strong> from the hardcoded catalog into Supabase. Existing products with the same name will be skipped.</p>`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Seed Now',
+    confirmButtonColor: '#002D62',
+    cancelButtonText: 'Cancel',
+  });
+
+  if (!result.isConfirmed) return;
+
+  const btn = document.getElementById('btn-seed');
+  btn.disabled = true;
+  btn.textContent = 'Seeding…';
+
+  // Get existing names to avoid duplicates
+  const { data: existing } = await sb.from('products').select('name_en');
+  const existingNames = new Set((existing || []).map(p => p.name_en));
+
+  const toInsert = [];
+  let sortOrder = 0;
+
+  for (const [key, p] of Object.entries(hardcoded)) {
+    if (existingNames.has(p.en ? p.en.name : key)) continue;
+
+    // Build prices
+    let price = null, prices = null;
+    if (p.price) {
+      price = parseFloat(p.price);
+    } else if (p.prices) {
+      prices = p.prices;
+    }
+
+    toInsert.push({
+      name_en: p.en ? p.en.name : key,
+      name_es: p.es ? p.es.name : (p.en ? p.en.name : key),
+      tag_en: p.en ? p.en.tag : (p.tag || ''),
+      tag_es: p.es ? p.es.tag : (p.tag || ''),
+      price,
+      prices,
+      images: [],
+      available: true,
+      sold_out: false,
+      sort_order: sortOrder++,
+    });
+  }
+
+  if (!toInsert.length) {
+    showToast('All hardcoded products already exist in Supabase', 'success');
+    btn.disabled = false;
+    btn.textContent = 'Seed from Code';
+    return;
+  }
+
+  const { error } = await sb.from('products').insert(toInsert);
+  btn.disabled = false;
+  btn.textContent = 'Seed from Code';
+
+  if (error) { showToast(`Seed failed: ${error.message}`, 'error'); return; }
+  showToast(`Seeded ${toInsert.length} products successfully!`, 'success');
+  await loadProducts();
+}
+
+/* ═══════════════════════════════════
+   LOGOUT
+   ═══════════════════════════════════ */
+async function handleLogout() {
+  await sb.auth.signOut();
+  window.location.href = '/admin-dashboard.html';
+}
+
+/* ═══════════════════════════════════
+   TOAST
+   ═══════════════════════════════════ */
+let _toastTimer = null;
+function showToast(msg, type = '') {
+  const el = document.getElementById('pm-toast');
+  el.textContent = msg;
+  el.className = `pm-toast ${type}`;
+  clearTimeout(_toastTimer);
+  requestAnimationFrame(() => el.classList.add('show'));
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+/* ═══════════════════════════════════
+   UTILS
+   ═══════════════════════════════════ */
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function escAttr(s) {
+  return String(s || '').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+}
+
+/* ═══════════════════════════════════
+   EVENT LISTENERS
+   ═══════════════════════════════════ */
+document.getElementById('btn-add').addEventListener('click', openAdd);
+document.getElementById('btn-seed').addEventListener('click', seedFromCode);
+document.getElementById('btn-logout').addEventListener('click', handleLogout);
+document.getElementById('btn-save').addEventListener('click', saveProduct);
+document.getElementById('btn-cancel').addEventListener('click', closeModal);
+document.getElementById('modal-close').addEventListener('click', closeModal);
+
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+
+/* ═══════════════════════════════════
+   BOOT
+   ═══════════════════════════════════ */
+lucide.createIcons();
+checkAuth();
+</script>
+</body>
+</html>

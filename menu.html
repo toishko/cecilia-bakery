@@ -20,6 +20,19 @@
     rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+  (function() {
+    const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
+    try {
+      if (window.supabase && window.supabase.createClient) {
+        window.__supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      }
+    } catch(e) { console.warn('Supabase init failed on menu:', e); }
+  })();
+  </script>
+
   <style>
     /* ════════════════════════════════════════
    DESIGN TOKENS
@@ -985,6 +998,24 @@
       background: var(--red);
       color: #fff;
       border-color: var(--red);
+    }
+
+    /* Sold-out ribbon — injected by applySOldOutState() */
+    .sold-out-ribbon {
+      position: absolute;
+      top: 14px;
+      left: -8px;
+      background: var(--red);
+      color: #fff;
+      font-size: .65rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      padding: 3px 10px 3px 14px;
+      pointer-events: none;
+      z-index: 5;
+      clip-path: polygon(8px 0%, 100% 0%, 100% 100%, 8px 100%, 0% 50%);
+      white-space: nowrap;
     }
 
     .product-card.featured .pc-order {
@@ -4854,7 +4885,9 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         'Hershey (Cup)': ['https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?w=700&fit=crop', 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=700&fit=crop', 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=700&fit=crop'],
       };
 
-      const urls = PRODUCT_PHOTOS[productName] || PRODUCT_PHOTOS['Tres Leches'];
+      // Check Supabase-loaded images first, fall back to hardcoded Unsplash URLs
+      const _override = window.__PRODUCT_PHOTOS_OVERRIDE || {};
+      const urls = _override[productName] || PRODUCT_PHOTOS[productName] || PRODUCT_PHOTOS['Tres Leches'];
       atcImages = urls;
       atcActiveImg = 0;
       renderGallery();
@@ -4888,7 +4921,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
     }
 
     /* ── Product catalog with flavors/sizes ── */
-    const PRODUCTS = {
+    let PRODUCTS = {
       'Tres Leches': { price: '4.99', en: { name: 'Tres Leches', tag: 'Tres Leches' }, es: { name: 'Tres Leches', tag: 'Tres Leches' }, sizes: [], sizesEs: [] },
       'Tres Leche Piña': { price: '4.99', en: { name: 'Tres Leche Piña', tag: 'Tres Leches' }, es: { name: 'Tres Leche Piña', tag: 'Tres Leches' }, sizes: [], sizesEs: [] },
       'Tres Leche Strawberry': { price: '4.99', en: { name: 'Tres Leche Strawberry', tag: 'Tres Leches' }, es: { name: 'Tres Leche Fresa', tag: 'Tres Leches' }, sizes: [], sizesEs: [] },
@@ -4918,6 +4951,10 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       'Cuatro Leche (Cup)': { price: '4.99', en: { name: 'Cuatro Leche', tag: 'Cup · Premium' }, es: { name: 'Cuatro Leche', tag: 'Baso · Premium' }, sizes: [], sizesEs: [] },
       'Hershey (Cup)': { price: '4.99', en: { name: 'Hershey', tag: 'Cup' }, es: { name: 'Hershey', tag: 'Baso' }, sizes: [], sizesEs: [] },
     };
+
+    // Expose hardcoded catalog for Seed button in product-manager.html
+    window.__HARDCODED_PRODUCTS = JSON.parse(JSON.stringify(PRODUCTS));
+
 
     /* ── Cart i18n ── */
     const cartI18n = {
@@ -5669,8 +5706,47 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       }
     }
 
+    /* ── Load products from Supabase (runtime override) ── */
+    async function loadProductsFromSupabase() {
+      try {
+        const sb = window.__supabase;
+        if (!sb) return;
+        const { data, error } = await sb
+          .from('products')
+          .select('*')
+          .eq('available', true)
+          .order('sort_order', { ascending: true });
+        if (error || !data || data.length === 0) return; // silent fallback
+
+        // Rebuild PRODUCTS object from Supabase rows
+        PRODUCTS = {};
+        data.forEach(p => {
+          PRODUCTS[p.name_en] = {
+            en: { name: p.name_en, tag: p.tag_en },
+            es: { name: p.name_es, tag: p.tag_es },
+            price: p.price ? String(p.price) : null,
+            prices: p.prices || null,
+            sold_out: p.sold_out || false,
+            images: p.images || [],
+            sizes: p.prices ? Object.keys(p.prices).filter(k => p.prices[k]) : [],
+            sizesEs: p.prices ? Object.keys(p.prices).filter(k => p.prices[k]) : [],
+          };
+        });
+
+        // Rebuild PRODUCT_PHOTOS from images arrays
+        window.__PRODUCT_PHOTOS_OVERRIDE = {};
+        data.forEach(p => {
+          if (p.images && p.images.length > 0) {
+            window.__PRODUCT_PHOTOS_OVERRIDE[p.name_en] = p.images;
+          }
+        });
+      } catch (err) {
+        console.warn('Supabase product load failed, using hardcoded fallback:', err);
+      }
+    }
+
     /* ── Init ── */
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       loadCart();
       updateBadge();
       /* Restore saved language preference */
@@ -5678,7 +5754,36 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         const savedLang = localStorage.getItem('lang') || 'en';
         setLang(savedLang);
       } catch (e) { }
+      // Load live products from Supabase (silent fallback to hardcoded if unavailable)
+      await loadProductsFromSupabase();
+      applySOldOutState();
     });
+
+    /* Apply sold-out state to all rendered ATC buttons */
+    function applySOldOutState() {
+      document.querySelectorAll('.atc-trigger').forEach(btn => {
+        const onclick = btn.getAttribute('onclick') || '';
+        const match = onclick.match(/openATC\('([^']+)'/);
+        if (!match) return;
+        const productName = match[1];
+        const prod = PRODUCTS[productName];
+        if (prod && prod.sold_out) {
+          btn.disabled = true;
+          btn.textContent = lang === 'es' ? 'Agotado' : 'Sold Out';
+          btn.style.opacity = '0.5';
+          btn.style.cursor = 'not-allowed';
+          // Add sold-out ribbon to card
+          const card = btn.closest('.product-card');
+          if (card && !card.querySelector('.sold-out-ribbon')) {
+            const ribbon = document.createElement('div');
+            ribbon.className = 'sold-out-ribbon';
+            ribbon.textContent = lang === 'es' ? 'AGOTADO' : 'SOLD OUT';
+            card.style.position = 'relative';
+            card.appendChild(ribbon);
+          }
+        }
+      });
+    }
 
   </script>
 
