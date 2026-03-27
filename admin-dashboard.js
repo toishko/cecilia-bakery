@@ -1374,22 +1374,36 @@ window.shareWhatsApp = function() {
   msg += `${lang === 'es' ? 'Artículos' : 'Items'}:\n`;
   let grandTotal = 0;
   let totalItems = 0;
+
+  // Group items by category
+  const catGrouped = {};
   detailItems.forEach(item => {
     const effectiveQty = item.adjusted_quantity !== null ? item.adjusted_quantity : item.quantity;
+    if (effectiveQty === 0) return;
+    const cat = getCategoryLabel(item.product_key) || (lang === 'es' ? 'Otros' : 'Other');
+    if (!catGrouped[cat]) catGrouped[cat] = [];
+
+    let label = item.product_label || item.product_key;
+    const isNoTicket = item.product_key && item.product_key.endsWith('_nt');
+    // Clean label — strip existing "(No Ticket)" / "(NT)" / "(ST)" to re-add cleanly
+    label = label.replace(/\s*\((No Ticket|NT|ST)\)/gi, '');
+
+    if (isNoTicket) label += ' (No Ticket)';
+
     const lineTotal = effectiveQty * parseFloat(item.price_at_order || 0);
     grandTotal += lineTotal;
     totalItems += effectiveQty;
 
-    let label = item.product_label || item.product_key;
-    // Ensure no-ticket items show the tag even for old data
-    if (item.product_key && item.product_key.endsWith('_nt') && !/no ticket|NT\)|ST\)/i.test(label)) {
-      label += ' (No Ticket)';
-    }
-    let line = `• ${label} × ${effectiveQty}`;
+    let line = `  • ${label} × ${effectiveQty}`;
     if (detailTotalsVisible) {
       line += ` — ${formatCurrency(lineTotal)}`;
     }
-    msg += line + '\n';
+    catGrouped[cat].push(line);
+  });
+
+  const catEmojis = { 'Round': '🔵', 'Redondo': '🔵', 'Plain': '🟤', 'Tres Leche': '🍰', 'Pieces': '🍰', 'Piezas': '🍰', 'Frosted Pieces': '🧁', 'Piezas Frostin': '🧁', 'Happy Birthday — BIG': '🎂', 'Feliz Cumpleaños — GRANDE': '🎂', 'Happy Birthday — SMALL': '🎂', 'Feliz Cumpleaños — PEQUEÑO': '🎂', 'Square': '🟫', 'Cuadrao': '🟫', 'Cups': '☕', 'Basos': '☕', 'Family Size': '👨‍👩‍👧‍👦', 'Familiar': '👨‍👩‍👧‍👦' };
+  Object.entries(catGrouped).forEach(([cat, lines]) => {
+    msg += `\n${catEmojis[cat] || '🍰'} ${cat}:\n${lines.join('\n')}\n`;
   });
 
   msg += `\n${lang === 'es' ? 'Total Artículos' : 'Total Items'}: ${totalItems}`;

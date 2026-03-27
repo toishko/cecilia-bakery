@@ -5462,9 +5462,20 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       if (!phone) { if (errEl) errEl.textContent = t.errPhone; return; }
       if (errEl) errEl.textContent = '';
 
-      const summary = cart.map(i =>
-        `• ${i.qty}x ${i.name}${i.size ? ' (' + i.size + ')' : ''}`
-      ).join('\n');
+      // Group items by category for clear WhatsApp message
+      const grouped = {};
+      cart.forEach(i => {
+        const tag = lang === 'es' ? (i.tagEs || i.tagEn || i.tag || '') : (i.tagEn || i.tag || '');
+        if (!grouped[tag]) grouped[tag] = [];
+        const name = lang === 'es' ? (i.nameEs || i.nameEn || i.name || '') : (i.nameEn || i.name || '');
+        let line = `  • ${i.qty}x ${name}`;
+        if (i.size) line += ` (${lang === 'es' ? (i.sizeDisplay || i.size) : i.size})`;
+        grouped[tag].push(line);
+      });
+      const catEmojis = { 'Birthday Cake': '🎂', 'Bizcocho de Cumpleaños': '🎂', 'Tres Leches': '🍰', 'Tres Leches · Premium': '🍰', 'Slice': '🍰', 'Pieza': '🍰', 'Square Cake': '🧁', 'Bizcocho Cuadrado': '🧁', 'Cup': '☕', 'Baso': '☕', 'Baso · Premium': '☕', 'Cup · Premium': '☕', 'Whipping Cream Slice': '🍰', 'Crema · Pieza': '🍰', 'Slice · New': '🍰', 'Pieza · Nuevo': '🍰' };
+      const summary = Object.entries(grouped).map(([cat, items]) =>
+        `${catEmojis[cat] || '🍰'} ${cat}:\n${items.join('\n')}`
+      ).join('\n\n');
 
       // Format pickup date + time nicely
       let pickupStr = '';
