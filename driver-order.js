@@ -1952,35 +1952,84 @@ async function subscribeToPush(userType, userId) {
   if (!sb) return;
 
   try {
+    // Wait for SW — 15 seconds (iOS PWA can be slow on first load)
     const reg = await Promise.race([
       navigator.serviceWorker.ready,
-      new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 5000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout (15s)')), 15000))
     ]);
 
     console.log('Service Worker ready, checking push subscription...');
-    let sub = await reg.pushManager.getSubscription();
 
-    if (!sub) {
+    // Request notification permission first
+    if (Notification.permission === 'default') {
       const perm = await Notification.requestPermission();
       console.log('Notification permission:', perm);
-      if (perm !== 'granted') return;
-
-      const urlBase64 = VAPID_PUBLIC_KEY;
-      const padding = '='.repeat((4 - urlBase64.length % 4) % 4);
-      const base64 = (urlBase64 + padding).replace(/-/g, '+').replace(/_/g, '/');
-      const rawData = atob(base64);
-      const applicationServerKey = new Uint8Array(rawData.length);
-      for (let i = 0; i < rawData.length; i++) applicationServerKey[i] = rawData.charCodeAt(i);
-
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey
-      });
-      console.log('Push subscription created');
-    } else {
-      console.log('Existing push subscription found');
+      if (perm !== 'granted') {
+        console.warn('Notification permission denied');
+        return;
+      }
+    } else if (Notification.permission === 'denied') {
+      console.warn('Notifications are blocked in browser settings');
+      return;
     }
 
+    // Convert VAPID key
+    const urlBase64 = VAPID_PUBLIC_KEY;
+    const padding = '='.repeat((4 - urlBase64.length % 4) % 4);
+    const base64 = (urlBase64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    const applicationServerKey = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; i++) applicationServerKey[i] = rawData.charCodeAt(i);
+
+    // Check existing subscription
+    let sub = await reg.pushManager.getSubscription();
+
+    if (sub) {
+      // Verify the existing subscription matches our current VAPID key
+      try {
+        const existingKey = sub.options?.applicationServerKey;
+        if (existingKey) {
+          const existingKeyArray = new Uint8Array(existingKey);
+          const keysMatch = existingKeyArray.length === applicationServerKey.length &&
+            existingKeyArray.every((val, i) => val === applicationServerKey[i]);
+          if (!keysMatch) {
+            console.warn('VAPID key mismatch — unsubscribing stale subscription');
+            await sub.unsubscribe();
+            sub = null;
+          }
+        }
+      } catch (keyCheckErr) {
+        console.warn('Could not verify existing sub key, re-subscribing:', keyCheckErr);
+        try { await sub.unsubscribe(); } catch (_) {}
+        sub = null;
+      }
+    }
+
+    if (!sub) {
+      try {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey
+        });
+        console.log('Push subscription created');
+      } catch (subErr) {
+        console.warn('Subscribe failed, attempting cleanup + retry:', subErr.message);
+        const oldSub = await reg.pushManager.getSubscription();
+        if (oldSub) {
+          await oldSub.unsubscribe();
+          console.log('Unsubscribed stale registration');
+        }
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey
+        });
+        console.log('Push subscription created (retry succeeded)');
+      }
+    } else {
+      console.log('Existing push subscription found (VAPID key verified)');
+    }
+
+    // Save subscription to Supabase
     const subJson = sub.toJSON();
     const { error } = await sb.from('push_subscriptions').upsert({
       user_type: userType,
@@ -1990,9 +2039,16 @@ async function subscribeToPush(userType, userId) {
       auth: subJson.keys.auth
     }, { onConflict: 'user_type,user_id,endpoint' });
 
-    if (error) console.error('Push sub save error:', error);
-    else console.log('✅ Push subscription saved for', userType);
-  } catch (e) { console.warn('Push subscription failed:', e.message || e); }
+    if (error) {
+      console.error('Push sub save error:', error);
+      showToast(lang === 'es' ? 'Error guardando notificaciones push' : 'Error saving push subscription', 'error');
+    } else {
+      console.log('✅ Push subscription saved for', userType, userId);
+    }
+  } catch (e) {
+    console.error('Push subscription failed:', e.message || e);
+    showToast(lang === 'es' ? 'Error configurando notificaciones' : 'Error setting up notifications — please reload', 'error');
+  }
 }
 
 // ── LANGUAGE SYNC TO SUPABASE ──

@@ -89,13 +89,24 @@ serve(async (req) => {
     for (const target of targets) {
       let query = sb.from('push_subscriptions').select('*').eq('user_type', target.user_type)
       if (target.user_id) query = query.eq('user_id', target.user_id)
+      query = query.order('created_at', { ascending: false })
 
       const { data: subs, error } = await query
       console.log(`Found ${subs?.length || 0} subscriptions for ${target.user_type}`)
       if (error) { console.error('Sub lookup error:', error); continue }
       if (!subs || subs.length === 0) continue
 
-      for (const sub of subs) {
+      // Deduplicate: only send to the most recent subscription per user_id
+      // This prevents double notifications when a user has multiple browsers
+      const seenUsers = new Set<string>()
+      const dedupedSubs = subs.filter(sub => {
+        if (seenUsers.has(sub.user_id)) return false
+        seenUsers.add(sub.user_id)
+        return true
+      })
+      console.log(`After dedup: ${dedupedSubs.length} unique users (from ${subs.length} subs)`)
+
+      for (const sub of dedupedSubs) {
         const pushPayload = JSON.stringify({
           title: target.title,
           body: target.body,
@@ -110,7 +121,7 @@ serve(async (req) => {
 
         try {
           await webpush.sendNotification(pushSub, pushPayload)
-          console.log(`✅ Push sent to ${target.user_type}:${sub.id}`)
+          console.log(`✅ Push sent to ${target.user_type}:${sub.user_id}`)
           sent++
         } catch (err: any) {
           console.error('Push send error:', err.statusCode, err.body)
