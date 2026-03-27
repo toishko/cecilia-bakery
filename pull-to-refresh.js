@@ -1,107 +1,149 @@
-// ═══════════════════════════════════
-//  Pull-to-Refresh for PWA
-//  Adds native-feeling refresh gesture
-//  Disabled when any modal/overlay is open
-// ═══════════════════════════════════
-(function() {
-  // Only enable in standalone PWA mode
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-    || window.navigator.standalone === true;
-  if (!isStandalone) return;
+/**
+ * pull-to-refresh.js
+ * Custom pull-to-refresh for Cecilia Bakery PWA (menu.html + driver-order.html).
+ * Replaces native iOS bounce/navigate behaviour in standalone PWA mode.
+ * - Pure touch events, passive listeners only (no scroll blocking)
+ * - Triggers DATA refresh only — never window.location.reload()
+ * - Pull threshold: 80 px; max rubber-band pull: 120 px
+ */
+(function initPullToRefresh() {
+  /* ── Inject CSS ─────────────────────────────────────────────────── */
+  const STYLE = `
+    #ptr-indicator {
+      position: fixed;
+      top: env(safe-area-inset-top);
+      left: 50%;
+      transform: translateX(-50%) translateY(-60px);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--bg-card, #fff);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9998;
+      transition: transform 0.2s ease;
+      pointer-events: none;
+      opacity: 0;
+    }
+    #ptr-indicator .ptr-icon {
+      width: 20px;
+      height: 20px;
+      border: 2.5px solid var(--red, #C8102E);
+      border-top-color: transparent;
+      border-radius: 50%;
+    }
+    #ptr-indicator.ptr-spinning .ptr-icon {
+      animation: ptrSpin 0.7s linear infinite;
+    }
+    @keyframes ptrSpin {
+      to { transform: rotate(360deg); }
+    }
+  `;
+  const styleEl = document.createElement('style');
+  styleEl.textContent = STYLE;
+  document.head.appendChild(styleEl);
 
-  let startY = 0;
-  let pulling = false;
-  let pullDistance = 0;
-  const THRESHOLD = 80;
-
-  // Check if any modal/overlay is open
-  function isModalOpen() {
-    // Body is position:fixed when a modal is open (our scroll lock)
-    if (document.body.style.position === 'fixed') return true;
-    // Also check for any overlay with .open class
-    const openOverlay = document.querySelector(
-      '.detail-overlay.open, .summary-overlay.open, ' +
-      '[id$="-overlay"].open, [id$="-modal-overlay"].open'
-    );
-    return !!openOverlay;
-  }
-
-  // Create indicator
+  /* ── Inject HTML ────────────────────────────────────────────────── */
   const indicator = document.createElement('div');
   indicator.id = 'ptr-indicator';
-  indicator.innerHTML = '<div class="ptr-spinner">↓</div>';
-  indicator.style.cssText = `
-    position:fixed;top:0;left:0;right:0;z-index:9998;
-    display:flex;align-items:center;justify-content:center;
-    height:0;overflow:hidden;
-    background:linear-gradient(180deg,rgba(200,16,46,.08),transparent);
-    transition:height .2s ease;
-    pointer-events:none;
-  `;
-  const spinner = indicator.querySelector('.ptr-spinner');
-  spinner.style.cssText = `
-    width:32px;height:32px;border-radius:50%;
-    background:var(--red,#C8102E);color:#fff;
-    display:flex;align-items:center;justify-content:center;
-    font-size:16px;font-weight:700;
-    transition:transform .2s ease;
-    box-shadow:0 2px 8px rgba(200,16,46,.3);
-  `;
-  document.body.appendChild(indicator);
+  indicator.innerHTML = '<div class="ptr-icon"></div>';
+  document.body.prepend(indicator);
 
-  document.addEventListener('touchstart', (e) => {
-    // Don't activate if a modal is open or not at top
-    if (isModalOpen()) return;
-    if (window.scrollY > 5) return;
-    startY = e.touches[0].clientY;
-    pulling = true;
-    pullDistance = 0;
-  }, { passive: true });
+  /* ── State ──────────────────────────────────────────────────────── */
+  const THRESHOLD = 80;   // px to pull before triggering refresh
+  const MAX_PULL  = 120;  // px max rubber-band distance
+  let startY     = 0;
+  let pulling    = false;
+  let refreshing = false;
 
-  document.addEventListener('touchmove', (e) => {
-    if (!pulling) return;
-    const currentY = e.touches[0].clientY;
-    pullDistance = Math.max(0, currentY - startY);
+  /* ── Helpers ────────────────────────────────────────────────────── */
+  function canPull() {
+    // Only pull when scrolled to the very top
+    return window.scrollY <= 0;
+  }
 
-    if (pullDistance > 10) {
-      const height = Math.min(pullDistance * 0.5, 60);
-      indicator.style.height = height + 'px';
+  function snapBack() {
+    indicator.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+    indicator.style.transform  = 'translateX(-50%) translateY(-60px)';
+    indicator.style.opacity    = '0';
+  }
 
-      const progress = Math.min(pullDistance / THRESHOLD, 1);
-      spinner.style.transform = `rotate(${progress * 360}deg)`;
+  async function triggerRefresh() {
+    refreshing = true;
 
-      if (pullDistance >= THRESHOLD) {
-        spinner.textContent = '↻';
-        spinner.style.background = '#2f8a4c';
-      } else {
-        spinner.textContent = '↓';
-        spinner.style.background = 'var(--red,#C8102E)';
+    // Show spinner locked at top (just below safe-area)
+    indicator.style.transition = 'transform 0.3s ease';
+    indicator.style.transform  = 'translateX(-50%) translateY(8px)';
+    indicator.style.opacity    = '1';
+    indicator.classList.add('ptr-spinning');
+
+    try {
+      /* ── menu.html: re-fetch + re-render ── */
+      if (typeof loadProductsFromSupabase === 'function') {
+        await loadProductsFromSupabase();
+        if (typeof renderMenu === 'function') renderMenu();
       }
+
+      /* ── driver-order.html: re-fetch + rebuild ── */
+      if (typeof loadDriverProducts === 'function') {
+        await loadDriverProducts();
+        if (typeof buildProductSections === 'function') buildProductSections();
+      }
+    } catch (e) {
+      // Silently swallow errors — PTR must never break the page
     }
+
+    // Hide indicator after a short dwell so the user sees the spinner complete
+    setTimeout(function () {
+      indicator.classList.remove('ptr-spinning');
+      snapBack();
+      refreshing = false;
+    }, 600);
+  }
+
+  /* ── Touch Listeners (all passive: true) ────────────────────────── */
+  document.addEventListener('touchstart', function (e) {
+    if (!canPull()) return;
+    startY  = e.touches[0].clientY;
+    pulling = true;
   }, { passive: true });
 
-  document.addEventListener('touchend', () => {
-    if (!pulling) return;
+  document.addEventListener('touchmove', function (e) {
+    if (!pulling || refreshing) return;
+
+    const dist = Math.min(e.touches[0].clientY - startY, MAX_PULL);
+    if (dist <= 0) {
+      // Swiping up — cancel
+      pulling = false;
+      snapBack();
+      return;
+    }
+
+    // Rubber-band the indicator into view
+    const progress = Math.min(dist / THRESHOLD, 1);
+    const yOffset  = -60 + (dist * 0.6); // slides from -60 toward view as user pulls
+
+    indicator.style.transition = 'none';
+    indicator.style.transform  =
+      'translateX(-50%) translateY(' + yOffset + 'px) rotate(' + (dist * 2) + 'deg)';
+    indicator.style.opacity    = String(progress);
+  }, { passive: true });
+
+  document.addEventListener('touchend', function (e) {
+    if (!pulling || refreshing) return;
     pulling = false;
 
-    if (pullDistance >= THRESHOLD) {
-      spinner.textContent = '↻';
-      indicator.style.height = '50px';
-      spinner.style.animation = 'ptr-spin .6s linear infinite';
+    const dist = e.changedTouches[0].clientY - startY;
 
-      // Add spin animation if not exists
-      if (!document.getElementById('ptr-style')) {
-        const style = document.createElement('style');
-        style.id = 'ptr-style';
-        style.textContent = '@keyframes ptr-spin{to{transform:rotate(360deg)}}';
-        document.head.appendChild(style);
-      }
-
-      // Reload after brief delay
-      setTimeout(() => window.location.reload(), 400);
-    } else {
-      indicator.style.height = '0';
+    if (dist < THRESHOLD) {
+      // Not pulled far enough — snap back
+      snapBack();
+      return;
     }
-    pullDistance = 0;
+
+    // Pulled past threshold — trigger data-only refresh
+    triggerRefresh();
   }, { passive: true });
 })();
