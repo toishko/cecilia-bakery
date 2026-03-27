@@ -2,7 +2,7 @@
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Order Confirmed — Cecilia Bakery</title>
   <meta name="description" content="Your order has been received at Cecilia Bakery.">
   <link rel="manifest" href="/manifest-website.json">
@@ -43,6 +43,8 @@
       align-items: center;
       justify-content: center;
       padding: 24px;
+      padding-top: calc(24px + env(safe-area-inset-top));
+      padding-bottom: calc(24px + env(safe-area-inset-bottom));
       transition: background .3s ease, color .3s ease;
     }
     h1, h2 { font-family: 'Cormorant Garamond', serif; font-weight: 600; }

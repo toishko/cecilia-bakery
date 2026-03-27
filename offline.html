@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Offline — Cecilia Bakery</title>
   <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0E0507" media="(prefers-color-scheme: dark)">
@@ -39,6 +39,8 @@
       align-items: center;
       justify-content: center;
       padding: 24px;
+      padding-top: calc(24px + env(safe-area-inset-top));
+      padding-bottom: calc(24px + env(safe-area-inset-bottom));
     }
 
     .card {

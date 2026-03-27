@@ -33,19 +33,31 @@ serve(async (req) => {
       return new Response('Not relevant', { status: 200 })
     }
 
-    // Idempotency guard: skip if this exact (record.id, type) was processed recently
+    // Idempotency guard: skip if this exact (record.id, type+detail) was processed recently
     const recordId = record?.id
-    if (recordId && type === 'INSERT') {
+    // Build a specific event key for dedup — e.g. "UPDATE:status=sent" or "INSERT"
+    let eventKey = type
+    if (type === 'UPDATE' && record) {
+      if (record.status && record.status !== old_record?.status) {
+        eventKey = `${type}:status=${record.status}`
+      } else if (record.payment_status && record.payment_status !== old_record?.payment_status) {
+        eventKey = `${type}:payment=${record.payment_status}`
+      } else if (record.admin_notes && record.admin_notes !== old_record?.admin_notes) {
+        eventKey = `${type}:notes`
+      }
+    }
+
+    if (recordId) {
       const { data: existing } = await sb
         .from('notification_log')
         .select('id')
         .eq('order_id', recordId)
-        .eq('event_type', type)
+        .eq('event_type', eventKey)
         .gte('created_at', new Date(Date.now() - 60000).toISOString())
         .limit(1)
 
       if (existing && existing.length > 0) {
-        console.log(`Idempotency: already processed ${type} for ${recordId}, skipping`)
+        console.log(`Idempotency: already processed ${eventKey} for ${recordId}, skipping`)
         return new Response(JSON.stringify({ skipped: true, reason: 'already_processed' }), {
           status: 200, headers: { 'Content-Type': 'application/json' }
         })
@@ -54,9 +66,9 @@ serve(async (req) => {
       // Log this invocation
       await sb.from('notification_log').insert({
         order_id: recordId,
-        event_type: type
+        event_type: eventKey
       }).select()
-      console.log(`Idempotency: logged ${type} for ${recordId}`)
+      console.log(`Idempotency: logged ${eventKey} for ${recordId}`)
     }
 
     // Determine who to notify
