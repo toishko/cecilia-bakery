@@ -85,6 +85,14 @@ function showSection(name) {
     nameEl.textContent = lang === 'es' ? esName : enName;
   }
 
+  // Unsubscribe admin products realtime when leaving the products tab
+  if (currentSection === 'products' && name !== 'products') {
+    try {
+      const sb = window.__supabase;
+      if (sb) sb.removeChannel(sb.channel('admin-products-live'));
+    } catch (_) {}
+  }
+
   // Load section data
   if (name === 'overview') loadOverview();
   if (name === 'incoming') loadIncomingOrders();
@@ -2762,6 +2770,7 @@ async function loadProductManager() {
   });
 
   await _pmFetch();
+  initAdminProductsRealtime();
 }
 
 /* ── Modal structure ── */
@@ -3011,6 +3020,11 @@ function _pmCloseModal() {
   if (ov) ov.classList.remove('open');
   document.body.style.overflow = '';
   window._pmTempId = null;
+  // Flush any queued realtime reload that was deferred while modal was open
+  if (window._pmReloadQueued) {
+    window._pmReloadQueued = false;
+    _pmReloadSilent();
+  }
 }
 
 /* ── Save (insert or update) ── */
@@ -3088,6 +3102,61 @@ async function _pmFetch() {
   if (error) { showToast('Failed to load products', 'error'); list.innerHTML = ''; return; }
   _pmProducts = data || [];
   _pmRenderList(_pmProducts);
+}
+
+/* ── Silent reload helper (no skeleton flash) ── */
+async function _pmReloadSilent() {
+  try {
+    const { data, error } = await sb
+      .from('products')
+      .select('*')
+      .order('sort_order', { ascending: true });
+    if (error || !data) return;
+    _pmProducts = data;
+    // Preserve search state if the user is actively searching
+    const q = document.getElementById('pm-search')?.value.toLowerCase().trim();
+    if (q) {
+      _pmRenderList(_pmProducts.filter(p =>
+        p.name_en.toLowerCase().includes(q) || p.tag_en.toLowerCase().includes(q)
+      ), true);
+    } else {
+      _pmRenderList(_pmProducts);
+    }
+    showToast('Product list updated', 'info');
+  } catch (_) { /* silent */ }
+}
+
+/* ── Subscribe to Realtime while Products tab is open ── */
+function initAdminProductsRealtime() {
+  try {
+    const sb = window.__supabase;
+    if (!sb) return;
+    // Remove any stale channel before (re)subscribing
+    try { sb.removeChannel(sb.channel('admin-products-live')); } catch (_) {}
+
+    sb.channel('admin-products-live')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'products'
+      }, (payload) => {
+        handleAdminProductChange(payload);
+      })
+      .subscribe();
+  } catch (_) { /* silent */ }
+}
+
+/* ── Handle incoming realtime change ── */
+async function handleAdminProductChange(payload) {
+  try {
+    // If the modal is open, queue the reload for when it closes
+    const modalOpen = document.getElementById('pm-overlay')?.classList.contains('open');
+    if (modalOpen) {
+      window._pmReloadQueued = true;
+      return;
+    }
+    await _pmReloadSilent();
+  } catch (_) { /* silent */ }
 }
 
 /* ── Render the product list ── */

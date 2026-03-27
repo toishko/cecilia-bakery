@@ -203,6 +203,8 @@ function enterDashboard() {
   }
   // Phase 9: sync language from Supabase
   syncLangFromSupabase();
+  // Load live product catalog from Supabase (falls back to hardcoded silently)
+  loadDriverProducts().then(() => initDriverRealtime());
 }
 
 async function handleLogout() {
@@ -422,7 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ═══════════════════════════════════
    PRODUCT CATALOG (EN/ES)
    ═══════════════════════════════════ */
-const PRODUCTS = {
+let PRODUCTS = {
   redondo: {
     en: 'Round', es: 'Redondo', type: 'redondo',
     items: [
@@ -808,6 +810,7 @@ function buildProductSections() {
   });
 
   container.innerHTML = html;
+  applyDriverSoldOut();
 
   // Bind accordion headers
   container.querySelectorAll('.acc-header').forEach(hdr => {
@@ -843,6 +846,167 @@ function buildProductSections() {
   });
 
   lucide.createIcons();
+}
+
+/* ═══════════════════════════════════
+   LOAD PRODUCTS FROM SUPABASE
+   ═══════════════════════════════════ */
+async function loadDriverProducts() {
+  if (!sb) return;
+  try {
+    const { data, error } = await sb
+      .from('products')
+      .select('*')
+      .eq('available', true)
+      .order('sort_order', { ascending: true });
+
+    if (error || !data || data.length === 0) {
+      console.warn('Driver: using hardcoded fallback product catalog');
+      return;
+    }
+
+    // Group rows by tag_en — each tag becomes a section
+    const grouped = {};
+    data.forEach(p => {
+      const secKey = p.tag_en.toLowerCase().replace(/\s+/g, '_');
+      if (!grouped[secKey]) {
+        grouped[secKey] = {
+          en: p.tag_en,
+          es: p.tag_es || p.tag_en,
+          type: 'standard',
+          items: []
+        };
+      }
+      grouped[secKey].items.push({
+        key: p.name_en.toLowerCase().replace(/\s+/g, '_'),
+        en: p.name_en,
+        es: p.name_es || p.name_en,
+        sold_out: p.sold_out || false,
+      });
+    });
+
+    PRODUCTS = grouped;
+    console.log('Driver: loaded', data.length, 'products from Supabase');
+  } catch (err) {
+    console.warn('Driver: product load failed, using hardcoded fallback:', err);
+  }
+}
+
+/* ── Apply sold-out state after buildProductSections() renders ── */
+function applyDriverSoldOut() {
+  Object.entries(PRODUCTS).forEach(([, sec]) => {
+    sec.items.forEach(item => {
+      if (!item.sold_out) return;
+      const rows = document.querySelectorAll(`[data-product="${item.key}"]`);
+      rows.forEach(row => {
+        row.querySelectorAll('.qty-input').forEach(inp => {
+          inp.disabled = true;
+          inp.value = 0;
+          inp.style.opacity = '0.4';
+        });
+        row.querySelectorAll('.qty-btn').forEach(btn => {
+          btn.disabled = true;
+          btn.style.opacity = '0.4';
+        });
+        const nameEl = row.querySelector('.prod-name');
+        if (nameEl && !nameEl.querySelector('.sold-out-tag')) {
+          const tag = document.createElement('span');
+          tag.className = 'sold-out-tag';
+          tag.textContent = lang === 'es' ? ' — Agotado' : ' — Sold Out';
+          tag.style.cssText = 'color:#C8102E;font-size:0.75rem;font-weight:600;';
+          nameEl.appendChild(tag);
+        }
+      });
+    });
+  });
+}
+
+/* ── Realtime: live availability & sold-out updates for drivers ── */
+function initDriverRealtime() {
+  try {
+    if (!sb) return;
+    sb.channel('driver-products-live')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'products'
+      }, (payload) => {
+        try {
+          const n = payload.new;
+          const key = n.name_en.toLowerCase().replace(/\s+/g, '_');
+
+          // ── Product turned unavailable ──
+          if (n.available === false) {
+            document.querySelectorAll(`[data-product="${key}"]`).forEach(row => {
+              row.style.display = 'none';
+            });
+            return;
+          }
+
+          // ── Product turned available (was hidden) ──
+          if (n.available === true) {
+            const rows = document.querySelectorAll(`[data-product="${key}"]`);
+            if (rows.length) {
+              rows.forEach(row => { row.style.display = ''; });
+            }
+            // Update PRODUCTS cache
+            Object.values(PRODUCTS).forEach(sec => {
+              const item = sec.items.find(i => i.key === key);
+              if (item) item.sold_out = n.sold_out || false;
+            });
+            return;
+          }
+
+          // ── Sold out toggled ON ──
+          const rows = document.querySelectorAll(`[data-product="${key}"]`);
+          if (n.sold_out) {
+            rows.forEach(row => {
+              row.querySelectorAll('.qty-input').forEach(inp => {
+                inp.disabled = true;
+                inp.value = 0;
+                inp.style.opacity = '0.4';
+              });
+              row.querySelectorAll('.qty-btn').forEach(btn => {
+                btn.disabled = true;
+                btn.style.opacity = '0.4';
+              });
+              const nameEl = row.querySelector('.prod-name');
+              if (nameEl && !nameEl.querySelector('.sold-out-tag')) {
+                const tag = document.createElement('span');
+                tag.className = 'sold-out-tag';
+                tag.textContent = lang === 'es' ? ' — Agotado' : ' — Sold Out';
+                tag.style.cssText = 'color:#C8102E;font-size:0.75rem;font-weight:600;';
+                nameEl.appendChild(tag);
+              }
+            });
+          } else {
+            // ── Sold out toggled OFF ──
+            rows.forEach(row => {
+              row.querySelectorAll('.qty-input').forEach(inp => {
+                inp.disabled = false;
+                inp.style.opacity = '1';
+              });
+              row.querySelectorAll('.qty-btn').forEach(btn => {
+                btn.disabled = false;
+                btn.style.opacity = '';
+              });
+              row.querySelector('.sold-out-tag')?.remove();
+            });
+          }
+
+          // Update PRODUCTS cache
+          Object.values(PRODUCTS).forEach(sec => {
+            const item = sec.items.find(i => i.key === key);
+            if (item) item.sold_out = n.sold_out || false;
+          });
+        } catch (_) { /* silent */ }
+      })
+      .subscribe();
+
+    window.addEventListener('beforeunload', () => {
+      try { sb.removeAllChannels(); } catch (_) {}
+    });
+  } catch (_) { /* silent fallback */ }
 }
 
 function qtyControl(key) {
