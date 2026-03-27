@@ -1,7 +1,21 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { writeFileSync } from 'fs';
+
+// Plugin: stamp public/version.json with build timestamp on every deploy
+function versionPlugin() {
+  return {
+    name: 'version-stamp',
+    buildStart() {
+      const version = Date.now().toString();
+      writeFileSync(resolve(__dirname, 'public/version.json'), JSON.stringify({ v: version }));
+      console.log(`[version-stamp] Build version: ${version}`);
+    }
+  };
+}
 
 export default defineConfig({
+  plugins: [versionPlugin()],
   build: {
     rollupOptions: {
       input: {

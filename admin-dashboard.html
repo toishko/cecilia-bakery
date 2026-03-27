@@ -473,32 +473,69 @@
 <script type="module" src="/admin-dashboard.js"></script>
 <script>
 (function() {
-  if (!('serviceWorker' in navigator)) return;
+  // ── Service Worker (caching + push only) ──
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+
+  // ── Version Polling — reliable update detection ──
+  let currentVersion = null;
+  let lastActivity = Date.now();
+  const POLL_INTERVAL = 45 * 1000;   // check every 45 seconds
+  const IDLE_THRESHOLD = 30 * 1000;  // 30 seconds = idle
+
+  // Track user activity
+  ['click', 'touchstart', 'keydown', 'scroll', 'mousemove'].forEach(evt => {
+    document.addEventListener(evt, () => { lastActivity = Date.now(); }, { passive: true });
+  });
+
+  function isUserIdle() {
+    return Date.now() - lastActivity > IDLE_THRESHOLD;
+  }
+
+  function isUserBusy() {
+    // Check if modals/overlays are open (user mid-task)
+    const openOverlays = document.querySelectorAll(
+      '.detail-overlay.open, .confirm-overlay.open, #print-preview-overlay'
+    );
+    return openOverlays.length > 0;
+  }
 
   function showUpdateBanner() {
     const banner = document.getElementById('update-banner');
     if (banner) banner.style.display = 'flex';
   }
 
-  navigator.serviceWorker.register('/sw.js').then(reg => {
-    reg.update();
-    setInterval(() => reg.update(), 30 * 60 * 1000);
+  async function checkVersion() {
+    try {
+      const res = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
 
-    reg.addEventListener('updatefound', () => {
-      const newSW = reg.installing;
-      if (newSW) {
-        newSW.addEventListener('statechange', () => {
-          if (newSW.state === 'activated') showUpdateBanner();
-        });
+      if (!currentVersion) {
+        // First load — store the version
+        currentVersion = data.v;
+        return;
       }
-    });
-  }).catch(() => {});
 
-  navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SW_UPDATED') showUpdateBanner();
-  });
+      if (data.v !== currentVersion) {
+        // Version changed — update available
+        if (isUserIdle() && !isUserBusy()) {
+          // Silent auto-reload
+          window.location.reload();
+        } else {
+          // User is active — show banner
+          showUpdateBanner();
+        }
+      }
+    } catch (e) {
+      // Network error — silently ignore
+    }
+  }
 
-  navigator.serviceWorker.addEventListener('controllerchange', () => showUpdateBanner());
+  // Start polling
+  checkVersion();
+  setInterval(checkVersion, POLL_INTERVAL);
 })();
 </script>
 </body>
