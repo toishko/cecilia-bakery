@@ -5830,42 +5830,43 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
           return;
         }
 
-        // ── UPDATE — use DOM state as primary signal, payload.old as fallback ──
+        // ── UPDATE ──
         if (eventType === 'UPDATE') {
           const nameEn = n.name_en;
-          const card   = findCard(nameEn);
-          const btn    = card?.querySelector('.atc-trigger');
 
-          // ── available toggled OFF → hide card immediately ──
-          if (n.available === false) {
-            if (card) {
-              const section = card.closest('.menu-section');
-              card.style.display = 'none';
-              cleanupSection(section);
+          // ── AVAILABILITY CHANGE — only enter if available actually changed ──
+          // Use DOM state to detect: card hidden = was available:false, card visible = available:true
+          const existingCard = findCard(nameEn);
+          const cardCurrentlyHidden = existingCard
+            ? existingCard.style.display === 'none'
+            : true; // card absent from DOM = treated as hidden
+
+          if (n.available === false && !cardCurrentlyHidden) {
+            // Product just turned hidden → hide it
+            if (existingCard) {
+              existingCard.style.display = 'none';
+              cleanupSection(existingCard.closest('.menu-section'));
             }
             delete PRODUCTS[nameEn];
             return;
           }
 
-          // ── available toggled ON → restore card in DOM ──
-          if (n.available === true) {
-            if (card) {
-              // Card is in the DOM but hidden — just show it
-              card.style.display = '';
-              // Restore the parent section
-              const section = card.closest('.menu-section');
+          if (n.available === true && cardCurrentlyHidden) {
+            // Product just turned visible → restore it
+            if (existingCard) {
+              existingCard.style.display = '';
+              const section = existingCard.closest('.menu-section');
               if (section) {
                 section.style.display = '';
-                // Restore the matching cat-nav tab (href="#section-id")
                 const sectionId = section.id;
                 if (sectionId) {
                   const navTab = document.querySelector(`.cat-nav-link[href="#${sectionId}"]`);
                   if (navTab) navTab.style.display = '';
                 }
               }
-              flashCard(card);
+              flashCard(existingCard);
             } else {
-              // Card not in DOM at all — was hidden before initial render, need full reload
+              // Card completely absent — was hidden before initial render
               await loadProductsFromSupabase();
               applyHiddenProducts();
               applySOldOutState();
@@ -5877,13 +5878,18 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
             return;
           }
 
-          // ── sold_out ON — use DOM state: button currently enabled → should be disabled ──
+          // ── SOLD OUT & PRICE — only reached when availability did NOT change ──
+          const card = existingCard;
+          if (!card) return;
+          const btn = card.querySelector('.atc-trigger');
+
+          // sold_out ON
           if (n.sold_out && btn && !btn.disabled) {
             btn.disabled = true;
             btn.textContent = lang === 'es' ? 'Agotado' : 'Sold Out';
             btn.style.opacity = '0.5';
             btn.style.cursor  = 'not-allowed';
-            if (card && !card.querySelector('.sold-out-ribbon')) {
+            if (!card.querySelector('.sold-out-ribbon')) {
               const ribbon = document.createElement('div');
               ribbon.className = 'sold-out-ribbon';
               ribbon.textContent = lang === 'es' ? 'AGOTADO' : 'SOLD OUT';
@@ -5895,35 +5901,33 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
             return;
           }
 
-          // ── sold_out OFF — use DOM state: button currently disabled → should be enabled ──
+          // sold_out OFF
           if (!n.sold_out && btn && btn.disabled) {
             btn.disabled = false;
             btn.textContent = lang === 'es' ? 'Agregar' : 'Add to Cart';
             btn.style.opacity = '1';
             btn.style.cursor  = 'pointer';
-            const ribbon = card?.querySelector('.sold-out-ribbon');
+            const ribbon = card.querySelector('.sold-out-ribbon');
             if (ribbon) ribbon.remove();
             flashCard(card);
             if (PRODUCTS[nameEn]) PRODUCTS[nameEn].sold_out = false;
             return;
           }
 
-          // ── price / prices changed ──
+          // price / prices changed
           const priceChanged = (o?.price !== n.price) ||
                                (JSON.stringify(o?.prices) !== JSON.stringify(n.prices));
           if (priceChanged) {
-            if (card) {
-              const priceEl = card.querySelector('.pc-price');
-              if (priceEl) {
-                if (n.prices && Object.keys(n.prices).length) {
-                  const vals = Object.values(n.prices).map(v => parseFloat(String(v).replace('$', '')));
-                  priceEl.textContent = `From $${Math.min(...vals).toFixed(2)}`;
-                } else if (n.price) {
-                  priceEl.textContent = `$${parseFloat(n.price).toFixed(2)}`;
-                }
+            const priceEl = card.querySelector('.pc-price');
+            if (priceEl) {
+              if (n.prices && Object.keys(n.prices).length) {
+                const vals = Object.values(n.prices).map(v => parseFloat(String(v).replace('$', '')));
+                priceEl.textContent = `From $${Math.min(...vals).toFixed(2)}`;
+              } else if (n.price) {
+                priceEl.textContent = `$${parseFloat(n.price).toFixed(2)}`;
               }
-              flashCard(card);
             }
+            flashCard(card);
             if (PRODUCTS[nameEn]) {
               PRODUCTS[nameEn].price  = n.price  ? String(n.price)  : null;
               PRODUCTS[nameEn].prices = n.prices || null;
@@ -5931,7 +5935,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
             return;
           }
 
-          // ── name or images changed → full reload ──
+          // name or images changed → full reload
           if ((o?.name_en && o.name_en !== n.name_en) ||
               JSON.stringify(o?.images) !== JSON.stringify(n.images)) {
             await loadProductsFromSupabase();
