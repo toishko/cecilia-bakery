@@ -814,8 +814,9 @@
     /* ── PRODUCT GRID ── */
     .product-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      padding: 20px 52px;
     }
 
     /* ── PRODUCT CARD ── */
@@ -1789,7 +1790,7 @@
       }
 
       .product-grid {
-        grid-template-columns: 1fr 1fr;
+        padding: 20px 24px;
       }
 
       .cta-card {
@@ -1812,11 +1813,46 @@
       }
     }
 
-    @media(max-width:500px) {
+    @media(max-width:768px) {
       .product-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        padding: 12px 16px;
       }
 
+      .product-card.featured {
+        grid-column: span 2;
+      }
+
+      .product-card.featured .pc-image-wrap {
+        aspect-ratio: 16/9;
+      }
+
+      .product-card .pc-tag {
+        font-size: 0.6rem;
+      }
+
+      .product-card .pc-name {
+        font-size: 0.95rem;
+        line-height: 1.2;
+      }
+
+      .product-card .pc-price {
+        font-size: 0.85rem;
+      }
+
+      .product-card .atc-trigger {
+        font-size: 0.7rem;
+        padding: 8px 10px;
+        letter-spacing: 0.04em;
+      }
+
+      .product-card .pc-desc {
+        display: none;
+      }
+    }
+
+    @media(max-width:500px) {
       .cta-card {
         grid-column: span 1;
       }
@@ -5522,6 +5558,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
             prices: p.prices || null,
             sold_out: p.sold_out || false,
             images: p.images || [],
+            icon_name: p.icon_name || 'cake',
             sizes: p.prices ? Object.keys(p.prices).filter(k => p.prices[k]) : [],
             sizesEs: p.prices ? Object.keys(p.prices).filter(k => p.prices[k]) : [],
           };
