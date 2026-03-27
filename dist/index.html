@@ -5,8 +5,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cecilia Bakery — Los Mejores Bizcochos Dominicanos</title>
+  <link rel="manifest" href="/assets/manifest-website-WBBbkk13.json">
+  <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E0507" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cecilia">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" as="style">
   <link
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
     rel="stylesheet" />
@@ -4531,16 +4539,19 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         notePH: 'e.g. allergies, custom message, special requests...',
         errName: 'Please enter your name.',
         errPhone: 'Please enter your phone number.',
-        whatsappMsg: (name, phone, pickup, summary, note) => [
-          `Hi! I'd like to place an order`,
-          `Name: ${name}`,
-          `Phone: ${phone}`,
-          pickup ? `Pickup Date: ${pickup}` : '',
-          `Order:`,
+        whatsappMsg: (name, phone, pickup, summary, total, note) => [
+          `*CECILIA BAKERY*`,
+          ``,
+          `*Name:* ${name}`,
+          `*Phone:* ${phone}`,
+          pickup ? `*Pickup:* ${pickup}` : '',
+          ``,
           summary,
-          note ? `Note: ${note}` : '',
+          total > 0 ? `\n*Total:* $${total.toFixed(2)}` : '',
+          note ? `\n*Note:* ${note}` : '',
+          ``,
           `Please confirm when ready!`
-        ].filter(Boolean).join('\n'),
+        ].filter(x => x !== false && x !== null && x !== undefined).join('\n'),
       },
       es: {
         drawerTitle: 'Tu <span>Carrito</span>',
@@ -4573,16 +4584,19 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         notePH: 'ej. alergias, mensaje personalizado, solicitudes especiales...',
         errName: 'Por favor ingresa tu nombre.',
         errPhone: 'Por favor ingresa tu número de teléfono.',
-        whatsappMsg: (name, phone, pickup, summary, note) => [
-          `¡Hola! Me gustaría hacer un pedido`,
-          `Nombre: ${name}`,
-          `Teléfono: ${phone}`,
-          pickup ? `Fecha de Recogida: ${pickup}` : '',
-          `Pedido:`,
+        whatsappMsg: (name, phone, pickup, summary, total, note) => [
+          `*CECILIA BAKERY*`,
+          ``,
+          `*Nombre:* ${name}`,
+          `*Teléfono:* ${phone}`,
+          pickup ? `*Recogida:* ${pickup}` : '',
+          ``,
           summary,
-          note ? `Nota: ${note}` : '',
-          `¡Por favor confírmame cuando estés listo!`
-        ].filter(Boolean).join('\n'),
+          total > 0 ? `\n*Total:* $${total.toFixed(2)}` : '',
+          note ? `\n*Nota:* ${note}` : '',
+          ``,
+          `¡Por favor confirma cuando esté listo!`
+        ].filter(x => x !== false && x !== null && x !== undefined).join('\n'),
       }
     };
 
@@ -5122,9 +5136,26 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       if (!phone) { if (errEl) errEl.textContent = t.errPhone; return; }
       if (errEl) errEl.textContent = '';
 
-      const summary = cart.map(i =>
-        `• ${i.qty}x ${i.name}${i.size ? ' (' + i.size + ')' : ''}`
-      ).join('\n');
+      // Group items by category for clear WhatsApp message
+      const sizeAbbr = { 'Small': 'S', 'Medium': 'M', 'Large': 'L', 'Pequeño': 'S', 'Mediano': 'M', 'Grande': 'L' };
+      const grouped = {};
+      let orderTotal = 0;
+      cart.forEach(i => {
+        const tag = lang === 'es' ? (i.tagEs || i.tagEn || i.tag || '') : (i.tagEn || i.tag || '');
+        if (!grouped[tag]) grouped[tag] = [];
+        const name = lang === 'es' ? (i.nameEs || i.nameEn || i.name || '') : (i.nameEn || i.name || '');
+        const sizeRaw = lang === 'es' ? (i.sizeDisplay || i.size) : i.size;
+        const sizeStr = sizeRaw ? ` (${sizeAbbr[sizeRaw] || sizeRaw})` : '';
+        const unitPrice = parseFloat(i.price || 0);
+        const lineTotal = unitPrice * i.qty;
+        orderTotal += lineTotal;
+        let line = `${i.qty}x ${name}${sizeStr}`;
+        if (unitPrice > 0) line += ` — $${lineTotal.toFixed(2)}`;
+        grouped[tag].push(line);
+      });
+      const summary = Object.entries(grouped).map(([cat, items]) =>
+        `*${cat}*\n${items.join('\n')}`
+      ).join('\n\n');
 
       // Format pickup date + time nicely
       let pickupStr = '';
@@ -5188,7 +5219,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       }
 
       // ── Send WhatsApp notification ──
-      const msg = t.whatsappMsg(name, phone, pickupStr, summary, note);
+      const msg = t.whatsappMsg(name, phone, pickupStr, summary, orderTotal, note);
       const waNumber = '12018697633';
       const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
 
@@ -5246,6 +5277,12 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
   </script>
 
   <script>if(typeof lucide !== 'undefined') lucide.createIcons();</script>
+<script>
+(function() {
+  if (!('serviceWorker' in navigator) || location.hostname.includes('localhost')) return;
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+})();
+</script>
 </body>
 
 </html>

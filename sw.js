@@ -1,19 +1,34 @@
 // ═══════════════════════════════════
 //  Cecilia Bakery — Service Worker
-//  Network-first + Push Notifications
+//  Network-first + Offline Fallback + Push Notifications
 // ═══════════════════════════════════
 
-const CACHE_NAME = 'cecilia-cache';
+const CACHE_VERSION = 'v2';                       // bump on each release
+const CACHE_NAME = `cecilia-cache-${CACHE_VERSION}`;
+const OFFLINE_URL = '/offline.html';
 
-// ── INSTALL: immediately activate ──
-self.addEventListener('install', () => self.skipWaiting());
-
-// ── ACTIVATE: clean old caches + claim clients ──
-self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+// ── INSTALL: pre-cache offline page + immediately activate ──
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.add(OFFLINE_URL))
+  );
+  self.skipWaiting();
 });
 
-// ── FETCH: always network-first ──
+// ── ACTIVATE: delete old caches + claim clients ──
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((names) =>
+      Promise.all(
+        names
+          .filter((name) => name.startsWith('cecilia-cache') && name !== CACHE_NAME)
+          .map((name) => caches.delete(name))
+      )
+    ).then(() => self.clients.claim())
+  );
+});
+
+// ── FETCH: network-first with offline fallback ──
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET') return;
@@ -28,7 +43,15 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() =>
+        caches.match(event.request).then((cached) => {
+          if (cached) return cached;
+          // Only serve offline page for navigation requests (HTML pages)
+          if (event.request.mode === 'navigate') {
+            return caches.match(OFFLINE_URL);
+          }
+        })
+      )
   );
 });
 

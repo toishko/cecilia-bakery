@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline — Cecilia Bakery</title>
+  <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E0507" media="(prefers-color-scheme: dark)">
+  <style>
+    /* ── Fully self-contained — no external dependencies ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #FAFAF8;
+      --tx: #18080D;
+      --tx-muted: #6B5057;
+      --red: #C8102E;
+      --red-dk: #9B0B22;
+      --card-bg: #FFFFFF;
+      --card-shadow: 0 8px 32px rgba(200, 16, 46, .08);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0E0507;
+        --tx: #F2E8E4;
+        --tx-muted: #BFA0A8;
+        --card-bg: #1E0D12;
+        --card-shadow: 0 8px 32px rgba(0, 0, 0, .4);
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--tx);
+      min-height: 100svh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 48px 36px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      box-shadow: var(--card-shadow);
+    }
+
+    .icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 24px;
+      border-radius: 50%;
+      background: rgba(200, 16, 46, .08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .icon { background: rgba(200, 16, 46, .15); }
+    }
+
+    .icon svg {
+      width: 28px;
+      height: 28px;
+      stroke: var(--red);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--tx);
+    }
+
+    p {
+      font-size: .95rem;
+      color: var(--tx-muted);
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    .btn {
+      display: inline-block;
+      background: var(--red);
+      color: #fff;
+      border: none;
+      padding: 13px 32px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: .88rem;
+      font-weight: 500;
+      letter-spacing: .04em;
+      cursor: pointer;
+      transition: background .2s, transform .2s;
+    }
+
+    .btn:hover { background: var(--red-dk); }
+    .btn:active { transform: scale(.97); }
+
+    .brand {
+      margin-top: 32px;
+      font-size: .75rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--tx-muted);
+      opacity: .6;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="icon">
+    <svg viewBox="0 0 24 24">
+      <line x1="1" y1="1" x2="23" y2="23"></line>
+      <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+      <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+      <path d="M10.71 5.05A16 16 0 0 1 22.56 9"></path>
+      <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+      <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+      <line x1="12" y1="20" x2="12.01" y2="20"></line>
+    </svg>
+  </div>
+  <h1 id="title">You're Offline</h1>
+  <p id="message">Check your connection and try again.</p>
+  <button class="btn" onclick="window.location.reload()" id="retry-btn">Try Again</button>
+  <div class="brand">Cecilia Bakery</div>
+</div>
+
+<script>
+  // Detect language for bilingual support
+  (function() {
+    const lang = (navigator.language || 'en').toLowerCase();
+    if (lang.startsWith('es')) {
+      document.getElementById('title').textContent = 'Estás sin conexión';
+      document.getElementById('message').textContent = 'Revisa tu conexión e intenta de nuevo.';
+      document.getElementById('retry-btn').textContent = 'Reintentar';
+    }
+  })();
+</script>
+
+</body>
+</html>

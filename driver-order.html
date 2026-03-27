@@ -6,13 +6,15 @@
   <title>Cecilia Bakery — Driver Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="/driver-order.css">
   <!-- PWA -->
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#C8102E">
+  <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E0507" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Cecilia">
@@ -33,10 +35,10 @@
     </div>
     <a href="/index.html" class="login-logo-link"><img src="assets/logo.png" alt="Cecilia Bakery" class="login-logo"></a>
     <h1 class="login-title" data-en="Driver Portal" data-es="Portal del Conductor">Driver Portal</h1>
-    <p class="login-subtitle" data-en="Enter your code to continue" data-es="Ingresa tu codigo para continuar">Enter your code to continue</p>
+    <p class="login-subtitle" data-en="Enter your code to continue" data-es="Ingresa tu código para continuar">Enter your code to continue</p>
     <div class="login-input-wrap">
       <input type="text" id="code-input" class="login-input" placeholder="Your code" autocomplete="off"
-        data-en-placeholder="Your code" data-es-placeholder="Tu codigo">
+        data-en-placeholder="Your code" data-es-placeholder="Tu código">
     </div>
     <button id="login-btn" class="login-btn" data-en="Enter" data-es="Entrar">Enter</button>
     <div id="login-error" class="login-error"></div>
@@ -69,7 +71,7 @@
     </button>
     <button class="dash-nav-item" data-section="settings">
       <i data-lucide="settings"></i>
-      <span data-en="Settings" data-es="Configuracion">Settings</span>
+      <span data-en="Settings" data-es="Configuración">Settings</span>
     </button>
   </nav>
 
@@ -78,7 +80,7 @@
     <div id="section-overview" class="dash-section active">
       <div class="welcome-card">
         <h2 class="welcome-name" id="welcome-name">Welcome</h2>
-        <p class="welcome-sub" data-en="Ready to place an order?" data-es="Listo para hacer un pedido?">Ready to place an order?</p>
+        <p class="welcome-sub" data-en="Ready to place an order?" data-es="¿Listo para hacer un pedido?">Ready to place an order?</p>
       </div>
       <div class="balance-banner" id="balance-banner-overview" onclick="showBalanceBreakdown()" style="cursor:pointer">
         <div><div class="balance-label" data-en="Outstanding Balance" data-es="Saldo Pendiente">Outstanding Balance</div></div>
@@ -91,7 +93,7 @@
       </button>
       <h3 class="section-title" data-en="Recent Orders" data-es="Pedidos Recientes">Recent Orders</h3>
       <div id="recent-orders">
-        <div class="empty-state" data-en="No orders yet" data-es="Aun no hay pedidos">No orders yet</div>
+        <div class="empty-state" data-en="No orders yet" data-es="Aún no hay pedidos">No orders yet</div>
       </div>
     </div>
 
@@ -104,13 +106,13 @@
       </div>
       <h3 class="section-title" data-en="My Orders" data-es="Mis Pedidos">My Orders</h3>
       <div id="all-orders">
-        <div class="empty-state" data-en="No orders yet" data-es="Aun no hay pedidos">No orders yet</div>
+        <div class="empty-state" data-en="No orders yet" data-es="Aún no hay pedidos">No orders yet</div>
       </div>
     </div>
 
     <!-- SETTINGS -->
     <div id="section-settings" class="dash-section" style="display:none">
-      <h3 class="section-title" data-en="Settings" data-es="Configuracion">Settings</h3>
+      <h3 class="section-title" data-en="Settings" data-es="Configuración">Settings</h3>
       <div class="settings-group">
         <div class="settings-row">
           <div class="settings-label"><i data-lucide="globe"></i> <span data-en="Language" data-es="Idioma">Language</span></div>
@@ -120,7 +122,7 @@
           </div>
         </div>
         <div class="settings-row">
-          <div class="settings-label"><i data-lucide="type"></i> <span data-en="Text Size" data-es="Tamano de Texto">Text Size</span></div>
+          <div class="settings-label"><i data-lucide="type"></i> <span data-en="Text Size" data-es="Tamaño de Texto">Text Size</span></div>
           <div class="size-btns">
             <button class="size-btn" data-size="-2">A-</button>
             <button class="size-btn" data-size="2">A+</button>
@@ -152,7 +154,7 @@
       <a href="/index.html" class="settings-website-link" data-en="Visit Website" data-es="Visitar Sitio Web">
         <i data-lucide="external-link"></i> <span data-en="Visit Website" data-es="Visitar Sitio Web">Visit Website</span>
       </a>
-      <button class="logout-btn" id="logout-btn" data-en="Log Out" data-es="Cerrar Sesion">Log Out</button>
+      <button class="logout-btn" id="logout-btn" data-en="Log Out" data-es="Cerrar Sesión">Log Out</button>
     </div>
 
     <!-- MY PRODUCTS SUB-VIEW -->
@@ -176,7 +178,7 @@
       <div class="form-fields">
         <div class="form-field full">
           <label data-en="Business / Delivery To" data-es="Negocio / Entregar a">Business / Delivery To</label>
-          <input type="text" id="field-business" data-en-placeholder="Where is this order going?" data-es-placeholder="A donde va este pedido?" placeholder="Where is this order going?">
+          <input type="text" id="field-business" data-en-placeholder="Where is this order going?" data-es-placeholder="¿A dónde va este pedido?" placeholder="Where is this order going?">
         </div>
         <div class="form-field">
           <label data-en="Date" data-es="Fecha">Date</label>
@@ -229,7 +231,7 @@
 
 <!-- FOOTER BAR (only visible during order form) -->
 <div class="form-footer" id="form-footer" style="display:none">
-  <div class="form-footer-count"><span data-en="Items:" data-es="Articulos:">Items:</span> <strong id="footer-item-count">0</strong></div>
+  <div class="form-footer-count"><span data-en="Items:" data-es="Artículos:">Items:</span> <strong id="footer-item-count">0</strong></div>
   <button class="form-footer-btn" id="footer-continue-btn" disabled data-en="Continue" data-es="Continuar">Continue</button>
 </div>
 
@@ -281,17 +283,11 @@
 </div>
 
 <!-- Update Banner -->
-<div id="update-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;
-  background:linear-gradient(135deg,#C8102E,#a00d24);color:#fff;padding:12px 16px;
-  font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:500;
-  display:none;align-items:center;justify-content:center;gap:10px;
-  box-shadow:0 2px 12px rgba(0,0,0,.2);cursor:pointer"
-  onclick="window.location.reload()">
+<div id="update-banner" class="update-banner" onclick="window.location.reload()">
   <span>🔄</span>
   <span id="update-text">New update available — tap to refresh</span>
-  <button onclick="event.stopPropagation();document.getElementById('update-banner').style.display='none'"
-    style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:50%;
-    width:24px;height:24px;font-size:14px;cursor:pointer;flex-shrink:0">✕</button>
+  <button onclick="event.stopPropagation();document.getElementById('update-banner').classList.remove('visible')"
+    class="update-banner-close">✕</button>
 </div>
 
 <script src="/pull-to-refresh.js"></script>
@@ -300,7 +296,7 @@
 <script>
 (function() {
   // ── Service Worker (caching + push only) ──
-  if ('serviceWorker' in navigator) {
+  if ('serviceWorker' in navigator && !location.hostname.includes('localhost')) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
 
@@ -329,7 +325,7 @@
 
   function showUpdateBanner() {
     const banner = document.getElementById('update-banner');
-    if (banner) banner.style.display = 'flex';
+    if (banner) banner.classList.add('visible');
   }
 
   async function checkVersion() {

@@ -88,3 +88,29 @@
 - [x] prefers-reduced-motion accessibility
 - [x] Responsive testing
 - [x] Final end-to-end verification
+
+## Phase 10A — PWA Improvements → [IMPLEMENTATION_PWA_IMPROVEMENTS.md](docs/IMPLEMENTATION_PWA_IMPROVEMENTS.md)
+- [x] Version SW cache + clean old caches on activate
+- [x] Fix icon `purpose` field in all manifests (separate `any` / `maskable`)
+- [x] Unify SW registration (localhost-skip on all pages)
+- [x] Create `/offline.html` fallback page
+- [x] Update SW fetch handler for offline fallback
+- [x] Replace update-banner inline style duplication with CSS class
+- [x] Add `screenshots` to all three manifests
+- [x] Standardize `apple-mobile-web-app-status-bar-style` + safe-area padding
+- [x] Preload critical Google Font files
+- [x] Add/create `order-confirmation.html` + add to vite.config.js
+- [x] Remove broken notification audio element
+- [x] Add dark-mode-aware `theme-color` meta tags
+- [x] Audit + fix ALL Spanish strings (accents, tildes, ¿/¡)
+- [x] Verification pass
+
+## Phase 10B — Push Notification Hardening → [IMPLEMENTATION_PUSH_NOTIFICATIONS.md](docs/IMPLEMENTATION_PUSH_NOTIFICATIONS.md)
+- [ ] Audit subscription lifecycle for edge cases
+- [ ] Add push subscription cleanup on logout
+- [ ] Wire Settings notification toggle to push subscription state
+- [ ] Handle subscription renewal on SW update
+- [ ] Add push notification opt-in UI (first-time prompt)
+- [ ] Deduplicate `subscribeToPush()` into shared `push-utils.js`
+- [ ] Verify Edge Function error handling (stale subscription cleanup)
+- [ ] Verification pass

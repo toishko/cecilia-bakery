@@ -7,15 +7,17 @@
   <meta name="description" content="Admin dashboard for managing driver orders at Cecilia Bakery">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="/admin-dashboard.css">
   <!-- PWA -->
   <link rel="manifest" href="/manifest-admin.json">
-  <meta name="theme-color" content="#C8102E">
+  <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E0507" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Cecilia">
   <link rel="apple-touch-icon" href="/assets/icon-192.png">
 </head>
@@ -449,23 +451,12 @@
 <!-- PRINT CONTAINER (hidden, used for @media print) -->
 <div id="print-container" style="display:none"></div>
 
-<!-- NOTIFICATION SOUND -->
-<audio id="notification-sound" preload="auto">
-  <source src="data:audio/wav;base64,UklGRl9vT19teleXBlfm10LQBAAAASUREWAEAAQCAkAAAbvAAAAAAHDAdoAAAA=" type="audio/wav">
-</audio>
-
 <!-- Update Banner -->
-<div id="update-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;
-  background:linear-gradient(135deg,#C8102E,#a00d24);color:#fff;padding:12px 16px;
-  font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:500;
-  display:none;align-items:center;justify-content:center;gap:10px;
-  box-shadow:0 2px 12px rgba(0,0,0,.2);cursor:pointer"
-  onclick="window.location.reload()">
+<div id="update-banner" class="update-banner" onclick="window.location.reload()">
   <span>🔄</span>
   <span>New update available — tap to refresh</span>
-  <button onclick="event.stopPropagation();document.getElementById('update-banner').style.display='none'"
-    style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:50%;
-    width:24px;height:24px;font-size:14px;cursor:pointer;flex-shrink:0">✕</button>
+  <button onclick="event.stopPropagation();document.getElementById('update-banner').classList.remove('visible')"
+    class="update-banner-close">✕</button>
 </div>
 
 <script src="/pull-to-refresh.js"></script>
@@ -474,7 +465,7 @@
 <script>
 (function() {
   // ── Service Worker (caching + push only) ──
-  if ('serviceWorker' in navigator) {
+  if ('serviceWorker' in navigator && !location.hostname.includes('localhost')) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
 
@@ -503,7 +494,7 @@
 
   function showUpdateBanner() {
     const banner = document.getElementById('update-banner');
-    if (banner) banner.style.display = 'flex';
+    if (banner) banner.classList.add('visible');
   }
 
   async function checkVersion() {

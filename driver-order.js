@@ -102,7 +102,7 @@ async function handleLogin() {
   }
 
   if (!code) {
-    errorEl.textContent = lang === 'es' ? 'Ingresa tu codigo' : 'Enter your code';
+    errorEl.textContent = lang === 'es' ? 'Ingresa tu código' : 'Enter your code';
     return;
   }
 
@@ -949,7 +949,7 @@ function renderSummaryOrder(idx) {
     }
   });
 
-  if (!html) html = `<div class="empty-state">${lang === 'es' ? 'Sin articulos' : 'No items'}</div>`;
+  if (!html) html = `<div class="empty-state">${lang === 'es' ? 'Sin artículos' : 'No items'}</div>`;
 
   document.getElementById('summary-content').innerHTML = html;
   document.getElementById('summary-notes').value = o.notes || '';
@@ -1373,7 +1373,7 @@ async function loadRecentOrders() {
 
     if (error) { console.error('Recent orders error:', error); return; }
     if (!data || data.length === 0) {
-      container.innerHTML = `<div class="empty-state" data-en="No orders yet" data-es="Aun no hay pedidos">${lang === 'es' ? 'Aún no hay pedidos' : 'No orders yet'}</div>`;
+      container.innerHTML = `<div class="empty-state" data-en="No orders yet" data-es="Aún no hay pedidos">${lang === 'es' ? 'Aún no hay pedidos' : 'No orders yet'}</div>`;
       return;
     }
 
@@ -1396,7 +1396,7 @@ async function loadMyOrders() {
 
     if (error) { console.error('My orders error:', error); return; }
     if (!data || data.length === 0) {
-      container.innerHTML = `<div class="empty-state" data-en="No orders yet" data-es="Aun no hay pedidos">${lang === 'es' ? 'Aún no hay pedidos' : 'No orders yet'}</div>`;
+      container.innerHTML = `<div class="empty-state" data-en="No orders yet" data-es="Aún no hay pedidos">${lang === 'es' ? 'Aún no hay pedidos' : 'No orders yet'}</div>`;
       return;
     }
 

@@ -23,6 +23,8 @@ export default defineConfig({
         menu: resolve(__dirname, 'menu.html'),
         driverOrder: resolve(__dirname, 'driver-order.html'),
         adminDashboard: resolve(__dirname, 'admin-dashboard.html'),
+        offline: resolve(__dirname, 'offline.html'),
+        orderConfirmation: resolve(__dirname, 'order-confirmation.html'),
       },
     },
   },
