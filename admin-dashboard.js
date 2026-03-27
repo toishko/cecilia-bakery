@@ -1364,14 +1364,14 @@ window.shareWhatsApp = function() {
     dateStr = formatDate(order.submitted_at);
   }
 
-  let msg = `📦 ${lang === 'es' ? 'Pedido' : 'Order'} ${orderNum}\n`;
-  msg += `${lang === 'es' ? 'Conductor' : 'Driver'}: ${driverName}\n`;
+  let msg = `*CECILIA BAKERY*\n`;
+  msg += `*${lang === 'es' ? 'Pedido' : 'Order'} ${orderNum}*\n\n`;
+  msg += `*${lang === 'es' ? 'Conductor' : 'Driver'}:* ${driverName}\n`;
   if (order.business_name) {
-    msg += `${lang === 'es' ? 'Negocio' : 'Business'}: ${order.business_name}\n`;
+    msg += `*${lang === 'es' ? 'Negocio' : 'Business'}:* ${order.business_name}\n`;
   }
-  msg += `${lang === 'es' ? 'Fecha' : 'Date'}: ${dateStr}\n\n`;
+  msg += `*${lang === 'es' ? 'Fecha' : 'Date'}:* ${dateStr}\n`;
 
-  msg += `${lang === 'es' ? 'Artículos' : 'Items'}:\n`;
   let grandTotal = 0;
   let totalItems = 0;
 
@@ -1394,21 +1394,20 @@ window.shareWhatsApp = function() {
     grandTotal += lineTotal;
     totalItems += effectiveQty;
 
-    let line = `  • ${label} × ${effectiveQty}`;
+    let line = `${effectiveQty}x ${label}`;
     if (detailTotalsVisible) {
       line += ` — ${formatCurrency(lineTotal)}`;
     }
     catGrouped[cat].push(line);
   });
 
-  const catEmojis = { 'Round': '🔵', 'Redondo': '🔵', 'Plain': '🟤', 'Tres Leche': '🍰', 'Pieces': '🍰', 'Piezas': '🍰', 'Frosted Pieces': '🧁', 'Piezas Frostin': '🧁', 'Happy Birthday — BIG': '🎂', 'Feliz Cumpleaños — GRANDE': '🎂', 'Happy Birthday — SMALL': '🎂', 'Feliz Cumpleaños — PEQUEÑO': '🎂', 'Square': '🟫', 'Cuadrao': '🟫', 'Cups': '☕', 'Basos': '☕', 'Family Size': '👨‍👩‍👧‍👦', 'Familiar': '👨‍👩‍👧‍👦' };
   Object.entries(catGrouped).forEach(([cat, lines]) => {
-    msg += `\n${catEmojis[cat] || '🍰'} ${cat}:\n${lines.join('\n')}\n`;
+    msg += `\n*${cat}*\n${lines.join('\n')}\n`;
   });
 
   msg += `\n${lang === 'es' ? 'Total Artículos' : 'Total Items'}: ${totalItems}`;
   if (detailTotalsVisible) {
-    msg += `\n${lang === 'es' ? 'Total General' : 'Grand Total'}: ${formatCurrency(grandTotal)}`;
+    msg += `\n*${lang === 'es' ? 'Total General' : 'Grand Total'}:* ${formatCurrency(grandTotal)}`;
   }
 
   const encoded = encodeURIComponent(msg);
