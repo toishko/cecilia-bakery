@@ -5,6 +5,25 @@ const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
 const VAPID_PUBLIC_KEY = 'BPK9nQfqIXaf-kc5HHJ5G6trkWxjAX9MzeYwLTUfcnk4jWVYVO6gpzXS-d0tNgGTmHp0ntzYe3xRKT0Ud3t5a3Q';
 
+// ── Push Notification Trigger ──
+// Calls the Edge Function to send push notifications to admins/drivers
+async function triggerPushNotification(type, table, record, old_record) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-push-notification`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      },
+      body: JSON.stringify({ type, table, record, old_record })
+    });
+    const result = await res.json();
+    console.log('Push notification result:', result);
+  } catch (e) {
+    console.warn('Push notification trigger failed:', e);
+  }
+}
+
 let sb = null;
 try {
   const supabaseLib = window.supabase;
@@ -1129,6 +1148,14 @@ async function submitAllOrders() {
       // Calculate and set total_amount on the order
       const orderTotal = orderItems.reduce((sum, it) => sum + it.quantity * it.price_at_order, 0);
       await sb.from('driver_orders').update({ total_amount: orderTotal }).eq('id', orderData.id);
+
+      // Trigger push notification to admins (fire-and-forget)
+      triggerPushNotification('INSERT', 'driver_orders', {
+        id: orderData.id,
+        driver_id: currentDriver.id,
+        business_name: o.business || 'Driver',
+        status: 'pending'
+      }, null);
     }
 
     // Success

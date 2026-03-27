@@ -5,6 +5,25 @@ const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
 const VAPID_PUBLIC_KEY = 'BPK9nQfqIXaf-kc5HHJ5G6trkWxjAX9MzeYwLTUfcnk4jWVYVO6gpzXS-d0tNgGTmHp0ntzYe3xRKT0Ud3t5a3Q';
 
+// ── Push Notification Trigger ──
+// Calls the Edge Function to send push notifications to admins/drivers
+async function triggerPushNotification(type, table, record, old_record) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-push-notification`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      },
+      body: JSON.stringify({ type, table, record, old_record })
+    });
+    const result = await res.json();
+    console.log('Push notification result:', result);
+  } catch (e) {
+    console.warn('Push notification trigger failed:', e);
+  }
+}
+
 let sb = null;
 try {
   const supabaseLib = window.supabase;
@@ -1224,6 +1243,14 @@ window.confirmAndSend = async function() {
     detailOrder.admin_editable_until = editableUntil;
 
     showToast(lang === 'es' ? 'Pedido confirmado y enviado' : 'Order confirmed and sent', 'success');
+
+    // Trigger push notification to driver (fire-and-forget)
+    triggerPushNotification('UPDATE', 'driver_orders', {
+      id: detailOrder.id,
+      driver_id: detailOrder.driver_id,
+      status: 'sent'
+    }, { status: 'pending' });
+
     closeDetailModal();
 
     if (currentSection === 'incoming') loadIncomingOrders();
@@ -1244,6 +1271,14 @@ window.savePaymentOnly = async function() {
     }).eq('id', detailOrder.id);
 
     showToast(lang === 'es' ? 'Pago actualizado' : 'Payment updated', 'success');
+
+    // Trigger push notification to driver (fire-and-forget)
+    triggerPushNotification('UPDATE', 'driver_orders', {
+      id: detailOrder.id,
+      driver_id: detailOrder.driver_id,
+      payment_status: detailOrder.payment_status,
+      payment_amount: detailOrder.payment_amount
+    }, { payment_status: 'not_paid' });
 
     if (currentSection === 'history') loadHistoryOrders(true);
     if (currentSection === 'overview') loadOverview();
