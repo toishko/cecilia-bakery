@@ -5716,7 +5716,9 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
           .select('*')
           .eq('available', true)
           .order('sort_order', { ascending: true });
-        if (error || !data || data.length === 0) return; // silent fallback
+        if (error) { console.warn('Supabase products error:', error); return; }
+        if (!data || data.length === 0) { console.warn('Supabase products: empty result, using hardcoded fallback'); return; }
+        console.log('Supabase products loaded:', data.length, data);
 
         // Rebuild PRODUCTS object from Supabase rows
         PRODUCTS = {};

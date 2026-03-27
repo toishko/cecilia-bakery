@@ -2695,6 +2695,15 @@ textarea.pm-input{resize:vertical;min-height:68px}
   animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 @media(max-width:480px){.pm-controls{gap:5px}.pm-icon-btn{width:30px;height:30px}}
+.pm-category-group{margin-bottom:24px}
+.pm-category-header{display:flex;align-items:baseline;gap:8px;padding:8px 0;margin-bottom:8px;
+  border-bottom:2px solid var(--bd);font-family:'Cormorant Garamond',serif;font-size:1.05rem;
+  font-weight:600;color:var(--tx)}
+.pm-category-es{font-size:.78rem;color:var(--tx-faint);font-weight:400;font-family:'Outfit',sans-serif;font-style:italic}
+.pm-category-count{margin-left:auto;font-size:.7rem;font-weight:700;background:rgba(200,16,46,.08);
+  color:var(--red);padding:2px 8px;border-radius:20px;font-family:'Outfit',sans-serif;white-space:nowrap}
+.pm-search-results-lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--tx-faint);
+  font-weight:600;padding:4px 0 10px;display:block}
   `;
   document.head.appendChild(s);
 }
@@ -2731,9 +2740,14 @@ async function loadProductManager() {
   document.getElementById('pm-btn-seed').addEventListener('click', _pmSeed);
   document.getElementById('pm-search').addEventListener('input', e => {
     const q = e.target.value.toLowerCase().trim();
-    _pmRenderList(q
-      ? _pmProducts.filter(p => p.name_en.toLowerCase().includes(q) || p.tag_en.toLowerCase().includes(q))
-      : _pmProducts);
+    if (q) {
+      _pmRenderList(
+        _pmProducts.filter(p => p.name_en.toLowerCase().includes(q) || p.tag_en.toLowerCase().includes(q)),
+        true  // isSearch — render flat with result count, no category headers
+      );
+    } else {
+      _pmRenderList(_pmProducts); // restore grouped view
+    }
   });
 
   await _pmFetch();
@@ -3043,42 +3057,41 @@ async function _pmFetch() {
 }
 
 /* ── Render the product list ── */
-function _pmRenderList(list) {
+function _pmRenderList(list, isSearch) {
   const container = document.getElementById('pm-list');
   if (!container) return;
 
   if (!list.length) {
     container.innerHTML = `<div class="empty-state">
       <i data-lucide="package-open" style="width:40px;height:40px;opacity:.3;display:block;margin:0 auto 10px"></i>
-      No products yet — use "+ Add Product" or "Seed from Code".
+      ${isSearch ? 'No products match your search.' : 'No products yet — use \"+ Add Product\" or \"Seed from Code\".'}
     </div>`;
     lucide.createIcons();
     return;
   }
 
-  container.innerHTML = list.map(p => {
+  // Shared card builder
+  function _pmCardHTML(p) {
     const thumb = p.images && p.images[0]
       ? `<img class="pm-thumb" src="${_esc(p.images[0])}" alt="" loading="lazy">`
       : `<div class="pm-thumb-ph"><i data-lucide="image-off"></i></div>`;
 
-    const prices = p.prices && typeof p.prices === 'object' && Object.keys(p.prices).length
-      ? Object.values(p.prices)
-      : null;
-    const priceStr = prices
-      ? `From $${Math.min(...prices.map(v => parseFloat(String(v).replace('$',''))))}`
+    const priceVals = p.prices && typeof p.prices === 'object' && Object.keys(p.prices).length
+      ? Object.values(p.prices) : null;
+    const priceStr = priceVals
+      ? `From $${Math.min(...priceVals.map(v => parseFloat(String(v).replace('$',''))))}`
       : (p.price ? `$${parseFloat(p.price).toFixed(2)}` : '—');
 
     let badgeClass, badgeLabel;
-    if (!p.available)   { badgeClass = 'pm-badge-hidden';  badgeLabel = 'HIDDEN';   }
-    else if (p.sold_out){ badgeClass = 'pm-badge-soldout'; badgeLabel = 'SOLD OUT'; }
-    else                { badgeClass = 'pm-badge-live';    badgeLabel = 'LIVE';     }
+    if (!p.available)    { badgeClass = 'pm-badge-hidden';  badgeLabel = 'HIDDEN';   }
+    else if (p.sold_out) { badgeClass = 'pm-badge-soldout'; badgeLabel = 'SOLD OUT'; }
+    else                 { badgeClass = 'pm-badge-live';    badgeLabel = 'LIVE';     }
 
     return `
     <div class="pm-card">
       ${thumb}
       <div class="pm-info">
         <div class="pm-name">${_esc(p.name_en)}</div>
-        <div class="pm-tag">${_esc(p.tag_en)}</div>
         <div class="pm-price-txt">${priceStr}</div>
         <span class="badge ${badgeClass}" style="margin-top:4px">${badgeLabel}</span>
       </div>
@@ -3110,6 +3123,39 @@ function _pmRenderList(list) {
           <i data-lucide="trash-2"></i>
         </button>
       </div>
+    </div>`;
+  }
+
+  // Search mode: flat list with result count
+  if (isSearch) {
+    container.innerHTML =
+      `<span class="pm-search-results-lbl">${list.length} result${list.length !== 1 ? 's' : ''}</span>` +
+      list.map(_pmCardHTML).join('');
+    lucide.createIcons();
+    return;
+  }
+
+  // Normal mode: group by tag_en, preserving sort_order within each group
+  const groupOrder = [];
+  const groups = {};
+  list.forEach(p => {
+    if (!groups[p.tag_en]) {
+      groupOrder.push(p.tag_en);
+      groups[p.tag_en] = { tag_es: p.tag_es, items: [] };
+    }
+    groups[p.tag_en].items.push(p);
+  });
+
+  container.innerHTML = groupOrder.map(tag => {
+    const g = groups[tag];
+    return `
+    <div class="pm-category-group">
+      <div class="pm-category-header">
+        ${_esc(tag)}
+        <span class="pm-category-es">/ ${_esc(g.tag_es)}</span>
+        <span class="pm-category-count">${g.items.length} item${g.items.length !== 1 ? 's' : ''}</span>
+      </div>
+      ${g.items.map(_pmCardHTML).join('')}
     </div>`;
   }).join('');
 
@@ -3210,11 +3256,11 @@ async function _pmSeed() {
   btn.disabled = true;
   btn.textContent = `Seeding ${PM_SEED_DATA.length} products…`;
 
-  const { data: existing } = await sb.from('products').select('name_en');
-  const existingNames = new Set((existing || []).map(p => p.name_en));
+  const { data: existing } = await sb.from('products').select('name_en, tag_en');
+  const existingKeys = new Set((existing || []).map(p => `${p.name_en}|${p.tag_en}`));
 
   const toInsert = PM_SEED_DATA
-    .filter(p => !existingNames.has(p.name_en))
+    .filter(p => !existingKeys.has(`${p.name_en}|${p.tag_en}`))
     .map((p, i) => ({
       name_en: p.name_en, name_es: p.name_es,
       tag_en:  p.tag_en,  tag_es:  p.tag_es,
@@ -3243,6 +3289,7 @@ async function _pmSeed() {
   lucide.createIcons();
 
   if (error) { showToast(`Seed failed: ${error.message}`, 'error'); return; }
+  console.log('Seeded:', toInsert.map(p => `${p.name_en} (${p.tag_en})`).join(', '));
   showToast(`Done! ${toInsert.length} added, ${skipped} skipped`, 'success');
   await _pmFetch();
 }
