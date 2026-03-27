@@ -5847,11 +5847,33 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
             return;
           }
 
-          // ── available toggled ON → reload to restore the card ──
-          if (n.available === true && (o?.available === false || !card)) {
-            await loadProductsFromSupabase();
-            applyHiddenProducts();
-            applySOldOutState();
+          // ── available toggled ON → restore card in DOM ──
+          if (n.available === true) {
+            if (card) {
+              // Card is in the DOM but hidden — just show it
+              card.style.display = '';
+              // Restore the parent section
+              const section = card.closest('.menu-section');
+              if (section) {
+                section.style.display = '';
+                // Restore the matching cat-nav tab (href="#section-id")
+                const sectionId = section.id;
+                if (sectionId) {
+                  const navTab = document.querySelector(`.cat-nav-link[href="#${sectionId}"]`);
+                  if (navTab) navTab.style.display = '';
+                }
+              }
+              flashCard(card);
+            } else {
+              // Card not in DOM at all — was hidden before initial render, need full reload
+              await loadProductsFromSupabase();
+              applyHiddenProducts();
+              applySOldOutState();
+              setTimeout(() => {
+                const newCard = findCard(n.name_en);
+                if (newCard) flashCard(newCard);
+              }, 300);
+            }
             return;
           }
 
