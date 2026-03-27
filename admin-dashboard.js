@@ -98,6 +98,7 @@ function showSection(name) {
     }
   }
   if (name === 'settings') loadActiveInvites();
+  if (name === 'products') loadProductManager();
 }
 
 /* ═══════════════════════════════════
@@ -2544,3 +2545,694 @@ async function loadActiveInvites() {
 
   } catch (e) { console.error('Load invites error:', e); }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   PRODUCT MANAGER — Section: "products"
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Seed data (mirrored from menu.html PRODUCTS const) ── */
+const PM_SEED_DATA = [
+  { name_en:'Tres Leches',                    name_es:'Tres Leches',                tag_en:'Tres Leches',           tag_es:'Tres Leches',             price:4.99 },
+  { name_en:'Tres Leche Piña',                name_es:'Tres Leche Piña',            tag_en:'Tres Leches',           tag_es:'Tres Leches',             price:4.99 },
+  { name_en:'Tres Leche Strawberry',          name_es:'Tres Leche Fresa',           tag_en:'Tres Leches',           tag_es:'Tres Leches',             price:4.99 },
+  { name_en:'Tres Leche Hershey',             name_es:'Tres Leche Hershey',         tag_en:'Tres Leches',           tag_es:'Tres Leches',             price:4.99 },
+  { name_en:'Cuatro Leche',                   name_es:'Cuatro Leche',               tag_en:'Tres Leches · Premium', tag_es:'Tres Leches · Premium',   price:4.99 },
+  { name_en:'Piña',          name_es:'Piña',          tag_en:'Birthday Cake', tag_es:'Bizcocho de Cumpleaños', prices:{ Small:'$17.99', Medium:'$25.99' } },
+  { name_en:'Guava',         name_es:'Guava',         tag_en:'Birthday Cake', tag_es:'Bizcocho de Cumpleaños', prices:{ Small:'$17.99', Medium:'$25.99' } },
+  { name_en:'Dulce de Leche',name_es:'Dulce de Leche',tag_en:'Birthday Cake', tag_es:'Bizcocho de Cumpleaños', prices:{ Small:'$17.99', Medium:'$25.99' } },
+  { name_en:'Chocolate',     name_es:'Chocolate',     tag_en:'Birthday Cake', tag_es:'Bizcocho de Cumpleaños', prices:{ Small:'$17.99', Medium:'$25.99' } },
+  { name_en:'Strawberry',    name_es:'Fresa',         tag_en:'Birthday Cake', tag_es:'Bizcocho de Cumpleaños', prices:{ Small:'$17.99', Medium:'$25.99' } },
+  { name_en:'Pudin',                          name_es:'Pudín',                      tag_en:'Square Cake',           tag_es:'Bizcocho Cuadrado',       price:9.99 },
+  { name_en:'Plain',                          name_es:'Plain',                      tag_en:'Square Cake',           tag_es:'Bizcocho Cuadrado',       price:9.99 },
+  { name_en:'Maiz',                           name_es:'Maíz',                       tag_en:'Square Cake',           tag_es:'Bizcocho Cuadrado',       price:9.99 },
+  { name_en:'Red Velvet',                     name_es:'Red Velvet',                 tag_en:'Square Cake',           tag_es:'Bizcocho Cuadrado',       price:9.99 },
+  { name_en:'Carrot Cake',                    name_es:'Bizcocho de Zanahoria',      tag_en:'Square Cake',           tag_es:'Bizcocho Cuadrado',       price:9.99 },
+  { name_en:'Cheesecake',                     name_es:'Cheesecake',                 tag_en:'Slice',                 tag_es:'Pieza',                   price:4.99 },
+  { name_en:'Pudin (Slice)',                  name_es:'Pudín (Pieza)',              tag_en:'Slice',                 tag_es:'Pieza',                   price:4.99 },
+  { name_en:'Piña (Slice)',                   name_es:'Piña (Pieza)',               tag_en:'Slice',                 tag_es:'Pieza',                   price:4.99 },
+  { name_en:'Guava (Slice)',                  name_es:'Guava (Pieza)',              tag_en:'Slice',                 tag_es:'Pieza',                   price:4.99 },
+  { name_en:'Whipping Cream Piña',            name_es:'Crema Piña',                 tag_en:'Whipping Cream Slice',  tag_es:'Crema · Pieza',           price:4.99 },
+  { name_en:'Whipping Cream Guava',           name_es:'Crema Guava',                tag_en:'Whipping Cream Slice',  tag_es:'Crema · Pieza',           price:4.99 },
+  { name_en:'Whipping Cream Dulce de Leche',  name_es:'Crema Dulce de Leche',       tag_en:'Whipping Cream Slice',  tag_es:'Crema · Pieza',           price:4.99 },
+  { name_en:'Whipping Cream Chocolate',       name_es:'Crema Chocolate',            tag_en:'Whipping Cream Slice',  tag_es:'Crema · Pieza',           price:4.99 },
+  { name_en:'Chocoflan',                      name_es:'Chocoflan',                  tag_en:'Slice · New',           tag_es:'Pieza · Nuevo',           price:4.99 },
+  { name_en:'Tres Leche (Cup)',               name_es:'Tres Leche',                 tag_en:'Cup',                   tag_es:'Baso',                    price:4.99 },
+  { name_en:'Cuatro Leche (Cup)',             name_es:'Cuatro Leche',               tag_en:'Cup · Premium',         tag_es:'Baso · Premium',          price:4.99 },
+  { name_en:'Hershey (Cup)',                  name_es:'Hershey',                    tag_en:'Cup',                   tag_es:'Baso',                    price:4.99 },
+];
+
+/* ── Module state ── */
+let _pmProducts  = [];
+let _pmEditId    = null;
+let _pmImages    = [];
+let _pmPriceMode = 'single';
+
+/* ── Inject scoped styles once ── */
+let _pmStylesInjected = false;
+function _pmInjectStyles() {
+  if (_pmStylesInjected) return;
+  _pmStylesInjected = true;
+  const s = document.createElement('style');
+  s.textContent = `
+.pm-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px}
+.pm-title{font-size:1.8rem;font-weight:300;color:var(--tx)}
+.pm-title em{color:var(--red);font-style:italic}
+.pm-header-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.pm-search-wrap{display:flex;align-items:center;gap:10px;background:var(--bg-card);
+  border:1px solid var(--bd);border-radius:10px;padding:10px 14px;margin-bottom:16px;box-shadow:var(--shadow-card)}
+.pm-search-wrap svg,.pm-search-wrap i{color:var(--tx-faint);flex-shrink:0;width:18px;height:18px}
+.pm-search{flex:1;border:none;background:none;color:var(--tx);font-size:.9rem;font-family:inherit;outline:none}
+.pm-search::placeholder{color:var(--tx-faint)}
+.btn-add-prod{display:flex;align-items:center;gap:6px;padding:10px 18px;border:none;
+  border-radius:10px;background:var(--red);color:#fff;font-size:.85rem;font-weight:600;
+  font-family:inherit;cursor:pointer;transition:background .2s,transform .1s;white-space:nowrap}
+.btn-add-prod:hover{background:var(--red-dk)}.btn-add-prod:active{transform:scale(.97)}
+.btn-seed-prod{display:flex;align-items:center;gap:6px;padding:10px 16px;border:1px solid var(--bd);
+  border-radius:10px;background:none;color:var(--tx-muted);font-size:.82rem;font-weight:600;
+  font-family:inherit;cursor:pointer;transition:var(--transition);white-space:nowrap}
+.btn-seed-prod:hover{border-color:var(--blue);color:var(--blue)}
+.pm-card{background:var(--bg-card);border:1px solid var(--bd);border-radius:12px;
+  padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;
+  box-shadow:var(--shadow-card);transition:background .15s}
+.pm-card:hover{background:var(--bg-card-hover)}
+.pm-thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1px solid var(--bd);background:var(--bg-surface)}
+.pm-thumb-ph{width:56px;height:56px;border-radius:8px;flex-shrink:0;border:1px solid var(--bd);
+  background:var(--bg-surface);display:flex;align-items:center;justify-content:center;color:var(--tx-faint)}
+.pm-thumb-ph svg,.pm-thumb-ph i{width:22px;height:22px}
+.pm-info{flex:1;min-width:0}
+.pm-name{font-size:.95rem;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pm-tag{font-size:.72rem;color:var(--tx-muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+.pm-price-txt{font-size:.82rem;color:var(--red);font-weight:600;margin-top:4px}
+.pm-controls{display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.pm-toggle-wrap{display:flex;flex-direction:column;align-items:center;gap:2px}
+.pm-toggle-lbl{font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;color:var(--tx-faint);font-weight:500;white-space:nowrap}
+.pm-icon-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;
+  border-radius:8px;border:1px solid var(--bd);background:none;color:var(--tx-muted);cursor:pointer;transition:var(--transition)}
+.pm-icon-btn:hover{border-color:var(--red);color:var(--red)}
+.pm-icon-btn.danger:hover{border-color:#dc2626;color:#dc2626}
+.pm-icon-btn svg,.pm-icon-btn i{width:15px;height:15px}
+.pm-badge-live{background:rgba(27,122,74,.1);color:var(--green)}
+.pm-badge-soldout{background:rgba(200,155,42,.1);color:var(--yellow)}
+.pm-badge-hidden{background:rgba(220,38,38,.1);color:#dc2626}
+/* Modal */
+.pm-overlay{position:fixed;inset:0;background:var(--bg-overlay);z-index:400;
+  display:none;align-items:flex-end;justify-content:center}
+.pm-overlay.open{display:flex}
+.pm-overlay.open .pm-modal{animation:slideUp .3s ease}
+.pm-modal{background:var(--bg-card);border-radius:20px 20px 0 0;width:100%;max-width:640px;
+  max-height:92vh;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.2)}
+@media(min-width:680px){.pm-overlay{align-items:center}.pm-modal{border-radius:16px;max-height:88vh}}
+.pm-modal-handle{width:40px;height:4px;background:var(--bd);border-radius:2px;margin:12px auto 0;flex-shrink:0}
+.pm-modal-header{display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px 12px;border-bottom:1px solid var(--bd);flex-shrink:0}
+.pm-modal-title{font-family:'Cormorant Garamond',serif;font-size:1.35rem;font-weight:600;color:var(--tx)}
+.pm-modal-title em{color:var(--red);font-style:italic}
+.pm-modal-close{background:none;border:1px solid var(--bd);border-radius:8px;padding:6px 12px;
+  color:var(--tx-muted);cursor:pointer;font-family:inherit;font-size:.82rem;transition:var(--transition)}
+.pm-modal-close:hover{border-color:var(--red);color:var(--red)}
+.pm-tabs-bar{display:flex;border-bottom:1px solid var(--bd);flex-shrink:0}
+.pm-tab{flex:1;padding:12px 8px;background:none;border:none;border-bottom:2px solid transparent;
+  font-family:inherit;font-size:.78rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--tx-muted);cursor:pointer;transition:color .2s,border-color .2s}
+.pm-tab.active{color:var(--red);border-bottom-color:var(--red)}
+.pm-modal-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px}
+.pm-panel{display:none}.pm-panel.active{display:block}
+.pm-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:520px){.pm-form-grid{grid-template-columns:1fr}}
+.pm-form-field{display:flex;flex-direction:column;gap:5px}
+.pm-form-field.full{grid-column:span 2}
+@media(max-width:520px){.pm-form-field.full{grid-column:span 1}}
+.pm-form-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;font-weight:500;color:var(--tx-faint)}
+.pm-form-label .req{color:var(--red)}
+.pm-input{width:100%;padding:11px 13px;border:1.5px solid var(--bd-input);border-radius:10px;
+  background:var(--bg-input);color:var(--tx);font-size:.88rem;font-family:inherit;
+  transition:border-color .2s,box-shadow .2s;box-sizing:border-box}
+.pm-input:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.10)}
+.pm-input::placeholder{color:var(--tx-faint)}
+textarea.pm-input{resize:vertical;min-height:68px}
+.pm-price-toggle{display:flex;gap:8px;margin-bottom:16px}
+.pm-price-toggle button{flex:1;padding:9px;border:1.5px solid var(--bd-input);border-radius:8px;
+  background:none;font-family:inherit;font-size:.82rem;font-weight:500;color:var(--tx-muted);cursor:pointer;transition:var(--transition)}
+.pm-price-toggle button.active{border-color:var(--red);background:rgba(200,16,46,.06);color:var(--red)}
+.pm-progress-wrap{height:4px;background:var(--bg-surface);border-radius:2px;overflow:hidden;margin-bottom:8px;display:none}
+.pm-progress-bar{height:100%;background:var(--red);border-radius:2px;transition:width .2s;width:0}
+.pm-img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;margin-bottom:12px}
+.pm-img-thumb{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1.5px solid var(--bd);background:var(--bg-surface)}
+.pm-img-thumb img{width:100%;height:100%;object-fit:cover}
+.pm-img-rm{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;
+  background:rgba(0,0,0,.65);color:#fff;border:none;cursor:pointer;display:flex;
+  align-items:center;justify-content:center;font-size:.85rem;line-height:1}
+.pm-img-rm:hover{background:var(--red)}
+.pm-upload-area{display:block;border:2px dashed var(--bd-input);border-radius:10px;padding:20px;
+  text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:10px}
+.pm-upload-area:hover,.pm-upload-area:focus{border-color:var(--red);background:rgba(200,16,46,.03)}
+.pm-upload-area p{font-size:.8rem;color:var(--tx-muted);margin-top:8px}
+.pm-url-row{display:flex;gap:8px;align-items:center}
+.pm-divider{border:none;border-top:1px solid var(--bd);margin:14px 0}
+.pm-modal-footer{padding:14px 20px;border-top:1px solid var(--bd);display:flex;
+  justify-content:flex-end;gap:8px;flex-shrink:0;background:var(--bg-card)}
+.pm-skeleton{background:var(--bg-surface);border-radius:12px;height:84px;margin-bottom:10px;
+  animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@media(max-width:480px){.pm-controls{gap:5px}.pm-icon-btn{width:30px;height:30px}}
+  `;
+  document.head.appendChild(s);
+}
+
+/* ── Main entry point — called by showSection('products') ── */
+async function loadProductManager() {
+  _pmInjectStyles();
+  const sec = document.getElementById('section-products');
+
+  sec.innerHTML = `
+    <div class="pm-header">
+      <h1 class="pm-title">Product <em>Manager</em></h1>
+      <div class="pm-header-actions">
+        <button class="btn-seed-prod" id="pm-btn-seed">
+          <i data-lucide="database-zap"></i> Seed from Code
+        </button>
+        <button class="btn-add-prod" id="pm-btn-add">
+          <i data-lucide="plus"></i> Add Product
+        </button>
+      </div>
+    </div>
+    <div class="pm-search-wrap">
+      <i data-lucide="search"></i>
+      <input class="pm-search" id="pm-search" type="text" placeholder="Search products…" autocomplete="off">
+    </div>
+    <div id="pm-list"></div>
+    ${_pmModalHTML()}
+  `;
+
+  lucide.createIcons();
+  _pmBindModal();
+
+  document.getElementById('pm-btn-add').addEventListener('click', () => _pmOpenModal(null));
+  document.getElementById('pm-btn-seed').addEventListener('click', _pmSeed);
+  document.getElementById('pm-search').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase().trim();
+    _pmRenderList(q
+      ? _pmProducts.filter(p => p.name_en.toLowerCase().includes(q) || p.tag_en.toLowerCase().includes(q))
+      : _pmProducts);
+  });
+
+  await _pmFetch();
+}
+
+/* ── Modal structure ── */
+function _pmModalHTML() {
+  return `
+<div class="pm-overlay" id="pm-overlay">
+  <div class="pm-modal">
+    <div class="pm-modal-handle"></div>
+    <div class="pm-modal-header">
+      <div class="pm-modal-title" id="pm-modal-title">Add <em>Product</em></div>
+      <button class="pm-modal-close" id="pm-modal-close">Close</button>
+    </div>
+    <div class="pm-tabs-bar">
+      <button class="pm-tab active" data-tab="info">Basic Info</button>
+      <button class="pm-tab" data-tab="pricing">Pricing</button>
+      <button class="pm-tab" data-tab="images">Images</button>
+    </div>
+    <div class="pm-modal-body">
+      <div class="pm-panel active" id="pm-panel-info">
+        <div class="pm-form-grid">
+          <div class="pm-form-field">
+            <label class="pm-form-label">Name (EN) <span class="req">*</span></label>
+            <input class="pm-input" id="pm-f-en" type="text" placeholder="e.g. Tres Leches">
+          </div>
+          <div class="pm-form-field">
+            <label class="pm-form-label">Name (ES) <span class="req">*</span></label>
+            <input class="pm-input" id="pm-f-es" type="text" placeholder="e.g. Tres Leches">
+          </div>
+          <div class="pm-form-field">
+            <label class="pm-form-label">Tag (EN) <span class="req">*</span></label>
+            <input class="pm-input" id="pm-f-tag-en" type="text" placeholder="e.g. Tres Leches">
+          </div>
+          <div class="pm-form-field">
+            <label class="pm-form-label">Tag (ES) <span class="req">*</span></label>
+            <input class="pm-input" id="pm-f-tag-es" type="text" placeholder="e.g. Tres Leches">
+          </div>
+          <div class="pm-form-field full">
+            <label class="pm-form-label">Description (EN)</label>
+            <textarea class="pm-input" id="pm-f-desc-en" placeholder="Short description…"></textarea>
+          </div>
+          <div class="pm-form-field full">
+            <label class="pm-form-label">Description (ES)</label>
+            <textarea class="pm-input" id="pm-f-desc-es" placeholder="Descripción corta…"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="pm-panel" id="pm-panel-pricing">
+        <div class="pm-price-toggle">
+          <button id="pm-pt-single" class="active" onclick="window._pmSetPriceMode('single')">Single Price</button>
+          <button id="pm-pt-sized" onclick="window._pmSetPriceMode('sized')">Size-Based</button>
+        </div>
+        <div id="pm-price-single">
+          <div class="pm-form-field">
+            <label class="pm-form-label">Price ($)</label>
+            <input class="pm-input" id="pm-f-price" type="number" step="0.01" min="0" placeholder="4.99">
+          </div>
+        </div>
+        <div id="pm-price-sized" style="display:none">
+          <div class="pm-form-grid">
+            <div class="pm-form-field">
+              <label class="pm-form-label">Small ($)</label>
+              <input class="pm-input" id="pm-f-sm" type="number" step="0.01" min="0" placeholder="17.99">
+            </div>
+            <div class="pm-form-field">
+              <label class="pm-form-label">Medium ($)</label>
+              <input class="pm-input" id="pm-f-md" type="number" step="0.01" min="0" placeholder="25.99">
+            </div>
+            <div class="pm-form-field">
+              <label class="pm-form-label">Large ($)</label>
+              <input class="pm-input" id="pm-f-lg" type="number" step="0.01" min="0" placeholder="(optional)">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pm-panel" id="pm-panel-images">
+        <p style="font-size:.78rem;color:var(--tx-muted);margin-bottom:10px">
+          Up to 5 images. Tap the area below to choose from your camera roll or files.
+        </p>
+        <div class="pm-img-grid" id="pm-img-grid"></div>
+        <label class="pm-upload-area" for="pm-file-input">
+          <i data-lucide="upload-cloud" style="width:26px;height:26px;color:var(--tx-faint)"></i>
+          <p>Tap to choose photos<br><small>JPEG · PNG · WebP · max 5 MB each</small></p>
+        </label>
+        <input type="file" id="pm-file-input" accept="image/*" multiple style="display:none">
+        <div class="pm-progress-wrap" id="pm-progress-wrap">
+          <div class="pm-progress-bar" id="pm-progress-bar"></div>
+        </div>
+        <hr class="pm-divider">
+        <p style="font-size:.78rem;color:var(--tx-muted);margin-bottom:8px">Or paste an image URL:</p>
+        <div class="pm-url-row">
+          <input class="pm-input" id="pm-url-input" type="url" placeholder="https://…" inputmode="url">
+          <button class="btn-seed-prod" style="height:44px;padding:0 14px;flex-shrink:0" onclick="window._pmAddUrl()">Add</button>
+        </div>
+      </div>
+    </div>
+    <div class="pm-modal-footer">
+      <button class="btn-cancel" id="pm-btn-cancel" style="padding:10px 18px;font-size:.85rem">Cancel</button>
+      <button class="btn-add-prod" id="pm-btn-save">Save Product</button>
+    </div>
+  </div>
+</div>`;
+}
+
+/* ── Modal event binding ── */
+function _pmBindModal() {
+  document.getElementById('pm-modal-close').addEventListener('click', _pmCloseModal);
+  document.getElementById('pm-btn-cancel').addEventListener('click', _pmCloseModal);
+  document.getElementById('pm-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('pm-overlay')) _pmCloseModal();
+  });
+  document.getElementById('pm-btn-save').addEventListener('click', _pmSave);
+  document.getElementById('pm-file-input').addEventListener('change', async e => {
+    await _pmUploadFiles(Array.from(e.target.files));
+    e.target.value = '';
+  });
+  document.querySelectorAll('.pm-tab').forEach(t => {
+    t.addEventListener('click', () => _pmSwitchTab(t.dataset.tab));
+  });
+  // expose for inline onclick
+  window._pmSetPriceMode = _pmSetPriceMode;
+  window._pmAddUrl       = _pmAddUrl;
+  window._pmRemoveImg    = _pmRemoveImg;
+}
+
+function _pmSwitchTab(name) {
+  document.querySelectorAll('.pm-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.pm-panel').forEach(p => p.classList.toggle('active', p.id === 'pm-panel-' + name));
+  lucide.createIcons();
+}
+
+function _pmSetPriceMode(mode) {
+  _pmPriceMode = mode;
+  document.getElementById('pm-pt-single').classList.toggle('active', mode === 'single');
+  document.getElementById('pm-pt-sized').classList.toggle('active', mode === 'sized');
+  document.getElementById('pm-price-single').style.display = mode === 'single' ? 'block' : 'none';
+  document.getElementById('pm-price-sized').style.display  = mode === 'sized'  ? 'grid'  : 'none';
+}
+
+/* ── Image helpers ── */
+function _pmRenderImages() {
+  const grid = document.getElementById('pm-img-grid');
+  if (!grid) return;
+  grid.innerHTML = _pmImages.map((url, i) => `
+    <div class="pm-img-thumb">
+      <img src="${_esc(url)}" alt="">
+      <button class="pm-img-rm" onclick="window._pmRemoveImg(${i})">✕</button>
+    </div>`).join('');
+}
+
+function _pmRemoveImg(i) { _pmImages.splice(i, 1); _pmRenderImages(); }
+
+function _pmAddUrl() {
+  const el = document.getElementById('pm-url-input');
+  const url = el.value.trim();
+  if (!url) return;
+  if (_pmImages.length >= 5) { showToast('Max 5 images per product', 'error'); return; }
+  _pmImages.push(url);
+  _pmRenderImages();
+  el.value = '';
+}
+
+async function _pmUploadFiles(files) {
+  if (!files.length) return;
+  const slots = 5 - _pmImages.length;
+  if (slots <= 0) { showToast('Max 5 images per product', 'error'); return; }
+  files = files.slice(0, slots);
+
+  const productId = _pmEditId || (window._pmTempId = window._pmTempId || crypto.randomUUID());
+  const wrap = document.getElementById('pm-progress-wrap');
+  const bar  = document.getElementById('pm-progress-bar');
+  if (wrap) wrap.style.display = 'block';
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (file.size > 5 * 1024 * 1024) { showToast(`${file.name} exceeds 5 MB`, 'error'); continue; }
+    const path = `${productId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    if (bar) bar.style.width = Math.round(((i + 0.5) / files.length) * 100) + '%';
+
+    const { error } = await sb.storage.from('product-images').upload(path, file, { upsert: true });
+    if (error) { showToast(`Upload failed: ${error.message}`, 'error'); continue; }
+
+    const { data: urlData } = sb.storage.from('product-images').getPublicUrl(path);
+    _pmImages.push(urlData.publicUrl);
+    _pmRenderImages();
+    if (bar) bar.style.width = Math.round(((i + 1) / files.length) * 100) + '%';
+  }
+  lucide.createIcons();
+  setTimeout(() => { if (wrap) { wrap.style.display = 'none'; } if (bar) bar.style.width = '0'; }, 700);
+}
+
+/* ── Open / close modal ── */
+function _pmOpenModal(product) {
+  _pmEditId    = product ? product.id : null;
+  _pmImages    = product ? [...(product.images || [])] : [];
+  _pmPriceMode = (product && product.prices && Object.keys(product.prices).length) ? 'sized' : 'single';
+
+  document.getElementById('pm-modal-title').innerHTML = product ? 'Edit <em>Product</em>' : 'Add <em>Product</em>';
+  document.getElementById('pm-f-en').value         = product?.name_en         || '';
+  document.getElementById('pm-f-es').value         = product?.name_es         || '';
+  document.getElementById('pm-f-tag-en').value     = product?.tag_en          || '';
+  document.getElementById('pm-f-tag-es').value     = product?.tag_es          || '';
+  document.getElementById('pm-f-desc-en').value    = product?.description_en  || '';
+  document.getElementById('pm-f-desc-es').value    = product?.description_es  || '';
+  document.getElementById('pm-f-price').value      = product?.price           || '';
+  document.getElementById('pm-url-input').value    = '';
+
+  if (_pmPriceMode === 'sized' && product && product.prices) {
+    document.getElementById('pm-f-sm').value = product.prices.Small  ? product.prices.Small.replace('$','')  : '';
+    document.getElementById('pm-f-md').value = product.prices.Medium ? product.prices.Medium.replace('$','') : '';
+    document.getElementById('pm-f-lg').value = product.prices.Large  ? product.prices.Large.replace('$','')  : '';
+  } else {
+    ['pm-f-sm','pm-f-md','pm-f-lg'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  }
+
+  _pmSetPriceMode(_pmPriceMode);
+  _pmSwitchTab('info');
+  _pmRenderImages();
+  document.getElementById('pm-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  lucide.createIcons();
+}
+
+function _pmCloseModal() {
+  const ov = document.getElementById('pm-overlay');
+  if (ov) ov.classList.remove('open');
+  document.body.style.overflow = '';
+  window._pmTempId = null;
+}
+
+/* ── Save (insert or update) ── */
+async function _pmSave() {
+  const nameEn = document.getElementById('pm-f-en').value.trim();
+  const nameEs = document.getElementById('pm-f-es').value.trim();
+  const tagEn  = document.getElementById('pm-f-tag-en').value.trim();
+  const tagEs  = document.getElementById('pm-f-tag-es').value.trim();
+
+  if (!nameEn || !nameEs || !tagEn || !tagEs) {
+    showToast('Fill in all required fields', 'error');
+    _pmSwitchTab('info');
+    return;
+  }
+
+  let price = null, prices = null;
+  if (_pmPriceMode === 'single') {
+    const v = document.getElementById('pm-f-price').value;
+    price = v ? parseFloat(v) : null;
+  } else {
+    const sm = document.getElementById('pm-f-sm').value;
+    const md = document.getElementById('pm-f-md').value;
+    const lg = document.getElementById('pm-f-lg').value;
+    prices = {};
+    if (sm) prices.Small  = `$${parseFloat(sm).toFixed(2)}`;
+    if (md) prices.Medium = `$${parseFloat(md).toFixed(2)}`;
+    if (lg) prices.Large  = `$${parseFloat(lg).toFixed(2)}`;
+    if (!Object.keys(prices).length) prices = null;
+  }
+
+  const payload = {
+    name_en: nameEn, name_es: nameEs, tag_en: tagEn, tag_es: tagEs,
+    description_en: document.getElementById('pm-f-desc-en').value.trim() || null,
+    description_es: document.getElementById('pm-f-desc-es').value.trim() || null,
+    price, prices, images: _pmImages,
+    updated_at: new Date().toISOString(),
+  };
+
+  const btn = document.getElementById('pm-btn-save');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  let error;
+  if (_pmEditId) {
+    ({ error } = await sb.from('products').update(payload).eq('id', _pmEditId));
+  } else {
+    payload.available  = true;
+    payload.sold_out   = false;
+    payload.sort_order = 999;
+    ({ error } = await sb.from('products').insert(payload));
+  }
+
+  btn.disabled = false; btn.textContent = 'Save Product';
+
+  if (error) { showToast(error.message || 'Save failed', 'error'); return; }
+  showToast(_pmEditId ? 'Product updated ✓' : 'Product added ✓', 'success');
+  _pmCloseModal();
+  await _pmFetch();
+}
+
+/* ── Fetch products from Supabase ── */
+async function _pmFetch() {
+  const list = document.getElementById('pm-list');
+  if (!list) return;
+  list.innerHTML = `
+    <div class="pm-skeleton"></div>
+    <div class="pm-skeleton"></div>
+    <div class="pm-skeleton"></div>`;
+
+  const { data, error } = await sb
+    .from('products')
+    .select('*')
+    .order('sort_order', { ascending: true });
+
+  if (error) { showToast('Failed to load products', 'error'); list.innerHTML = ''; return; }
+  _pmProducts = data || [];
+  _pmRenderList(_pmProducts);
+}
+
+/* ── Render the product list ── */
+function _pmRenderList(list) {
+  const container = document.getElementById('pm-list');
+  if (!container) return;
+
+  if (!list.length) {
+    container.innerHTML = `<div class="empty-state">
+      <i data-lucide="package-open" style="width:40px;height:40px;opacity:.3;display:block;margin:0 auto 10px"></i>
+      No products yet — use "+ Add Product" or "Seed from Code".
+    </div>`;
+    lucide.createIcons();
+    return;
+  }
+
+  container.innerHTML = list.map(p => {
+    const thumb = p.images && p.images[0]
+      ? `<img class="pm-thumb" src="${_esc(p.images[0])}" alt="" loading="lazy">`
+      : `<div class="pm-thumb-ph"><i data-lucide="image-off"></i></div>`;
+
+    const prices = p.prices && typeof p.prices === 'object' && Object.keys(p.prices).length
+      ? Object.values(p.prices)
+      : null;
+    const priceStr = prices
+      ? `From $${Math.min(...prices.map(v => parseFloat(String(v).replace('$',''))))}`
+      : (p.price ? `$${parseFloat(p.price).toFixed(2)}` : '—');
+
+    let badgeClass, badgeLabel;
+    if (!p.available)   { badgeClass = 'pm-badge-hidden';  badgeLabel = 'HIDDEN';   }
+    else if (p.sold_out){ badgeClass = 'pm-badge-soldout'; badgeLabel = 'SOLD OUT'; }
+    else                { badgeClass = 'pm-badge-live';    badgeLabel = 'LIVE';     }
+
+    return `
+    <div class="pm-card">
+      ${thumb}
+      <div class="pm-info">
+        <div class="pm-name">${_esc(p.name_en)}</div>
+        <div class="pm-tag">${_esc(p.tag_en)}</div>
+        <div class="pm-price-txt">${priceStr}</div>
+        <span class="badge ${badgeClass}" style="margin-top:4px">${badgeLabel}</span>
+      </div>
+      <div class="pm-controls">
+        <div class="pm-toggle-wrap">
+          <span class="pm-toggle-lbl">Sold Out</span>
+          <label class="toggle" style="width:44px;height:26px">
+            <input type="checkbox" ${p.sold_out ? 'checked' : ''}
+              onchange="window._pmToggle('${p.id}','sold_out',this.checked)">
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+        <div class="pm-toggle-wrap">
+          <span class="pm-toggle-lbl">Hidden</span>
+          <label class="toggle" style="width:44px;height:26px">
+            <input type="checkbox" ${!p.available ? 'checked' : ''}
+              onchange="window._pmToggle('${p.id}','available',!this.checked)">
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+        <button class="pm-icon-btn" title="Edit"
+          onclick="window._pmEdit('${p.id}')">
+          <i data-lucide="pencil"></i>
+        </button>
+        <button class="pm-icon-btn danger" title="Delete"
+          onclick="window._pmDelete('${p.id}','${_escAttr(p.name_en)}')">
+          <i data-lucide="trash-2"></i>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
+  lucide.createIcons();
+}
+
+/* ── Instant toggle (sold_out / available) ── */
+window._pmToggle = async function(id, field, value) {
+  const { error } = await sb.from('products')
+    .update({ [field]: value, updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) { showToast('Update failed', 'error'); return; }
+  const p = _pmProducts.find(x => x.id === id);
+  if (p) p[field] = value;
+
+  const msg = field === 'sold_out'
+    ? (value ? 'Marked as Sold Out' : 'Back to Available')
+    : (!value ? 'Product hidden from menu' : 'Product visible on menu');
+  showToast(msg, 'success');
+  _pmRenderList(_pmProducts);
+};
+
+/* ── Edit (open modal prefilled) ── */
+window._pmEdit = function(id) {
+  const p = _pmProducts.find(x => x.id === id);
+  if (p) _pmOpenModal(p);
+};
+
+/* ── Delete with typed confirmation ── */
+window._pmDelete = async function(id, name) {
+  const result = await Swal.fire({
+    title: 'Delete Product',
+    html: `<p style="font-size:.9rem;color:var(--tx-muted);margin-bottom:12px">
+             Type <strong>${_esc(name)}</strong> to confirm deletion.
+             This cannot be undone.
+           </p>
+           <input id="swal-pm-confirm" class="swal2-input" placeholder="${_esc(name)}" style="font-size:.88rem">`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Delete',
+    confirmButtonColor: '#C8102E',
+    cancelButtonText: 'Cancel',
+    focusConfirm: false,
+    preConfirm: () => {
+      const val = document.getElementById('swal-pm-confirm').value.trim();
+      if (val !== name) { Swal.showValidationMessage(`Type exactly: "${name}"`); return false; }
+      return true;
+    }
+  });
+  if (!result.isConfirmed) return;
+
+  // Best-effort: remove storage files
+  try {
+    const { data: files } = await sb.storage.from('product-images').list(id);
+    if (files && files.length) {
+      await sb.storage.from('product-images').remove(files.map(f => `${id}/${f.name}`));
+    }
+  } catch (e) { /* storage cleanup is non-critical */ }
+
+  const { error } = await sb.from('products').delete().eq('id', id);
+  if (error) { showToast('Delete failed', 'error'); return; }
+  showToast('Product deleted', 'success');
+  await _pmFetch();
+};
+
+/* ── Seed from hardcoded catalog ── */
+async function _pmSeed() {
+  const result = await Swal.fire({
+    title: 'Seed Products',
+    html: `<p style="font-size:.9rem;color:var(--tx-muted)">
+             Insert <strong>${PM_SEED_DATA.length} products</strong> from the
+             hardcoded catalog. Any product whose name already exists will be skipped.
+           </p>`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Seed Now',
+    confirmButtonColor: '#002D62',
+    cancelButtonText: 'Cancel',
+  });
+  if (!result.isConfirmed) return;
+
+  const btn = document.getElementById('pm-btn-seed');
+  btn.disabled = true;
+  btn.textContent = `Seeding ${PM_SEED_DATA.length} products…`;
+
+  const { data: existing } = await sb.from('products').select('name_en');
+  const existingNames = new Set((existing || []).map(p => p.name_en));
+
+  const toInsert = PM_SEED_DATA
+    .filter(p => !existingNames.has(p.name_en))
+    .map((p, i) => ({
+      name_en: p.name_en, name_es: p.name_es,
+      tag_en:  p.tag_en,  tag_es:  p.tag_es,
+      price:   p.price  || null,
+      prices:  p.prices || null,
+      images:  [],
+      available:  true,
+      sold_out:   false,
+      sort_order: i,
+    }));
+
+  const skipped = PM_SEED_DATA.length - toInsert.length;
+
+  if (!toInsert.length) {
+    showToast(`All ${PM_SEED_DATA.length} products already exist (0 added, ${skipped} skipped)`, 'info');
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="database-zap"></i> Seed from Code';
+    lucide.createIcons();
+    return;
+  }
+
+  const { error } = await sb.from('products').insert(toInsert);
+
+  btn.disabled = false;
+  btn.innerHTML = '<i data-lucide="database-zap"></i> Seed from Code';
+  lucide.createIcons();
+
+  if (error) { showToast(`Seed failed: ${error.message}`, 'error'); return; }
+  showToast(`Done! ${toInsert.length} added, ${skipped} skipped`, 'success');
+  await _pmFetch();
+}
+
+/* ── Escape helpers (scoped to avoid conflicts) ── */
+function _esc(s)     { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _escAttr(s) { return String(s||'').replace(/'/g,"\\'"); }
