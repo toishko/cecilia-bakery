@@ -14,8 +14,8 @@
       position: fixed;
       top: 0;
       left: 50%;
-      /* Start hidden above the safe-area notch */
-      transform: translateX(-50%) translateY(-80px);
+      /* Start fully hidden above the safe-area notch */
+      transform: translateX(-50%) translateY(-100px);
       width: 40px;
       height: 40px;
       border-radius: 50%;
@@ -68,18 +68,32 @@
 
   function snapBack() {
     indicator.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
-    indicator.style.transform  = 'translateX(-50%) translateY(-80px)';
+    indicator.style.transform  = 'translateX(-50%) translateY(-100px)';
     indicator.style.opacity    = '0';
   }
 
   async function triggerRefresh() {
     refreshing = true;
 
-    // Read the safe-area inset so the spinner parks below the notch
-    const safeTop = parseInt(
-      getComputedStyle(document.documentElement).getPropertyValue('--sat') || '44'
-    );
-    const activeY = safeTop + 8;
+    // Resolve safe-area height. getPropertyValue('--sat') returns the raw
+    // string 'env(safe-area-inset-top)', not a number, so we probe a throw-
+    // away element to get the computed pixel value instead.
+    const safeTop = (function () {
+      try {
+        const el = document.createElement('div');
+        el.style.cssText =
+          'position:fixed;top:env(safe-area-inset-top);top:constant(safe-area-inset-top);' +
+          'width:1px;height:1px;pointer-events:none;visibility:hidden';
+        document.body.appendChild(el);
+        const val = parseInt(getComputedStyle(el).top);
+        document.body.removeChild(el);
+        if (val > 0) return val;
+      } catch (e) { /* ignore */ }
+      // Fallback: 60px covers standard notch (44px), Dynamic Island (59px),
+      // and any expanded status bar state.
+      return 60;
+    })();
+    const activeY = safeTop + 20;
 
     // Show spinner locked just below the notch
     indicator.style.transition = 'transform 0.3s ease';
@@ -129,12 +143,22 @@
       return;
     }
 
-    // Read safe-area inset so rubber-band tracks below the notch
-    const safeTop = parseInt(
-      getComputedStyle(document.documentElement).getPropertyValue('--sat') || '44'
-    );
+    // Probe a throw-away element to get the real computed safe-area px value.
+    const safeTop = (function () {
+      try {
+        const el = document.createElement('div');
+        el.style.cssText =
+          'position:fixed;top:env(safe-area-inset-top);top:constant(safe-area-inset-top);' +
+          'width:1px;height:1px;pointer-events:none;visibility:hidden';
+        document.body.appendChild(el);
+        const val = parseInt(getComputedStyle(el).top);
+        document.body.removeChild(el);
+        if (val > 0) return val;
+      } catch (e) { /* ignore */ }
+      return 60; // safe minimum covering all iPhone notch/Dynamic Island heights
+    })();
     const progress = Math.min(dist / THRESHOLD, 1);
-    const yOffset  = safeTop + (dist * 0.5) - 60; // approaches safeTop+0 at ~120 px pull
+    const yOffset  = safeTop + (dist * 0.5) - 20; // slides from below notch as user pulls
 
     indicator.style.transition = 'none';
     indicator.style.transform  =
