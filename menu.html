@@ -1018,6 +1018,15 @@
       white-space: nowrap;
     }
 
+    @keyframes productPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(200, 16, 46, 0.4); }
+      50%  { box-shadow: 0 0 0 12px rgba(200, 16, 46, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(200, 16, 46, 0); }
+    }
+    .product-updated {
+      animation: productPulse 0.6s ease-out;
+    }
+
     .product-card.featured .pc-order {
       border-color: rgba(255, 255, 255, .35);
       color: #fff;
@@ -5758,9 +5767,195 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       } catch (e) { }
       // Load live products from Supabase (silent fallback to hardcoded if unavailable)
       await loadProductsFromSupabase();
+      tagProductCards();      // stamp data-product-key on every static card
       applyHiddenProducts();
       applySOldOutState();
+      initProductsRealtime(); // open realtime channel after initial load
     });
+
+    /* ── Stamp data-product-key on every static card ── */
+    function tagProductCards() {
+      document.querySelectorAll('.atc-trigger').forEach(btn => {
+        const match = (btn.getAttribute('onclick') || '').match(/openATC\('([^']+)'/);
+        if (!match) return;
+        const card = btn.closest('.product-card');
+        if (card) card.dataset.productKey = match[1];
+      });
+    }
+
+    /* ── Flash a card with a brief pulse ── */
+    function flashCard(cardEl) {
+      if (!cardEl) return;
+      cardEl.classList.remove('product-updated');
+      void cardEl.offsetWidth; // force reflow
+      cardEl.classList.add('product-updated');
+      setTimeout(() => cardEl.classList.remove('product-updated'), 600);
+    }
+
+    /* ── Find a card by name_en ── */
+    function findCard(nameEn) {
+      return document.querySelector(`[data-product-key="${CSS.escape(nameEn)}"]`);
+    }
+
+    /* ── Hide a section if all its cards are gone ── */
+    function cleanupSection(sectionEl) {
+      if (!sectionEl) return;
+      const cards = sectionEl.querySelectorAll('.product-card');
+      const allGone = cards.length === 0 || [...cards].every(c => c.style.display === 'none');
+      if (allGone) sectionEl.style.display = 'none';
+    }
+
+    /* ── Handle a single realtime product change ── */
+    async function handleProductChange(payload) {
+      try {
+        const { eventType, new: n, old: o } = payload;
+
+        if (eventType === 'DELETE') {
+          // Remove card from DOM
+          const card = findCard(o?.name_en);
+          if (card) {
+            const section = card.closest('.menu-section');
+            card.style.display = 'none';
+            cleanupSection(section);
+          }
+          delete PRODUCTS[o?.name_en];
+          return;
+        }
+
+        if (eventType === 'INSERT') {
+          // Reload all to pick up the new card (it's static HTML, can't inject)
+          await loadProductsFromSupabase();
+          // New products won't appear in static DOM, but PRODUCTS is updated
+          return;
+        }
+
+        // UPDATE — surgical handling
+        if (eventType === 'UPDATE') {
+          const nameEn = n.name_en;
+          const card   = findCard(nameEn);
+
+          // ── available toggled off → hide card ──
+          if (o.available === true && n.available === false) {
+            if (card) {
+              const section = card.closest('.menu-section');
+              card.style.display = 'none';
+              cleanupSection(section);
+            }
+            delete PRODUCTS[nameEn];
+            return;
+          }
+
+          // ── available toggled on → reload to restore ──
+          if (o.available === false && n.available === true) {
+            await loadProductsFromSupabase();
+            applyHiddenProducts();
+            applySOldOutState();
+            return;
+          }
+
+          // ── sold_out toggled on ──
+          if (!o.sold_out && n.sold_out) {
+            if (card) {
+              const btn = card.querySelector('.atc-trigger');
+              if (btn) {
+                btn.disabled = true;
+                btn.textContent = lang === 'es' ? 'Agotado' : 'Sold Out';
+                btn.style.opacity = '0.5';
+                btn.style.cursor  = 'not-allowed';
+              }
+              if (!card.querySelector('.sold-out-ribbon')) {
+                const ribbon = document.createElement('div');
+                ribbon.className = 'sold-out-ribbon';
+                ribbon.textContent = lang === 'es' ? 'AGOTADO' : 'SOLD OUT';
+                card.style.position = 'relative';
+                card.appendChild(ribbon);
+              }
+              flashCard(card);
+            }
+            if (PRODUCTS[nameEn]) PRODUCTS[nameEn].sold_out = true;
+            return;
+          }
+
+          // ── sold_out toggled off ──
+          if (o.sold_out && !n.sold_out) {
+            if (card) {
+              const btn = card.querySelector('.atc-trigger');
+              if (btn) {
+                btn.disabled = false;
+                btn.textContent = lang === 'es' ? 'Agregar' : 'Add to Cart';
+                btn.style.opacity = '';
+                btn.style.cursor  = '';
+              }
+              const ribbon = card.querySelector('.sold-out-ribbon');
+              if (ribbon) ribbon.remove();
+              flashCard(card);
+            }
+            if (PRODUCTS[nameEn]) PRODUCTS[nameEn].sold_out = false;
+            return;
+          }
+
+          // ── price / prices changed ──
+          if (o.price !== n.price || JSON.stringify(o.prices) !== JSON.stringify(n.prices)) {
+            if (card) {
+              const priceEl = card.querySelector('.pc-price');
+              if (priceEl) {
+                if (n.prices && Object.keys(n.prices).length) {
+                  const vals = Object.values(n.prices).map(v => parseFloat(String(v).replace('$','')));
+                  priceEl.textContent = `From $${Math.min(...vals).toFixed(2)}`;
+                } else if (n.price) {
+                  priceEl.textContent = `$${parseFloat(n.price).toFixed(2)}`;
+                }
+              }
+              flashCard(card);
+            }
+            if (PRODUCTS[nameEn]) {
+              PRODUCTS[nameEn].price  = n.price  ? String(n.price)  : null;
+              PRODUCTS[nameEn].prices = n.prices || null;
+            }
+            return;
+          }
+
+          // ── name or images changed → full section reload ──
+          if (o.name_en !== n.name_en || JSON.stringify(o.images) !== JSON.stringify(n.images)) {
+            await loadProductsFromSupabase();
+            applyHiddenProducts();
+            applySOldOutState();
+          }
+        }
+      } catch (err) {
+        // Silent — never surface realtime errors to customers
+        console.warn('Realtime product update error (non-fatal):', err);
+      }
+    }
+
+    /* ── Subscribe to Supabase Realtime ── */
+    function initProductsRealtime() {
+      try {
+        const sb = window.__supabase;
+        if (!sb) return;
+
+        sb.channel('menu-products-live')
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'products'
+          }, (payload) => {
+            handleProductChange(payload);
+          })
+          .subscribe((status) => {
+            console.log('Realtime status:', status);
+          });
+      } catch (err) {
+        // Silent fallback — customers never see this
+        console.warn('Realtime init failed (non-fatal):', err);
+      }
+    }
+
+    // Clean up realtime channel on page unload
+    window.addEventListener('beforeunload', () => {
+      try { window.__supabase?.removeAllChannels(); } catch (_) {}
+    });
+
 
     /* Hide product cards for products not returned by Supabase (available=false) */
     function applyHiddenProducts() {
