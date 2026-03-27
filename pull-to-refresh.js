@@ -9,11 +9,13 @@
 (function initPullToRefresh() {
   /* ── Inject CSS ─────────────────────────────────────────────────── */
   const STYLE = `
+    :root { --sat: env(safe-area-inset-top); }
     #ptr-indicator {
       position: fixed;
-      top: env(safe-area-inset-top);
+      top: 0;
       left: 50%;
-      transform: translateX(-50%) translateY(-60px);
+      /* Start hidden above the safe-area notch */
+      transform: translateX(-50%) translateY(-80px);
       width: 40px;
       height: 40px;
       border-radius: 50%;
@@ -66,16 +68,22 @@
 
   function snapBack() {
     indicator.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
-    indicator.style.transform  = 'translateX(-50%) translateY(-60px)';
+    indicator.style.transform  = 'translateX(-50%) translateY(-80px)';
     indicator.style.opacity    = '0';
   }
 
   async function triggerRefresh() {
     refreshing = true;
 
-    // Show spinner locked at top (just below safe-area)
+    // Read the safe-area inset so the spinner parks below the notch
+    const safeTop = parseInt(
+      getComputedStyle(document.documentElement).getPropertyValue('--sat') || '44'
+    );
+    const activeY = safeTop + 8;
+
+    // Show spinner locked just below the notch
     indicator.style.transition = 'transform 0.3s ease';
-    indicator.style.transform  = 'translateX(-50%) translateY(8px)';
+    indicator.style.transform  = 'translateX(-50%) translateY(' + activeY + 'px)';
     indicator.style.opacity    = '1';
     indicator.classList.add('ptr-spinning');
 
@@ -121,9 +129,12 @@
       return;
     }
 
-    // Rubber-band the indicator into view
+    // Read safe-area inset so rubber-band tracks below the notch
+    const safeTop = parseInt(
+      getComputedStyle(document.documentElement).getPropertyValue('--sat') || '44'
+    );
     const progress = Math.min(dist / THRESHOLD, 1);
-    const yOffset  = -60 + (dist * 0.6); // slides from -60 toward view as user pulls
+    const yOffset  = safeTop + (dist * 0.5) - 60; // approaches safeTop+0 at ~120 px pull
 
     indicator.style.transition = 'none';
     indicator.style.transform  =
