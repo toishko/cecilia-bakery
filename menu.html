@@ -1049,6 +1049,29 @@
       50%       { opacity: .45; }
     }
 
+    /* ── Product card image (dynamic render) ── */
+    .pc-image-wrap {
+      width: calc(100% + 48px);
+      margin: -28px -24px 18px;
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .product-card.featured .pc-image-wrap {
+      aspect-ratio: 3 / 4;
+    }
+    .pc-image-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+      transition: transform .45s ease;
+    }
+    .product-card:hover .pc-image-wrap img {
+      transform: scale(1.04);
+    }
+
     .product-card.featured .pc-order {
       border-color: rgba(255, 255, 255, .35);
       color: #fff;
@@ -5267,23 +5290,36 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         </div>`;
     }
 
+    /* ── Icon fallback per category name (when DB icon_name is null/empty) ── */
+    const CAT_ICON_DEFAULTS = {
+      'Tres Leches': 'star', 'Tres Leches · Premium': 'star',
+      'Birthday Cake': 'cake', 'Square Cake': 'square',
+      'Slice': 'cake-slice', 'Slice · New': 'cake-slice',
+      'Whipping Cream Slice': 'layers',
+      'Cup': 'cup-soda', 'Cup · Premium': 'cup-soda',
+      'Plain Cakes': 'wheat',
+    };
+
     /* ── Group flat products array into category groups ── */
     function groupProductsByCategory(products) {
       const groups = {};
       const order = [];
       products.forEach(p => {
         if (!groups[p.tag_en]) {
+          const icon = p.icon_name || CAT_ICON_DEFAULTS[p.tag_en] || 'cake';
           groups[p.tag_en] = {
             tag_en: p.tag_en,
-            tag_es: p.tag_es,
-            icon_name: p.icon_name || 'cake',
+            tag_es: p.tag_es || p.tag_en,
+            icon_name: icon,
             products: []
           };
           order.push(p.tag_en);
         }
         groups[p.tag_en].products.push(p);
       });
-      return order.map(k => groups[k]);
+      const result = order.map(k => groups[k]);
+      console.log('Groups:', result.map(g => ({ tag: g.tag_en, icon: g.icon_name })));
+      return result;
     }
 
     /* ── Render category nav tabs ── */
@@ -5337,14 +5373,52 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         dots.forEach(d => dotsEl.appendChild(d));
       }
 
-      if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [nav] });
+      if (typeof lucide !== 'undefined') lucide.createIcons({ root: nav });
     }
 
+    /* ── Fallback Unsplash photos when Supabase images array is empty ── */
+    const FALLBACK_PHOTOS = {
+      'Tres Leches':                   'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=700&fit=crop',
+      'Tres Leche Piña':               'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=700&fit=crop',
+      'Tres Leche Strawberry':         'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=700&fit=crop',
+      'Tres Leche Hershey':            'https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?w=700&fit=crop',
+      'Cuatro Leche':                  'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=700&fit=crop',
+      'Piña':                          'https://images.unsplash.com/photo-1464349153174-7b7e6e23c52c?w=700&fit=crop',
+      'Guava':                         'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=700&fit=crop',
+      'Dulce de Leche':                'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=700&fit=crop',
+      'Chocolate':                     'https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?w=700&fit=crop',
+      'Strawberry':                    'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=700&fit=crop',
+      'Pudin':                         'https://images.unsplash.com/photo-1517427677506-ade074eb1432?w=700&fit=crop',
+      'Plain':                         'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=700&fit=crop',
+      'Raisin':                        'https://images.unsplash.com/photo-1517427677506-ade074eb1432?w=700&fit=crop',
+      'Maiz':                          'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=700&fit=crop',
+      'Red Velvet':                    'https://images.unsplash.com/photo-1614707267537-b85aaf00c4b7?w=700&fit=crop',
+      'Carrot Cake':                   'https://images.unsplash.com/photo-1621303837174-89787a7d4729?w=700&fit=crop',
+      'Cheesecake':                    'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=700&fit=crop',
+      'Pudin (Slice)':                 'https://images.unsplash.com/photo-1517427677506-ade074eb1432?w=700&fit=crop',
+      'Piña (Slice)':                  'https://images.unsplash.com/photo-1464349153174-7b7e6e23c52c?w=700&fit=crop',
+      'Guava (Slice)':                 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=700&fit=crop',
+      'Whipping Cream Piña':           'https://images.unsplash.com/photo-1464349153174-7b7e6e23c52c?w=700&fit=crop',
+      'Whipping Cream Guava':          'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=700&fit=crop',
+      'Whipping Cream Dulce de Leche': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=700&fit=crop',
+      'Whipping Cream Chocolate':      'https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?w=700&fit=crop',
+      'Chocoflan':                     'https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?w=700&fit=crop',
+      'Tres Leche (Cup)':              'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=700&fit=crop',
+      'Cuatro Leche (Cup)':            'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=700&fit=crop',
+      'Hershey (Cup)':                 'https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?w=700&fit=crop',
+    };
+
     /* ── Build a single product card element ── */
-    function renderProductCard(p, currentLang) {
-      const nameEn = p.name_en;
-      const nameEs = p.name_es || p.name_en;
+    function renderProductCard(p, currentLang, index) {
+      const nameEn    = p.name_en;
+      const nameEs    = p.name_es || p.name_en;
       const displayName = currentLang === 'es' ? nameEs : nameEn;
+      const isFeatured  = index === 0;
+
+      // Resolve image: Supabase upload → Fallback Unsplash map → generic placeholder
+      const imgSrc = (p.images && p.images.length > 0)
+        ? p.images[0]
+        : (FALLBACK_PHOTOS[nameEn] || 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=700&fit=crop');
 
       // Price display
       let priceHTML = '';
@@ -5360,43 +5434,49 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         ? (p.description_es || p.description_en || '')
         : (p.description_en || '');
 
-      // Image
-      const img = (p.images && p.images.length)
-        ? `<div class="pc-image-wrap"><img class="pc-image" src="${p.images[0]}" alt="${nameEn}" loading="lazy"></div>`
-        : '';
-
-      // Tag label
-      const tagEn = p.tag_en || '';
-      const tagEs = p.tag_es || tagEn;
-      const icon  = p.icon_name || 'cake';
+      // Category tag + icon
+      const tagEn      = p.tag_en || '';
+      const tagEs      = p.tag_es || tagEn;
+      const icon       = p.icon_name || CAT_ICON_DEFAULTS[tagEn] || 'cake';
       const tagDisplay = currentLang === 'es' ? tagEs : tagEn;
 
       // Sold out state
-      const isSoldOut = !!p.sold_out;
-      const btnText = isSoldOut
-        ? (currentLang === 'es' ? 'Agotado' : 'Sold Out')
-        : (currentLang === 'es' ? 'Agregar' : 'Add to Cart');
+      const isSoldOut   = !!p.sold_out;
+      const btnText     = isSoldOut
+        ? (currentLang === 'es' ? 'Agotado'  : 'Sold Out')
+        : (currentLang === 'es' ? 'Agregar'  : 'Add to Cart');
       const btnDisabled = isSoldOut ? 'disabled' : '';
-      const btnStyle = isSoldOut ? 'style="opacity:.5;cursor:not-allowed"' : '';
+      const soldOutAttr = isSoldOut ? 'style="opacity:.5;cursor:not-allowed"' : '';
 
       const div = document.createElement('div');
-      div.className = 'product-card reveal';
+      div.className = `product-card reveal${isFeatured ? ' featured' : ''}`;
       div.dataset.productKey = nameEn;
+
       div.innerHTML = `
-        ${img}
-        <div class="pc-tag" data-en="<i data-lucide='${icon}' class='icon'></i> ${tagEn}" data-es="<i data-lucide='${icon}' class='icon'></i> ${tagEs}">
+        <div class="pc-image-wrap">
+          <img class="pc-image" src="${imgSrc}" alt="${nameEn}" loading="lazy"
+               onerror="this.src='https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=700&fit=crop'">
+        </div>
+        <div class="pc-tag"
+          data-en="<i data-lucide='${icon}' class='icon'></i> ${tagEn}"
+          data-es="<i data-lucide='${icon}' class='icon'></i> ${tagEs}">
           <i data-lucide="${icon}" class="icon"></i> ${tagDisplay}
         </div>
         <p class="pc-name" data-en="${nameEn}" data-es="${nameEs}">${displayName}</p>
-        ${description ? `<p class="pc-desc" data-en="${p.description_en || ''}" data-es="${p.description_es || ''}">${description}</p>` : ''}
+        ${description
+          ? `<p class="pc-desc"
+               data-en="${(p.description_en||'').replace(/"/g,'&quot;')}"
+               data-es="${(p.description_es||'').replace(/"/g,'&quot;')}">${description}</p>`
+          : ''}
         <div class="pc-footer">
           <div class="pc-footer-badge-row"></div>
           <div class="pc-footer-action-row">
             <span class="pc-price">${priceHTML}</span>
-            <button class="pc-order atc-trigger" onclick="openATC('${nameEn}','${tagEn}')"
-              data-en="${isSoldOut ? 'Sold Out' : 'Add to Cart'}"
-              data-es="${isSoldOut ? 'Agotado' : 'Agregar'}"
-              ${btnDisabled} ${btnStyle}>${btnText}</button>
+            <button class="pc-order atc-trigger"
+              onclick="openATC('${nameEn.replace(/'/g,"\\'")}')"
+              data-en="${isSoldOut ? 'Sold Out'  : 'Add to Cart'}"
+              data-es="${isSoldOut ? 'Agotado'   : 'Agregar'}"
+              ${btnDisabled} ${soldOutAttr}>${btnText}</button>
           </div>
         </div>
         ${isSoldOut ? `<div class="sold-out-ribbon">${currentLang === 'es' ? 'AGOTADO' : 'SOLD OUT'}</div>` : ''}
@@ -5434,8 +5514,8 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         `;
 
         const grid = section.querySelector('.product-grid');
-        g.products.forEach(p => {
-          const card = renderProductCard(p, currentLang);
+        g.products.forEach((p, idx) => {
+          const card = renderProductCard(p, currentLang, idx);
           // update PRODUCTS in-memory store
           PRODUCTS[p.name_en] = {
             en: { name: p.name_en, tag: p.tag_en },
@@ -5456,7 +5536,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       if (typeof io !== 'undefined') {
         document.querySelectorAll('.reveal:not(.visible)').forEach(el => io.observe(el));
       }
-      if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [body] });
+      if (typeof lucide !== 'undefined') lucide.createIcons({ root: body });
     }
 
     /* ── Master render orchestrator ── */
