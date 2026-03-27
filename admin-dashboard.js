@@ -3141,26 +3141,34 @@ window._pmEdit = function(id) {
 
 /* ── Delete with typed confirmation ── */
 window._pmDelete = async function(id, name) {
-  const result = await Swal.fire({
-    title: 'Delete Product',
-    html: `<p style="font-size:.9rem;color:var(--tx-muted);margin-bottom:12px">
-             Type <strong>${_esc(name)}</strong> to confirm deletion.
-             This cannot be undone.
-           </p>
-           <input id="swal-pm-confirm" class="swal2-input" placeholder="${_esc(name)}" style="font-size:.88rem">`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Delete',
-    confirmButtonColor: '#C8102E',
-    cancelButtonText: 'Cancel',
-    focusConfirm: false,
-    preConfirm: () => {
-      const val = document.getElementById('swal-pm-confirm').value.trim();
-      if (val !== name) { Swal.showValidationMessage(`Type exactly: "${name}"`); return false; }
-      return true;
-    }
-  });
-  if (!result.isConfirmed) return;
+  // Confirm deletion — use Swal if available, native confirm as fallback
+  let confirmed = false;
+  if (typeof Swal !== 'undefined') {
+    const result = await Swal.fire({
+      title: 'Delete Product',
+      html: `<p style="font-size:.9rem;color:var(--tx-muted);margin-bottom:12px">
+               Type <strong>${_esc(name)}</strong> to confirm deletion.
+               This cannot be undone.
+             </p>
+             <input id="swal-pm-confirm" class="swal2-input" placeholder="${_esc(name)}" style="font-size:.88rem">`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      confirmButtonColor: '#C8102E',
+      cancelButtonText: 'Cancel',
+      focusConfirm: false,
+      preConfirm: () => {
+        const val = document.getElementById('swal-pm-confirm').value.trim();
+        if (val !== name) { Swal.showValidationMessage(`Type exactly: "${name}"`); return false; }
+        return true;
+      }
+    });
+    confirmed = result.isConfirmed;
+  } else {
+    confirmed = window.confirm(`Delete "${name}"? This cannot be undone. Type OK to confirm.`);
+  }
+
+  if (!confirmed) return;
 
   // Best-effort: remove storage files
   try {
@@ -3178,19 +3186,25 @@ window._pmDelete = async function(id, name) {
 
 /* ── Seed from hardcoded catalog ── */
 async function _pmSeed() {
-  const result = await Swal.fire({
-    title: 'Seed Products',
-    html: `<p style="font-size:.9rem;color:var(--tx-muted)">
-             Insert <strong>${PM_SEED_DATA.length} products</strong> from the
-             hardcoded catalog. Any product whose name already exists will be skipped.
-           </p>`,
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: 'Seed Now',
-    confirmButtonColor: '#002D62',
-    cancelButtonText: 'Cancel',
-  });
-  if (!result.isConfirmed) return;
+  // Confirm seed — use Swal if available, native confirm as fallback
+  let seedConfirmed = false;
+  if (typeof Swal !== 'undefined') {
+    const result = await Swal.fire({
+      title: 'Seed Products',
+      html: `<p style="font-size:.9rem;color:var(--tx-muted)">
+               Insert <strong>${PM_SEED_DATA.length} products</strong> from the
+               hardcoded catalog. Any product whose name already exists will be skipped.
+             </p>`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Seed Now',
+      confirmButtonColor: '#002D62',
+      cancelButtonText: 'Cancel',
+    });
+    seedConfirmed = result.isConfirmed;
+  } else {
+    seedConfirmed = window.confirm(`Seed ${PM_SEED_DATA.length} products into Supabase? Duplicates will be skipped.`);
+  }
 
   const btn = document.getElementById('pm-btn-seed');
   btn.disabled = true;
