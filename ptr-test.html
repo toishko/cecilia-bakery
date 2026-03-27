@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>PTR Position Test</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, monospace;
+      background: #0a0a0a;
+      color: #fff;
+      /* Intentionally NOT padding safe-area so lines render from true y=0 */
+      min-height: 100vh;
+      overscroll-behavior: none;
+    }
+
+    /* ── Measurement panel ─────────────────────────────────────── */
+    #panel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow-y: auto;
+      padding: 8px 12px 120px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    h1 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ff3b30;
+      letter-spacing: .04em;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 5px 0;
+      border-bottom: 1px solid #222;
+      font-size: 14px;
+    }
+    .row .label { color: #8e8e93; }
+    .row .val   { font-size: 18px; font-weight: 700; color: #30d158; }
+    .row .val.highlight { color: #ffd60a; font-size: 22px; }
+
+    #ua {
+      font-size: 10px;
+      color: #636366;
+      word-break: break-all;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    /* ── Reference lines ───────────────────────────────────────── */
+    .ref-line {
+      position: fixed;
+      left: 0;
+      right: 0;
+      height: 2px;
+      pointer-events: none;
+      z-index: 900;
+    }
+    .ref-line span {
+      position: absolute;
+      right: 6px;
+      top: 3px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: -apple-system, monospace;
+      pointer-events: none;
+    }
+
+    /* ── Draggable dot ─────────────────────────────────────────── */
+    #dot {
+      position: fixed;
+      left: 50%;
+      width: 44px;
+      height: 44px;
+      margin-left: -22px;
+      border-radius: 50%;
+      background: #ff3b30;
+      border: 3px solid #fff;
+      box-shadow: 0 0 0 2px #ff3b30;
+      z-index: 9999;
+      touch-action: none;
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: #fff;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #dot-y-label {
+      position: fixed;
+      left: 12px;
+      font-size: 20px;
+      font-weight: 900;
+      color: #ff3b30;
+      z-index: 9999;
+      text-shadow: 0 1px 4px #000;
+      pointer-events: none;
+      font-family: -apple-system, monospace;
+    }
+
+    /* ── SAT probe — invisible, just for measurement ───────────── */
+    #sat-probe {
+      position: fixed;
+      top: env(safe-area-inset-top);
+      top: constant(safe-area-inset-top);
+      left: 0;
+      width: 1px;
+      height: 1px;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    /* Show a visible bar at the safe-area boundary */
+    #sat-bar {
+      position: fixed;
+      top: env(safe-area-inset-top);
+      top: constant(safe-area-inset-top);
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #00d4ff;
+      z-index: 800;
+      pointer-events: none;
+    }
+    #sat-bar span {
+      position: absolute;
+      left: 6px;
+      top: 3px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #00d4ff;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Invisible probe to read safe-area-inset-top -->
+<div id="sat-probe"></div>
+
+<!-- Cyan bar at the actual safe-area boundary -->
+<div id="sat-bar"><span>← env(safe-area-inset-top)</span></div>
+
+<!-- Reference lines at fixed pixel positions -->
+<div class="ref-line" style="top:80px;  background:#ff9f0a;"><span style="color:#ff9f0a">y=80</span></div>
+<div class="ref-line" style="top:100px; background:#ff6b00;"><span style="color:#ff6b00">y=100</span></div>
+<div class="ref-line" style="top:120px; background:#ff3b30;"><span style="color:#ff3b30">y=120</span></div>
+<div class="ref-line" style="top:140px; background:#bf5af2;"><span style="color:#bf5af2">y=140</span></div>
+<div class="ref-line" style="top:160px; background:#30d158;"><span style="color:#30d158">y=160</span></div>
+
+<!-- Draggable dot -->
+<div id="dot">●</div>
+<div id="dot-y-label">y=?</div>
+
+<!-- Measurement panel -->
+<div id="panel">
+  <h1>PTR Diagnostic · Safe Area Test</h1>
+
+  <div class="row">
+    <span class="label">env(safe-area-inset-top)</span>
+    <span class="val highlight" id="val-sat">—</span>
+  </div>
+  <div class="row">
+    <span class="label">window.screen.height</span>
+    <span class="val" id="val-sh">—</span>
+  </div>
+  <div class="row">
+    <span class="label">window.innerHeight</span>
+    <span class="val" id="val-ih">—</span>
+  </div>
+  <div class="row">
+    <span class="label">window.outerHeight</span>
+    <span class="val" id="val-oh">—</span>
+  </div>
+  <div class="row">
+    <span class="label">documentElement.clientHeight</span>
+    <span class="val" id="val-ch">—</span>
+  </div>
+  <div class="row">
+    <span class="label">screen.height − innerHeight</span>
+    <span class="val highlight" id="val-diff">—</span>
+  </div>
+  <div class="row">
+    <span class="label">Display mode</span>
+    <span class="val" id="val-mode">—</span>
+  </div>
+  <div class="row">
+    <span class="label">devicePixelRatio</span>
+    <span class="val" id="val-dpr">—</span>
+  </div>
+  <div class="row">
+    <span class="label">Dot Y position</span>
+    <span class="val highlight" id="val-dot">—</span>
+  </div>
+
+  <p id="ua"></p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── Measure safe-area-inset-top via probe element ─────────────── */
+  function measureSAT() {
+    const probe = document.getElementById('sat-probe');
+    return Math.round(parseFloat(getComputedStyle(probe).top)) || 0;
+  }
+
+  /* ── Populate all measurement fields ──────────────────────────── */
+  function update() {
+    const sat = measureSAT();
+
+    document.getElementById('val-sat').textContent = sat + 'px';
+    document.getElementById('val-sh').textContent  = window.screen.height + 'px';
+    document.getElementById('val-ih').textContent  = window.innerHeight + 'px';
+    document.getElementById('val-oh').textContent  = (window.outerHeight || '—') + (window.outerHeight ? 'px' : '');
+    document.getElementById('val-ch').textContent  = document.documentElement.clientHeight + 'px';
+    document.getElementById('val-diff').textContent =
+      (window.screen.height - window.innerHeight) + 'px';
+
+    const mode = window.matchMedia('(display-mode: standalone)').matches
+      ? 'standalone ✓'
+      : window.navigator.standalone === true
+        ? 'standalone (navigator) ✓'
+        : 'browser';
+    document.getElementById('val-mode').textContent = mode;
+    document.getElementById('val-dpr').textContent = window.devicePixelRatio;
+    document.getElementById('ua').textContent = navigator.userAgent;
+  }
+
+  /* ── Draggable dot ─────────────────────────────────────────────── */
+  const dot      = document.getElementById('dot');
+  const dotLabel = document.getElementById('dot-y-label');
+  let dotY = 200;
+
+  function setDotY(y) {
+    dotY = Math.max(0, Math.min(y, window.innerHeight - 44));
+    dot.style.top      = dotY + 'px';
+    dotLabel.style.top = (dotY + 48) + 'px';
+    dotLabel.textContent = 'dot y=' + Math.round(dotY) + 'px';
+    document.getElementById('val-dot').textContent = Math.round(dotY) + 'px';
+  }
+
+  setDotY(120); // start at the default SAFE_TOP
+
+  dot.addEventListener('touchstart', function (e) {
+    e.stopPropagation();
+  }, { passive: true });
+
+  dot.addEventListener('touchmove', function (e) {
+    e.stopPropagation();
+    const touch = e.touches[0];
+    setDotY(touch.clientY - 22);
+  }, { passive: true });
+
+  /* ── Init ──────────────────────────────────────────────────────── */
+  update();
+  window.addEventListener('resize', update);
+  // Re-measure after a tick in case layout shifts on PWA launch
+  setTimeout(update, 300);
+  setTimeout(update, 1000);
+})();
+</script>
+</body>
+</html>
