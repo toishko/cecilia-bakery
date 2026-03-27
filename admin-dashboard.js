@@ -303,9 +303,109 @@ function setupRealtime() {
         setTimeout(() => setupRealtime(), 3000);
       }
     });
+
+  // Start reliability layers
+  startRealtimeGuard();
+}
+
+/* ── RELIABILITY LAYER 1: Visibility change ──
+   When user returns to tab (switches back, unlocks phone),
+   immediately reconnect WebSocket and reload latest orders */
+let _visibilityListenerAdded = false;
+function startRealtimeGuard() {
+  if (_visibilityListenerAdded) return;
+  _visibilityListenerAdded = true;
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && currentUser) {
+      console.log('Tab visible — reconnecting realtime + refreshing orders');
+      // Reconnect WebSocket (mobile often kills it in background)
+      setupRealtime();
+      // Immediately fetch latest orders
+      silentRefreshOrders();
+    }
+  });
+
+  // Also handle iOS PWA resume (doesn't always fire visibilitychange)
+  window.addEventListener('focus', () => {
+    if (currentUser) {
+      silentRefreshOrders();
+    }
+  });
+
+  // RELIABILITY LAYER 2: Periodic polling fallback
+  // Every 60 seconds, check database for orders the WebSocket may have missed
+  setInterval(() => {
+    if (document.visibilityState === 'visible' && currentUser) {
+      silentRefreshOrders();
+    }
+  }, 60 * 1000);
+}
+
+/* ── Silent refresh: fetch latest orders and detect new ones ── */
+let _lastKnownOrderIds = new Set();
+
+async function silentRefreshOrders() {
+  if (!sb || !currentUser) return;
+  try {
+    const { data, error } = await sb
+      .from('driver_orders')
+      .select('*')
+      .in('status', ['pending', 'confirmed', 'sent'])
+      .order('submitted_at', { ascending: false });
+
+    if (error || !data) return;
+
+    // On first run, just seed the known IDs
+    if (_lastKnownOrderIds.size === 0) {
+      data.forEach(o => _lastKnownOrderIds.add(o.id));
+      incomingOrders = data;
+      updateIncomingBadge();
+      if (currentSection === 'incoming') renderIncomingOrders();
+      if (currentSection === 'overview') loadOverview();
+      return;
+    }
+
+    // Detect truly new orders (ones we haven't seen before)
+    const newOrders = data.filter(o => !_lastKnownOrderIds.has(o.id));
+
+    // Update known IDs
+    data.forEach(o => _lastKnownOrderIds.add(o.id));
+
+    // Update the order list
+    incomingOrders = data;
+    updateIncomingBadge();
+
+    // Notify about new orders that the WebSocket missed
+    newOrders.forEach(order => {
+      console.log('Polling caught missed order:', order.id);
+      if (notificationsEnabled) playNotification();
+
+      const driverName = getDriverName(order.driver_id);
+      const items = order.items ? Object.values(order.items).reduce((s, v) => s + (parseInt(v) || 0), 0) : 0;
+      const msgEn = `New order from ${driverName}` + (items ? ` (${items} items)` : '');
+      const msgEs = `Nuevo pedido de ${driverName}` + (items ? ` (${items} artículos)` : '');
+      showToast(lang === 'es' ? msgEs : msgEn, 'info');
+
+      showBrowserNotification(
+        lang === 'es' ? 'Nuevo Pedido' : 'New Order',
+        lang === 'es' ? msgEs : msgEn,
+        'incoming'
+      );
+    });
+
+    // Re-render current view
+    if (currentSection === 'incoming') renderIncomingOrders();
+    if (currentSection === 'overview') loadOverview();
+  } catch (e) {
+    console.warn('Silent refresh failed:', e);
+  }
 }
 
 function handleNewOrder(order) {
+  // Mark as known so polling won't re-notify
+  _lastKnownOrderIds.add(order.id);
+
   // Add to incoming orders if not already there
   if (!incomingOrders.find(o => o.id === order.id)) {
     incomingOrders.unshift(order);
