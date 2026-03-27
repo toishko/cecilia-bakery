@@ -20,14 +20,14 @@
 
 ## Checklist
 
-- [ ] 1. Audit subscription lifecycle for edge cases
-- [ ] 2. Add push subscription cleanup on logout
-- [ ] 3. Wire the Settings notification toggle to push subscription state
-- [ ] 4. Handle subscription renewal on SW update
-- [ ] 5. Add push notification opt-in UI (first-time prompt)
-- [ ] 6. Deduplicate identical `subscribeToPush()` code
-- [ ] 7. Verify Edge Function error handling
-- [ ] 8. Verification pass
+- [x] 1. Audit subscription lifecycle for edge cases
+- [x] 2. Add push subscription cleanup on logout
+- [x] 3. Wire the Settings notification toggle to push subscription state
+- [x] 4. Handle subscription renewal on SW update
+- [x] 5. Add push notification opt-in UI (first-time prompt)
+- [x] 6. Deduplicate identical `subscribeToPush()` code
+- [x] 7. Verify Edge Function error handling
+- [x] 8. Verification pass
 
 ---
 

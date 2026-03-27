@@ -452,6 +452,17 @@
 <div id="print-container" style="display:none"></div>
 
 <!-- Update Banner -->
+<!-- Push Notification Opt-In Banner -->
+<div id="push-opt-in" class="push-opt-in" style="display:none">
+  <div class="push-opt-in-text">
+    <strong data-en="Enable Notifications" data-es="Activar Notificaciones">Enable Notifications</strong>
+    <span data-en="Get notified when new orders arrive" data-es="Recibe notificaciones de nuevos pedidos">Get notified when new orders arrive</span>
+  </div>
+  <button class="push-opt-in-btn" id="push-opt-in-btn"
+    data-en="Enable" data-es="Activar">Enable</button>
+  <button class="push-opt-in-dismiss" id="push-opt-in-dismiss">✕</button>
+</div>
+
 <div id="update-banner" class="update-banner" onclick="window.location.reload()">
   <span>🔄</span>
   <span>New update available — tap to refresh</span>
@@ -467,6 +478,12 @@
   // ── Service Worker (caching + push only) ──
   if ('serviceWorker' in navigator && !location.hostname.includes('localhost')) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
+    // Re-verify push subscription when a new SW activates
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (typeof subscribeToPush === 'function' && typeof currentUser !== 'undefined' && currentUser) {
+        subscribeToPush('admin', currentUser.id);
+      }
+    });
   }
 
   // ── Version Polling — reliable update detection ──

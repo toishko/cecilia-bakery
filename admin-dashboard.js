@@ -3,7 +3,7 @@
    ═══════════════════════════════════ */
 const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
-const VAPID_PUBLIC_KEY = 'BPK9nQfqIXaf-kc5HHJ5G6trkWxjAX9MzeYwLTUfcnk4jWVYVO6gpzXS-d0tNgGTmHp0ntzYe3xRKT0Ud3t5a3Q';
+import { subscribeToPush as _subscribeToPush, unsubscribeFromPush } from './push-utils.js';
 
 // ── Push Notification Trigger ──
 // Calls the Edge Function to send push notifications to admins/drivers
@@ -172,7 +172,14 @@ function enterDashboard() {
   loadDriversCache();
   setupRealtime();
   requestNotifPermission();
-  subscribeToPush('admin', currentUser.id);
+  // Push opt-in: only auto-subscribe if permission already granted
+  if ('Notification' in window && Notification.permission === 'granted') {
+    subscribeToPush('admin', currentUser.id);
+  } else if ('Notification' in window && Notification.permission === 'default'
+             && !localStorage.getItem('cecilia_push_dismissed')) {
+    const optIn = document.getElementById('push-opt-in');
+    if (optIn) optIn.style.display = 'flex';
+  }
   lucide.createIcons();
 
   // Show admin email in settings
@@ -183,6 +190,11 @@ function enterDashboard() {
 }
 
 async function handleLogout() {
+  // Clean up push subscription on logout
+  if (currentUser) {
+    await unsubscribeFromPush(sb, 'admin', currentUser.id);
+  }
+
   try {
     await sb.auth.signOut();
   } catch (e) { console.error(e); }
@@ -511,114 +523,9 @@ async function showBrowserNotification(title, body, section, orderId) {
   } catch (e) { console.warn('Notification failed:', e); }
 }
 
-// ── WEB PUSH SUBSCRIPTION ──
+// ── WEB PUSH SUBSCRIPTION (delegated to push-utils.js) ──
 async function subscribeToPush(userType, userId) {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    console.log('Push not supported in this browser');
-    return;
-  }
-  if (!sb) return;
-
-  try {
-    // Wait for SW — 15 seconds (iOS PWA can be slow on first load)
-    const reg = await Promise.race([
-      navigator.serviceWorker.ready,
-      new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout (15s)')), 15000))
-    ]);
-
-    console.log('Service Worker ready, checking push subscription...');
-
-    // Request notification permission first
-    if (Notification.permission === 'default') {
-      const perm = await Notification.requestPermission();
-      console.log('Notification permission:', perm);
-      if (perm !== 'granted') {
-        console.warn('Notification permission denied');
-        return;
-      }
-    } else if (Notification.permission === 'denied') {
-      console.warn('Notifications are blocked in browser settings');
-      return;
-    }
-
-    // Convert VAPID key
-    const urlBase64 = VAPID_PUBLIC_KEY;
-    const padding = '='.repeat((4 - urlBase64.length % 4) % 4);
-    const base64 = (urlBase64 + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = atob(base64);
-    const applicationServerKey = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; i++) applicationServerKey[i] = rawData.charCodeAt(i);
-
-    // Check existing subscription
-    let sub = await reg.pushManager.getSubscription();
-
-    if (sub) {
-      // Verify the existing subscription matches our current VAPID key
-      // If not, unsubscribe the stale one and create a fresh subscription
-      try {
-        const existingKey = sub.options?.applicationServerKey;
-        if (existingKey) {
-          const existingKeyArray = new Uint8Array(existingKey);
-          const keysMatch = existingKeyArray.length === applicationServerKey.length &&
-            existingKeyArray.every((val, i) => val === applicationServerKey[i]);
-          if (!keysMatch) {
-            console.warn('VAPID key mismatch — unsubscribing stale subscription');
-            await sub.unsubscribe();
-            sub = null;
-          }
-        }
-      } catch (keyCheckErr) {
-        console.warn('Could not verify existing sub key, re-subscribing:', keyCheckErr);
-        try { await sub.unsubscribe(); } catch (_) {}
-        sub = null;
-      }
-    }
-
-    if (!sub) {
-      try {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey
-        });
-        console.log('Push subscription created');
-      } catch (subErr) {
-        // If subscribe fails (e.g., stale registration), try unsubscribe + retry once
-        console.warn('Subscribe failed, attempting cleanup + retry:', subErr.message);
-        const oldSub = await reg.pushManager.getSubscription();
-        if (oldSub) {
-          await oldSub.unsubscribe();
-          console.log('Unsubscribed stale registration');
-        }
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey
-        });
-        console.log('Push subscription created (retry succeeded)');
-      }
-    } else {
-      console.log('Existing push subscription found (VAPID key verified)');
-    }
-
-    // Save subscription to Supabase
-    const subJson = sub.toJSON();
-    const { error } = await sb.from('push_subscriptions').upsert({
-      user_type: userType,
-      user_id: userId,
-      endpoint: subJson.endpoint,
-      p256dh: subJson.keys.p256dh,
-      auth: subJson.keys.auth
-    }, { onConflict: 'user_type,user_id,endpoint' });
-
-    if (error) {
-      console.error('Push sub save error:', error);
-      showToast(lang === 'es' ? 'Error guardando notificaciones push' : 'Error saving push notification subscription', 'error');
-    } else {
-      console.log('✅ Push subscription saved for', userType, userId);
-    }
-  } catch (e) {
-    console.error('Push subscription failed:', e.message || e);
-    showToast(lang === 'es' ? 'Error configurando notificaciones' : 'Error setting up notifications — please reload', 'error');
-  }
+  return _subscribeToPush(sb, userType, userId, lang, showToast);
 }
 
 /* ═══════════════════════════════════
@@ -2387,11 +2294,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.addEventListener('click', () => changeSize(parseInt(btn.dataset.size)));
   });
   document.getElementById('theme-toggle').addEventListener('change', toggleTheme);
-  document.getElementById('notification-toggle').addEventListener('change', (e) => {
+  document.getElementById('notification-toggle').addEventListener('change', async (e) => {
     notificationsEnabled = e.target.checked;
     localStorage.setItem('cecilia_admin_notifications', notificationsEnabled);
+
+    if (!notificationsEnabled) {
+      // Unsubscribe from push
+      if (currentUser) await unsubscribeFromPush(sb, 'admin', currentUser.id);
+      showToast(lang === 'es' ? 'Notificaciones desactivadas' : 'Notifications disabled');
+    } else {
+      // Re-subscribe to push
+      if (currentUser) await subscribeToPush('admin', currentUser.id);
+      showToast(lang === 'es' ? 'Notificaciones activadas' : 'Notifications enabled');
+    }
   });
   document.getElementById('logout-btn').addEventListener('click', handleLogout);
+
+  // ── Push opt-in banner ──
+  document.getElementById('push-opt-in-btn')?.addEventListener('click', async () => {
+    document.getElementById('push-opt-in').style.display = 'none';
+    if (currentUser) await subscribeToPush('admin', currentUser.id);
+  });
+  document.getElementById('push-opt-in-dismiss')?.addEventListener('click', () => {
+    document.getElementById('push-opt-in').style.display = 'none';
+    localStorage.setItem('cecilia_push_dismissed', '1');
+  });
 
   // ── Detail modal ──
   document.getElementById('detail-close').addEventListener('click', closeDetailModal);

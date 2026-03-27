@@ -106,11 +106,11 @@
 - [x] Verification pass
 
 ## Phase 10B — Push Notification Hardening → [IMPLEMENTATION_PUSH_NOTIFICATIONS.md](docs/IMPLEMENTATION_PUSH_NOTIFICATIONS.md)
-- [ ] Audit subscription lifecycle for edge cases
-- [ ] Add push subscription cleanup on logout
-- [ ] Wire Settings notification toggle to push subscription state
-- [ ] Handle subscription renewal on SW update
-- [ ] Add push notification opt-in UI (first-time prompt)
-- [ ] Deduplicate `subscribeToPush()` into shared `push-utils.js`
-- [ ] Verify Edge Function error handling (stale subscription cleanup)
-- [ ] Verification pass
+- [x] Audit subscription lifecycle for edge cases
+- [x] Add push subscription cleanup on logout
+- [x] Wire Settings notification toggle to push subscription state
+- [x] Handle subscription renewal on SW update
+- [x] Add push notification opt-in UI (first-time prompt)
+- [x] Deduplicate `subscribeToPush()` into shared `push-utils.js`
+- [x] Verify Edge Function error handling (stale subscription cleanup)
+- [x] Verification pass

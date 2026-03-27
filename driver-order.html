@@ -282,6 +282,17 @@
   </div>
 </div>
 
+<!-- Push Notification Opt-In Banner -->
+<div id="push-opt-in" class="push-opt-in" style="display:none">
+  <div class="push-opt-in-text">
+    <strong data-en="Enable Notifications" data-es="Activar Notificaciones">Enable Notifications</strong>
+    <span data-en="Get notified about order updates" data-es="Recibe notificaciones sobre pedidos">Get notified about order updates</span>
+  </div>
+  <button class="push-opt-in-btn" id="push-opt-in-btn"
+    data-en="Enable" data-es="Activar">Enable</button>
+  <button class="push-opt-in-dismiss" id="push-opt-in-dismiss">✕</button>
+</div>
+
 <!-- Update Banner -->
 <div id="update-banner" class="update-banner" onclick="window.location.reload()">
   <span>🔄</span>
@@ -298,6 +309,12 @@
   // ── Service Worker (caching + push only) ──
   if ('serviceWorker' in navigator && !location.hostname.includes('localhost')) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
+    // Re-verify push subscription when a new SW activates
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (typeof subscribeToPush === 'function' && typeof currentDriver !== 'undefined' && currentDriver) {
+        subscribeToPush('driver', currentDriver.id);
+      }
+    });
   }
 
   // ── Version Polling — reliable update detection ──
