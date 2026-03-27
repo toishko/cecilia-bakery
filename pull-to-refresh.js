@@ -9,13 +9,12 @@
 (function initPullToRefresh() {
   /* ── Inject CSS ─────────────────────────────────────────────────── */
   const STYLE = `
-    :root { --sat: env(safe-area-inset-top); }
     #ptr-indicator {
       position: fixed;
       top: 0;
       left: 50%;
-      /* Start fully hidden above the safe-area notch */
-      transform: translateX(-50%) translateY(-100px);
+      /* Start fully hidden above the tallest possible status bar */
+      transform: translateX(-50%) translateY(-120px);
       width: 40px;
       height: 40px;
       border-radius: 50%;
@@ -53,14 +52,20 @@
   indicator.innerHTML = '<div class="ptr-icon"></div>';
   document.body.prepend(indicator);
 
-  /* ── State ──────────────────────────────────────────────────────── */
+  /* ── Constants ───────────────────────────────────────────────────── */
   const THRESHOLD = 80;   // px to pull before triggering refresh
   const MAX_PULL  = 120;  // px max rubber-band distance
+  // Fixed offset that clears the status bar on every iPhone:
+  //   standard notch = 44px, Dynamic Island = 59px, media bar ≈ 68px
+  //   80px gives comfortable breathing room on all models.
+  const SAFE_TOP  = 80;
+
+  /* ── State ───────────────────────────────────────────────────────── */
   let startY     = 0;
   let pulling    = false;
   let refreshing = false;
 
-  /* ── Helpers ────────────────────────────────────────────────────── */
+  /* ── Helpers ─────────────────────────────────────────────────────── */
   function canPull() {
     // Only pull when scrolled to the very top
     return window.scrollY <= 0;
@@ -68,36 +73,17 @@
 
   function snapBack() {
     indicator.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
-    indicator.style.transform  = 'translateX(-50%) translateY(-100px)';
+    indicator.style.transform  = 'translateX(-50%) translateY(-120px)';
     indicator.style.opacity    = '0';
   }
 
   async function triggerRefresh() {
     refreshing = true;
 
-    // Resolve safe-area height. getPropertyValue('--sat') returns the raw
-    // string 'env(safe-area-inset-top)', not a number, so we probe a throw-
-    // away element to get the computed pixel value instead.
-    const safeTop = (function () {
-      try {
-        const el = document.createElement('div');
-        el.style.cssText =
-          'position:fixed;top:env(safe-area-inset-top);top:constant(safe-area-inset-top);' +
-          'width:1px;height:1px;pointer-events:none;visibility:hidden';
-        document.body.appendChild(el);
-        const val = parseInt(getComputedStyle(el).top);
-        document.body.removeChild(el);
-        if (val > 0) return val;
-      } catch (e) { /* ignore */ }
-      // Fallback: 60px covers standard notch (44px), Dynamic Island (59px),
-      // and any expanded status bar state.
-      return 60;
-    })();
-    const activeY = safeTop + 20;
-
-    // Show spinner locked just below the notch
+    // Park the spinner below the status bar using the fixed SAFE_TOP constant.
+    // (SAFE_TOP + 16) = 96px from top of screen — safely below every iPhone status bar.
     indicator.style.transition = 'transform 0.3s ease';
-    indicator.style.transform  = 'translateX(-50%) translateY(' + activeY + 'px)';
+    indicator.style.transform  = 'translateX(-50%) translateY(' + (SAFE_TOP + 16) + 'px)';
     indicator.style.opacity    = '1';
     indicator.classList.add('ptr-spinning');
 
@@ -143,22 +129,10 @@
       return;
     }
 
-    // Probe a throw-away element to get the real computed safe-area px value.
-    const safeTop = (function () {
-      try {
-        const el = document.createElement('div');
-        el.style.cssText =
-          'position:fixed;top:env(safe-area-inset-top);top:constant(safe-area-inset-top);' +
-          'width:1px;height:1px;pointer-events:none;visibility:hidden';
-        document.body.appendChild(el);
-        const val = parseInt(getComputedStyle(el).top);
-        document.body.removeChild(el);
-        if (val > 0) return val;
-      } catch (e) { /* ignore */ }
-      return 60; // safe minimum covering all iPhone notch/Dynamic Island heights
-    })();
+    // Rubber-band the indicator into view, always starting from below SAFE_TOP.
+    // At dist=0 → translateY(80px), at dist=MAX_PULL(120) → translateY(140px).
     const progress = Math.min(dist / THRESHOLD, 1);
-    const yOffset  = safeTop + (dist * 0.5) - 20; // slides from below notch as user pulls
+    const yOffset  = SAFE_TOP + (dist * 0.5);
 
     indicator.style.transition = 'none';
     indicator.style.transform  =
