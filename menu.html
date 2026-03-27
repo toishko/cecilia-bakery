@@ -1027,6 +1027,28 @@
       animation: productPulse 0.6s ease-out;
     }
 
+    /* ── Skeleton loader ── */
+    .menu-skeleton-wrap { padding: 0 var(--side-pad); }
+    .skel-section-header {
+      height: 2.4rem; background: var(--bd); border-radius: 8px;
+      margin: 2.5rem 0 1.2rem; width: 200px;
+      animation: skelShimmer 1.4s ease-in-out infinite;
+    }
+    .skel-card {
+      background: var(--bg-card) !important;
+      border: 1px solid var(--bd) !important;
+      animation: skelShimmer 1.4s ease-in-out infinite;
+    }
+    .skel-img  { height: 140px; background: var(--bd); border-radius: 8px; margin-bottom: 12px; }
+    .skel-tag  { height: 12px;  background: var(--bd); border-radius: 6px; width: 60px; margin-bottom: 10px; }
+    .skel-title{ height: 18px;  background: var(--bd); border-radius: 6px; width: 80%;  margin-bottom: 8px; }
+    .skel-desc { height: 12px;  background: var(--bd); border-radius: 6px; width: 90%;  margin-bottom: 14px; }
+    .skel-btn  { height: 36px;  background: var(--bd); border-radius: 20px; width: 100%; }
+    @keyframes skelShimmer {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .45; }
+    }
+
     .product-card.featured .pc-order {
       border-color: rgba(255, 255, 255, .35);
       color: #fff;
@@ -3461,525 +3483,21 @@
   <div class="cat-nav-wrap" id="cat-nav-wrap">
     <span class="cat-nav-hint" id="cat-nav-hint">›</span>
     <nav class="cat-nav" id="cat-nav" aria-label="Menu categories">
-      <a href="#tres-leches" class="cat-nav-link active" data-en="<i data-lucide='star' class='icon'></i> Tres Leches"
-        data-es="<i data-lucide='star' class='icon'></i> Tres Leches"><i data-lucide='star' class='icon'></i> Tres
-        Leches</a>
-      <span class="cat-nav-divider">·</span>
-      <a href="#birthday" class="cat-nav-link" data-en="<i data-lucide='cake' class='icon'></i> Birthday Cakes"
-        data-es="<i data-lucide='cake' class='icon'></i> Cumpleaños"><i data-lucide='cake' class='icon'></i> Birthday
-        Cakes</a>
-      <span class="cat-nav-divider">·</span>
-      <a href="#square" class="cat-nav-link" data-en="<i data-lucide='square' class='icon'></i> Square Cakes"
-        data-es="<i data-lucide='square' class='icon'></i> Cuadrados"><i data-lucide='square' class='icon'></i> Square
-        Cakes</a>
-      <span class="cat-nav-divider">·</span>
-      <a href="#piezas" class="cat-nav-link" data-en="<i data-lucide='cake-slice' class='icon'></i> Slices"
-        data-es="<i data-lucide='cake-slice' class='icon'></i> Piezas"><i data-lucide='cake-slice' class='icon'></i>
-        Slices</a>
-      <span class="cat-nav-divider">·</span>
-      <a href="#basos" class="cat-nav-link" data-en="<i data-lucide='cup-soda' class='icon'></i> Cups"
-        data-es="<i data-lucide='cup-soda' class='icon'></i> Basos"><i data-lucide='cup-soda' class='icon'></i> Cups</a>
+      <!-- Dynamically rendered by renderCatNav() -->
       <button class="cat-nav-order" onclick="openChat()" data-en="Custom Cake →"
         data-es="Bizcocho Personalizado →">Custom Cake →</button>
     </nav>
     <div class="cat-nav-dots" id="cat-nav-dots">
-      <span class="cat-dot active" data-section="tres-leches"></span>
-      <span class="cat-dot" data-section="birthday"></span>
-      <span class="cat-dot" data-section="square"></span>
-      <span class="cat-dot" data-section="piezas"></span>
-      <span class="cat-dot" data-section="basos"></span>
+      <!-- Dynamically rendered by renderCatNav() -->
     </div>
   </div>
 
-  <!-- ══ TRES LECHES ══ -->
-  <section class="menu-section" id="tres-leches">
-    <div class="section-header">
-      <div class="section-header-left">
-        <p class="sec-eyebrow" data-en="Our Signature" data-es="Nuestra Firma">Our Signature</p>
-        <h2><span data-en="Tres <em>Leches</em>" data-es="Tres <em>Leches</em>">Tres <em>Leches</em></span></h2>
-      </div>
-      <span class="section-count reveal" data-en="5 flavors" data-es="5 sabores">5 flavors</span>
-    </div>
-    <div class="product-grid">
-      <div class="product-card featured reveal">
-        <div class="pc-tag" data-en="<i data-lucide='star' class='icon'></i> The Original"
-          data-es="<i data-lucide='star' class='icon'></i> El Original"><i data-lucide='star' class='icon'></i> The
-          Original</div>
-        <div class="pc-name">Tres Leches</div>
-        <p class="pc-desc"
-          data-en="Soaked in three milks — whole milk, evaporated, and condensed. Impossibly moist, perfectly sweet. This is the one that defines us."
-          data-es="Empapado en tres leches — entera, evaporada y condensada. Increíblemente húmedo, perfectamente dulce. Este es el que nos define.">
-          Soaked in three milks — whole milk, evaporated, and condensed. Impossibly moist, perfectly sweet. This is the
-          one that defines us.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"><span class="pc-badge" data-en="The Classic" data-es="El Clásico">The
-              Classic</span></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Tres Leches','The Original')" data-en="Add to Cart" data-es="Agregar">Add to
-              Cart</button></div>
-        </div>
-      </div>
-      <div class="product-card reveal d1">
-        <div class="pc-tag">Tres Leches</div>
-        <div class="pc-name">Tres Leche Piña</div>
-        <p class="pc-desc"
-          data-en="The classic soaked sponge with a bright, tropical pineapple filling layered through every bite."
-          data-es="El bizcocho empapado clásico con un relleno de piña tropical brillante en cada bocado.">The classic
-          soaked sponge with a bright, tropical pineapple filling layered through every bite.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Tres Leche Piña','Tres Leches')" data-en="Add to Cart" data-es="Agregar">Add to
-              Cart</button></div>
-        </div>
-      </div>
-      <div class="product-card reveal d2">
-        <div class="pc-tag">Tres Leches</div>
-        <div class="pc-name">Tres Leche Strawberry</div>
-        <p class="pc-desc"
-          data-en="Fresh strawberry woven through the three-milk sponge. Sweet, soft, and impossible to stop eating."
-          data-es="Fresa fresca entretejida en el bizcocho de tres leches. Dulce, suave e imposible de dejar de comer.">
-          Fresh strawberry woven through the three-milk sponge. Sweet, soft, and impossible to stop eating.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Tres Leche Strawberry','Tres Leches')" data-en="Add to Cart" data-es="Agregar">Add to
-              Cart</button></div>
-        </div>
-      </div>
-      <div class="product-card reveal d3">
-        <div class="pc-tag">Tres Leches</div>
-        <div class="pc-name">Tres Leche Hershey</div>
-        <p class="pc-desc"
-          data-en="Our signature tres leche base finished with a Hershey chocolate layer. Rich, indulgent, and deeply satisfying."
-          data-es="Nuestra base de tres leche con una capa de chocolate Hershey. Rico, indulgente y profundamente satisfactorio.">
-          Our signature tres leche base finished with a Hershey chocolate layer. Rich, indulgent, and deeply satisfying.
-        </p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Tres Leche Hershey','Tres Leches')" data-en="Add to Cart" data-es="Agregar">Add to
-              Cart</button></div>
-        </div>
-      </div>
-      <div class="product-card reveal d1">
-        <div class="pc-tag" data-en="Premium" data-es="Premium">Premium</div>
-        <div class="pc-name">Cuatro Leche</div>
-        <p class="pc-desc"
-          data-en="One step beyond the classic. Four milks create a deeper, richer, even more indulgent sponge. Once you try it, you can't go back."
-          data-es="Un paso más allá del clásico. Cuatro leches crean un bizcocho más rico y más indulgente. Una vez que lo pruebas, no hay vuelta atrás.">
-          One step beyond the classic. Four milks create a deeper, richer, even more indulgent sponge. Once you try it,
-          you can't go back.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"><span class="pc-badge" data-en="Customer Favorite"
-              data-es="Favorito del Cliente">Customer Favorite</span></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Cuatro Leche','Premium')" data-en="Add to Cart" data-es="Agregar">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+  <!-- ══ DYNAMIC MENU BODY ══ -->
+  <div id="menu-body">
+    <!-- Skeleton and product sections are dynamically rendered by renderMenu() -->
+  </div>
 
-  <!-- ══ BIRTHDAY CAKES ══ -->
-  <section class="menu-section" id="birthday">
-    <div class="section-header">
-      <div class="section-header-left">
-        <p class="sec-eyebrow" data-en="Celebration Cakes" data-es="Bizcochos de Celebración">Celebration Cakes</p>
-        <h2><span data-en="Birthday <em>Cakes</em>" data-es="Bizcochos de <em>Cumpleaños</em>">Birthday
-            <em>Cakes</em></span></h2>
-      </div>
-      <span class="section-count reveal" data-en="5 flavors · Big &amp; Small" data-es="5 sabores · Grande y Pequeño">5
-        flavors · Big &amp; Small</span>
-    </div>
-    <div class="size-notice reveal">
-      <span class="size-notice-dot"></span>
-      <span
-        data-en="Available in Happy Birthday Big and Happy Birthday Small — all made to order with your custom message."
-        data-es="Disponible en Grande y Pequeño — todos hechos al pedido con tu mensaje personalizado.">
-        Available in Happy Birthday Big and Happy Birthday Small — all made to order with your custom message.
-      </span>
-    </div>
-    <div class="product-grid">
-      <div class="product-card reveal">
-        <div class="pc-tag" data-en="Birthday" data-es="Cumpleaños">Birthday</div>
-        <div class="pc-name">Piña</div>
-        <p class="pc-desc"
-          data-en="Bright tropical pineapple filling, light sponge, and our signature whipping cream on top. A classic choice for any celebration."
-          data-es="Relleno de piña tropical brillante, bizcocho ligero y nuestro merengue dominicano encima. Una elección clásica para cualquier celebración.">
-          Bright tropical pineapple filling, light sponge, and our signature whipping cream on top.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price" id="price-piña">$17.99 – $25.99</span><button
-              class="pc-order atc-trigger" onclick="openATC('Piña','Birthday Cake')" data-en="Add to Cart"
-              data-es="Agregar">Add to Cart</button></div>
-        </div>
-      </div>
-      <div class="product-card reveal d1">
-        <div class="pc-tag" data-en="Birthday" data-es="Cumpleaños">Birthday</div>
-        <div class="pc-name">Guava</div>
-        <p class="pc-desc"
-          data-en="Sweet tropical guava filling with our fluffy whipping cream finish. Bold, vibrant, and always a crowd favorite."
-          data-es="Relleno de guayaba tropical dulce con nuestro acabado de merengue. Atrevido, vibrante y siempre favorito.">
-          Sweet tropical guava filling with our fluffy whipping cream finish. Bold, vibrant, and always a crowd
-          favorite.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price" id="price-guava">$17.99 – $25.99</span><button
-              class="pc-order atc-trigger" onclick="openATC('Guava','Birthday Cake')" data-en="Add to Cart"
-              data-es="Agregar">Add to Cart</button></div>
-        </div>
-      </div>
-      <div class="product-card reveal d2">
-        <div class="pc-tag" data-en="Birthday" data-es="Cumpleaños">Birthday</div>
-        <div class="pc-name">Dulce de Leche</div>
-        <p class="pc-desc"
-          data-en="Rich caramel filling layered throughout a tender sponge, finished with a generous cloud of whipping cream. Deeply satisfying."
-          data-es="Relleno de caramelo rico en todo un bizcocho tierno, terminado con una generosa nube de merengue.">
-          Rich caramel filling layered throughout a tender sponge, finished with a generous cloud of whipping cream.
-          Deeply satisfying.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price" id="price-dulce-de-leche">$17.99 –
-              $25.99</span><button class="pc-order atc-trigger" onclick="openATC('Dulce de Leche','Birthday Cake')"
-              data-en="Add to Cart" data-es="Agregar">Add to Cart</button></div>
-        </div>
-      </div>
-      <div class="product-card reveal d3">
-        <div class="pc-tag" data-en="Birthday" data-es="Cumpleaños">Birthday</div>
-        <div class="pc-name">Chocolate</div>
-        <p class="pc-desc"
-          data-en="Deep chocolate flavor in a light, airy sponge, crowned with our classic whipping cream. For the chocolate lover at the party."
-          data-es="Sabor a chocolate intenso en un bizcocho ligero y esponjoso, coronado con nuestro merengue dominicano clásico.">
-          Deep chocolate flavor in a light, airy sponge, crowned with our classic whipping cream. For the chocolate
-          lover at the party.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price" id="price-chocolate">$17.99 – $25.99</span><button
-              class="pc-order atc-trigger" onclick="openATC('Chocolate','Birthday Cake')" data-en="Add to Cart"
-              data-es="Agregar">Add to Cart</button></div>
-        </div>
-      </div>
-      <div class="product-card reveal d1">
-        <div class="pc-tag" data-en="Birthday" data-es="Cumpleaños">Birthday</div>
-        <div class="pc-name">Strawberry</div>
-        <p class="pc-desc"
-          data-en="Fresh strawberry filling in a light, delicate sponge. A beautiful cake for any celebration — elegant and crowd-pleasing."
-          data-es="Relleno de fresa fresca en un bizcocho ligero y delicado. Un bizcocho hermoso para cualquier celebración.">
-          Fresh strawberry filling in a light, delicate sponge. A beautiful cake for any celebration.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price" id="price-strawberry">$17.99 – $25.99</span><button
-              class="pc-order atc-trigger" onclick="openATC('Strawberry','Birthday Cake')" data-en="Add to Cart"
-              data-es="Agregar">Add to Cart</button></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ══ SQUARE CAKES ══ -->
-  <section class="menu-section" id="square">
-    <div class="section-header">
-      <div class="section-header-left">
-        <p class="sec-eyebrow" data-en="Dominican Classics" data-es="Clásicos Dominicanos">Dominican Classics</p>
-        <h2><span data-en="Square <em>Cakes</em>" data-es="Bizcochos <em>Cuadrados</em>">Square <em>Cakes</em></span>
-        </h2>
-      </div>
-      <span class="section-count reveal" data-en="4 options" data-es="4 opciones">4 options</span>
-    </div>
-    <div class="product-grid">
-      <div class="product-card reveal">
-        <div class="pc-tag" data-en="Square" data-es="Cuadrado">Square</div>
-        <div class="pc-name">Pudin</div>
-        <p class="pc-desc"
-          data-en="Dense, sweet, unmistakably Dominican. Our bread pudding-style square is a staple that has stood the test of time."
-          data-es="Denso, dulce, inconfundiblemente dominicano. Nuestro cuadrado estilo pudín es un básico que ha resistido la prueba del tiempo.">
-          Dense, sweet, unmistakably Dominican. Our bread pudding-style square is a staple that has stood the test of
-          time.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"><span class="pc-badge" data-en="Dominican Classic"
-              data-es="Clásico Dominicano">Dominican Classic</span></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$9.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Pudin','Square Cake')" data-en="Add to Cart" data-es="Agregar">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-      <div class="product-card reveal d1">
-        <div class="pc-tag" data-en="Square" data-es="Cuadrado">Square</div>
-        <div class="pc-name" data-en="Plain" data-es="Plain">Plain</div>
-        <p class="pc-desc"
-          data-en="Simple, clean, and versatile. A tender, lightly sweet sponge — perfect as is or as the base for your occasion."
-          data-es="Simple, limpio y versátil. Un bizcocho tierno y ligeramente dulce — perfecto solo o como base para tu ocasión.">
-          Simple, clean, and versatile. A tender, lightly sweet sponge — perfect as is or as the base for your occasion.
-        </p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$9.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Plain','Square Cake')" data-en="Add to Cart" data-es="Agregar">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-      <div class="product-card reveal d2">
-        <div class="pc-tag" data-en="Square" data-es="Cuadrado">Square</div>
-        <div class="pc-name">Raisin</div>
-        <p class="pc-desc"
-          data-en="Plump, sweet raisins baked right into the sponge. A comforting, familiar flavor that brings people back every time."
-          data-es="Pasas jugosas y dulces horneadas en el bizcocho. Un sabor reconfortante y familiar que hace que la gente vuelva siempre.">
-          Plump, sweet raisins baked right into the sponge. A comforting, familiar flavor that brings people back every
-          time.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$9.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Raisin','Square Cake')" data-en="Add to Cart" data-es="Agregar">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-      <div class="product-card reveal d3">
-        <div class="pc-tag" data-en="Square" data-es="Cuadrado">Square</div>
-        <div class="pc-name">Maiz</div>
-        <p class="pc-desc"
-          data-en="Our corn cake — a uniquely Dominican staple with a subtly sweet, slightly hearty flavor that you won't find anywhere else."
-          data-es="Nuestro bizcocho de maíz — un básico dominicano con un sabor sutilmente dulce que no encontrarás en ningún otro lugar.">
-          Our corn cake — a uniquely Dominican staple with a subtly sweet, slightly hearty flavor.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"><span class="pc-badge" data-en="Dominican Classic"
-              data-es="Clásico Dominicano">Dominican Classic</span></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$9.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Maiz','Square Cake')" data-en="Add to Cart" data-es="Agregar">Add to Cart</button></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ══ PIEZAS ══ -->
-  <section class="menu-section" id="piezas">
-    <div class="section-header">
-      <div class="section-header-left">
-        <p class="sec-eyebrow" data-en="By the Slice" data-es="Por Pieza">By the Slice</p>
-        <h2><span data-en="Slices" data-es="Piezas">Slices</span></h2>
-      </div>
-      <span class="section-count reveal" data-en="11 options" data-es="11 opciones">11 options</span>
-    </div>
-    <div class="product-grid">
-      <div class="product-card reveal">
-        <div class="pc-tag" data-en="Slice" data-es="Pieza">Slice</div>
-        <div class="pc-name">Red Velvet</div>
-        <p class="pc-desc"
-          data-en="Vibrant red, velvety crumb with cream cheese undertones. A showstopper of a slice — rich color, smooth flavor."
-          data-es="Rojo vibrante, miga aterciopelada con notas de queso crema. Una pieza impresionante — color rico, sabor suave.">
-          Vibrant red, velvety crumb with cream cheese undertones. A showstopper every time.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Red Velvet','Slice')" data-en="Add to Cart" data-es="Agregar">Add to Cart</button></div>
-        </div>
-      </div>
-      <div class="product-card reveal d1">
-        <div class="pc-tag" data-en="Slice" data-es="Pieza">Slice</div>
-        <div class="pc-name">Carrot Cake</div>
-        <p class="pc-desc"
-          data-en="Warm spiced carrot batter with a moist, tender crumb and a sweet finish. Classic done right."
-          data-es="Masa de zanahoria especiada con una miga tierna y húmeda. Un clásico bien hecho.">Warm spiced carrot
-          batter with a moist, tender crumb and a sweet finish. Classic done right.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Carrot Cake','Slice')" data-en="Add to Cart" data-es="Agregar">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-      <div class="product-card reveal d2">
-        <div class="pc-tag" data-en="Slice" data-es="Pieza">Slice</div>
-        <div class="pc-name">Cheesecake</div>
-        <p class="pc-desc"
-          data-en="Rich, dense, and creamy on a buttery base. Smooth from edge to edge — perfectly balanced."
-          data-es="Rico, denso y cremoso sobre una base mantecosa. Suave de borde a borde — perfectamente equilibrado.">
-          Rich, dense, and creamy on a buttery base. Smooth from edge to edge — perfectly balanced.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Cheesecake','Slice')" data-en="Add to Cart" data-es="Agregar">Add to Cart</button></div>
-        </div>
-      </div>
-      <div class="product-card reveal d3">
-        <div class="pc-tag" data-en="Slice" data-es="Pieza">Slice</div>
-        <div class="pc-name">Pudin</div>
-        <p class="pc-desc"
-          data-en="Dominican bread pudding style by the slice — dense, sweet, and deeply satisfying. A classic in every bite."
-          data-es="Estilo pudín dominicano por pieza — denso, dulce y profundamente satisfactorio.">Dominican bread
-          pudding style by the slice — dense, sweet, and deeply satisfying.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Pudin (Slice)','Slice')" data-en="Add to Cart" data-es="Agregar">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-      <div class="product-card reveal d1">
-        <div class="pc-tag" data-en="Slice" data-es="Pieza">Slice</div>
-        <div class="pc-name">Piña</div>
-        <p class="pc-desc"
-          data-en="Bright tropical pineapple filling in a light sponge. Refreshing, classic, and always in demand."
-          data-es="Relleno de piña tropical brillante en un bizcocho ligero. Refrescante, clásico y siempre en demanda.">
-          Bright tropical pineapple filling in a light sponge. Refreshing, classic, and always in demand.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Piña (Slice)','Slice')" data-en="Add to Cart" data-es="Agregar">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-      <div class="product-card reveal d2">
-        <div class="pc-tag" data-en="Slice" data-es="Pieza">Slice</div>
-        <div class="pc-name">Guava</div>
-        <p class="pc-desc"
-          data-en="Sweet guava filling in a tender sponge. A Dominican essential — familiar, bold, and satisfying."
-          data-es="Relleno de guayaba dulce en un bizcocho tierno. Un esencial dominicano — familiar, atrevido y satisfactorio.">
-          Sweet guava filling in a tender sponge. A Dominican essential — familiar, bold, and satisfying.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Guava (Slice)','Slice')" data-en="Add to Cart" data-es="Agregar">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-      <div class="product-card reveal d3">
-        <div class="pc-tag" data-en="Whipping Cream · Slice" data-es="Crema · Pieza">Whipping Cream · Slice</div>
-        <div class="pc-name" data-en="Whipping Cream Piña" data-es="Crema Piña">Whipping Cream Piña</div>
-        <p class="pc-desc"
-          data-en="Soft cake with a silky pineapple cream layer. Smooth, tropical, and luxuriously creamy."
-          data-es="Bizcocho suave con una capa de crema de piña sedosa. Suave, tropical y lujosamente cremoso.">Soft
-          cake with a silky pineapple cream layer. Smooth, tropical, and luxuriously creamy.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Whipping Cream Piña','Whipping Cream Slice')" data-en="Add to Cart"
-              data-es="Agregar">Add to Cart</button></div>
-        </div>
-      </div>
-      <div class="product-card reveal d1">
-        <div class="pc-tag" data-en="Whipping Cream · Slice" data-es="Crema · Pieza">Whipping Cream · Slice</div>
-        <div class="pc-name" data-en="Whipping Cream Guava" data-es="Crema Guava">Whipping Cream Guava</div>
-        <p class="pc-desc" data-en="Lush guava cream filling over soft sponge — rich, sweet, and beautifully layered."
-          data-es="Relleno cremoso de guayaba sobre bizcocho suave — rico, dulce y hermosamente en capas.">Lush guava
-          cream filling over soft sponge — rich, sweet, and beautifully layered.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Whipping Cream Guava','Whipping Cream Slice')" data-en="Add to Cart"
-              data-es="Agregar">Add to Cart</button></div>
-        </div>
-      </div>
-      <div class="product-card reveal d2">
-        <div class="pc-tag" data-en="Whipping Cream · Slice" data-es="Crema · Pieza">Whipping Cream · Slice</div>
-        <div class="pc-name" data-en="Whipping Cream Dulce de Leche" data-es="Crema Dulce de Leche">Whipping Cream Dulce
-          de Leche</div>
-        <p class="pc-desc"
-          data-en="Silky caramel cream filling — smooth, deeply flavored, and impossible to resist at just one bite."
-          data-es="Relleno de crema de caramelo sedosa — suave, profundamente sabrosa e imposible de resistir.">Silky
-          caramel cream filling — smooth, deeply flavored, and impossible to resist at just one bite.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Whipping Cream Dulce de Leche','Whipping Cream Slice')" data-en="Add to Cart"
-              data-es="Agregar">Add to Cart</button></div>
-        </div>
-      </div>
-      <div class="product-card reveal d3">
-        <div class="pc-tag" data-en="Whipping Cream · Slice" data-es="Crema · Pieza">Whipping Cream · Slice</div>
-        <div class="pc-name" data-en="Whipping Cream Chocolate" data-es="Crema Chocolate">Whipping Cream Chocolate</div>
-        <p class="pc-desc"
-          data-en="Velvety chocolate cream filling layered into a soft sponge. For the chocolate lovers — this one hits different."
-          data-es="Relleno de crema de chocolate aterciopelado en un bizcocho suave. Para los amantes del chocolate — este golpea diferente.">
-          Velvety chocolate cream filling layered into a soft sponge. For the chocolate lovers — this one hits
-          different.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Whipping Cream Chocolate','Whipping Cream Slice')" data-en="Add to Cart"
-              data-es="Agregar">Add to Cart</button></div>
-        </div>
-      </div>
-      <div class="product-card featured reveal d1">
-        <div class="pc-tag" data-en="🆕 New · Slice" data-es="🆕 Nuevo · Pieza">🆕 New · Slice</div>
-        <div class="pc-name">Chocoflan</div>
-        <p class="pc-desc"
-          data-en="Two of our most beloved classics in one — our chocolate cake layered with silky smooth flan. Rich, creamy, and unlike anything else on the menu."
-          data-es="Dos de nuestros clásicos más amados en uno — nuestro bizcocho de chocolate en capas con flan suave y sedoso. Rico, cremoso y único en el menú.">
-          Two classics in one — our chocolate cake layered with silky smooth flan. Rich, creamy, and unlike anything
-          else on the menu.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"><span class="pc-badge" data-en="New" data-es="Nuevo">New</span></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Chocoflan','Slice · New')" data-en="Add to Cart" data-es="Agregar">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ══ BASOS ══ -->
-  <section class="menu-section" id="basos">
-    <div class="section-header">
-      <div class="section-header-left">
-        <p class="sec-eyebrow" data-en="Individual Cups" data-es="Vasos Individuales">Individual Cups</p>
-        <h2><span data-en="<em>Cups</em>" data-es="<em>Basos</em>"><em>Cups</em></span></h2>
-      </div>
-      <span class="section-count reveal" data-en="3 flavors" data-es="3 sabores">3 flavors</span>
-    </div>
-    <p class="reveal"
-      style="font-size:.92rem;font-weight:300;color:var(--tx-muted);line-height:1.7;max-width:520px;margin-bottom:32px"
-      data-en="All the flavor of our signature cakes in individual cups. Perfect for events, offices, or just yourself. Easy to carry, impossible to share."
-      data-es="Todo el sabor de nuestros bizcochos en vasos individuales. Perfecto para eventos, oficinas, o solo para ti. Fácil de llevar, imposible de compartir.">
-      All the flavor of our signature cakes in individual cups. Perfect for events, offices, or just yourself. Easy to
-      carry, impossible to share.
-    </p>
-    <div class="product-grid">
-      <div class="product-card featured reveal">
-        <div class="pc-tag" data-en="Cup · Signature" data-es="Baso · Firma">Cup · Signature</div>
-        <div class="pc-name">Tres Leche</div>
-        <p class="pc-desc"
-          data-en="All the richness of our signature tres leches in a portable, individual cup. Layered beautifully, creamy all the way through."
-          data-es="Toda la riqueza de nuestro tres leches en un vaso portátil e individual. Hermosamente en capas, cremoso de principio a fin.">
-          All the richness of our signature tres leches in a portable, individual cup. Layered, creamy, perfect.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"><span class="pc-badge" data-en="Most Popular" data-es="El Más Popular">Most
-              Popular</span></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Tres Leche (Cup)','Cup')" data-en="Add to Cart" data-es="Agregar">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-      <div class="product-card reveal d1">
-        <div class="pc-tag" data-en="Cup · Premium" data-es="Baso · Premium">Cup · Premium</div>
-        <div class="pc-name">Cuatro Leche</div>
-        <p class="pc-desc"
-          data-en="Four milks of pure indulgence in a cup. Richer and creamier than the classic — for when you want the full experience."
-          data-es="Cuatro leches de pura indulgencia en un vaso. Más rico y cremoso que el clásico — para cuando quieres la experiencia completa.">
-          Four milks of pure indulgence in a cup. Richer and creamier than the classic.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Cuatro Leche (Cup)','Cup · Premium')" data-en="Add to Cart" data-es="Agregar">Add to
-              Cart</button></div>
-        </div>
-      </div>
-      <div class="product-card reveal d2">
-        <div class="pc-tag" data-en="Cup · Chocolate" data-es="Baso · Chocolate">Cup · Chocolate</div>
-        <div class="pc-name">Hershey</div>
-        <p class="pc-desc"
-          data-en="Our tres leche base with a Hershey chocolate layer on top. Layered, luscious, and incredibly satisfying in every spoonful."
-          data-es="Nuestra base de tres leche con una capa de chocolate Hershey encima. En capas, delicioso y muy satisfactorio en cada cucharada.">
-          Our tres leche base with a Hershey chocolate layer on top. Layered and luscious in every spoonful.</p>
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row"><span class="pc-price">$4.99</span><button class="pc-order atc-trigger"
-              onclick="openATC('Hershey (Cup)','Cup')" data-en="Add to Cart" data-es="Agregar">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+  <!-- Static sections removed: dynamically rendered by renderMenu() -->
 
   <!-- CUSTOM CAKE BANNER -->
   <div class="custom-banner">
@@ -4187,6 +3705,10 @@
       if (drawerTitle) drawerTitle.innerHTML = cartI18n[l].drawerTitle;
       if (document.getElementById('cart-drawer')?.classList.contains('open')) renderCartDrawer();
       if (document.getElementById('atc-overlay')?.classList.contains('open')) updateATCBtn();
+      // Re-render dynamic card text in the new language
+      if (typeof renderMenu === 'function' && window.__menuLastData) {
+        renderMenuSections(groupProductsByCategory(window.__menuLastData), l);
+      }
     }
 
     /* ══ NAV SCROLL ══ */
@@ -4199,15 +3721,14 @@
     }, { threshold: .08 });
     document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
-    /* ══ STICKY CATEGORY NAV — highlight active section ══ */
-    const sections = ['tres-leches', 'birthday', 'square', 'piezas', 'basos'];
-    const catLinks = document.querySelectorAll('.cat-nav-link');
+    /* ══ STICKY CATEGORY NAV — highlight active section (dynamic) ══ */
     const catNavEl = document.getElementById('cat-nav');
 
     const sectionObserver = new IntersectionObserver(entries => {
       entries.forEach(e => {
         if (e.isIntersecting) {
           const id = e.target.id;
+          const catLinks = document.querySelectorAll('.cat-nav-link');
 
           // Update nav links
           catLinks.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + id));
@@ -4215,7 +3736,6 @@
           // Scroll active link into view in the cat-nav
           const activeLink = document.querySelector(`.cat-nav-link[href="#${id}"]`);
           if (activeLink && catNavEl) {
-            const navLeft = catNavEl.scrollLeft;
             const navWidth = catNavEl.clientWidth;
             const linkLeft = activeLink.offsetLeft;
             const linkWidth = activeLink.offsetWidth;
@@ -4223,7 +3743,7 @@
             catNavEl.scrollTo({ left: linkCenter - navWidth / 2, behavior: 'smooth' });
           }
 
-          // Update dots — scroll within dots container only, never scroll the page
+          // Update dots
           const dots = document.querySelectorAll('.cat-dot');
           dots.forEach(dot => {
             dot.classList.toggle('active', dot.getAttribute('data-section') === id);
@@ -4240,10 +3760,10 @@
       });
     }, { rootMargin: '-40% 0px -55% 0px' });
 
-    sections.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) sectionObserver.observe(el);
-    });
+    /* observeMenuSections — called after each render to wire up the scroll spy */
+    function observeMenuSections() {
+      document.querySelectorAll('.menu-section').forEach(el => sectionObserver.observe(el));
+    }
 
     /* ── CAT NAV HEIGHT ── */
     function setNavHeight() {
@@ -5716,6 +5236,259 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
     }
 
     /* ── Load products from Supabase (runtime override) ── */
+
+    /* ══════════════════════════════════════════════════════════════
+       DYNAMIC MENU RENDERING ENGINE
+       ══════════════════════════════════════════════════════════════ */
+
+    /* ── Slugify a category name into a stable DOM id ── */
+    function slugify(str) {
+      return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    }
+
+    /* ── Show skeleton placeholder while Supabase loads ── */
+    function showMenuSkeleton() {
+      const body = document.getElementById('menu-body');
+      if (!body) return;
+      body.innerHTML = `
+        <div class="menu-skeleton-wrap">
+          ${Array.from({ length: 3 }, (_, si) => `
+            <div class="skel-section-header"></div>
+            <div class="product-grid">
+              ${Array.from({ length: 4 }, () => `
+                <div class="product-card skel-card">
+                  <div class="skel-img"></div>
+                  <div class="skel-tag"></div>
+                  <div class="skel-title"></div>
+                  <div class="skel-desc"></div>
+                  <div class="skel-btn"></div>
+                </div>`).join('')}
+            </div>`).join('')}
+        </div>`;
+    }
+
+    /* ── Group flat products array into category groups ── */
+    function groupProductsByCategory(products) {
+      const groups = {};
+      const order = [];
+      products.forEach(p => {
+        if (!groups[p.tag_en]) {
+          groups[p.tag_en] = {
+            tag_en: p.tag_en,
+            tag_es: p.tag_es,
+            icon_name: p.icon_name || 'cake',
+            products: []
+          };
+          order.push(p.tag_en);
+        }
+        groups[p.tag_en].products.push(p);
+      });
+      return order.map(k => groups[k]);
+    }
+
+    /* ── Render category nav tabs ── */
+    function renderCatNav(groups) {
+      const nav = document.getElementById('cat-nav');
+      const dotsEl = document.getElementById('cat-nav-dots');
+      if (!nav) return;
+
+      // Build link HTML (insert before the last child — the "Custom Cake →" button)
+      const orderBtn = nav.querySelector('.cat-nav-order');
+      // Remove old dynamic links (keep order button)
+      nav.querySelectorAll('.cat-nav-link, .cat-nav-divider').forEach(el => el.remove());
+
+      const links = [], dots = [];
+      let first = true;
+      groups.forEach(g => {
+        const id = slugify(g.tag_en);
+        const icon  = g.icon_name || 'cake';
+        const labelEn = g.tag_en;
+        const labelEs = g.tag_es;
+
+        if (!first) {
+          const div = document.createElement('span');
+          div.className = 'cat-nav-divider';
+          div.textContent = '·';
+          nav.insertBefore(div, orderBtn);
+        }
+        first = false;
+
+        const a = document.createElement('a');
+        a.href = `#${id}`;
+        a.className = 'cat-nav-link' + (links.length === 0 ? ' active' : '');
+        a.dataset.en = `<i data-lucide="${icon}" class="icon"></i> ${labelEn}`;
+        a.dataset.es = `<i data-lucide="${icon}" class="icon"></i> ${labelEs}`;
+        a.innerHTML = `<i data-lucide="${icon}" class="icon"></i> ${lang === 'es' ? labelEs : labelEn}`;
+        nav.insertBefore(a, orderBtn);
+        links.push(a);
+
+        // Dot
+        if (dotsEl) {
+          const dot = document.createElement('span');
+          dot.className = 'cat-dot' + (dots.length === 0 ? ' active' : '');
+          dot.dataset.section = id;
+          dots.push(dot);
+        }
+      });
+
+      // Rebuild dots container
+      if (dotsEl) {
+        dotsEl.innerHTML = '';
+        dots.forEach(d => dotsEl.appendChild(d));
+      }
+
+      if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [nav] });
+    }
+
+    /* ── Build a single product card element ── */
+    function renderProductCard(p, currentLang) {
+      const nameEn = p.name_en;
+      const nameEs = p.name_es || p.name_en;
+      const displayName = currentLang === 'es' ? nameEs : nameEn;
+
+      // Price display
+      let priceHTML = '';
+      if (p.prices && Object.keys(p.prices).length) {
+        const vals = Object.values(p.prices).map(v => parseFloat(String(v).replace('$', '')));
+        priceHTML = `From $${Math.min(...vals).toFixed(2)}`;
+      } else if (p.price) {
+        priceHTML = `$${parseFloat(p.price).toFixed(2)}`;
+      }
+
+      // Description
+      const description = currentLang === 'es'
+        ? (p.description_es || p.description_en || '')
+        : (p.description_en || '');
+
+      // Image
+      const img = (p.images && p.images.length)
+        ? `<div class="pc-image-wrap"><img class="pc-image" src="${p.images[0]}" alt="${nameEn}" loading="lazy"></div>`
+        : '';
+
+      // Tag label
+      const tagEn = p.tag_en || '';
+      const tagEs = p.tag_es || tagEn;
+      const icon  = p.icon_name || 'cake';
+      const tagDisplay = currentLang === 'es' ? tagEs : tagEn;
+
+      // Sold out state
+      const isSoldOut = !!p.sold_out;
+      const btnText = isSoldOut
+        ? (currentLang === 'es' ? 'Agotado' : 'Sold Out')
+        : (currentLang === 'es' ? 'Agregar' : 'Add to Cart');
+      const btnDisabled = isSoldOut ? 'disabled' : '';
+      const btnStyle = isSoldOut ? 'style="opacity:.5;cursor:not-allowed"' : '';
+
+      const div = document.createElement('div');
+      div.className = 'product-card reveal';
+      div.dataset.productKey = nameEn;
+      div.innerHTML = `
+        ${img}
+        <div class="pc-tag" data-en="<i data-lucide='${icon}' class='icon'></i> ${tagEn}" data-es="<i data-lucide='${icon}' class='icon'></i> ${tagEs}">
+          <i data-lucide="${icon}" class="icon"></i> ${tagDisplay}
+        </div>
+        <p class="pc-name" data-en="${nameEn}" data-es="${nameEs}">${displayName}</p>
+        ${description ? `<p class="pc-desc" data-en="${p.description_en || ''}" data-es="${p.description_es || ''}">${description}</p>` : ''}
+        <div class="pc-footer">
+          <div class="pc-footer-badge-row"></div>
+          <div class="pc-footer-action-row">
+            <span class="pc-price">${priceHTML}</span>
+            <button class="pc-order atc-trigger" onclick="openATC('${nameEn}','${tagEn}')"
+              data-en="${isSoldOut ? 'Sold Out' : 'Add to Cart'}"
+              data-es="${isSoldOut ? 'Agotado' : 'Agregar'}"
+              ${btnDisabled} ${btnStyle}>${btnText}</button>
+          </div>
+        </div>
+        ${isSoldOut ? `<div class="sold-out-ribbon">${currentLang === 'es' ? 'AGOTADO' : 'SOLD OUT'}</div>` : ''}
+      `;
+      return div;
+    }
+
+    /* ── Render product sections into #menu-body (or just refresh cards) ── */
+    function renderMenuSections(groups, currentLang) {
+      const body = document.getElementById('menu-body');
+      if (!body) return;
+      body.innerHTML = '';
+
+      groups.forEach(g => {
+        const id = slugify(g.tag_en);
+        const icon = g.icon_name || 'cake';
+        const countLabel = `${g.products.length} ${g.products.length === 1 ? 'flavor' : 'flavors'}`;
+        const countLabelEs = `${g.products.length} ${g.products.length === 1 ? 'sabor' : 'sabores'}`;
+
+        const section = document.createElement('section');
+        section.className = 'menu-section';
+        section.id = id;
+
+        section.innerHTML = `
+          <div class="section-header">
+            <div class="section-header-left">
+              <p class="sec-eyebrow" data-en="Cecilia's Bakery" data-es="Panadería Cecilia">Cecilia's Bakery</p>
+              <h2><span data-en="${g.tag_en}" data-es="${g.tag_es}">${currentLang === 'es' ? g.tag_es : g.tag_en}</span></h2>
+            </div>
+            <span class="section-count reveal" data-en="${countLabel}" data-es="${countLabelEs}">
+              ${currentLang === 'es' ? countLabelEs : countLabel}
+            </span>
+          </div>
+          <div class="product-grid"></div>
+        `;
+
+        const grid = section.querySelector('.product-grid');
+        g.products.forEach(p => {
+          const card = renderProductCard(p, currentLang);
+          // update PRODUCTS in-memory store
+          PRODUCTS[p.name_en] = {
+            en: { name: p.name_en, tag: p.tag_en },
+            es: { name: p.name_es || p.name_en, tag: p.tag_es || p.tag_en },
+            price: p.price ? String(p.price) : null,
+            prices: p.prices || null,
+            sold_out: p.sold_out || false,
+            images: p.images || [],
+            sizes: p.prices ? Object.keys(p.prices).filter(k => p.prices[k]) : [],
+            sizesEs: p.prices ? Object.keys(p.prices).filter(k => p.prices[k]) : [],
+          };
+          grid.appendChild(card);
+        });
+        body.appendChild(section);
+      });
+
+      // Re-run reveal observer on new cards
+      if (typeof io !== 'undefined') {
+        document.querySelectorAll('.reveal:not(.visible)').forEach(el => io.observe(el));
+      }
+      if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [body] });
+    }
+
+    /* ── Master render orchestrator ── */
+    function renderMenu() {
+      const products = window.__menuLastData;
+      if (!products || !products.length) {
+        // Fallback: convert PRODUCTS dict to flat array for rendering
+        const fallback = Object.entries(PRODUCTS).map(([nameEn, p]) => ({
+          name_en: nameEn,
+          name_es: p.es?.name || nameEn,
+          tag_en:  p.en?.tag || 'Other',
+          tag_es:  p.es?.tag || 'Otro',
+          icon_name: 'cake',
+          price: p.price || null,
+          prices: p.prices || null,
+          sold_out: p.sold_out || false,
+          images: p.images || [],
+        }));
+        const groups = groupProductsByCategory(fallback);
+        renderCatNav(groups);
+        renderMenuSections(groups, lang);
+      } else {
+        const groups = groupProductsByCategory(products);
+        renderCatNav(groups);
+        renderMenuSections(groups, lang);
+      }
+      // Wire up scroll spy for newly created sections
+      if (typeof observeMenuSections === 'function') observeMenuSections();
+      // Update nav indicators scroll state
+      if (typeof updateCatNavIndicators === 'function') updateCatNavIndicators();
+    }
+
     async function loadProductsFromSupabase() {
       try {
         const sb = window.__supabase;
@@ -5729,22 +5502,10 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         if (!data || data.length === 0) { console.warn('Supabase products: empty result, using hardcoded fallback'); return; }
         console.log('Supabase products loaded:', data.length, data);
 
-        // Rebuild PRODUCTS object from Supabase rows
-        PRODUCTS = {};
-        data.forEach(p => {
-          PRODUCTS[p.name_en] = {
-            en: { name: p.name_en, tag: p.tag_en },
-            es: { name: p.name_es, tag: p.tag_es },
-            price: p.price ? String(p.price) : null,
-            prices: p.prices || null,
-            sold_out: p.sold_out || false,
-            images: p.images || [],
-            sizes: p.prices ? Object.keys(p.prices).filter(k => p.prices[k]) : [],
-            sizesEs: p.prices ? Object.keys(p.prices).filter(k => p.prices[k]) : [],
-          };
-        });
+        // Store raw data for the render engine
+        window.__menuLastData = data;
 
-        // Rebuild PRODUCT_PHOTOS from images arrays
+        // Also rebuild PHOTOS override for ATC modal / gallery
         window.__PRODUCT_PHOTOS_OVERRIDE = {};
         data.forEach(p => {
           if (p.images && p.images.length > 0) {
@@ -5765,12 +5526,12 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         const savedLang = localStorage.getItem('lang') || 'en';
         setLang(savedLang);
       } catch (e) { }
-      // Load live products from Supabase (silent fallback to hardcoded if unavailable)
+      // Show skeleton loader while Supabase data is being fetched
+      showMenuSkeleton();
+      // Load live products from Supabase, then render dynamically
       await loadProductsFromSupabase();
-      tagProductCards();      // stamp data-product-key on every static card
-      applyHiddenProducts();
-      applySOldOutState();
-      initProductsRealtime(); // open realtime channel after initial load
+      renderMenu();
+      initProductsRealtime(); // open realtime channel after initial render
     });
 
     /* ── Stamp data-product-key on every static card ── */
@@ -5802,7 +5563,16 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       if (!sectionEl) return;
       const cards = sectionEl.querySelectorAll('.product-card');
       const allGone = cards.length === 0 || [...cards].every(c => c.style.display === 'none');
-      if (allGone) sectionEl.style.display = 'none';
+      if (allGone) {
+        sectionEl.style.display = 'none';
+        const sectionId = sectionEl.id;
+        if (sectionId) {
+          const navTab = document.querySelector(`.cat-nav-link[href="#${sectionId}"]`);
+          if (navTab) navTab.style.display = 'none';
+          const dot = document.querySelector(`.cat-dot[data-section="${sectionId}"]`);
+          if (dot) dot.style.display = 'none';
+        }
+      }
     }
 
     /* ── Handle a single realtime product change ── */
@@ -5816,17 +5586,39 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
           const card = findCard(key);
           if (card) {
             const section = card.closest('.menu-section');
-            card.style.display = 'none';
-            cleanupSection(section);
+            card.remove();
+            if (section) {
+              const remaining = section.querySelectorAll('.product-card');
+              if (remaining.length === 0) {
+                const sectionId = section.id;
+                section.remove();
+                // Remove matching nav tab and divider
+                const navTab = document.querySelector(`.cat-nav-link[href="#${sectionId}"]`);
+                if (navTab) {
+                  const prev = navTab.previousElementSibling;
+                  const next = navTab.nextElementSibling;
+                  navTab.remove();
+                  if (prev?.classList.contains('cat-nav-divider')) prev.remove();
+                  else if (next?.classList.contains('cat-nav-divider')) next.remove();
+                }
+                // Remove matching dot
+                const dot = document.querySelector(`.cat-dot[data-section="${sectionId}"]`);
+                if (dot) dot.remove();
+              }
+            }
           }
           delete PRODUCTS[key];
+          // Sync __menuLastData
+          if (window.__menuLastData) {
+            window.__menuLastData = window.__menuLastData.filter(p => p.name_en !== key);
+          }
           return;
         }
 
-        // ── INSERT ──
+        // ── INSERT ── full re-render with new product included
         if (eventType === 'INSERT') {
-          // Can't inject into static HTML, but update the PRODUCTS dict
           await loadProductsFromSupabase();
+          renderMenu();
           return;
         }
 
@@ -5862,14 +5654,15 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
                 if (sectionId) {
                   const navTab = document.querySelector(`.cat-nav-link[href="#${sectionId}"]`);
                   if (navTab) navTab.style.display = '';
+                  const dot = document.querySelector(`.cat-dot[data-section="${sectionId}"]`);
+                  if (dot) dot.style.display = '';
                 }
               }
               flashCard(existingCard);
             } else {
               // Card completely absent — was hidden before initial render
               await loadProductsFromSupabase();
-              applyHiddenProducts();
-              applySOldOutState();
+              renderMenu();
               setTimeout(() => {
                 const newCard = findCard(n.name_en);
                 if (newCard) flashCard(newCard);
@@ -5935,12 +5728,11 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
             return;
           }
 
-          // name or images changed → full reload
+          // name or images changed → full re-render
           if ((o?.name_en && o.name_en !== n.name_en) ||
               JSON.stringify(o?.images) !== JSON.stringify(n.images)) {
             await loadProductsFromSupabase();
-            applyHiddenProducts();
-            applySOldOutState();
+            renderMenu();
           }
         }
       } catch (err) {

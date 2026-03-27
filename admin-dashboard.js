@@ -2818,7 +2818,7 @@ function _pmModalHTML() {
           <div class="pm-form-field full">
             <label class="pm-form-label">Category Icon</label>
             <div class="pm-icon-grid" id="pm-icon-grid">
-              ${['star','cake','square','cake-slice','cup-soda','layers','cookie','gift','heart','sparkles','flame','leaf','droplets','zap','package','tag','box','shopping-bag']
+              ${['cake','cake-slice','star','cup-soda','layers','cookie','wheat','coffee','gift','heart','sparkles','flame','leaf','droplets','zap','chef-hat','utensils','egg','apple','banana','ice-cream','candy','croissant','sandwich']
                 .map(ic => `<button type="button" class="pm-icon-opt" data-icon="${ic}" onclick="window._pmSelectIcon('${ic}')">
                   <i data-lucide="${ic}"></i>
                   <span class="pm-icon-lbl">${ic}</span>
@@ -2997,7 +2997,7 @@ function _pmOpenModal(product) {
   document.getElementById('pm-f-price').value      = product?.price           || '';
   document.getElementById('pm-url-input').value    = '';
   // Set icon picker selection
-  window._pmSelectIcon(product?.icon_name || 'package');
+  window._pmSelectIcon(product?.icon_name || 'cake');
 
   if (_pmPriceMode === 'sized' && product && product.prices) {
     document.getElementById('pm-f-sm').value = product.prices.Small  ? product.prices.Small.replace('$','')  : '';
