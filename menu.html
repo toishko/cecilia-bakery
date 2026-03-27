@@ -2014,6 +2014,9 @@
       opacity: 0;
       pointer-events: none;
       transition: opacity .3s;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: none;
+      touch-action: none;
     }
 
     .cart-overlay.open {
@@ -2034,6 +2037,7 @@
       transform: translateX(100%);
       transition: transform .35s cubic-bezier(.4, 0, .2, 1);
       box-shadow: -8px 0 48px rgba(0, 0, 0, .35);
+      overscroll-behavior: contain;
     }
 
     [data-theme="dark"] .cart-drawer {
@@ -5020,9 +5024,16 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         slots.map(s => `<option value="${s.value}">${s.label}</option>`).join('');
     }
 
+    let _cartScrollY = 0;
     function openCart() {
       document.getElementById('cart-overlay').classList.add('open');
       document.getElementById('cart-drawer').classList.add('open');
+      // iOS-safe scroll lock: position:fixed + save scroll
+      _cartScrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${_cartScrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
       document.body.style.overflow = 'hidden';
 
       const today = new Date().toISOString().split('T')[0];
@@ -5042,7 +5053,13 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
     function closeCart() {
       document.getElementById('cart-overlay').classList.remove('open');
       document.getElementById('cart-drawer').classList.remove('open');
+      // Restore scroll position
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
       document.body.style.overflow = '';
+      window.scrollTo(0, _cartScrollY);
     }
 
     function renderCartDrawer() {
