@@ -405,12 +405,6 @@ async function silentRefreshOrders() {
       const msgEn = `New order from ${driverName}` + (items ? ` (${items} items)` : '');
       const msgEs = `Nuevo pedido de ${driverName}` + (items ? ` (${items} artículos)` : '');
       showToast(lang === 'es' ? msgEs : msgEn, 'info');
-
-      showBrowserNotification(
-        lang === 'es' ? 'Nuevo Pedido' : 'New Order',
-        lang === 'es' ? msgEs : msgEn,
-        'incoming'
-      );
     });
 
     // Re-render current view
@@ -440,15 +434,8 @@ function handleNewOrder(order) {
   const msgEs = `Nuevo pedido de ${driverName}` + (items ? ` (${items} artículos)` : '');
   showToast(lang === 'es' ? msgEs : msgEn, 'info');
 
-  // Browser notification (skip if app is in background — push notification handles that)
-  if (document.visibilityState === 'visible') {
-    showBrowserNotification(
-      lang === 'es' ? 'Nuevo Pedido' : 'New Order',
-      lang === 'es' ? msgEs : msgEn,
-      'incoming',
-      order.id
-    );
-  }
+  // NOTE: Browser push notification is handled by the Edge Function (triggerPushNotification)
+  // No need to also call showBrowserNotification here — that causes duplicates
 
   // Update badge
   updateIncomingBadge();
