@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
   <meta charset="UTF-8" />
@@ -7,7 +7,8 @@
   <title>Refund Policy — Cecilia Bakery</title>
   <meta name="description" content="Refund policy for Cecilia Bakery. Learn about eligible refunds, how to request one, and processing times." />
   <link rel="manifest" href="/manifest-website.json">
-  <meta name="theme-color" content="#FAFAF8">
+  <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E0507" media="(prefers-color-scheme: dark)">
 
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -65,6 +66,31 @@
       --green: #1B7A4A;
     }
 
+    [data-theme="dark"] {
+      --bg: #0E0507;
+      --bg-surface: #1F0D14;
+      --bg-card: #1E0D12;
+      --bg-card-hover: #26101A;
+      --bg-input: #1E0D12;
+      --bg-nav: rgba(10, 3, 5, .80);
+      --bg-overlay: rgba(0, 0, 0, .70);
+      --bg-footer: #080305;
+
+      --tx: #F2E8E4;
+      --tx-muted: #BFA0A8;
+      --tx-faint: #7A5560;
+
+      --bd: rgba(200, 16, 46, .35);
+      --bd-hover: rgba(200, 16, 46, .65);
+      --bd-input: rgba(200, 16, 46, .40);
+
+      --shadow-card: 0 4px 22px rgba(0, 0, 0, .40);
+      --shadow-nav: 0 1px 0 rgba(200, 16, 46, .12);
+
+      --lang-border: rgba(200, 16, 46, .25);
+      --lang-text: #BFA0A8;
+    }
+
     /* ── Reset ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-padding-top: 100px; }
@@ -95,6 +121,11 @@
       background:
         radial-gradient(ellipse 55% 35% at 20% 30%, rgba(200,16,46,.07) 0%, transparent 55%),
         radial-gradient(ellipse 40% 40% at 78% 68%, rgba(200,16,46,.05) 0%, transparent 50%);
+    }
+    [data-theme="dark"] .bg-blob {
+      background:
+        radial-gradient(ellipse 55% 35% at 20% 30%, rgba(200,16,46,.10) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 40% at 78% 68%, rgba(200,16,46,.07) 0%, transparent 50%);
     }
     @keyframes blobDrift {
       from { transform: translate(0,0) scale(1); }
@@ -138,8 +169,9 @@
       letter-spacing: .02em;
     }
     .nav-logo-text span { color: var(--blue); font-style: italic; }
+    [data-theme="dark"] .nav-logo-text span { color: #A6CEFF; }
 
-    .nav-right-group { display: flex; align-items: center; gap: 0; }
+    .nav-right-group { display: flex; align-items: center; gap: 14px; }
     .nav-back {
       font-size: .78rem; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
       color: var(--tx-muted); text-decoration: none;
@@ -297,6 +329,10 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
         Back to Menu
       </a>
+      <button class="theme-btn" onclick="toggleTheme()" aria-label="Toggle theme" style="border:none;background:transparent;cursor:pointer;color:var(--lang-text);display:inline-flex;align-items:center;justify-content:center;padding:4px;transition:color .2s;">
+        <svg id="theme-icon-sun" class="hidden" style="display:none" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg id="theme-icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
     </div>
   </nav>
 
@@ -410,8 +446,34 @@
 
   <!-- ═══ SCRIPTS ═══ -->
   <script>
-    window.addEventListener('scroll', () => {
-      const nav = document.getElementById('main-nav');
+    /* ════════════════════════════════════════
+       THEME TOGGLE — copied from menu.html
+       ════════════════════════════════════════ */
+    const THEME_KEY = 'cb-theme';
+
+    function applyTheme(t) {
+      document.documentElement.setAttribute('data-theme', t);
+      var sun = document.getElementById('theme-icon-sun');
+      var moon = document.getElementById('theme-icon-moon');
+      if (sun) { sun.style.display = t === 'dark' ? 'inline-block' : 'none'; }
+      if (moon) { moon.style.display = t === 'dark' ? 'none' : 'inline-block'; }
+      try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+    }
+
+    function toggleTheme() {
+      var current = document.documentElement.getAttribute('data-theme') || 'light';
+      applyTheme(current === 'light' ? 'dark' : 'light');
+    }
+
+    // Theme initialization IIFE
+    (function () {
+      var saved;
+      try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
+      applyTheme(saved || 'light');
+    })();
+
+    window.addEventListener('scroll', function () {
+      var nav = document.getElementById('main-nav');
       if (nav) nav.classList.toggle('scrolled', window.scrollY > 20);
     });
   </script>
