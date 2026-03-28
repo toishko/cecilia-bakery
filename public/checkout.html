@@ -698,6 +698,7 @@
 
   <!-- ═══ SCRIPTS ═══ -->
   <script>
+    const N8N_WEBHOOK_URL = 'https://toisko.com/webhook/3c47e3d7-1bbf-45b1-a02f-5e2e2a3f9756';
 
     /* ════════════════════════════════════════
        SCROLL EFFECT ON NAV
@@ -875,42 +876,137 @@
     }
 
     /* ════════════════════════════════════════
-       PLACE ORDER — Placeholder (Part 2 pending)
+       PLACE ORDER
        ════════════════════════════════════════ */
     async function placeOrder() {
-      console.log('Place order clicked');
-
       const name = (document.getElementById('checkout-name')?.value || '').trim();
       const phone = (document.getElementById('checkout-phone')?.value || '').trim();
       const errorEl = document.getElementById('payment-error');
+      const btn = document.getElementById('place-order-btn');
 
-      // Basic validation
+      // Clear previous errors
+      if (errorEl) errorEl.textContent = '';
+
+      // Validate required fields
       if (!name) {
         if (errorEl) errorEl.textContent = 'Please enter your name.';
+        document.getElementById('checkout-name')?.focus();
         return;
       }
       if (!phone) {
         if (errorEl) errorEl.textContent = 'Please enter your phone number.';
+        document.getElementById('checkout-phone')?.focus();
         return;
       }
-      if (errorEl) errorEl.textContent = '';
+      if (!cloverTokenizer) {
+        if (errorEl) errorEl.textContent = 'Payment form not ready. Please refresh and try again.';
+        return;
+      }
 
-      // TODO: Part 2 — tokenize with Clover, send to n8n webhook, handle response
-      console.log('Order data:', {
-        name,
-        phone,
-        pickupDate: document.getElementById('checkout-pickup-date')?.value || '',
-        pickupTime: document.getElementById('checkout-pickup-time')?.value || '',
-        note: document.getElementById('checkout-note')?.value || '',
-        cart,
-        total: cartTotal,
-      });
+      // Show processing state
+      showState('processing');
+      if (btn) btn.disabled = true;
 
-      // For now just show processing state
-      // showState('processing');
-      // document.getElementById('place-order-btn').disabled = true;
+      try {
+        // Step 1 — Tokenize card with Clover
+        const { token, errors } = await cloverTokenizer.createToken();
 
-      alert('Place Order clicked! Part 2 handler not yet implemented.');
+        // Check for card errors
+        if (errors) {
+          const cardErrors = Object.values(errors).filter(Boolean);
+          if (cardErrors.length > 0) {
+            showState('checkout');
+            if (btn) btn.disabled = false;
+            if (errorEl) errorEl.textContent = cardErrors[0] || 'Please check your card details.';
+            return;
+          }
+        }
+
+        if (!token || !token.id) {
+          showState('checkout');
+          if (btn) btn.disabled = false;
+          if (errorEl) errorEl.textContent = 'Could not process your card. Please try again.';
+          return;
+        }
+
+        // Step 2 — Build order payload
+        const user = window.Clerk?.user;
+        const pickupDate = document.getElementById('checkout-pickup-date')?.value || null;
+        const pickupTime = document.getElementById('checkout-pickup-time')?.value || null;
+        const note = document.getElementById('checkout-note')?.value?.trim() || null;
+
+        const orderPayload = {
+          customer_name: name,
+          customer_phone: phone,
+          customer_email: user?.primaryEmailAddress?.emailAddress || null,
+          clerk_user_id: user?.id || null,
+          items: cart.map(item => ({
+            name: item.nameEn || item.name || item.key || 'Item',
+            qty: item.qty || 1,
+            size: item.size || null,
+            price: parseFloat(item.price || 0),
+            tag: item.tagEn || item.tag || '',
+          })),
+          total_amount: cartTotal,
+          amount_cents: Math.round(cartTotal * 100),
+          pickup_date: pickupDate,
+          pickup_time: pickupTime,
+          order_note: note,
+          clover_token: token.id,
+          source: 'website',
+          timestamp: new Date().toISOString(),
+        };
+
+        // Step 3 — Send to n8n webhook
+        const response = await fetch(N8N_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderPayload),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        // Step 4 — Handle response
+        if (result.success) {
+          // Save order info for confirmation page
+          sessionStorage.setItem('cecilia_last_order_id', result.order_id || '');
+          sessionStorage.setItem('cecilia_last_order', JSON.stringify({
+            ...orderPayload,
+            order_id: result.order_id,
+          }));
+
+          // Clear cart
+          localStorage.removeItem('cecilia_cart');
+          sessionStorage.removeItem('cecilia_cart');
+
+          // Redirect to confirmation (fallback to menu with success param)
+          const orderId = result.order_id || '';
+          window.location.href = `/order-confirmation.html?id=${orderId}`;
+
+        } else {
+          showState('checkout');
+          if (btn) btn.disabled = false;
+          if (errorEl) {
+            errorEl.textContent = result.message || 'Payment failed. Please try again.';
+          }
+        }
+
+      } catch (err) {
+        console.error('Order error:', err);
+        showState('checkout');
+        if (btn) btn.disabled = false;
+        if (errorEl) {
+          if (err.message?.includes('fetch') || err.message?.includes('network')) {
+            errorEl.textContent = 'Connection error. Please check your internet and try again.';
+          } else {
+            errorEl.textContent = 'Something went wrong. Please try again.';
+          }
+        }
+      }
     }
 
     /* ════════════════════════════════════════
