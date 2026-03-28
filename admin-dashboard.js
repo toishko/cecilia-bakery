@@ -2656,6 +2656,12 @@ function _pmInjectStyles() {
 .pm-badge-live{background:rgba(27,122,74,.1);color:var(--green)}
 .pm-badge-soldout{background:rgba(200,155,42,.1);color:var(--yellow)}
 .pm-badge-hidden{background:rgba(220,38,38,.1);color:#dc2626}
+.pm-grip{cursor:grab;padding:0 10px;display:flex;align-items:center;flex-shrink:0;opacity:.4;transition:opacity .2s}
+.pm-grip:hover{opacity:1}
+.pm-grip:active{cursor:grabbing}
+.pm-dragging{opacity:.4;transform:scale(.98);box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:10;position:relative}
+.pm-drag-over{border:2px dashed var(--red,#C8102E)!important;background:rgba(200,16,46,.04);transform:translateY(2px)}
+.pm-card{transition:background .15s,transform .15s,opacity .15s,box-shadow .15s}
 /* Modal */
 .pm-overlay{position:fixed;inset:0;background:var(--bg-overlay);z-index:400;
   display:none;align-items:flex-end;justify-content:center;overscroll-behavior:none}
@@ -3266,7 +3272,17 @@ function _pmRenderList(list, isSearch) {
     else                 { badgeClass = 'pm-badge-live';    badgeLabel = 'LIVE';     }
 
     return `
-    <div class="pm-card">
+    <div class="pm-card" draggable="true" data-product-id="${p.id}" data-sort-order="${p.sort_order ?? 0}">
+      <div class="pm-grip" title="Drag to reorder">
+        <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
+          <circle cx="2" cy="2" r="1.5" fill="#C8A0A8"/>
+          <circle cx="8" cy="2" r="1.5" fill="#C8A0A8"/>
+          <circle cx="2" cy="8" r="1.5" fill="#C8A0A8"/>
+          <circle cx="8" cy="8" r="1.5" fill="#C8A0A8"/>
+          <circle cx="2" cy="14" r="1.5" fill="#C8A0A8"/>
+          <circle cx="8" cy="14" r="1.5" fill="#C8A0A8"/>
+        </svg>
+      </div>
       ${thumb}
       <div class="pm-info">
         <div class="pm-name">${_esc(p.name_en)}</div>
@@ -3338,6 +3354,109 @@ function _pmRenderList(list, isSearch) {
   }).join('');
 
   lucide.createIcons();
+  if (!isSearch) _pmAttachDragListeners();
+}
+
+/* ── Drag-and-drop reordering within category groups ── */
+function _pmAttachDragListeners() {
+  document.querySelectorAll('.pm-category-group').forEach(group => {
+    const cards = group.querySelectorAll('.pm-card[data-product-id]');
+    cards.forEach(card => {
+      card.addEventListener('dragstart', (e) => {
+        // Only allow drag from grip handle
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', card.dataset.productId);
+        card.classList.add('pm-dragging');
+        window.__pmDragging = card;
+        window.__pmDragGroup = group;
+      });
+
+      card.addEventListener('dragend', () => {
+        card.classList.remove('pm-dragging');
+        document.querySelectorAll('.pm-drag-over')
+          .forEach(el => el.classList.remove('pm-drag-over'));
+        window.__pmDragging = null;
+        window.__pmDragGroup = null;
+      });
+
+      card.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        // Only allow drag-over within the same category group
+        if (window.__pmDragging && window.__pmDragging !== card && window.__pmDragGroup === group) {
+          card.classList.add('pm-drag-over');
+        }
+      });
+
+      card.addEventListener('dragleave', () => {
+        card.classList.remove('pm-drag-over');
+      });
+
+      card.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        card.classList.remove('pm-drag-over');
+
+        const draggedId = e.dataTransfer.getData('text/plain');
+        const targetId = card.dataset.productId;
+        if (draggedId === targetId) return;
+
+        // Only allow drop within the same category group
+        if (window.__pmDragGroup !== group) return;
+
+        const draggedCard = window.__pmDragging;
+        if (!draggedCard) return;
+
+        const allCards = [...group.querySelectorAll('.pm-card[data-product-id]')];
+        const draggedIndex = allCards.indexOf(draggedCard);
+        const targetIndex = allCards.indexOf(card);
+
+        if (draggedIndex < targetIndex) {
+          group.insertBefore(draggedCard, card.nextSibling);
+        } else {
+          group.insertBefore(draggedCard, card);
+        }
+
+        // Save new order to Supabase
+        await _pmSaveOrder(group);
+      });
+    });
+  });
+}
+
+async function _pmSaveOrder(groupEl) {
+  const cards = [...groupEl.querySelectorAll('.pm-card[data-product-id]')];
+  const updates = cards.map((card, index) => ({
+    id: card.dataset.productId,
+    sort_order: index
+  }));
+
+  try {
+    const results = await Promise.all(updates.map(({ id, sort_order }) =>
+      sb.from('products')
+        .update({ sort_order, updated_at: new Date().toISOString() })
+        .eq('id', id)
+    ));
+
+    const failed = results.filter(r => r.error);
+    if (failed.length) {
+      showToast('Failed to save order', 'error');
+      return;
+    }
+
+    // Update local data to match new order
+    updates.forEach(({ id, sort_order }) => {
+      const p = _pmProducts.find(x => x.id === id);
+      if (p) p.sort_order = sort_order;
+    });
+
+    // Update data-sort-order attributes
+    cards.forEach((card, i) => card.dataset.sortOrder = i);
+
+    showToast('Order saved', 'success');
+  } catch (err) {
+    console.error('Failed to save order:', err);
+    showToast('Failed to save order', 'error');
+  }
 }
 
 /* ── Instant toggle (sold_out / available) ── */
