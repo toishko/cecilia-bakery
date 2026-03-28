@@ -4608,38 +4608,6 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
     <!-- Scrollable area: items + form scroll together -->
     <div class="cart-scroll-area" id="cart-scroll-area">
       <div class="cart-items" id="cart-items"></div>
-      <div class="cart-scroll-form" id="cart-scroll-form" style="display:none">
-        <div class="cart-summary-row">
-          <span id="cart-count-label">0 items</span>
-        </div>
-        <div class="cart-form">
-          <div class="cart-form-row-double">
-            <div class="cart-form-col">
-              <label class="cart-form-label" id="lbl-name">Your Name <span class="cart-form-req">*</span></label>
-              <input class="cart-form-input" id="cart-name" type="text" placeholder="e.g. Maria" />
-            </div>
-            <div class="cart-form-col">
-              <label class="cart-form-label" id="lbl-phone">Phone <span class="cart-form-req">*</span></label>
-              <input class="cart-form-input" id="cart-phone" type="tel" placeholder="(201) 555-0123" />
-            </div>
-          </div>
-          <div class="cart-form-row">
-            <label class="cart-form-label" id="lbl-pickup">Pickup Date <span
-                class="cart-form-opt">(optional)</span></label>
-            <input class="cart-form-input" id="cart-pickup" type="date" />
-          </div>
-          <div class="cart-form-row" id="cart-time-row" style="display:none">
-            <label class="cart-form-label" id="lbl-time">Pickup Time <span class="cart-form-opt">(optional)</span></label>
-            <select class="cart-form-input" id="cart-time"></select>
-          </div>
-          <div class="cart-form-row">
-            <label class="cart-form-label" id="lbl-note">Order Note <span class="cart-form-opt">(optional)</span></label>
-            <textarea class="cart-form-input cart-form-textarea" id="cart-order-note"
-              placeholder="e.g. allergies, custom message, special requests..."></textarea>
-          </div>
-          <p class="cart-form-error" id="cart-form-error"></p>
-        </div>
-      </div>
     </div>
 
     <div class="cart-drawer-footer" id="cart-footer" style="display:none">
@@ -5033,18 +5001,6 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       document.body.style.right = '0';
       document.body.style.overflow = 'hidden';
 
-      const today = new Date().toISOString().split('T')[0];
-      const pickupEl = document.getElementById('cart-pickup');
-      if (pickupEl) {
-        pickupEl.min = today;
-        if (!pickupEl.value) pickupEl.value = today;
-        pickupEl.onchange = () => {
-          const todayStr = new Date().toISOString().split('T')[0];
-          if (pickupEl.value < todayStr) pickupEl.value = todayStr;
-          buildTimeSlots(pickupEl.value);
-        };
-        buildTimeSlots(today);
-      }
       renderCartDrawer();
     }
     function closeCart() {
@@ -5076,14 +5032,6 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         return;
       }
       footer.style.display = 'block';
-      if (scrollForm) scrollForm.style.display = 'block';
-      // Always enforce min date
-      const todayStr = new Date().toISOString().split('T')[0];
-      const pickupInput = document.getElementById('cart-pickup');
-      if (pickupInput) {
-        pickupInput.min = todayStr;
-        if (!pickupInput.value || pickupInput.value < todayStr) pickupInput.value = todayStr;
-      }
       el.innerHTML = cart.map((item, idx) => {
         const hasSizes = item.key && PRODUCTS[item.key] && PRODUCTS[item.key].sizes.length > 0;
         const sizeLabel = item.size ? ' · ' + item.size : '';
@@ -5139,19 +5087,6 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       if (checkoutBtn) checkoutBtn.textContent = t.checkout;
       const checkoutNote = document.querySelector('.cart-checkout-note');
       if (checkoutNote) checkoutNote.textContent = t.checkoutNote;
-      // Form labels
-      const setLbl = (id, text) => { const el = document.getElementById(id); if (el) el.innerHTML = text; };
-      setLbl('lbl-name', `${t.lblName} <span class="cart-form-req">*</span>`);
-      setLbl('lbl-phone', `${t.lblPhone} <span class="cart-form-req">*</span>`);
-      setLbl('lbl-pickup', `${t.lblPickup} <span class="cart-form-opt">${t.optional}</span>`);
-      setLbl('lbl-note', `${t.lblNote} <span class="cart-form-opt">${t.optional}</span>`);
-      setLbl('lbl-time', `${t.lblTime} <span class="cart-form-opt">${t.optional}</span>`);
-      const timeSelect = document.getElementById('cart-time');
-      if (timeSelect && timeSelect.options[0]) timeSelect.options[0].text = t.timePH;
-      const ph = (id, text) => { const el = document.getElementById(id); if (el) el.placeholder = text; };
-      ph('cart-name', t.namePH);
-      ph('cart-phone', t.phonePH);
-      ph('cart-order-note', t.notePH);
     }
 
     function changeQty(idx, delta) {
@@ -5497,38 +5432,31 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
 
     function cartCheckout() {
       const t = cartI18n[lang];
-      const name = (document.getElementById('cart-name')?.value || '').trim();
-      const phone = (document.getElementById('cart-phone')?.value || '').trim();
-      const errEl = document.getElementById('cart-form-error');
-
-      // Validate first
-      if (!name) { if (errEl) errEl.textContent = t.errName; return; }
-      if (!phone) { if (errEl) errEl.textContent = t.errPhone; return; }
-      if (errEl) errEl.textContent = '';
-
-      // Show confirmation before placing order
       const itemCount = cartTotal();
+
+      // Use the existing confirm modal to collect name and phone
       showConfirm(
-        t.checkoutConfirmTitle || 'Ready to place your order?',
-        t.checkoutConfirmSub || `${itemCount} item${itemCount !== 1 ? 's' : ''} · Pickup by ${name}`,
-        t.checkoutConfirmOk || 'Yes, Place Order',
-        t.checkoutConfirmCancel || 'Go Back',
-        _placeOrder
+        lang === 'es' ? '¿Ordenar por WhatsApp?' : 'Order via WhatsApp?',
+        lang === 'es'
+          ? `${itemCount} artículo${itemCount !== 1 ? 's' : ''} — te pediremos tu nombre y teléfono`
+          : `${itemCount} item${itemCount !== 1 ? 's' : ''} — we\'ll ask for your name and phone`,
+        lang === 'es' ? 'Continuar' : 'Continue',
+        lang === 'es' ? 'Cancelar' : 'Cancel',
+        _promptWhatsAppInfo
       );
     }
 
-    async function _placeOrder() {
-      const t = cartI18n[lang];
-      const name = (document.getElementById('cart-name')?.value || '').trim();
-      const phone = (document.getElementById('cart-phone')?.value || '').trim();
-      const pickup = (document.getElementById('cart-pickup')?.value || '').trim();
-      const pickupTime = (document.getElementById('cart-time')?.value || '').trim();
-      const note = (document.getElementById('cart-order-note')?.value || '').trim();
-      const errEl = document.getElementById('cart-form-error');
+    function _promptWhatsAppInfo() {
+      const namePrompt = prompt(lang === 'es' ? 'Tu nombre:' : 'Your name:');
+      if (!namePrompt || !namePrompt.trim()) return;
+      const phonePrompt = prompt(lang === 'es' ? 'Tu número de teléfono:' : 'Your phone number:');
+      if (!phonePrompt || !phonePrompt.trim()) return;
+      _placeWhatsAppOrder(namePrompt.trim(), phonePrompt.trim());
+    }
 
-      if (!name) { if (errEl) errEl.textContent = t.errName; return; }
-      if (!phone) { if (errEl) errEl.textContent = t.errPhone; return; }
-      if (errEl) errEl.textContent = '';
+    async function _placeWhatsAppOrder(name, phone) {
+      const t = cartI18n[lang];
+      const note = '';
 
       // Group items by category for clear WhatsApp message
       const sizeAbbr = { 'Small': 'S', 'Medium': 'M', 'Large': 'L', 'Pequeño': 'S', 'Mediano': 'M', 'Grande': 'L' };
@@ -5551,18 +5479,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         `*${cat}*\n${items.join('\n')}`
       ).join('\n\n');
 
-      // Format pickup date + time nicely
       let pickupStr = '';
-      if (pickup) {
-        const d = new Date(pickup + 'T12:00:00');
-        pickupStr = d.toLocaleDateString(lang === 'es' ? 'es-US' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        if (pickupTime) {
-          const [ph, pm] = pickupTime.split(':');
-          const ampm = parseInt(ph) < 12 ? 'AM' : 'PM';
-          const dh = parseInt(ph) > 12 ? parseInt(ph) - 12 : (parseInt(ph) === 0 ? 12 : parseInt(ph));
-          pickupStr += ` at ${dh}:${pm} ${ampm}`;
-        }
-      }
 
       // ── Save to Supabase if logged in ──
       let orderId = null;
