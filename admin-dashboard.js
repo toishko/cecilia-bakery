@@ -57,13 +57,11 @@ function showScreen(id) {
   document.getElementById('screen-' + id).classList.add('active');
 }
 
-function showSection(name) {
+async function showSection(name) {
   // Warn about unsaved Product Manager changes when navigating away
   if (typeof _pmHasPending === 'function' && _pmHasPending() && currentSection === 'products' && name !== 'products') {
-    const proceed = window.confirm('You have unsaved product changes. Discard and leave?');
-    if (!proceed) return;
-    _pmPendingChanges = {};
-    _pmUpdateSaveBar();
+    const canLeave = await _pmConfirmDiscard();
+    if (!canLeave) return;
   }
   currentSection = name;
   sessionStorage.setItem('admin_section', name);
@@ -3672,6 +3670,7 @@ function _pmUpdateSaveBar() {
   } else {
     bar.classList.add('hidden');
   }
+  _pmUpdateNavBadge();
 }
 
 function _pmInjectSaveBar() {
@@ -3728,13 +3727,61 @@ window._pmDiscardChanges = async function() {
   showToast('Changes discarded', 'info');
 };
 
-// Warn on page unload if there are pending changes
-window.addEventListener('beforeunload', (e) => {
-  if (_pmHasPending()) {
-    e.preventDefault();
-    e.returnValue = '';
+/* ── Confirm discard dialog (SweetAlert2) ── */
+async function _pmConfirmDiscard() {
+  if (!_pmHasPending()) return true;
+
+  const result = await Swal.fire({
+    title: 'Unsaved Changes',
+    text: 'You have unsaved product changes. What would you like to do?',
+    icon: 'warning',
+    showDenyButton: true,
+    showCancelButton: true,
+    confirmButtonText: 'Save Changes',
+    denyButtonText: 'Discard',
+    cancelButtonText: 'Stay Here',
+    confirmButtonColor: '#C8102E',
+    denyButtonColor: '#6B5057',
+    cancelButtonColor: '#A08088',
+    reverseButtons: false,
+  });
+
+  if (result.isConfirmed) {
+    await window._pmSaveAllChanges();
+    return true;
+  } else if (result.isDenied) {
+    _pmPendingChanges = {};
+    _pmUpdateSaveBar();
+    await _pmFetch();
+    return true;
   }
-});
+  return false; // cancelled — stay
+}
+
+/* ── Pulsing nav badge for unsaved changes ── */
+(function _pmInjectPulseStyle() {
+  if (document.getElementById('pm-pulse-style')) return;
+  const s = document.createElement('style');
+  s.id = 'pm-pulse-style';
+  s.textContent = `@keyframes pmPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}`;
+  document.head.appendChild(s);
+})();
+
+function _pmUpdateNavBadge() {
+  const navItems = document.querySelectorAll('[data-section="products"]');
+  navItems.forEach(item => {
+    if (_pmHasPending()) {
+      if (!item.querySelector('.pm-unsaved-dot')) {
+        const dot = document.createElement('span');
+        dot.className = 'pm-unsaved-dot';
+        dot.style.cssText = 'display:inline-block;width:8px;height:8px;background:#C8102E;border-radius:50%;margin-left:6px;vertical-align:middle;animation:pmPulse 1.5s ease-in-out infinite';
+        item.appendChild(dot);
+      }
+    } else {
+      item.querySelector('.pm-unsaved-dot')?.remove();
+    }
+  });
+}
 
 /* ── Edit (open modal prefilled) ── */
 window._pmEdit = function(id) {
