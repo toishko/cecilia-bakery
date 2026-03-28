@@ -3217,7 +3217,17 @@ async function _pmFetch() {
 
   if (error) { showToast('Failed to load products', 'error'); list.innerHTML = ''; return; }
   _pmProducts = data || [];
+  _pmApplyPendingToProducts();  // reapply unsaved toggle states
   _pmRenderList(_pmProducts);
+}
+
+/* ── Reapply pending toggle changes to fresh DB data ── */
+function _pmApplyPendingToProducts() {
+  Object.entries(_pmPendingChanges).forEach(([id, changes]) => {
+    const p = _pmProducts.find(x => x.id === id);
+    if (!p) return;
+    Object.assign(p, changes);
+  });
 }
 
 /* ── Silent reload helper (no skeleton flash) ── */
@@ -3229,6 +3239,7 @@ async function _pmReloadSilent() {
       .order('sort_order', { ascending: true });
     if (error || !data) return;
     _pmProducts = data;
+    _pmApplyPendingToProducts();  // reapply unsaved toggle states
     // Preserve search state if the user is actively searching
     const q = document.getElementById('pm-search')?.value.toLowerCase().trim();
     if (q) {
