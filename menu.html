@@ -6023,6 +6023,7 @@ function initUpdateBanner() {
   // Capture controller state BEFORE registering — no controller means first load, not update
   var hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.register('/sw.js').then(function(reg) {
+    reg.update(); // Force update check on every page load
     reg.addEventListener('updatefound', function() {
       var nw = reg.installing;
       nw.addEventListener('statechange', function() {
