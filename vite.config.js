@@ -25,6 +25,7 @@ export default defineConfig({
         adminDashboard: resolve(__dirname, 'admin-dashboard.html'),
         offline: resolve(__dirname, 'offline.html'),
         orderConfirmation: resolve(__dirname, 'order-confirmation.html'),
+        ptrTest: resolve(__dirname, 'ptr-test.html'),
       },
     },
   },
