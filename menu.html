@@ -2132,8 +2132,9 @@
       .product-card .pc-footer-action-row {
         display: flex;
         flex-direction: column;
-        align-items: stretch;
+        align-items: flex-start;
         gap: 6px;
+        width: auto;
       }
 
       .product-card .pc-price {
@@ -2141,12 +2142,15 @@
         font-weight: 700;
       }
 
-      .product-card .atc-trigger {
-        width: 100%;
+      .product-card .pc-atc-footer {
+        width: auto !important;
+        min-width: unset !important;
+        align-self: flex-start;
         text-align: center;
-        font-size: 0.65rem;
-        letter-spacing: 0.04em;
-        padding: 8px 6px;
+        font-size: 0.68rem;
+        letter-spacing: 0.06em;
+        padding: 9px 18px;
+        border-radius: 6px;
         white-space: nowrap;
         box-sizing: border-box;
       }
