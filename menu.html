@@ -1855,14 +1855,26 @@
         padding: 0 12px 12px;
       }
 
+      .product-card .pc-footer-action-row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 4px;
+        overflow: hidden;
+      }
+
       .product-card .pc-price {
-        font-size: 0.85rem;
+        flex-shrink: 0;
+        font-size: 0.8rem;
       }
 
       .product-card .atc-trigger {
-        font-size: 0.7rem;
-        padding: 8px 10px;
-        letter-spacing: 0.04em;
+        flex-shrink: 0;
+        font-size: 0.6rem;
+        letter-spacing: 0.03em;
+        padding: 7px 8px;
+        white-space: nowrap;
       }
 
       .product-card .pc-desc {
