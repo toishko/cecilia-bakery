@@ -96,9 +96,44 @@
     }, 300);
   }
 
+  /* ── Helper: is touch inside a scrolled-down container or modal? ── */
+  function isInsideScrolledContainer(el) {
+    let node = el;
+    while (node && node !== document.body && node !== document.documentElement) {
+      // If inside an open modal overlay, never trigger PTR
+      if (node.classList &&
+          (node.classList.contains('pm-overlay') ||
+           node.classList.contains('detail-overlay') ||
+           node.classList.contains('summary-overlay') ||
+           node.classList.contains('pp-overlay')) &&
+          node.classList.contains('open')) {
+        return true;
+      }
+      // Check by id for overlays that use id-based open detection
+      if (node.id === 'pm-overlay' || node.id === 'detail-overlay' ||
+          node.id === 'print-preview-overlay') {
+        if (node.classList.contains('open') ||
+            (node.style && node.style.display === 'flex')) {
+          return true;
+        }
+      }
+      // If this element scrolls vertically and isn't at the top, bail
+      const style = window.getComputedStyle(node);
+      const overflowY = style.overflowY;
+      if ((overflowY === 'auto' || overflowY === 'scroll') &&
+          node.scrollHeight > node.clientHeight &&
+          node.scrollTop > 0) {
+        return true;
+      }
+      node = node.parentElement;
+    }
+    return false;
+  }
+
   /* ── Touch: start ───────────────────────────────────────────────── */
   document.addEventListener('touchstart', function (e) {
     if (window.scrollY > 0) return;
+    if (isInsideScrolledContainer(e.target)) return;
     pinToNav(); // re-measure in case status bar height changed
     startY = e.touches[0].clientY;
     active = true;
