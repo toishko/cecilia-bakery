@@ -4647,8 +4647,14 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         <span class="cart-total-label" data-en="Total" data-es="Total">Total</span>
         <span class="cart-total-amount" id="cart-total-amount"></span>
       </div>
-      <button class="cart-checkout-btn" onclick="cartCheckout()">Checkout</button>
+      <button class="cart-checkout-btn" onclick="redirectToCheckout()">Checkout</button>
       <p class="cart-checkout-note">We'll confirm your order and arrange pickup after receiving it.</p>
+      <p style="text-align:center; margin-top:10px;">
+        <a href="#" onclick="cartCheckout(); return false;"
+           style="font-size:0.72rem; color:var(--tx-muted); text-decoration:underline;">
+          Order via WhatsApp instead
+        </a>
+      </p>
     </div>
   </div>
 
@@ -5474,6 +5480,19 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         el.classList.add('bounce');
         setTimeout(() => el.classList.remove('bounce'), 500);
       });
+    }
+
+    function redirectToCheckout() {
+      // Make sure cart is saved to localStorage
+      saveCart();
+
+      // Also save to sessionStorage as backup
+      try {
+        sessionStorage.setItem('cecilia_cart', JSON.stringify(cart));
+      } catch(e) {}
+
+      // Redirect to checkout page
+      window.location.href = '/checkout.html';
     }
 
     function cartCheckout() {
