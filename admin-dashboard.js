@@ -3193,12 +3193,90 @@ async function _pmSave() {
   btn.disabled = false; btn.textContent = 'Save Product';
 
   if (error) { showToast(error.message || 'Save failed', 'error'); return; }
-  showToast(_pmEditId ? 'Product updated ✓' : 'Product added ✓', 'success');
-  const scrollY = window.scrollY;
-  _pmCloseModal();
-  await _pmFetch();
-  // Restore scroll position after re-render
-  requestAnimationFrame(() => window.scrollTo(0, scrollY));
+
+  if (_pmEditId) {
+    // ── Existing product: surgical card update (no full reload) ──
+    const p = _pmProducts.find(x => x.id === _pmEditId);
+    if (p) Object.assign(p, payload);
+    showToast('Product updated ✓', 'success');
+    _pmCloseModal();
+    _pmUpdateCard(_pmEditId, payload);
+  } else {
+    // ── New product: full reload to render the new card ──
+    showToast('Product added ✓', 'success');
+    const scrollY = window.scrollY;
+    _pmCloseModal();
+    await _pmFetch();
+    requestAnimationFrame(() => window.scrollTo(0, scrollY));
+  }
+}
+
+/* ── Surgical in-place card update (no re-render) ── */
+function _pmUpdateCard(id, data) {
+  const card = document.querySelector(`[data-product-id="${id}"]`);
+  if (!card) return;
+
+  // Update thumbnail
+  const existingImg = card.querySelector('.pm-thumb');
+  const existingPh  = card.querySelector('.pm-thumb-ph');
+  if (data.images && data.images[0]) {
+    if (existingImg) {
+      existingImg.src = data.images[0];
+    } else if (existingPh) {
+      const img = document.createElement('img');
+      img.className = 'pm-thumb';
+      img.src = data.images[0];
+      img.alt = '';
+      img.loading = 'lazy';
+      existingPh.replaceWith(img);
+    }
+  } else if (existingImg) {
+    const ph = document.createElement('div');
+    ph.className = 'pm-thumb-ph';
+    ph.innerHTML = '<i data-lucide="image-off"></i>';
+    existingImg.replaceWith(ph);
+    lucide.createIcons({ nodes: [ph] });
+  }
+
+  // Update name
+  const nameEl = card.querySelector('.pm-name');
+  if (nameEl && data.name_en) nameEl.textContent = data.name_en;
+
+  // Update price
+  const priceEl = card.querySelector('.pm-price-txt');
+  if (priceEl) {
+    if (data.prices && typeof data.prices === 'object' && Object.keys(data.prices).length) {
+      const vals = Object.values(data.prices).map(v => parseFloat(String(v).replace('$', '')));
+      priceEl.textContent = `From $${Math.min(...vals)}`;
+    } else if (data.price) {
+      priceEl.textContent = `$${parseFloat(data.price).toFixed(2)}`;
+    } else {
+      priceEl.textContent = '—';
+    }
+  }
+
+  // Update badge
+  const badge = card.querySelector('.badge');
+  if (badge) {
+    const p = _pmProducts.find(x => x.id === id);
+    if (p) {
+      if (!p.available) {
+        badge.textContent = 'HIDDEN';
+        badge.className = badge.className.replace(/pm-badge-\w+/g, 'pm-badge-hidden');
+      } else if (p.sold_out) {
+        badge.textContent = 'SOLD OUT';
+        badge.className = badge.className.replace(/pm-badge-\w+/g, 'pm-badge-soldout');
+      } else {
+        badge.textContent = 'LIVE';
+        badge.className = badge.className.replace(/pm-badge-\w+/g, 'pm-badge-live');
+      }
+    }
+  }
+
+  // Flash confirmation
+  card.style.transition = 'box-shadow 0.3s ease';
+  card.style.boxShadow = '0 0 0 2px #C8102E';
+  setTimeout(() => { card.style.boxShadow = ''; }, 800);
 }
 
 /* ── Fetch products from Supabase ── */
