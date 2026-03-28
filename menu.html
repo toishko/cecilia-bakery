@@ -1828,9 +1828,10 @@
         display: flex;
         flex-direction: row;
         justify-content: flex-start;
-        align-items: flex-start;
-        min-height: 90px;
-        padding: 10px 0;
+        align-items: center;
+        min-height: 0;
+        padding: 12px 0;
+        border: none;
         border-bottom: 1px solid var(--bd);
         border-radius: 0;
         box-shadow: none;
@@ -1844,12 +1845,19 @@
       .product-card:hover {
         background: var(--bg-card-hover, rgba(0,0,0,.02));
         margin: 0 -16px;
-        padding: 10px 16px;
+        padding: 12px 16px;
         border-radius: 8px;
+        border: none;
+        border-bottom: 1px solid var(--bd);
+        box-shadow: none;
+        transform: none;
       }
 
-      .product-card::before {
-        display: none;
+      .product-card::before,
+      .product-card:hover::before {
+        display: none !important;
+        width: 0;
+        height: 0;
       }
 
       /* Text wrapper — LEFT side */
@@ -1857,9 +1865,9 @@
         flex: 1;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: flex-start;
         align-items: flex-start;
-        gap: 3px;
+        gap: 2px;
         min-width: 0;
         order: 1;
       }
@@ -1904,14 +1912,15 @@
         flex-direction: row;
         align-items: center;
         justify-content: flex-start;
-        gap: 12px;
-        margin-top: 6px;
+        gap: 0;
+        margin-top: 2px;
         padding: 0;
         width: 100%;
       }
 
       .pc-footer-badge-row {
         display: none;
+        min-height: 0;
       }
 
       .pc-footer-action-row {
@@ -1965,7 +1974,7 @@
         padding: 14px 20px;
         margin-bottom: 1px;
         border: none;
-        min-height: 120px;
+        min-height: 0;
       }
 
       .product-card.featured:hover {
