@@ -58,6 +58,13 @@ function showScreen(id) {
 }
 
 function showSection(name) {
+  // Warn about unsaved Product Manager changes when navigating away
+  if (typeof _pmHasPending === 'function' && _pmHasPending() && currentSection === 'products' && name !== 'products') {
+    const proceed = window.confirm('You have unsaved product changes. Discard and leave?');
+    if (!proceed) return;
+    _pmPendingChanges = {};
+    _pmUpdateSaveBar();
+  }
   currentSection = name;
   sessionStorage.setItem('admin_section', name);
   // Close mobile nav
@@ -2608,6 +2615,7 @@ let _pmProducts  = [];
 let _pmEditId    = null;
 let _pmImages    = [];
 let _pmPriceMode = 'single';
+let _pmPendingChanges = {};  // { productId: { field: value, ... } }
 
 /* ── Inject scoped styles once ── */
 let _pmStylesInjected = false;
@@ -2669,6 +2677,23 @@ function _pmInjectStyles() {
 .pm-cat-drag-over{border:2px dashed var(--red,#C8102E)!important;border-radius:8px;background:rgba(200,16,46,.03)}
 .pm-category-group{transition:opacity .15s,transform .15s,box-shadow .15s}
 .pm-category-header{display:flex;align-items:center}
+.pm-save-bar{position:sticky;bottom:0;left:0;right:0;z-index:50;padding:14px 20px;
+  background:var(--bg-card);border-top:1px solid var(--bd);box-shadow:0 -4px 20px rgba(0,0,0,.1);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  transition:opacity .25s,transform .25s}
+.pm-save-bar.hidden{opacity:0;transform:translateY(100%);pointer-events:none}
+.pm-save-bar .pm-pending-count{font-size:.85rem;color:var(--tx-muted);font-weight:500}
+.pm-save-bar .pm-pending-count strong{color:var(--red);font-weight:700}
+.pm-save-bar-actions{display:flex;gap:10px}
+.pm-btn-discard{padding:10px 18px;border-radius:10px;border:1px solid var(--bd);background:none;
+  color:var(--tx-muted);font-size:.82rem;font-weight:600;font-family:inherit;cursor:pointer;transition:var(--transition)}
+.pm-btn-discard:hover{border-color:var(--red);color:var(--red)}
+.pm-btn-save-all{padding:10px 22px;border-radius:10px;border:none;
+  background:var(--red);color:#fff;font-size:.82rem;font-weight:700;font-family:inherit;
+  cursor:pointer;transition:var(--transition);display:flex;align-items:center;gap:6px}
+.pm-btn-save-all:hover{background:var(--red-dk)}
+.pm-btn-save-all:disabled{opacity:.5;cursor:not-allowed}
+.pm-card.pm-changed{border-left:3px solid var(--red)}
 /* Modal */
 .pm-overlay{position:fixed;inset:0;background:var(--bg-overlay);z-index:400;
   display:none;align-items:flex-end;justify-content:center;overscroll-behavior:none}
@@ -2807,6 +2832,8 @@ async function loadProductManager() {
 
   await _pmFetch();
   initAdminProductsRealtime();
+  _pmInjectSaveBar();
+  _pmUpdateSaveBar();
 }
 
 /* ── Modal structure ── */
@@ -3169,8 +3196,18 @@ async function _pmSave() {
 
   if (error) { showToast(error.message || 'Save failed', 'error'); return; }
   showToast(_pmEditId ? 'Product updated ✓' : 'Product added ✓', 'success');
+  const scrollY = document.getElementById('pm-list')?.parentElement?.scrollTop || window.scrollY;
   _pmCloseModal();
   await _pmFetch();
+  // Restore scroll position after re-render
+  requestAnimationFrame(() => {
+    const parent = document.getElementById('pm-list')?.parentElement;
+    if (parent && parent.scrollTop !== undefined && parent !== document.documentElement) {
+      parent.scrollTop = scrollY;
+    } else {
+      window.scrollTo(0, scrollY);
+    }
+  });
 }
 
 /* ── Fetch products from Supabase ── */
@@ -3277,9 +3314,10 @@ function _pmRenderList(list, isSearch) {
     if (!p.available)    { badgeClass = 'pm-badge-hidden';  badgeLabel = 'HIDDEN';   }
     else if (p.sold_out) { badgeClass = 'pm-badge-soldout'; badgeLabel = 'SOLD OUT'; }
     else                 { badgeClass = 'pm-badge-live';    badgeLabel = 'LIVE';     }
+    const hasChange = _pmPendingChanges[p.id] ? ' pm-changed' : '';
 
     return `
-    <div class="pm-card" draggable="true" data-product-id="${p.id}" data-sort-order="${p.sort_order ?? 0}">
+    <div class="pm-card${hasChange}" draggable="true" data-product-id="${p.id}" data-sort-order="${p.sort_order ?? 0}">
       <div class="pm-grip" title="Drag to reorder">
         <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
           <circle cx="2" cy="2" r="1.5" fill="#C8A0A8"/>
@@ -3593,21 +3631,109 @@ async function _pmSaveCategoryOrder(container) {
 }
 
 /* ── Instant toggle (sold_out / available) ── */
-window._pmToggle = async function(id, field, value) {
-  const { error } = await sb.from('products')
-    .update({ [field]: value, updated_at: new Date().toISOString() })
-    .eq('id', id);
-
-  if (error) { showToast('Update failed', 'error'); return; }
+window._pmToggle = function(id, field, value) {
+  // Update local data immediately (no DB save yet)
   const p = _pmProducts.find(x => x.id === id);
   if (p) p[field] = value;
 
-  const msg = field === 'sold_out'
-    ? (value ? 'Marked as Sold Out' : 'Back to Available')
-    : (!value ? 'Product hidden from menu' : 'Product visible on menu');
-  showToast(msg, 'success');
+  // Track as pending change
+  if (!_pmPendingChanges[id]) _pmPendingChanges[id] = {};
+  _pmPendingChanges[id][field] = value;
+
+  // Re-render preserving scroll
+  const scrollY = document.getElementById('pm-list')?.parentElement?.scrollTop || window.scrollY;
   _pmRenderList(_pmProducts);
+  requestAnimationFrame(() => {
+    const parent = document.getElementById('pm-list')?.parentElement;
+    if (parent && parent.scrollTop !== undefined && parent !== document.documentElement) {
+      parent.scrollTop = scrollY;
+    } else {
+      window.scrollTo(0, scrollY);
+    }
+  });
+
+  _pmUpdateSaveBar();
 };
+
+/* ── Pending changes helpers ── */
+function _pmHasPending() {
+  return Object.keys(_pmPendingChanges).length > 0;
+}
+
+function _pmUpdateSaveBar() {
+  const bar = document.getElementById('pm-save-bar');
+  if (!bar) return;
+  const count = Object.keys(_pmPendingChanges).length;
+  if (count > 0) {
+    bar.classList.remove('hidden');
+    bar.querySelector('.pm-pending-count').innerHTML =
+      `<strong>${count}</strong> product${count !== 1 ? 's' : ''} with unsaved changes`;
+  } else {
+    bar.classList.add('hidden');
+  }
+}
+
+function _pmInjectSaveBar() {
+  if (document.getElementById('pm-save-bar')) return;
+  const section = document.getElementById('section-products');
+  if (!section) return;
+  const bar = document.createElement('div');
+  bar.id = 'pm-save-bar';
+  bar.className = 'pm-save-bar hidden';
+  bar.innerHTML = `
+    <span class="pm-pending-count"></span>
+    <div class="pm-save-bar-actions">
+      <button class="pm-btn-discard" onclick="window._pmDiscardChanges()">Discard</button>
+      <button class="pm-btn-save-all" onclick="window._pmSaveAllChanges()">Save Changes</button>
+    </div>`;
+  section.appendChild(bar);
+}
+
+window._pmSaveAllChanges = async function() {
+  const ids = Object.keys(_pmPendingChanges);
+  if (!ids.length) return;
+
+  const btn = document.querySelector('.pm-btn-save-all');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  try {
+    const results = await Promise.all(ids.map(id => {
+      const fields = { ..._pmPendingChanges[id], updated_at: new Date().toISOString() };
+      return sb.from('products').update(fields).eq('id', id);
+    }));
+
+    const failed = results.filter(r => r.error);
+    if (failed.length) {
+      showToast(`${failed.length} update(s) failed`, 'error');
+    } else {
+      showToast(`${ids.length} product${ids.length !== 1 ? 's' : ''} saved ✓`, 'success');
+    }
+
+    _pmPendingChanges = {};
+    _pmUpdateSaveBar();
+  } catch (err) {
+    console.error('Batch save failed:', err);
+    showToast('Save failed', 'error');
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
+};
+
+window._pmDiscardChanges = async function() {
+  _pmPendingChanges = {};
+  _pmUpdateSaveBar();
+  // Reload from DB to revert local changes
+  await _pmFetch();
+  showToast('Changes discarded', 'info');
+};
+
+// Warn on page unload if there are pending changes
+window.addEventListener('beforeunload', (e) => {
+  if (_pmHasPending()) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
 
 /* ── Edit (open modal prefilled) ── */
 window._pmEdit = function(id) {
