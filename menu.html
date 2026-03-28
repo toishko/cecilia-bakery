@@ -1812,6 +1812,71 @@
       }
     }
 
+    /* ── Desktop product card refinements ── */
+    @media (min-width: 769px) {
+      .product-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 18px;
+        padding: 24px 52px;
+      }
+
+      .pc-image-wrap {
+        aspect-ratio: 4 / 3;
+        max-height: 220px;
+      }
+
+      .product-card.featured .pc-image-wrap {
+        max-height: 280px;
+        aspect-ratio: 16 / 9;
+      }
+
+      .product-card.featured {
+        grid-column: span 2;
+      }
+
+      .product-card.featured .pc-name {
+        font-size: 1.4rem;
+      }
+
+      .pc-info {
+        padding: 12px 16px 14px;
+      }
+
+      .pc-tag {
+        font-size: 0.65rem;
+        margin-bottom: 4px;
+      }
+
+      .pc-name {
+        font-size: 1.1rem;
+        line-height: 1.25;
+        margin-bottom: 6px;
+      }
+
+      .pc-price {
+        font-size: 0.95rem;
+      }
+
+      .atc-trigger {
+        font-size: 0.72rem;
+        padding: 9px 14px;
+      }
+    }
+
+    @media (min-width: 1200px) {
+      .product-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+      }
+    }
+
+    @media (min-width: 769px) and (max-width: 1199px) {
+      .product-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+    }
+
     @media(max-width:768px) {
       .product-grid {
         grid-template-columns: repeat(2, 1fr);
