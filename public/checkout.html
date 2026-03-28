@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8" />
@@ -8,7 +8,7 @@
   <meta name="description" content="Complete your order at Cecilia Bakery. Sign in and pay securely online." />
   <link rel="manifest" href="/manifest-website.json">
   <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0E0507" media="(prefers-color-scheme: dark)">
+
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Cecilia">
@@ -91,34 +91,6 @@
       --green: #1B7A4A;
     }
 
-    [data-theme="dark"] {
-      --bg: #0E0507;
-      --bg-surface: #1F0D14;
-      --bg-card: #1E0D12;
-      --bg-card-hover: #26101A;
-      --bg-input: #1E0D12;
-      --bg-nav: rgba(10, 3, 5, .80);
-      --bg-overlay: rgba(0, 0, 0, .70);
-      --bg-footer: #080305;
-
-      --tx: #F2E8E4;
-      --tx-muted: #BFA0A8;
-      --tx-faint: #7A5560;
-      --tx-on-footer: rgba(255, 255, 255, .45);
-      --tx-footer-head: rgba(255, 255, 255, .22);
-      --tx-footer-brand: rgba(255, 255, 255, .75);
-
-      --bd: rgba(200, 16, 46, .35);
-      --bd-hover: rgba(200, 16, 46, .65);
-      --bd-input: rgba(200, 16, 46, .40);
-      --bd-footer: rgba(255, 255, 255, .04);
-
-      --shadow-card: 0 4px 22px rgba(0, 0, 0, .40);
-      --shadow-nav: 0 1px 0 rgba(200, 16, 46, .12);
-
-      --lang-border: rgba(200, 16, 46, .25);
-      --lang-text: #BFA0A8;
-    }
 
     /* ── Reset ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -149,15 +121,10 @@
       will-change: transform; pointer-events: none;
       transition: background .3s;
     }
-    [data-theme="light"] .bg-blob {
+    .bg-blob {
       background:
         radial-gradient(ellipse 55% 35% at 20% 30%, rgba(200,16,46,.07) 0%, transparent 55%),
         radial-gradient(ellipse 40% 40% at 78% 68%, rgba(200,16,46,.05) 0%, transparent 50%);
-    }
-    [data-theme="dark"] .bg-blob {
-      background:
-        radial-gradient(ellipse 55% 35% at 20% 30%, rgba(200,16,46,.10) 0%, transparent 55%),
-        radial-gradient(ellipse 40% 40% at 78% 68%, rgba(200,16,46,.07) 0%, transparent 50%);
     }
     @keyframes blobDrift {
       from { transform: translate(0,0) scale(1); }
@@ -201,7 +168,6 @@
       letter-spacing: .02em;
     }
     .nav-logo-text span { color: var(--blue); font-style: italic; }
-    [data-theme="dark"] .nav-logo-text span { color: #A6CEFF; }
 
     .nav-right-group { display: flex; align-items: center; gap: 0; }
     .nav-back {
@@ -212,15 +178,7 @@
     .nav-back:hover { color: var(--red); }
 
     .nav-controls { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-    .theme-btn {
-      font-family: 'Outfit', sans-serif;
-      font-size: .68rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
-      padding: 4px; border-radius: 0; border: none; background: transparent;
-      cursor: pointer; transition: var(--transition); color: var(--lang-text);
-      width: auto; height: auto; display: inline-flex; justify-content: center; align-items: center; line-height: 1;
-    }
-    .theme-btn:hover { color: var(--red); }
-    .theme-btn svg { width: 18px !important; height: 18px !important; }
+
 
     @media (max-width: 900px) {
       nav { padding: 14px 16px; padding-top: calc(14px + env(safe-area-inset-top)); }
@@ -409,19 +367,18 @@
       border: 1px solid var(--bd-input);
       border-radius: 6px;
       background: var(--bg-input);
-      height: 46px;
+      height: 52px;
       overflow: hidden;
       transition: border-color .2s;
+      padding: 0;
+      display: flex;
+      align-items: center;
     }
 
-    .clover-field > iframe,
-    .clover-field iframe {
-      width: 100% !important;
-      height: 100% !important;
-      border: none !important;
-      display: block !important;
+    .clover-field:focus-within {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px rgba(200,16,46,0.12);
     }
-    .clover-field:focus-within { border-color: var(--red); }
     .card-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
     /* Place Order Button */
@@ -558,11 +515,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
         Back to Menu
       </a>
-      <div class="nav-controls">
-        <button class="theme-btn" onclick="toggleTheme()" aria-label="Toggle theme">
-          <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-        </button>
-      </div>
+
     </div>
   </nav>
 
@@ -746,25 +699,6 @@
 
   <!-- ═══ SCRIPTS ═══ -->
   <script>
-    /* ════════════════════════════════════════
-       THEME TOGGLE
-       ════════════════════════════════════════ */
-    (function () {
-      const saved = localStorage.getItem('cecilia_theme');
-      if (saved) {
-        document.documentElement.setAttribute('data-theme', saved);
-      } else {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
-      }
-    })();
-
-    function toggleTheme() {
-      const current = document.documentElement.getAttribute('data-theme');
-      const next = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('cecilia_theme', next);
-    }
 
     /* ════════════════════════════════════════
        SCROLL EFFECT ON NAV
@@ -907,26 +841,25 @@
 
         const elements = cloverInstance.elements();
 
-        const cloverStyles = {
+        const styles = {
           body: {
             fontFamily: 'Outfit, sans-serif',
-            margin: '0',
-            padding: '0',
+            fontSize: '16px',
           },
           input: {
-            fontSize: '22px',
-            lineHeight: '48px',
+            fontSize: '18px',
             color: '#18080D',
             fontFamily: 'Outfit, sans-serif',
-            padding: '0',
-            margin: '0',
+            padding: '0px',
+            margin: '0px',
           }
         };
 
-        const cardNumber = elements.create('CARD_NUMBER', { styles: cloverStyles });
-        const cardDate = elements.create('CARD_DATE', { styles: cloverStyles });
-        const cardCvv = elements.create('CARD_CVV', { styles: cloverStyles });
-        const cardPostalCode = elements.create('CARD_POSTAL_CODE', { styles: cloverStyles });
+        // Pass styles directly as second argument per Clover docs
+        const cardNumber = elements.create('CARD_NUMBER', styles);
+        const cardDate = elements.create('CARD_DATE', styles);
+        const cardCvv = elements.create('CARD_CVV', styles);
+        const cardPostalCode = elements.create('CARD_POSTAL_CODE', styles);
 
         cardNumber.mount('#card-number');
         cardDate.mount('#card-date');
@@ -936,45 +869,9 @@
         cloverTokenizer = cloverInstance;
 
         console.log('Clover iframe elements mounted');
-
-        // Force iframe heights after Clover finishes injecting
-        setTimeout(enforceCloverFieldHeights, 500);
-        setTimeout(enforceCloverFieldHeights, 1500);
       } catch (err) {
         console.error('Clover init error:', err);
       }
-    }
-
-    function enforceCloverFieldHeights() {
-      const fields = ['card-number', 'card-date', 'card-cvv', 'card-postal'];
-
-      fields.forEach(fieldId => {
-        const container = document.getElementById(fieldId);
-        if (!container) return;
-
-        container.style.height = '46px';
-        container.style.overflow = 'hidden';
-
-        const fixIframes = () => {
-          const iframes = container.querySelectorAll('iframe');
-          iframes.forEach(iframe => {
-            iframe.style.setProperty('height', '100%', 'important');
-            iframe.style.setProperty('width', '100%', 'important');
-            iframe.style.setProperty('border', 'none', 'important');
-            iframe.style.setProperty('display', 'block', 'important');
-          });
-        };
-
-        fixIframes();
-
-        const observer = new MutationObserver(() => fixIframes());
-        observer.observe(container, {
-          childList: true,
-          subtree: true,
-          attributes: true,
-          attributeFilter: ['style', 'height']
-        });
-      });
     }
 
     /* ════════════════════════════════════════
