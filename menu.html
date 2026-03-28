@@ -4,7 +4,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Menu — Cecilia Bakery</title>
+  <title>Our Menu | Cecilia Bakery — Dominican Cakes, West New York, NJ</title>
+  <meta name="description" content="Browse Cecilia Bakery's full menu. Fresh Dominican cakes including tres leches, birthday cakes, square cakes, slices, and cups. Order online for pickup at 6101 Park Ave, West New York, NJ.">
   <link rel="manifest" href="/manifest-website.json">
   <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0E0507" media="(prefers-color-scheme: dark)">
@@ -12,6 +13,17 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Cecilia">
   <link rel="apple-touch-icon" href="/assets/icon-192.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://ceciliabakery.com/menu.html">
+  <meta property="og:title" content="Our Menu | Cecilia Bakery — Dominican Cakes, West New York, NJ">
+  <meta property="og:description" content="Browse Cecilia Bakery's full menu. Fresh Dominican cakes including tres leches, birthday cakes, square cakes, slices, and cups. Order online for pickup.">
+  <meta property="og:image" content="https://ceciliabakery.com/assets/icon-512.png">
+  <meta property="og:site_name" content="Cecilia Bakery">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Our Menu | Cecilia Bakery — Dominican Cakes, West New York, NJ">
+  <meta name="twitter:description" content="Browse Cecilia Bakery's full menu. Fresh Dominican cakes including tres leches, birthday cakes, square cakes, slices, and cups. Order online for pickup.">
+  <meta name="twitter:image" content="https://ceciliabakery.com/assets/icon-512.png">
+  <link rel="canonical" href="https://ceciliabakery.com/menu.html">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" as="style">
@@ -5906,6 +5918,39 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       if (typeof updateCatNavIndicators === 'function') updateCatNavIndicators();
     }
 
+    function generateMenuSchema(products) {
+      if (!products || products.length === 0) return;
+      
+      const menuItems = products.map(p => ({
+        "@type": "MenuItem",
+        "name": p.name_en,
+        "description": p.description_en || '',
+        "offers": {
+          "@type": "Offer",
+          "price": p.price 
+            || (p.prices && p.prices[0]?.price) 
+            || '',
+          "priceCurrency": "USD"
+        }
+      }));
+
+      const schema = {
+        "@context": "https://schema.org",
+        "@type": "Menu",
+        "name": "Cecilia Bakery Menu",
+        "hasMenuSection": menuItems
+      };
+
+      let schemaEl = document.getElementById('menu-schema');
+      if (!schemaEl) {
+        schemaEl = document.createElement('script');
+        schemaEl.type = 'application/ld+json';
+        schemaEl.id = 'menu-schema';
+        document.head.appendChild(schemaEl);
+      }
+      schemaEl.textContent = JSON.stringify(schema);
+    }
+
     async function loadProductsFromSupabase() {
       try {
         const sb = window.__supabase;
@@ -5918,6 +5963,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         if (error) { console.warn('Supabase products error:', error); return; }
         if (!data || data.length === 0) { console.warn('Supabase products: empty result, using hardcoded fallback'); return; }
         console.log('Supabase products loaded:', data.length, data);
+        generateMenuSchema(data);
 
         // Store raw data for the render engine
         window.__menuLastData = data;
