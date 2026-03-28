@@ -5519,26 +5519,35 @@ function showUpdateBanner() {
   var btn = document.getElementById('update-banner-btn');
   if (btn) btn.addEventListener('click', function() {
     navigator.serviceWorker.ready.then(function(reg) {
-      if (reg.waiting) reg.waiting.postMessage('skipWaiting');
-      else window.location.reload();
+      if (reg.waiting) {
+        // Wait for controller to change, then reload
+        navigator.serviceWorker.addEventListener(
+          'controllerchange',
+          function() { window.location.reload(); },
+          { once: true }
+        );
+        reg.waiting.postMessage('skipWaiting');
+      } else {
+        window.location.reload();
+      }
     });
   });
 }
 function initUpdateBanner() {
   if (!('serviceWorker' in navigator)) return;
+  // Capture controller state BEFORE registering — no controller means first load, not update
+  var hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.register('/sw.js').then(function(reg) {
     reg.addEventListener('updatefound', function() {
       var nw = reg.installing;
       nw.addEventListener('statechange', function() {
         if (nw.state === 'installed' && navigator.serviceWorker.controller)
-          showUpdateBanner();
+          if (hadController) showUpdateBanner();
       });
     });
     if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner();
   }).catch(function(){});
-  navigator.serviceWorker.addEventListener('controllerchange', function() {
-    window.location.reload();
-  });
+  // No global controllerchange listener — it causes false reloads on page navigation
 }
 initUpdateBanner();
 </script>
