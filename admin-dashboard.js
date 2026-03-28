@@ -3271,16 +3271,31 @@ function initAdminProductsRealtime() {
   } catch (_) { /* silent */ }
 }
 
-/* ── Handle incoming realtime change ── */
+/* ── Handle incoming realtime change (debounced) ── */
+let _pmRealtimeTimer = null;
 async function handleAdminProductChange(payload) {
   try {
+    // Skip if there are pending unsaved changes — don't wipe local edits
+    if (_pmHasPending()) return;
+
+    // Skip during active drag operations
+    if (window.__pmDragging || window.__pmDraggingCat) return;
+
     // If the modal is open, queue the reload for when it closes
     const modalOpen = document.getElementById('pm-overlay')?.classList.contains('open');
     if (modalOpen) {
       window._pmReloadQueued = true;
       return;
     }
-    await _pmReloadSilent();
+
+    // Debounce: wait 800ms after last event before reloading
+    // (drag-and-drop saves fire many rapid updates)
+    clearTimeout(_pmRealtimeTimer);
+    _pmRealtimeTimer = setTimeout(async () => {
+      // Re-check guards after debounce delay
+      if (_pmHasPending() || window.__pmDragging || window.__pmDraggingCat) return;
+      await _pmReloadSilent();
+    }, 800);
   } catch (_) { /* silent */ }
 }
 
