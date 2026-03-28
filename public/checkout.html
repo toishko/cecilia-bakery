@@ -409,18 +409,17 @@
       border: 1px solid var(--bd-input);
       border-radius: 6px;
       background: var(--bg-input);
-      height: 52px !important;
-      max-height: 52px !important;
-      overflow: hidden !important;
+      min-height: 52px;
       transition: border-color .2s;
-      display: block;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
     }
 
     .clover-field > iframe,
     .clover-field iframe {
       width: 100% !important;
-      height: 52px !important;
-      max-height: 52px !important;
+      min-height: 48px !important;
       border: none !important;
       display: block !important;
       margin: 0 !important;
@@ -915,11 +914,16 @@
         const cloverStyles = {
           body: {
             fontFamily: 'Outfit, sans-serif',
+            margin: '0',
+            padding: '0',
           },
           input: {
-            fontSize: '18px',
+            fontSize: '22px',
+            lineHeight: '48px',
             color: '#18080D',
             fontFamily: 'Outfit, sans-serif',
+            padding: '0',
+            margin: '0',
           }
         };
 
@@ -952,17 +956,16 @@
         const container = document.getElementById(fieldId);
         if (!container) return;
 
-        // Force the container height
-        container.style.height = '52px';
-        container.style.maxHeight = '52px';
-        container.style.overflow = 'hidden';
+        // Let the container size naturally, just set min-height
+        container.style.minHeight = '52px';
+        container.style.display = 'flex';
+        container.style.alignItems = 'center';
 
-        // Find and fix any iframes inside
+        // Fix any iframes inside
         const fixIframes = () => {
           const iframes = container.querySelectorAll('iframe');
           iframes.forEach(iframe => {
-            iframe.style.setProperty('height', '52px', 'important');
-            iframe.style.setProperty('max-height', '52px', 'important');
+            iframe.style.setProperty('min-height', '48px', 'important');
             iframe.style.setProperty('width', '100%', 'important');
             iframe.style.setProperty('border', 'none', 'important');
             iframe.style.setProperty('display', 'block', 'important');
