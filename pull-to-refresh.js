@@ -23,12 +23,25 @@
     'justify-content: center',
     'align-items: flex-end',
     'pointer-events: none',
-    'z-index: 9998',
+    // 99999 ensures we beat the nav (z-index:501) and its backdrop-filter
+    // compositing layer which iOS promotes to a separate GPU layer.
+    'z-index: 99999',
     'height: 0',
     'overflow: visible',
     'top: env(safe-area-inset-top)',
   ].join(';');
-  document.body.prepend(container);
+  // IMPORTANT: append (not prepend) so the container is the LAST child of
+  // <body>. On iOS PWA, backdrop-filter creates a GPU compositing layer that
+  // paints over earlier siblings regardless of z-index. Being the last DOM
+  // child ensures this element is painted on top in the GPU layer stack.
+  function mount() {
+    document.body.appendChild(container);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mount);
+  } else {
+    mount();
+  }
 
   /* ── Spinner — lives inside the container ───────────────────────── */
   const spinner = document.createElement('div');
