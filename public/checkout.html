@@ -409,21 +409,17 @@
       border: 1px solid var(--bd-input);
       border-radius: 6px;
       background: var(--bg-input);
-      min-height: 52px;
+      height: 46px;
+      overflow: hidden;
       transition: border-color .2s;
-      display: flex;
-      align-items: center;
-      padding: 0 12px;
     }
 
     .clover-field > iframe,
     .clover-field iframe {
       width: 100% !important;
-      min-height: 48px !important;
+      height: 100% !important;
       border: none !important;
       display: block !important;
-      margin: 0 !important;
-      padding: 0 !important;
     }
     .clover-field:focus-within { border-color: var(--red); }
     .card-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -956,30 +952,22 @@
         const container = document.getElementById(fieldId);
         if (!container) return;
 
-        // Let the container size naturally, just set min-height
-        container.style.minHeight = '52px';
-        container.style.display = 'flex';
-        container.style.alignItems = 'center';
+        container.style.height = '46px';
+        container.style.overflow = 'hidden';
 
-        // Fix any iframes inside
         const fixIframes = () => {
           const iframes = container.querySelectorAll('iframe');
           iframes.forEach(iframe => {
-            iframe.style.setProperty('min-height', '48px', 'important');
+            iframe.style.setProperty('height', '100%', 'important');
             iframe.style.setProperty('width', '100%', 'important');
             iframe.style.setProperty('border', 'none', 'important');
             iframe.style.setProperty('display', 'block', 'important');
           });
         };
 
-        // Fix immediately
         fixIframes();
 
-        // Also watch for Clover injecting the iframe async
-        const observer = new MutationObserver(() => {
-          fixIframes();
-        });
-
+        const observer = new MutationObserver(() => fixIframes());
         observer.observe(container, {
           childList: true,
           subtree: true,
