@@ -6020,20 +6020,23 @@ function showUpdateBanner() {
 }
 function initUpdateBanner() {
   if (!('serviceWorker' in navigator)) return;
-  // Capture controller state BEFORE registering — no controller means first load, not update
   var hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.register('/sw.js').then(function(reg) {
-    reg.update(); // Force update check on every page load
+    // FIRST: attach listener — must come before reg.update() to avoid the
+    // race where updatefound fires before the listener is registered.
     reg.addEventListener('updatefound', function() {
       var nw = reg.installing;
+      if (!nw) return;
       nw.addEventListener('statechange', function() {
         if (nw.state === 'installed' && navigator.serviceWorker.controller)
-          if (hadController) showUpdateBanner();
+          showUpdateBanner();
       });
     });
-    if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner();
+    // SECOND: check for an already-waiting SW (e.g. tab was open across deploy)
+    if (reg.waiting && hadController) { showUpdateBanner(); return; }
+    // THIRD: trigger update check — now safe because listener is already attached
+    reg.update().catch(function(){});
   }).catch(function(){});
-  // No global controllerchange listener — it causes false reloads on page navigation
 }
 initUpdateBanner();
 </script>
