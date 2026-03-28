@@ -475,88 +475,92 @@
   <button class="push-opt-in-dismiss" id="push-opt-in-dismiss">✕</button>
 </div>
 
-<div id="update-banner" class="update-banner" onclick="window.location.reload()">
-  <span>🔄</span>
-  <span>New update available — tap to refresh</span>
-  <button onclick="event.stopPropagation();document.getElementById('update-banner').classList.remove('visible')"
-    class="update-banner-close">✕</button>
+<div id="update-banner">
+  <span>New update available</span>
+  <button id="update-banner-btn">Tap to update</button>
 </div>
 
 <script src="/pull-to-refresh.js"></script>
 <script src="/swipe-dismiss.js"></script>
 <script type="module" src="/admin-dashboard.js"></script>
+<style>
+#update-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 99999;
+  background: #C8102E;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 20px;
+  padding-top: calc(14px + env(safe-area-inset-top));
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  transform: translateY(-100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(200, 16, 46, 0.4);
+}
+#update-banner.visible {
+  transform: translateY(0);
+}
+#update-banner-btn {
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.5);
+  color: #fff;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+</style>
 <script>
-(function() {
-  // ── Service Worker (caching + push only) ──
-  if ('serviceWorker' in navigator && !location.hostname.includes('localhost')) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-    // Re-verify push subscription when a new SW activates
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (typeof subscribeToPush === 'function' && typeof currentUser !== 'undefined' && currentUser) {
-        subscribeToPush('admin', currentUser.id);
-      }
-    });
-  }
-
-  // ── Version Polling — reliable update detection ──
-  let currentVersion = null;
-  let lastActivity = Date.now();
-  const POLL_INTERVAL = 45 * 1000;   // check every 45 seconds
-  const IDLE_THRESHOLD = 30 * 1000;  // 30 seconds = idle
-
-  // Track user activity
-  ['click', 'touchstart', 'keydown', 'scroll', 'mousemove'].forEach(evt => {
-    document.addEventListener(evt, () => { lastActivity = Date.now(); }, { passive: true });
-  });
-
-  function isUserIdle() {
-    return Date.now() - lastActivity > IDLE_THRESHOLD;
-  }
-
-  function isUserBusy() {
-    // Check if modals/overlays are open (user mid-task)
-    const openOverlays = document.querySelectorAll(
-      '.detail-overlay.open, .confirm-overlay.open, #print-preview-overlay'
-    );
-    return openOverlays.length > 0;
-  }
-
-  function showUpdateBanner() {
-    const banner = document.getElementById('update-banner');
-    if (banner) banner.classList.add('visible');
-  }
-
-  async function checkVersion() {
-    try {
-      const res = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
-      if (!res.ok) return;
-      const data = await res.json();
-
-      if (!currentVersion) {
-        // First load — store the version
-        currentVersion = data.v;
-        return;
-      }
-
-      if (data.v !== currentVersion) {
-        // Version changed — update available
-        if (isUserIdle() && !isUserBusy()) {
-          // Silent auto-reload
-          window.location.reload();
+function showUpdateBanner() {
+  const banner = document.getElementById('update-banner');
+  if (!banner) return;
+  setTimeout(() => { banner.classList.add('visible'); }, 1000);
+  document.getElementById('update-banner-btn')
+    ?.addEventListener('click', () => {
+      navigator.serviceWorker.ready.then(reg => {
+        if (reg.waiting) {
+          reg.waiting.postMessage('skipWaiting');
         } else {
-          // User is active — show banner
-          showUpdateBanner();
+          window.location.reload();
         }
+      });
+    });
+}
+function initUpdateBanner() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('/sw.js')
+    .then(reg => {
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateBanner();
+          }
+        });
+      });
+      if (reg.waiting && navigator.serviceWorker.controller) {
+        showUpdateBanner();
       }
-    } catch (e) {
-      // Network error — silently ignore
-    }
-  }
-
-  // Start polling
-  checkVersion();
-  setInterval(checkVersion, POLL_INTERVAL);
-})();
+    }).catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+}
+initUpdateBanner();
 </script>
 </body>
 </html>

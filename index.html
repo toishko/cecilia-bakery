@@ -3525,7 +3525,7 @@
 </head>
 
 <body>
-  <div class="bg-blob" aria-hidden="true"></div>
+<div id="update-banner"><span>New update available</span><button id="update-banner-btn">Tap to update</button></div>  <div class="bg-blob" aria-hidden="true"></div>
 
   <!-- ── CONTROL BAR ── -->
   <!-- ── NAV ── -->
@@ -5472,5 +5472,75 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
   <script src="/pull-to-refresh.js"></script>
 
 </body>
+<style>
+#update-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 99999;
+  background: #C8102E;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 20px;
+  padding-top: calc(14px + env(safe-area-inset-top));
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  transform: translateY(-100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(200, 16, 46, 0.4);
+}
+#update-banner.visible { transform: translateY(0); }
+#update-banner-btn {
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.5);
+  color: #fff;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+</style>
+<script>
+function showUpdateBanner() {
+  var b = document.getElementById('update-banner');
+  if (!b) return;
+  setTimeout(function(){ b.classList.add('visible'); }, 1000);
+  var btn = document.getElementById('update-banner-btn');
+  if (btn) btn.addEventListener('click', function() {
+    navigator.serviceWorker.ready.then(function(reg) {
+      if (reg.waiting) reg.waiting.postMessage('skipWaiting');
+      else window.location.reload();
+    });
+  });
+}
+function initUpdateBanner() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('/sw.js').then(function(reg) {
+    reg.addEventListener('updatefound', function() {
+      var nw = reg.installing;
+      nw.addEventListener('statechange', function() {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller)
+          showUpdateBanner();
+      });
+    });
+    if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner();
+  }).catch(function(){});
+  navigator.serviceWorker.addEventListener('controllerchange', function() {
+    window.location.reload();
+  });
+}
+initUpdateBanner();
+</script>
 
 </html>

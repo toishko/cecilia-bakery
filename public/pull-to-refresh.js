@@ -161,6 +161,10 @@
         await loadDriverProducts();
         if (typeof buildProductSections === 'function') buildProductSections();
       }
+      /* admin-dashboard.html */
+      if (typeof window.__adminRefresh === 'function') {
+        await window.__adminRefresh();
+      }
     } catch (err) {
       // Silently swallow — PTR must never break the page
     }

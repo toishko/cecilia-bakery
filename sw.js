@@ -3,7 +3,7 @@
 //  Network-first + Offline Fallback + Push Notifications
 // ═══════════════════════════════════
 
-const CACHE_VERSION = 'v3';                       // bump on each release
+const CACHE_VERSION = 'v4';                       // bump on each release
 const CACHE_NAME = `cecilia-cache-${CACHE_VERSION}`;
 const OFFLINE_URL = '/offline.html';
 
@@ -15,15 +15,18 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
+// ── MESSAGE: allow banner button to trigger skipWaiting ──
+self.addEventListener('message', e => {
+  if (e.data === 'skipWaiting') {
+    self.skipWaiting();
+  }
+});
+
 // ── ACTIVATE: delete old caches + claim clients ──
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((names) =>
-      Promise.all(
-        names
-          .filter((name) => name.startsWith('cecilia-cache') && name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
-      )
+    caches.keys().then(keys =>
+      Promise.all(keys.map(k => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });

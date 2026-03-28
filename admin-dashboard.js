@@ -109,6 +109,20 @@ function showSection(name) {
   if (name === 'products') loadProductManager();
 }
 
+/* Exposed for pull-to-refresh.js — reloads the current active section */
+window.__adminRefresh = async function () {
+  const fnMap = {
+    overview:  loadOverview,
+    incoming:  loadIncomingOrders,
+    drivers:   loadDriverList,
+    history:   () => loadHistoryOrders(true),
+    products:  loadProductManager,
+    settings:  () => {},
+  };
+  const fn = fnMap[currentSection];
+  if (fn) await fn();
+};
+
 /* ═══════════════════════════════════
    AUTH — LOGIN
    ═══════════════════════════════════ */
