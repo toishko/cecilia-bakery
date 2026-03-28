@@ -460,6 +460,18 @@
     /* ── Utilities ── */
     .hidden { display: none !important; }
 
+    /* ── Pickup address link ── */
+    .pickup-address-link {
+      color: var(--red);
+      text-decoration: none;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+    .pickup-address-link:hover {
+      opacity: 0.7;
+      text-decoration: underline;
+    }
+
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
@@ -586,7 +598,7 @@
         </div>
         <div class="summary-pickup-address">
           <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          <span>Pickup: 6101 Park Ave, West New York, NJ</span>
+          <a href="https://maps.google.com/?q=6101+Park+Ave,+West+New+York,+NJ" target="_blank" rel="noopener" class="pickup-address-link">📍 6101 Park Ave, West New York, NJ</a>
         </div>
       </div>
 
