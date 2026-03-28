@@ -2677,8 +2677,8 @@ function _pmInjectStyles() {
 .pm-cat-drag-over{border:2px dashed var(--red,#C8102E)!important;border-radius:8px;background:rgba(200,16,46,.03)}
 .pm-category-group{transition:opacity .15s,transform .15s,box-shadow .15s}
 .pm-category-header{display:flex;align-items:center}
-.pm-save-bar{position:sticky;bottom:0;left:0;right:0;z-index:50;padding:14px 20px;
-  background:var(--bg-card);border-top:1px solid var(--bd);box-shadow:0 -4px 20px rgba(0,0,0,.1);
+.pm-save-bar{position:fixed;bottom:0;left:0;right:0;z-index:300;padding:14px 20px;
+  background:var(--bg-card);border-top:1px solid var(--bd);box-shadow:0 -4px 20px rgba(0,0,0,.15);
   display:flex;align-items:center;justify-content:space-between;gap:12px;
   transition:opacity .25s,transform .25s}
 .pm-save-bar.hidden{opacity:0;transform:translateY(100%);pointer-events:none}
@@ -3196,18 +3196,11 @@ async function _pmSave() {
 
   if (error) { showToast(error.message || 'Save failed', 'error'); return; }
   showToast(_pmEditId ? 'Product updated ✓' : 'Product added ✓', 'success');
-  const scrollY = document.getElementById('pm-list')?.parentElement?.scrollTop || window.scrollY;
+  const scrollY = window.scrollY;
   _pmCloseModal();
   await _pmFetch();
   // Restore scroll position after re-render
-  requestAnimationFrame(() => {
-    const parent = document.getElementById('pm-list')?.parentElement;
-    if (parent && parent.scrollTop !== undefined && parent !== document.documentElement) {
-      parent.scrollTop = scrollY;
-    } else {
-      window.scrollTo(0, scrollY);
-    }
-  });
+  requestAnimationFrame(() => window.scrollTo(0, scrollY));
 }
 
 /* ── Fetch products from Supabase ── */
@@ -3656,16 +3649,9 @@ window._pmToggle = function(id, field, value) {
   _pmPendingChanges[id][field] = value;
 
   // Re-render preserving scroll
-  const scrollY = document.getElementById('pm-list')?.parentElement?.scrollTop || window.scrollY;
+  const scrollY = window.scrollY;
   _pmRenderList(_pmProducts);
-  requestAnimationFrame(() => {
-    const parent = document.getElementById('pm-list')?.parentElement;
-    if (parent && parent.scrollTop !== undefined && parent !== document.documentElement) {
-      parent.scrollTop = scrollY;
-    } else {
-      window.scrollTo(0, scrollY);
-    }
-  });
+  requestAnimationFrame(() => window.scrollTo(0, scrollY));
 
   _pmUpdateSaveBar();
 };
