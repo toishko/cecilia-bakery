@@ -409,18 +409,22 @@
       border: 1px solid var(--bd-input);
       border-radius: 6px;
       background: var(--bg-input);
-      height: 46px;
-      overflow: hidden;
+      height: 46px !important;
+      max-height: 46px !important;
+      overflow: hidden !important;
       transition: border-color .2s;
-      display: flex;
-      align-items: center;
+      display: block;
     }
 
-    .clover-field > iframe {
+    .clover-field > iframe,
+    .clover-field iframe {
       width: 100% !important;
-      height: 100% !important;
+      height: 46px !important;
+      max-height: 46px !important;
       border: none !important;
       display: block !important;
+      margin: 0 !important;
+      padding: 0 !important;
     }
     .clover-field:focus-within { border-color: var(--red); }
     .card-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -931,9 +935,54 @@
         cloverTokenizer = cloverInstance;
 
         console.log('Clover iframe elements mounted');
+
+        // Force iframe heights after Clover finishes injecting
+        setTimeout(enforceCloverFieldHeights, 500);
+        setTimeout(enforceCloverFieldHeights, 1500);
       } catch (err) {
         console.error('Clover init error:', err);
       }
+    }
+
+    function enforceCloverFieldHeights() {
+      const fields = ['card-number', 'card-date', 'card-cvv', 'card-postal'];
+
+      fields.forEach(fieldId => {
+        const container = document.getElementById(fieldId);
+        if (!container) return;
+
+        // Force the container height
+        container.style.height = '46px';
+        container.style.maxHeight = '46px';
+        container.style.overflow = 'hidden';
+
+        // Find and fix any iframes inside
+        const fixIframes = () => {
+          const iframes = container.querySelectorAll('iframe');
+          iframes.forEach(iframe => {
+            iframe.style.setProperty('height', '46px', 'important');
+            iframe.style.setProperty('max-height', '46px', 'important');
+            iframe.style.setProperty('width', '100%', 'important');
+            iframe.style.setProperty('border', 'none', 'important');
+            iframe.style.setProperty('display', 'block', 'important');
+          });
+        };
+
+        // Fix immediately
+        fixIframes();
+
+        // Also watch for Clover injecting the iframe async
+        const observer = new MutationObserver(() => {
+          fixIframes();
+        });
+
+        observer.observe(container, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['style', 'height']
+        });
+      });
     }
 
     /* ════════════════════════════════════════
