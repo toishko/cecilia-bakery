@@ -3384,8 +3384,8 @@ function _pmAttachDragListeners() {
     const cards = group.querySelectorAll('.pm-card[data-product-id]');
     cards.forEach(card => {
       card.addEventListener('dragstart', (e) => {
-        // Don't fire when category grip is being used
-        if (window.__pmDraggingCat) { e.preventDefault(); return; }
+        // Don't fire when category drag is active
+        if (window.__pmDraggingCategory) { e.preventDefault(); return; }
         e.stopPropagation();
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', card.dataset.productId);
@@ -3403,7 +3403,7 @@ function _pmAttachDragListeners() {
       });
 
       card.addEventListener('dragover', (e) => {
-        if (window.__pmDraggingCat) return; // category drag in progress
+        if (window.__pmDraggingCategory) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         if (window.__pmDragging && window.__pmDragging !== card && window.__pmDragGroup === group) {
@@ -3416,7 +3416,7 @@ function _pmAttachDragListeners() {
       });
 
       card.addEventListener('drop', async (e) => {
-        if (window.__pmDraggingCat) return; // category drag in progress
+        if (window.__pmDraggingCategory) return;
         e.preventDefault();
         e.stopPropagation();
         card.classList.remove('pm-drag-over');
@@ -3448,16 +3448,17 @@ function _pmAttachDragListeners() {
   const catGroups = container.querySelectorAll('.pm-category-group[data-category]');
   catGroups.forEach(group => {
     group.addEventListener('dragstart', (e) => {
-      // Only trigger if drag started from the category grip
+      // Block drag if not starting from the grip
       if (!e.target.closest('.pm-cat-grip')) {
-        // Let product card dragstart handle it instead
+        e.preventDefault();
+        e.stopPropagation();
         return;
       }
-      e.stopPropagation();
       e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', group.dataset.category);
-      group.classList.add('pm-cat-dragging');
+      e.dataTransfer.setData('category', group.dataset.category);
+      setTimeout(() => group.classList.add('pm-cat-dragging'), 0);
       window.__pmDraggingCat = group;
+      window.__pmDraggingCategory = true;
     });
 
     group.addEventListener('dragend', () => {
@@ -3465,11 +3466,13 @@ function _pmAttachDragListeners() {
       document.querySelectorAll('.pm-cat-drag-over')
         .forEach(el => el.classList.remove('pm-cat-drag-over'));
       window.__pmDraggingCat = null;
+      window.__pmDraggingCategory = false;
     });
 
     group.addEventListener('dragover', (e) => {
-      if (!window.__pmDraggingCat) return; // only for category drags
+      if (!window.__pmDraggingCategory) return;
       e.preventDefault();
+      e.stopPropagation();
       e.dataTransfer.dropEffect = 'move';
       if (window.__pmDraggingCat !== group) {
         group.classList.add('pm-cat-drag-over');
@@ -3483,26 +3486,23 @@ function _pmAttachDragListeners() {
     });
 
     group.addEventListener('drop', async (e) => {
-      if (!window.__pmDraggingCat) return; // only for category drags
+      if (!window.__pmDraggingCategory) return;
       e.preventDefault();
       e.stopPropagation();
       group.classList.remove('pm-cat-drag-over');
 
-      const draggedCat = e.dataTransfer.getData('text/plain');
-      const targetCat = group.dataset.category;
-      if (draggedCat === targetCat) return;
-
       const draggedGroup = window.__pmDraggingCat;
-      if (!draggedGroup) return;
+      if (!draggedGroup || draggedGroup === group) return;
 
-      const allGroups = [...container.querySelectorAll('.pm-category-group[data-category]')];
-      const draggedIndex = allGroups.indexOf(draggedGroup);
-      const targetIndex = allGroups.indexOf(group);
+      // Determine drop position (above or below target)
+      const rect = group.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      const dropAbove = e.clientY < midY;
 
-      if (draggedIndex < targetIndex) {
-        container.insertBefore(draggedGroup, group.nextSibling);
-      } else {
+      if (dropAbove) {
         container.insertBefore(draggedGroup, group);
+      } else {
+        container.insertBefore(draggedGroup, group.nextSibling);
       }
 
       await _pmSaveCategoryOrder(container);
