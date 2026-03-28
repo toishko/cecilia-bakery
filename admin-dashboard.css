@@ -896,6 +896,40 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   box-shadow: 0 0 0 2px rgba(200,16,46,0.08);
 }
 
+/* ── Estimated Pickup Time ── */
+.online-order-time-set {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid var(--bd);
+}
+.online-order-time-set label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--tx-muted);
+  white-space: nowrap;
+}
+.online-order-time-input {
+  font-size: 0.82rem;
+  padding: 6px 10px;
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--tx);
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  transition: border-color 0.2s;
+  min-width: 120px;
+}
+.online-order-time-input:focus {
+  border-color: var(--red);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(200,16,46,0.08);
+}
+
 /* ── Push Opt-In Banner ── */
 .push-opt-in {
   position: fixed;

@@ -681,9 +681,20 @@ async function loadOnlineOrders() {
               </select>
             </div>
           </div>
+          <div class="online-order-time-set">
+            <label>${lang === 'es' ? 'Hora estimada de recogida:' : 'Estimated Pickup Time:'}</label>
+            <input
+              type="time"
+              class="online-order-time-input"
+              id="pickup-time-${order.id}"
+              value="${order.estimated_pickup_at ? new Date(order.estimated_pickup_at).toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit'}) : ''}"
+              onchange="setEstimatedPickupTime('${order.id}', this.value)"
+            />
+          </div>
         </div>
       `;
     });
+
 
     container.innerHTML = html;
     setupOnlineOrdersRealtime();
@@ -766,9 +777,30 @@ async function updateOnlineOrderStatus(orderId, newStatus) {
   }
 }
 
+async function setEstimatedPickupTime(orderId, timeValue) {
+  if (!sb || !timeValue) return;
+
+  const today = new Date().toISOString().split('T')[0];
+  const fullDateTime = new Date(today + 'T' + timeValue).toISOString();
+
+  try {
+    const { error } = await sb
+      .from('orders')
+      .update({ estimated_pickup_at: fullDateTime })
+      .eq('id', orderId);
+
+    if (error) throw error;
+    showToast(lang === 'es' ? 'Hora de recogida actualizada — el cliente lo verá al instante' : 'Pickup time updated — customer will see this instantly');
+  } catch (err) {
+    console.error('Failed to set pickup time:', err);
+    showToast(lang === 'es' ? 'Error al actualizar hora de recogida' : 'Failed to update pickup time', 'error');
+  }
+}
+
 // Make functions globally accessible (called via onclick in rendered HTML)
 window.loadOnlineOrders = loadOnlineOrders;
 window.updateOnlineOrderStatus = updateOnlineOrderStatus;
+window.setEstimatedPickupTime = setEstimatedPickupTime;
 
 /* ═══════════════════════════════════
    TOAST
