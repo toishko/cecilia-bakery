@@ -294,7 +294,7 @@
 </div>
 
 <!-- Update Banner -->
-<div id="update-banner">
+<div id="update-banner" hidden>
   <span>New update available</span>
   <button id="update-banner-btn">Tap to update</button>
 </div>
@@ -347,7 +347,8 @@
 function showUpdateBanner() {
   const banner = document.getElementById('update-banner');
   if (!banner) return;
-  setTimeout(() => { banner.classList.add('visible'); }, 1000);
+  banner.hidden = false;
+  setTimeout(() => { banner.classList.add('visible'); }, 100);
   document.getElementById('update-banner-btn')
     ?.addEventListener('click', () => {
       navigator.serviceWorker.ready.then(reg => {

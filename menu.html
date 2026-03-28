@@ -3456,7 +3456,7 @@
 </head>
 
 <body>
-<div id="update-banner">
+<div id="update-banner" hidden>
   <span>New update available</span>
   <button id="update-banner-btn">Tap to update</button>
 </div>
@@ -5998,7 +5998,8 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
 function showUpdateBanner() {
   var b = document.getElementById('update-banner');
   if (!b) return;
-  setTimeout(function(){ b.classList.add('visible'); }, 1000);
+  b.hidden = false;
+  setTimeout(function(){ b.classList.add('visible'); }, 100);
   var btn = document.getElementById('update-banner-btn');
   if (btn) btn.addEventListener('click', function() {
     navigator.serviceWorker.ready.then(function(reg) {
