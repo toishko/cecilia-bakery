@@ -1163,6 +1163,80 @@
       color: rgba(255, 255, 255, .8);
     }
 
+    /* ── Category card skeleton loading ── */
+    .cat-skeleton {
+      background: var(--bg-card);
+      border: 2px solid var(--bd);
+      padding: 40px 36px;
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+    .cat-skeleton.cat-skeleton-featured {
+      grid-column: span 2;
+      background: var(--red);
+      border-color: transparent;
+    }
+    .cat-skeleton-bar {
+      border-radius: 3px;
+      animation: skeletonPulse 1.4s ease-in-out infinite;
+    }
+    .cat-skeleton .cat-skeleton-bar {
+      background: var(--bg-surface);
+    }
+    .cat-skeleton.cat-skeleton-featured .cat-skeleton-bar {
+      background: rgba(255,255,255,.15);
+    }
+    .cat-skeleton-icon {
+      width: 2rem;
+      height: 2rem;
+    }
+    .cat-skeleton-count {
+      width: 70px;
+      height: 18px;
+    }
+    .cat-skeleton-label {
+      width: 100px;
+      height: 12px;
+      margin-bottom: 10px;
+    }
+    .cat-skeleton-name {
+      width: 140px;
+      height: 24px;
+      margin-bottom: 10px;
+    }
+    .cat-skeleton-desc {
+      width: 100%;
+      max-width: 260px;
+      height: 14px;
+      margin-bottom: 6px;
+    }
+    .cat-skeleton-arrow {
+      width: 80px;
+      height: 14px;
+      margin-top: 16px;
+    }
+    .cat-skeleton-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .cat-skeleton-bottom {
+      margin-top: 32px;
+    }
+    @keyframes skeletonPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .4; }
+    }
+    @media(max-width:500px) {
+      .cat-skeleton.cat-skeleton-featured {
+        grid-column: span 1;
+      }
+    }
+
     /* View all CTA row */
     .menu-preview-cta {
       margin-top: 40px;
@@ -3652,7 +3726,7 @@
 
   <!-- ── TICKER ── -->
   <div class="ticker" aria-hidden="true">
-    <div class="ticker-inner">
+    <div class="ticker-inner" id="product-ticker-inner">
       <span class="ti">Tres Leches<span class="ti-dot"> ·</span></span>
       <span class="ti">Tres Leche Piña<span class="ti-dot"> ·</span></span>
       <span class="ti">Cuatro Leche<span class="ti-dot"> ·</span></span>
@@ -3782,94 +3856,69 @@
       </p>
     </div>
 
-    <div class="cat-preview-grid">
+    <div class="cat-preview-grid" id="cat-preview-grid">
 
-      <!-- Tres Leches — featured, spans 2 cols -->
-      <a href="menu.html#tres-leches" class="cat-card cat-featured reveal">
-        <div class="cat-card-top">
-          <span class="cat-emoji"><i data-lucide="star" class="icon"></i></span>
-          <span class="cat-count" data-en="5 flavors" data-es="5 sabores">5 flavors</span>
+      <!-- Skeleton loading state (shown while fetching from Supabase) -->
+      <div class="cat-skeleton cat-skeleton-featured" id="cat-skeleton-0">
+        <div class="cat-skeleton-top">
+          <div class="cat-skeleton-bar cat-skeleton-icon"></div>
+          <div class="cat-skeleton-bar cat-skeleton-count"></div>
         </div>
-        <div class="cat-card-bottom">
-          <div class="cat-label" data-en="Our Signature" data-es="Nuestra Firma">Our Signature</div>
-          <div class="cat-name">Tres Leches</div>
-          <p class="cat-desc"
-            data-en="The cake that started it all. Soaked in three milks, impossibly moist, unmistakably ours."
-            data-es="El bizcocho que lo comenzó todo. Empapado en tres leches, increíblemente húmedo, inconfundiblemente nuestro.">
-            The cake that started it all. Soaked in three milks, impossibly moist, unmistakably ours.
-          </p>
-          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        <div class="cat-skeleton-bottom">
+          <div class="cat-skeleton-bar cat-skeleton-label"></div>
+          <div class="cat-skeleton-bar cat-skeleton-name"></div>
+          <div class="cat-skeleton-bar cat-skeleton-desc"></div>
+          <div class="cat-skeleton-bar cat-skeleton-arrow"></div>
         </div>
-      </a>
-
-      <!-- Birthday Cakes -->
-      <a href="menu.html#birthday" class="cat-card reveal d1">
-        <div class="cat-card-top">
-          <span class="cat-emoji"><i data-lucide="cake" class="icon"></i></span>
-          <span class="cat-count" data-en="5 flavors · 2 sizes" data-es="5 sabores · 2 tamaños">5 flavors · 2
-            sizes</span>
+      </div>
+      <div class="cat-skeleton" id="cat-skeleton-1">
+        <div class="cat-skeleton-top">
+          <div class="cat-skeleton-bar cat-skeleton-icon"></div>
+          <div class="cat-skeleton-bar cat-skeleton-count"></div>
         </div>
-        <div class="cat-card-bottom">
-          <div class="cat-label" data-en="Celebration Cakes" data-es="Bizcochos de Celebración">Celebration Cakes</div>
-          <div class="cat-name" data-en="Birthday Cakes" data-es="Cumpleaños">Birthday Cakes</div>
-          <p class="cat-desc" data-en="Custom cakes for every celebration. Big or small, with your message."
-            data-es="Bizcochos personalizados para cada celebración. Grande o pequeño, con tu mensaje.">
-            Custom cakes for every celebration. Big or small, with your message.
-          </p>
-          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        <div class="cat-skeleton-bottom">
+          <div class="cat-skeleton-bar cat-skeleton-label"></div>
+          <div class="cat-skeleton-bar cat-skeleton-name"></div>
+          <div class="cat-skeleton-bar cat-skeleton-desc"></div>
+          <div class="cat-skeleton-bar cat-skeleton-arrow"></div>
         </div>
-      </a>
-
-      <!-- Square Cakes -->
-      <a href="menu.html#square" class="cat-card reveal d2">
-        <div class="cat-card-top">
-          <span class="cat-emoji"><i data-lucide="square" class="icon"></i></span>
-          <span class="cat-count" data-en="4 options" data-es="4 opciones">4 options</span>
+      </div>
+      <div class="cat-skeleton" id="cat-skeleton-2">
+        <div class="cat-skeleton-top">
+          <div class="cat-skeleton-bar cat-skeleton-icon"></div>
+          <div class="cat-skeleton-bar cat-skeleton-count"></div>
         </div>
-        <div class="cat-card-bottom">
-          <div class="cat-label" data-en="Dominican Classics" data-es="Clásicos Dominicanos">Dominican Classics</div>
-          <div class="cat-name" data-en="Square Cakes" data-es="Cuadrados">Square Cakes</div>
-          <p class="cat-desc" data-en="Pudin, Maiz, Plain, and Raisin — baked fresh daily."
-            data-es="Pudin, Maiz, Plain y Pasas — horneados frescos cada día.">
-            Pudin, Maiz, Plain, and Raisin — baked fresh daily.
-          </p>
-          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        <div class="cat-skeleton-bottom">
+          <div class="cat-skeleton-bar cat-skeleton-label"></div>
+          <div class="cat-skeleton-bar cat-skeleton-name"></div>
+          <div class="cat-skeleton-bar cat-skeleton-desc"></div>
+          <div class="cat-skeleton-bar cat-skeleton-arrow"></div>
         </div>
-      </a>
-
-      <!-- Piezas -->
-      <a href="menu.html#piezas" class="cat-card reveal d1">
-        <div class="cat-card-top">
-          <span class="cat-emoji"><i data-lucide='cake-slice' class='icon'></i></span>
-          <span class="cat-count" data-en="11 options" data-es="11 opciones">11 options</span>
+      </div>
+      <div class="cat-skeleton" id="cat-skeleton-3">
+        <div class="cat-skeleton-top">
+          <div class="cat-skeleton-bar cat-skeleton-icon"></div>
+          <div class="cat-skeleton-bar cat-skeleton-count"></div>
         </div>
-        <div class="cat-card-bottom">
-          <div class="cat-label" data-en="By the Slice" data-es="Por Pieza">By the Slice</div>
-          <div class="cat-name" data-en="Slices" data-es="Piezas">Slices</div>
-          <p class="cat-desc" data-en="Red Velvet, Cheesecake, Chocoflan, Crema Guava, and more — individual slices."
-            data-es="Red Velvet, Cheesecake, Chocoflan, Crema Guava y más — piezas individuales.">
-            Red Velvet, Cheesecake, Chocoflan, Crema Guava, and more — individual slices.
-          </p>
-          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        <div class="cat-skeleton-bottom">
+          <div class="cat-skeleton-bar cat-skeleton-label"></div>
+          <div class="cat-skeleton-bar cat-skeleton-name"></div>
+          <div class="cat-skeleton-bar cat-skeleton-desc"></div>
+          <div class="cat-skeleton-bar cat-skeleton-arrow"></div>
         </div>
-      </a>
-
-      <!-- Basos -->
-      <a href="menu.html#basos" class="cat-card reveal d2">
-        <div class="cat-card-top">
-          <span class="cat-emoji"><i data-lucide='cup-soda' class='icon'></i></span>
-          <span class="cat-count" data-en="3 flavors" data-es="3 sabores">3 flavors</span>
+      </div>
+      <div class="cat-skeleton" id="cat-skeleton-4">
+        <div class="cat-skeleton-top">
+          <div class="cat-skeleton-bar cat-skeleton-icon"></div>
+          <div class="cat-skeleton-bar cat-skeleton-count"></div>
         </div>
-        <div class="cat-card-bottom">
-          <div class="cat-label" data-en="Individual Cups" data-es="Vasos Individuales">Individual Cups</div>
-          <div class="cat-name" data-en="Cups" data-es="Basos">Cups</div>
-          <p class="cat-desc" data-en="Your favorite flavors in a cup. Perfect for events and offices."
-            data-es="Tus sabores favoritos en vaso. Perfecto para eventos y oficinas.">
-            Your favorite flavors in a cup. Perfect for events and offices.
-          </p>
-          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        <div class="cat-skeleton-bottom">
+          <div class="cat-skeleton-bar cat-skeleton-label"></div>
+          <div class="cat-skeleton-bar cat-skeleton-name"></div>
+          <div class="cat-skeleton-bar cat-skeleton-desc"></div>
+          <div class="cat-skeleton-bar cat-skeleton-arrow"></div>
         </div>
-      </a>
+      </div>
 
     </div>
 
@@ -5433,6 +5482,211 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       });
     }
 
+    /* ── Dynamic Category Showcase Cards ── */
+    function slugify(text) {
+      return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    }
+
+    /* Hardcoded fallback HTML (original cards) */
+    const CAT_FALLBACK_HTML = `
+      <a href="menu.html#tres-leches" class="cat-card cat-featured reveal">
+        <div class="cat-card-top">
+          <span class="cat-emoji"><i data-lucide="star" class="icon"></i></span>
+          <span class="cat-count" data-en="5 flavors" data-es="5 sabores">5 flavors</span>
+        </div>
+        <div class="cat-card-bottom">
+          <div class="cat-label" data-en="Our Signature" data-es="Nuestra Firma">Our Signature</div>
+          <div class="cat-name">Tres Leches</div>
+          <p class="cat-desc"
+            data-en="The cake that started it all. Soaked in three milks, impossibly moist, unmistakably ours."
+            data-es="El bizcocho que lo comenzó todo. Empapado en tres leches, increíblemente húmedo, inconfundiblemente nuestro.">
+            The cake that started it all. Soaked in three milks, impossibly moist, unmistakably ours.
+          </p>
+          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        </div>
+      </a>
+      <a href="menu.html#birthday" class="cat-card reveal d1">
+        <div class="cat-card-top">
+          <span class="cat-emoji"><i data-lucide="cake" class="icon"></i></span>
+          <span class="cat-count" data-en="5 flavors · 2 sizes" data-es="5 sabores · 2 tamaños">5 flavors · 2 sizes</span>
+        </div>
+        <div class="cat-card-bottom">
+          <div class="cat-label" data-en="Celebration Cakes" data-es="Bizcochos de Celebración">Celebration Cakes</div>
+          <div class="cat-name" data-en="Birthday Cakes" data-es="Cumpleaños">Birthday Cakes</div>
+          <p class="cat-desc" data-en="Custom cakes for every celebration. Big or small, with your message."
+            data-es="Bizcochos personalizados para cada celebración. Grande o pequeño, con tu mensaje.">
+            Custom cakes for every celebration. Big or small, with your message.
+          </p>
+          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        </div>
+      </a>
+      <a href="menu.html#square" class="cat-card reveal d2">
+        <div class="cat-card-top">
+          <span class="cat-emoji"><i data-lucide="square" class="icon"></i></span>
+          <span class="cat-count" data-en="4 options" data-es="4 opciones">4 options</span>
+        </div>
+        <div class="cat-card-bottom">
+          <div class="cat-label" data-en="Dominican Classics" data-es="Clásicos Dominicanos">Dominican Classics</div>
+          <div class="cat-name" data-en="Square Cakes" data-es="Cuadrados">Square Cakes</div>
+          <p class="cat-desc" data-en="Pudin, Maiz, Plain, and Raisin — baked fresh daily."
+            data-es="Pudin, Maiz, Plain y Pasas — horneados frescos cada día.">
+            Pudin, Maiz, Plain, and Raisin — baked fresh daily.
+          </p>
+          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        </div>
+      </a>
+      <a href="menu.html#piezas" class="cat-card reveal d1">
+        <div class="cat-card-top">
+          <span class="cat-emoji"><i data-lucide="cake-slice" class="icon"></i></span>
+          <span class="cat-count" data-en="11 options" data-es="11 opciones">11 options</span>
+        </div>
+        <div class="cat-card-bottom">
+          <div class="cat-label" data-en="By the Slice" data-es="Por Pieza">By the Slice</div>
+          <div class="cat-name" data-en="Slices" data-es="Piezas">Slices</div>
+          <p class="cat-desc" data-en="Red Velvet, Cheesecake, Chocoflan, Crema Guava, and more — individual slices."
+            data-es="Red Velvet, Cheesecake, Chocoflan, Crema Guava y más — piezas individuales.">
+            Red Velvet, Cheesecake, Chocoflan, Crema Guava, and more — individual slices.
+          </p>
+          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        </div>
+      </a>
+      <a href="menu.html#basos" class="cat-card reveal d2">
+        <div class="cat-card-top">
+          <span class="cat-emoji"><i data-lucide="cup-soda" class="icon"></i></span>
+          <span class="cat-count" data-en="3 flavors" data-es="3 sabores">3 flavors</span>
+        </div>
+        <div class="cat-card-bottom">
+          <div class="cat-label" data-en="Individual Cups" data-es="Vasos Individuales">Individual Cups</div>
+          <div class="cat-name" data-en="Cups" data-es="Basos">Cups</div>
+          <p class="cat-desc" data-en="Your favorite flavors in a cup. Perfect for events and offices."
+            data-es="Tus sabores favoritos en vaso. Perfecto para eventos y oficinas.">
+            Your favorite flavors in a cup. Perfect for events and offices.
+          </p>
+          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        </div>
+      </a>
+    `;
+
+    async function loadCategoryCards() {
+      const grid = document.getElementById('cat-preview-grid');
+      if (!grid) return;
+
+      try {
+        const sb = window.__supabase;
+        if (!sb) throw new Error('No Supabase client');
+
+        const { data, error } = await sb
+          .from('products')
+          .select('tag_en, tag_es, description_en, description_es, images, icon_name')
+          .eq('available', true)
+          .order('sort_order', { ascending: true });
+
+        if (error || !data || data.length === 0) throw new Error('No data');
+
+        // Deduplicate: first product per category wins
+        const seen = new Set();
+        const categories = [];
+        for (const p of data) {
+          if (p.tag_en && !seen.has(p.tag_en)) {
+            seen.add(p.tag_en);
+            categories.push(p);
+          }
+        }
+        if (categories.length === 0) throw new Error('No categories');
+
+        // Count products per category for the count badge
+        const countMap = {};
+        data.forEach(p => {
+          if (!p.tag_en) return;
+          countMap[p.tag_en] = (countMap[p.tag_en] || 0) + 1;
+        });
+
+        const currentLang = localStorage.getItem('lang') || 'en';
+
+        // Build card HTML
+        const cardsHTML = categories.map((cat, i) => {
+          const slug = slugify(cat.tag_en);
+          const isFeatured = i === 0;
+          const delay = i === 0 ? '' : i % 2 === 0 ? ' d2' : ' d1';
+          const featuredClass = isFeatured ? ' cat-featured' : '';
+          const iconName = cat.icon_name || 'tag';
+          const count = countMap[cat.tag_en] || 0;
+
+          const tagEn = cat.tag_en || '';
+          const tagEs = cat.tag_es || tagEn;
+          const descEn = cat.description_en || '';
+          const descEs = cat.description_es || descEn;
+
+          // Determine count label
+          const countLabelEn = count === 1 ? '1 option' : `${count} options`;
+          const countLabelEs = count === 1 ? '1 opción' : `${count} opciones`;
+
+          // Category label (eyebrow above name)
+          const labelEn = isFeatured ? 'Our Signature' : tagEn;
+          const labelEs = isFeatured ? 'Nuestra Firma' : tagEs;
+
+          const displayName = currentLang === 'es' ? tagEs : tagEn;
+          const displayDesc = currentLang === 'es' ? descEs : descEn;
+          const displayCount = currentLang === 'es' ? countLabelEs : countLabelEn;
+          const displayLabel = currentLang === 'es' ? labelEs : labelEn;
+          const displayArrow = currentLang === 'es' ? 'Ver Menú →' : 'See Menu →';
+
+          return `
+            <a href="menu.html#${slug}" class="cat-card${featuredClass} reveal${delay}">
+              <div class="cat-card-top">
+                <span class="cat-emoji"><i data-lucide="${iconName}" class="icon"></i></span>
+                <span class="cat-count" data-en="${countLabelEn}" data-es="${countLabelEs}">${displayCount}</span>
+              </div>
+              <div class="cat-card-bottom">
+                <div class="cat-label" data-en="${labelEn}" data-es="${labelEs}">${displayLabel}</div>
+                <div class="cat-name" data-en="${tagEn}" data-es="${tagEs}">${displayName}</div>
+                <p class="cat-desc" data-en="${descEn}" data-es="${descEs}">${displayDesc}</p>
+                <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">${displayArrow}</span>
+              </div>
+            </a>
+          `;
+        }).join('');
+
+        grid.innerHTML = cardsHTML;
+
+        // Re-init Lucide icons for the newly injected cards
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        // Re-register reveal observers for new cards
+        const revealEls = grid.querySelectorAll('.reveal');
+        if (revealEls.length && typeof IntersectionObserver !== 'undefined') {
+          const revealObs = new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                obs.unobserve(entry.target);
+              }
+            });
+          }, { threshold: 0.15 });
+          revealEls.forEach(el => revealObs.observe(el));
+        }
+
+      } catch (e) {
+        // Supabase failed — fall back to hardcoded cards
+        console.warn('Category cards fallback:', e);
+        grid.innerHTML = CAT_FALLBACK_HTML;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        // Still need reveal observers for fallback
+        const revealEls = grid.querySelectorAll('.reveal');
+        if (revealEls.length && typeof IntersectionObserver !== 'undefined') {
+          const revealObs = new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                obs.unobserve(entry.target);
+              }
+            });
+          }, { threshold: 0.15 });
+          revealEls.forEach(el => revealObs.observe(el));
+        }
+      }
+    }
+
     /* ── Dynamic Footer Menu Categories ── */
     async function loadFooterMenu() {
       try {
@@ -5461,9 +5715,6 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
 
         const currentLang = localStorage.getItem('lang') || 'en';
 
-        function slugify(text) {
-          return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-        }
         footerMenu.innerHTML = categories.map(c => {
           const slug = slugify(c.tag_en);
           const label = currentLang === 'es' ? c.tag_es : c.tag_en;
@@ -5471,6 +5722,52 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         }).join('');
       } catch (e) {
         // Keep fallback link on error
+      }
+    }
+
+    /* ── Load Product Ticker from Supabase ── */
+    async function loadProductTicker() {
+      try {
+        const sb = window.__supabase;
+        if (!sb) return;
+
+        const { data, error } = await sb
+          .from('products')
+          .select('name_en, name_es')
+          .eq('available', true)
+          .eq('sold_out', false)
+          .order('sort_order', { ascending: true });
+
+        if (error || !data || data.length === 0) return;
+
+        const tickerEl = document.getElementById('product-ticker-inner');
+        if (!tickerEl) return;
+
+        // Build one set of ticker items
+        const buildTickerItems = (names) => {
+          return names.map(name =>
+            `<span class="ti">${name.toUpperCase()}<span class="ti-dot"> ·</span></span>`
+          ).join('');
+        };
+
+        // Use name_en by default; name_es swapped on lang change
+        const namesEn = data.map(p => p.name_en).filter(Boolean);
+        const namesEs = data.map(p => p.name_es || p.name_en).filter(Boolean);
+
+        if (namesEn.length === 0) return;
+
+        // Store names for language switching
+        tickerEl.dataset.namesEn = JSON.stringify(namesEn);
+        tickerEl.dataset.namesEs = JSON.stringify(namesEs);
+
+        // Duplicate the list for seamless infinite scroll
+        const lang = localStorage.getItem('lang') || 'en';
+        const names = lang === 'es' ? namesEs : namesEn;
+        const itemsHtml = buildTickerItems(names);
+        tickerEl.innerHTML = itemsHtml + itemsHtml;
+      } catch (err) {
+        // On failure, keep existing hardcoded ticker content as fallback
+        console.warn('Failed to load product ticker from Supabase:', err);
       }
     }
 
@@ -5485,7 +5782,9 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       await loadProductsFromSupabase();
       applyHiddenProducts();
       applySOldOutState();
+      loadCategoryCards();
       loadFooterMenu();
+      loadProductTicker();
     });
 
   </script>
