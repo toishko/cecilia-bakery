@@ -3447,13 +3447,20 @@ function _pmAttachDragListeners() {
   /* ── Category group drag ── */
   const catGroups = container.querySelectorAll('.pm-category-group[data-category]');
   catGroups.forEach(group => {
+    // Track whether the drag started from the grip handle
+    const grip = group.querySelector('.pm-cat-grip');
+    let gripActive = false;
+    if (grip) {
+      grip.addEventListener('mousedown', () => { gripActive = true; });
+      document.addEventListener('mouseup', () => { gripActive = false; });
+    }
+
     group.addEventListener('dragstart', (e) => {
-      // Block drag if not starting from the grip
-      if (!e.target.closest('.pm-cat-grip')) {
-        e.preventDefault();
-        e.stopPropagation();
+      if (!gripActive) {
+        // Not from the grip — let product card drag handle it
         return;
       }
+      e.stopPropagation();
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('category', group.dataset.category);
       setTimeout(() => group.classList.add('pm-cat-dragging'), 0);
