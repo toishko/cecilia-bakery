@@ -11,22 +11,21 @@
   const STYLE = `
     #ptr-indicator {
       position: fixed;
-      top: 0;
+      top: env(safe-area-inset-top);
       left: 50%;
-      /* Start fully hidden above the tallest possible status bar */
-      transform: translateX(-50%) translateY(-110px);
-      width: 40px;
-      height: 40px;
+      /* Hidden: -80px pulls it entirely above the safe-area boundary */
+      transform: translateX(-50%) translateY(-80px);
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       background: var(--bg-card, #fff);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 9998;
-      transition: transform 0.2s ease;
       pointer-events: none;
-      opacity: 0;
+      transition: none;
     }
     #ptr-indicator .ptr-icon {
       width: 20px;
@@ -55,9 +54,8 @@
   /* ── Constants ───────────────────────────────────────────────────── */
   const THRESHOLD = 80;   // px to pull before triggering refresh
   const MAX_PULL  = 120;  // px max rubber-band distance
-  // Calibrated for this device: env(safe-area-inset-top) = 62px,
-  // music player status bar ≈ 74px. 90px clears both with room to spare.
-  const SAFE_TOP  = 90;
+  // No SAFE_TOP constant — CSS handles env(safe-area-inset-top) natively.
+  // All translateY values are relative to the safe-area boundary:
 
   /* ── State ───────────────────────────────────────────────────────── */
   let startY     = 0;
@@ -72,17 +70,19 @@
 
   function snapBack() {
     indicator.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
-    indicator.style.transform  = 'translateX(-50%) translateY(-110px)';
+    // -80px hides the 44px disc above the safe-area boundary
+    indicator.style.transform  = 'translateX(-50%) translateY(-80px)';
     indicator.style.opacity    = '0';
   }
 
   async function triggerRefresh() {
     refreshing = true;
 
-    // Park the spinner below the status bar using the fixed SAFE_TOP constant.
-    // (SAFE_TOP + 16) = 106px from top of screen — safely below the 62px safe area + music bar.
-    indicator.style.transition = 'transform 0.3s ease';
-    indicator.style.transform  = 'translateX(-50%) translateY(' + (SAFE_TOP + 16) + 'px)';
+    // Park spinner 16px below the safe-area boundary.
+    // CSS top:env(safe-area-inset-top) means translateY(0) = boundary,
+    // so translateY(16px) = exactly 16px into visible content.
+    indicator.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+    indicator.style.transform  = 'translateX(-50%) translateY(16px)';
     indicator.style.opacity    = '1';
     indicator.classList.add('ptr-spinning');
 
@@ -128,10 +128,11 @@
       return;
     }
 
-    // Rubber-band the indicator into view, always starting from below SAFE_TOP.
-    // At dist=0 → translateY(80px), at dist=MAX_PULL(120) → translateY(140px).
+    // translateY is relative to top:env(safe-area-inset-top).
+    // At dist=0  → translateY(-10px) — just above boundary, fades in
+    // At dist=80 → translateY(30px)  — threshold, fully visible
     const progress = Math.min(dist / THRESHOLD, 1);
-    const yOffset  = SAFE_TOP + (dist * 0.5);
+    const yOffset  = (dist * 0.5) - 10;
 
     indicator.style.transition = 'none';
     indicator.style.transform  =
