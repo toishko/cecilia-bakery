@@ -409,8 +409,8 @@
       border: 1px solid var(--bd-input);
       border-radius: 6px;
       background: var(--bg-input);
-      height: 46px !important;
-      max-height: 46px !important;
+      height: 52px !important;
+      max-height: 52px !important;
       overflow: hidden !important;
       transition: border-color .2s;
       display: block;
@@ -419,8 +419,8 @@
     .clover-field > iframe,
     .clover-field iframe {
       width: 100% !important;
-      height: 46px !important;
-      max-height: 46px !important;
+      height: 52px !important;
+      max-height: 52px !important;
       border: none !important;
       display: block !important;
       margin: 0 !important;
@@ -917,15 +917,16 @@
             fontFamily: 'Outfit, sans-serif',
           },
           input: {
-            fontSize: '16px',
+            fontSize: '18px',
             color: '#18080D',
+            fontFamily: 'Outfit, sans-serif',
           }
         };
 
-        const cardNumber = elements.create('CARD_NUMBER', { style: cloverStyles });
-        const cardDate = elements.create('CARD_DATE', { style: cloverStyles });
-        const cardCvv = elements.create('CARD_CVV', { style: cloverStyles });
-        const cardPostalCode = elements.create('CARD_POSTAL_CODE', { style: cloverStyles });
+        const cardNumber = elements.create('CARD_NUMBER', { styles: cloverStyles });
+        const cardDate = elements.create('CARD_DATE', { styles: cloverStyles });
+        const cardCvv = elements.create('CARD_CVV', { styles: cloverStyles });
+        const cardPostalCode = elements.create('CARD_POSTAL_CODE', { styles: cloverStyles });
 
         cardNumber.mount('#card-number');
         cardDate.mount('#card-date');
@@ -952,16 +953,16 @@
         if (!container) return;
 
         // Force the container height
-        container.style.height = '46px';
-        container.style.maxHeight = '46px';
+        container.style.height = '52px';
+        container.style.maxHeight = '52px';
         container.style.overflow = 'hidden';
 
         // Find and fix any iframes inside
         const fixIframes = () => {
           const iframes = container.querySelectorAll('iframe');
           iframes.forEach(iframe => {
-            iframe.style.setProperty('height', '46px', 'important');
-            iframe.style.setProperty('max-height', '46px', 'important');
+            iframe.style.setProperty('height', '52px', 'important');
+            iframe.style.setProperty('max-height', '52px', 'important');
             iframe.style.setProperty('width', '100%', 'important');
             iframe.style.setProperty('border', 'none', 'important');
             iframe.style.setProperty('display', 'block', 'important');
