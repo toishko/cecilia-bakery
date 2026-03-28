@@ -14,7 +14,7 @@
       top: 0;
       left: 50%;
       /* Start fully hidden above the tallest possible status bar */
-      transform: translateX(-50%) translateY(-160px);
+      transform: translateX(-50%) translateY(-110px);
       width: 40px;
       height: 40px;
       border-radius: 50%;
@@ -55,10 +55,9 @@
   /* ── Constants ───────────────────────────────────────────────────── */
   const THRESHOLD = 80;   // px to pull before triggering refresh
   const MAX_PULL  = 120;  // px max rubber-band distance
-  // Fixed offset that clears the status bar on every iPhone:
-  //   standard notch = 44px, Dynamic Island = 59px, media bar ≈ 68px
-  //   120px gives comfortable breathing room on all models.
-  const SAFE_TOP  = 120;
+  // Calibrated for this device: env(safe-area-inset-top) = 62px,
+  // music player status bar ≈ 74px. 90px clears both with room to spare.
+  const SAFE_TOP  = 90;
 
   /* ── State ───────────────────────────────────────────────────────── */
   let startY     = 0;
@@ -73,7 +72,7 @@
 
   function snapBack() {
     indicator.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
-    indicator.style.transform  = 'translateX(-50%) translateY(-160px)';
+    indicator.style.transform  = 'translateX(-50%) translateY(-110px)';
     indicator.style.opacity    = '0';
   }
 
@@ -81,9 +80,9 @@
     refreshing = true;
 
     // Park the spinner below the status bar using the fixed SAFE_TOP constant.
-    // (SAFE_TOP + 20) = 140px from top of screen — safely below every iPhone status bar.
+    // (SAFE_TOP + 16) = 106px from top of screen — safely below the 62px safe area + music bar.
     indicator.style.transition = 'transform 0.3s ease';
-    indicator.style.transform  = 'translateX(-50%) translateY(' + (SAFE_TOP + 20) + 'px)';
+    indicator.style.transform  = 'translateX(-50%) translateY(' + (SAFE_TOP + 16) + 'px)';
     indicator.style.opacity    = '1';
     indicator.classList.add('ptr-spinning');
 
