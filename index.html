@@ -1490,10 +1490,16 @@
       margin-top: 30px;
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-end;
       font-size: .76rem;
       flex-wrap: wrap;
       gap: 15px;
+    }
+
+    .footer-bottom-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
 
     .footer-legal {
@@ -2073,6 +2079,7 @@
       .footer-bottom {
         flex-direction: column;
         text-align: center;
+        align-items: center;
       }
 
       .chat-window {
@@ -4001,10 +4008,12 @@
 
     </div>
     <div class="footer-bottom">
-      <span data-en="© 2025 Cecilia Bakery. All rights reserved."
-        data-es="© 2025 Cecilia Bakery. Todos los derechos reservados.">© 2025 Cecilia Bakery. All rights
-        reserved.</span>
-      <span class="toisko-credit" data-en='Digital Experience by <a href="https://systems.toisko.com" target="_blank" rel="noopener">Toisko Systems</a>' data-es='Experiencia Digital por <a href="https://systems.toisko.com" target="_blank" rel="noopener">Toisko Systems</a>'>Digital Experience by <a href="https://systems.toisko.com" target="_blank" rel="noopener">Toisko Systems</a></span>
+      <div class="footer-bottom-left">
+        <span data-en="© 2025 Cecilia Bakery. All rights reserved."
+          data-es="© 2025 Cecilia Bakery. Todos los derechos reservados.">© 2025 Cecilia Bakery. All rights
+          reserved.</span>
+        <span class="toisko-credit" data-en='Digital Experience by <a href="https://systems.toisko.com" target="_blank" rel="noopener">Toisko Systems</a>' data-es='Experiencia Digital por <a href="https://systems.toisko.com" target="_blank" rel="noopener">Toisko Systems</a>'>Digital Experience by <a href="https://systems.toisko.com" target="_blank" rel="noopener">Toisko Systems</a></span>
+      </div>
       <div class="flag-row">
         <span data-en="Made with love 🇩🇴" data-es="Hecho con amor 🇩🇴">Made with love 🇩🇴</span>
       </div>
