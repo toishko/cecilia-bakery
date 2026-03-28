@@ -1827,10 +1827,10 @@
       .product-card {
         display: flex;
         flex-direction: row;
-        justify-content: space-between;
+        justify-content: flex-start;
         align-items: center;
-        min-height: 158px;
-        padding: 16px 0;
+        min-height: 90px;
+        padding: 10px 0;
         border-bottom: 1px solid var(--bd);
         border-radius: 0;
         box-shadow: none;
@@ -1844,7 +1844,7 @@
       .product-card:hover {
         background: var(--bg-card-hover, rgba(0,0,0,.02));
         margin: 0 -16px;
-        padding: 16px;
+        padding: 10px 16px;
         border-radius: 8px;
       }
 
@@ -1852,9 +1852,19 @@
         display: none;
       }
 
-      /* Text content — LEFT side */
+      /* Text wrapper — LEFT side */
+      .pc-text-group {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 3px;
+        min-width: 0;
+        order: 1;
+      }
+
       .pc-tag {
-        font-size: 0.62rem;
+        font-size: 0.6rem;
         letter-spacing: 0.1em;
         color: var(--tx-muted);
         margin-bottom: 2px;
@@ -1866,27 +1876,26 @@
       }
 
       .pc-name {
-        font-size: 1rem;
+        font-size: 0.92rem;
         font-weight: 600;
         color: var(--tx);
         line-height: 1.3;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
 
-      /* Show description — DoorDash does */
       .pc-desc {
         display: -webkit-box;
         -webkit-line-clamp: 2;
         line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         color: var(--tx-muted);
         line-height: 1.45;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
       }
 
       .pc-footer {
@@ -1908,14 +1917,14 @@
       }
 
       .pc-price {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         font-weight: 700;
         color: var(--tx);
       }
 
       .atc-trigger {
-        font-size: 0.7rem;
-        padding: 8px 14px;
+        font-size: 0.68rem;
+        padding: 7px 12px;
         border-radius: 20px;
         white-space: nowrap;
       }
@@ -1923,9 +1932,9 @@
       /* Image — RIGHT side, fixed square thumbnail */
       .pc-image-wrap {
         order: 2;
-        width: 150px;
-        height: 150px;
-        min-width: 150px;
+        width: 100px;
+        height: 100px;
+        min-width: 100px;
         margin: 0;
         border-radius: 8px;
         overflow: hidden;
@@ -1949,21 +1958,22 @@
       .product-card.featured {
         background: var(--red);
         border-radius: 12px;
-        padding: 20px;
+        padding: 14px 20px;
         margin-bottom: 1px;
         border: none;
-        min-height: 180px;
+        min-height: 120px;
       }
 
       .product-card.featured:hover {
         margin: 0;
+        padding: 14px 20px;
         background: var(--red-dk);
       }
 
       .product-card.featured .pc-image-wrap {
-        width: 180px;
-        height: 180px;
-        min-width: 180px;
+        width: 130px;
+        height: 130px;
+        min-width: 130px;
         border-radius: 10px;
       }
 
@@ -1975,17 +1985,21 @@
 
       .product-card.featured .pc-price {
         color: #fff;
-        font-size: 1rem;
+        font-size: 0.95rem;
       }
 
       .product-card.featured .atc-trigger {
-        background: #fff;
-        color: var(--red);
-        border-color: transparent;
+        background: rgba(255,255,255,0.15);
+        color: #fff;
+        border: 1.5px solid rgba(255,255,255,0.7);
+      }
+
+      .product-card.featured .atc-trigger:hover {
+        background: rgba(255,255,255,0.28);
       }
 
       .product-card.featured .pc-name {
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         white-space: normal;
       }
     }
@@ -5718,26 +5732,28 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
           <img class="pc-image" src="${imgSrc}" alt="${nameEn}" loading="lazy"
                onerror="this.src='https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=700&fit=crop'">
         </div>
-        <div class="pc-tag"
-          data-en="<i data-lucide='${icon}' class='icon'></i> ${tagEn}"
-          data-es="<i data-lucide='${icon}' class='icon'></i> ${tagEs}">
-          <i data-lucide="${icon}" class="icon"></i> ${tagDisplay}
-        </div>
-        <p class="pc-name" data-en="${nameEn}" data-es="${nameEs}">${displayName}</p>
-        ${description
-          ? `<p class="pc-desc"
-               data-en="${(p.description_en||'').replace(/"/g,'&quot;')}"
-               data-es="${(p.description_es||'').replace(/"/g,'&quot;')}">${description}</p>`
-          : ''}
-        <div class="pc-footer">
-          <div class="pc-footer-badge-row"></div>
-          <div class="pc-footer-action-row">
-            <span class="pc-price">${priceHTML}</span>
-            <button class="pc-order atc-trigger"
-              onclick="openATC('${nameEn.replace(/'/g,"\\'")}')"
-              data-en="${isSoldOut ? 'Sold Out'  : 'Add to Cart'}"
-              data-es="${isSoldOut ? 'Agotado'   : 'Agregar'}"
-              ${btnDisabled} ${soldOutAttr}>${btnText}</button>
+        <div class="pc-text-group">
+          <div class="pc-tag"
+            data-en="<i data-lucide='${icon}' class='icon'></i> ${tagEn}"
+            data-es="<i data-lucide='${icon}' class='icon'></i> ${tagEs}">
+            <i data-lucide="${icon}" class="icon"></i> ${tagDisplay}
+          </div>
+          <p class="pc-name" data-en="${nameEn}" data-es="${nameEs}">${displayName}</p>
+          ${description
+            ? `<p class="pc-desc"
+                 data-en="${(p.description_en||'').replace(/"/g,'&quot;')}"
+                 data-es="${(p.description_es||'').replace(/"/g,'&quot;')}">${description}</p>`
+            : ''}
+          <div class="pc-footer">
+            <div class="pc-footer-badge-row"></div>
+            <div class="pc-footer-action-row">
+              <span class="pc-price">${priceHTML}</span>
+              <button class="pc-order atc-trigger"
+                onclick="openATC('${nameEn.replace(/'/g,"\\'")}')"
+                data-en="${isSoldOut ? 'Sold Out'  : 'Add to Cart'}"
+                data-es="${isSoldOut ? 'Agotado'   : 'Agregar'}"
+                ${btnDisabled} ${soldOutAttr}>${btnText}</button>
+            </div>
           </div>
         </div>
         ${isSoldOut ? `<div class="sold-out-ribbon">${currentLang === 'es' ? 'AGOTADO' : 'SOLD OUT'}</div>` : ''}
