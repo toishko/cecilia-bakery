@@ -1,68 +1,57 @@
 /**
- * pull-to-refresh.js
- * Custom pull-to-refresh for Cecilia Bakery PWA (menu.html + driver-order.html).
- * Replaces native iOS bounce/navigate behaviour in standalone PWA mode.
- *
- * APPROACH: position:fixed container anchored at the bottom edge of the nav.
- * z-index 499 keeps it just below the nav (501) so the spinner "peels out"
- * from under the bar — fully visible, no compositing layer conflicts.
- *
- * - Pure touch events, passive: true on all listeners (no scroll blocking)
- * - DATA refresh only — never window.location.reload()
+ * pull-to-refresh.js  (served from /public/)
+ * Custom pull-to-refresh for Cecilia Bakery PWA.
+ * Visual: YouTube/Chrome-style thin progress bar below the nav.
+ * Logic:  data-only refresh — never window.location.reload()
  */
 (function initPullToRefresh() {
 
-  /* ── Spin keyframes ─────────────────────────────────────────────── */
+  /* ── Keyframes ──────────────────────────────────────────────────── */
   const kf = document.createElement('style');
   kf.id = 'ptr-keyframes';
-  kf.textContent = '@keyframes ptrSpin { to { transform: rotate(360deg); } }';
+  kf.textContent = `
+    @keyframes ptrShimmer {
+      0%   { opacity: 1; }
+      50%  { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+  `;
   document.head.appendChild(kf);
 
-  /* ── Container ──────────────────────────────────────────────────── */
+  /* ── Container — full-width strip flush with nav bottom ─────────── */
   const container = document.createElement('div');
   container.id = 'ptr-container';
-  // Initial top — will be corrected to nav bottom after DOMContentLoaded.
   container.style.cssText = [
     'position: fixed',
-    'top: 80px',            // sensible default before nav height is known
-    'left: 50%',
-    'transform: translateX(-50%)',
-    'z-index: 499',         // just below nav (501) — slides out from under it
+    'top: 80px',          // corrected to real nav bottom in pinToNav()
+    'left: 0',
+    'right: 0',
+    'height: 3px',
+    'z-index: 499',       // just below nav (z-index 501)
     'pointer-events: none',
-    'height: 0',
-    'overflow: visible',
-    'display: flex',
-    'justify-content: center',
+    'background: transparent',
   ].join(';');
   document.body.appendChild(container);
 
-  /* ── Spinner ────────────────────────────────────────────────────── */
-  const spinner = document.createElement('div');
-  spinner.id = 'ptr-spinner';
-  spinner.style.cssText = [
-    'width: 36px',
-    'height: 36px',
-    'border-radius: 50%',
-    'background: #fff',
-    'box-shadow: 0 2px 12px rgba(0,0,0,0.25)',
-    'border: 2.5px solid #C8102E',
-    'border-top-color: transparent',
+  /* ── Bar — grows across the container width ─────────────────────── */
+  const bar = document.createElement('div');
+  bar.id = 'ptr-bar';
+  bar.style.cssText = [
+    'height: 100%',
+    'width: 0%',
+    'background: #C8102E',
+    'border-radius: 0 2px 2px 0',
     'opacity: 0',
-    'transform: translateY(-60px)',  // hidden above container origin
-    'transition: opacity 0.2s, transform 0.2s',
-    'pointer-events: none',
+    'transition: width 0.1s ease, opacity 0.4s ease',
   ].join(';');
-  container.appendChild(spinner);
+  container.appendChild(bar);
 
-  /* ── Pin container top to actual nav bottom ─────────────────────── */
+  /* ── Pin container to actual nav bottom ─────────────────────────── */
   function pinToNav() {
-    // menu.html: <nav>; driver-order.html: .dash-header (sticky top bar)
-    const bar = document.querySelector('nav') ||
-                document.querySelector('.dash-header');
-    if (bar) {
-      // getBoundingClientRect().bottom = px from viewport top to bar's bottom edge
-      const bottom = bar.getBoundingClientRect().bottom;
-      container.style.top = bottom + 'px';
+    const navEl = document.querySelector('nav') ||
+                  document.querySelector('.dash-header');
+    if (navEl) {
+      container.style.top = navEl.getBoundingClientRect().bottom + 'px';
     }
   }
 
@@ -71,7 +60,6 @@
   } else {
     pinToNav();
   }
-  // Re-pin on resize/orientation change (safe-area inset may change)
   window.addEventListener('resize', pinToNav, { passive: true });
 
   /* ── State ──────────────────────────────────────────────────────── */
@@ -82,17 +70,18 @@
   let refreshing = false;
 
   /* ── Helpers ────────────────────────────────────────────────────── */
-  function snapBack() {
-    spinner.style.transition = 'opacity 0.3s, transform 0.3s';
-    spinner.style.opacity    = '0';
-    spinner.style.transform  = 'translateY(-60px)';
+  function resetBar() {
+    bar.style.animation  = 'none';
+    bar.style.transition = 'width 0.1s ease, opacity 0.4s ease';
+    bar.style.opacity    = '0';
+    // Reset width after fade completes so it's invisible before next pull
+    setTimeout(function () { bar.style.width = '0%'; }, 400);
   }
 
   /* ── Touch: start ───────────────────────────────────────────────── */
   document.addEventListener('touchstart', function (e) {
     if (window.scrollY > 0) return;
-    // Re-pin in case the nav height changed (e.g. music player bar appeared)
-    pinToNav();
+    pinToNav(); // re-measure in case status bar height changed
     startY = e.touches[0].clientY;
     active = true;
   }, { passive: true });
@@ -104,16 +93,16 @@
     const dist = Math.min(e.touches[0].clientY - startY, MAX_PULL);
     if (dist <= 0) {
       active = false;
-      snapBack();
+      resetBar();
       return;
     }
 
     const progress = Math.min(dist / THRESHOLD, 1);
-    const offset   = Math.min(dist * 0.4, 40); // slides 0 → 40px below nav
 
-    spinner.style.transition = 'none';
-    spinner.style.opacity    = String(progress);
-    spinner.style.transform  = 'translateY(' + offset + 'px)';
+    bar.style.animation  = 'none';
+    bar.style.transition = 'width 0.1s ease, opacity 0.15s ease';
+    bar.style.width      = (progress * 100) + '%';
+    bar.style.opacity    = String(progress);
   }, { passive: true });
 
   /* ── Touch: end ─────────────────────────────────────────────────── */
@@ -124,19 +113,23 @@
     const dist = e.changedTouches[0].clientY - startY;
 
     if (dist < THRESHOLD) {
-      snapBack();
+      resetBar();
       return;
     }
 
-    /* ── Trigger data refresh ── */
+    /* ── Threshold met — show loading state ── */
     refreshing = true;
-    spinner.style.transition = 'transform 0.2s';
-    spinner.style.transform  = 'translateY(20px)';
-    spinner.style.opacity    = '1';
-    spinner.style.animation  = 'ptrSpin 0.7s linear infinite';
+    bar.style.transition = 'width 0.15s ease';
+    bar.style.width      = '100%';
+    bar.style.opacity    = '1';
+    // Start shimmer after bar reaches full width
+    setTimeout(function () {
+      bar.style.transition = 'none';
+      bar.style.animation  = 'ptrShimmer 0.8s ease-in-out infinite';
+    }, 150);
 
     try {
-      /* menu.html */
+      /* menu.html / index.html */
       if (typeof loadProductsFromSupabase === 'function') {
         await loadProductsFromSupabase();
         if (typeof renderMenu === 'function') renderMenu();
@@ -151,8 +144,7 @@
     }
 
     setTimeout(function () {
-      spinner.style.animation = 'none';
-      snapBack();
+      resetBar();
       refreshing = false;
     }, 600);
 
