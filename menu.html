@@ -1828,7 +1828,7 @@
         display: flex;
         flex-direction: row;
         justify-content: flex-start;
-        align-items: center;
+        align-items: flex-start;
         min-height: 90px;
         padding: 10px 0;
         border-bottom: 1px solid var(--bd);
@@ -1858,6 +1858,7 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
+        align-items: flex-start;
         gap: 3px;
         min-width: 0;
         order: 1;
@@ -1900,10 +1901,13 @@
 
       .pc-footer {
         display: flex;
+        flex-direction: row;
         align-items: center;
+        justify-content: flex-start;
         gap: 12px;
-        margin-top: auto;
+        margin-top: 6px;
         padding: 0;
+        width: 100%;
       }
 
       .pc-footer-badge-row {
