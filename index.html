@@ -4790,7 +4790,9 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
     </div>`;
       }).join('');
 
-      document.getElementById('cart-count-label').textContent = t.countLabel(cartTotal());
+      const countLbl = document.getElementById('cart-count-label');
+      if (countLbl) countLbl.textContent = t.countLabel(cartTotal());
+
       // Calculate and show total
       const total = cart.reduce((sum, item) => {
         const p = parseFloat(item.price || 0);
