@@ -1977,14 +1977,19 @@
         padding: 0;
       }
 
-      /* Show action row for price, but hide the leftover button */
+      /* Show action row for price, hide the footer button on desktop */
       .pc-footer-action-row {
         display: flex;
         align-items: center;
       }
 
-      .pc-footer-action-row .atc-trigger {
+      .pc-atc-footer {
         display: none;
+      }
+
+      /* Desktop: show image overlay button */
+      .pc-atc-image {
+        display: flex;
       }
 
       .pc-price {
@@ -2069,10 +2074,13 @@
 
 
 
-    /* Mobile: show text label, hide + */
+    /* Mobile: show footer button, hide image button */
     @media (max-width: 768px) {
       .atc-desktop { display: none !important; }
       .atc-mobile  { display: inline !important; }
+      .pc-atc-image { display: none !important; }
+      .pc-atc-footer { display: flex !important; }
+      .pc-footer-action-row { display: flex !important; }
     }
 
     @media(max-width:768px) {
@@ -5800,6 +5808,9 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         <div class="pc-image-wrap">
           <img class="pc-image" src="${imgSrc}" alt="${nameEn}" loading="lazy"
                onerror="this.src='https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=700&fit=crop'">
+          <button class="pc-order atc-trigger pc-atc-image"
+            onclick="openATC('${nameEn.replace(/'/g,"\\\\'")}')"
+            ${btnDisabled} ${soldOutAttr}><span class="atc-desktop">+</span></button>
         </div>
         <div class="pc-text-group">
           <div class="pc-tag"
@@ -5817,21 +5828,16 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
             <div class="pc-footer-badge-row"></div>
             <div class="pc-footer-action-row">
               <span class="pc-price">${priceHTML}</span>
-              <button class="pc-order atc-trigger"
+              <button class="pc-order atc-trigger pc-atc-footer"
                 onclick="openATC('${nameEn.replace(/'/g,"\\'")}')"
                 data-en="${isSoldOut ? 'Sold Out'  : 'Add to Cart'}"
                 data-es="${isSoldOut ? 'Agotado'   : 'Agregar'}"
-                ${btnDisabled} ${soldOutAttr}><span class="atc-desktop">+</span><span class="atc-mobile">${btnText}</span></button>
+                ${btnDisabled} ${soldOutAttr}>${btnText}</button>
             </div>
           </div>
         </div>
         ${isSoldOut ? `<div class="sold-out-ribbon">${currentLang === 'es' ? 'AGOTADO' : 'SOLD OUT'}</div>` : ''}
       `;
-      // Move the + button into .pc-image-wrap for desktop overlay
-      const btn = div.querySelector('.atc-trigger');
-      const imgWrap = div.querySelector('.pc-image-wrap');
-      if (btn && imgWrap) imgWrap.appendChild(btn);
-
       return div;
     }
 
