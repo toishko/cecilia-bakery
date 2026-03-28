@@ -1819,6 +1819,7 @@
         grid-template-columns: repeat(3, 1fr);
         gap: 16px;
         padding: 24px 52px;
+        align-items: start;
       }
 
       .product-card {
@@ -1976,8 +1977,13 @@
         padding: 0;
       }
 
-      /* Hide action row — button moved to image */
+      /* Show action row for price, but hide the leftover button */
       .pc-footer-action-row {
+        display: flex;
+        align-items: center;
+      }
+
+      .pc-footer-action-row .atc-trigger {
         display: none;
       }
 
@@ -2033,6 +2039,11 @@
 
       .product-card.featured .pc-name {
         font-size: 1.1rem;
+        color: #fff !important;
+      }
+
+      .product-card.featured .pc-text-group {
+        background: var(--red);
       }
     }
 
