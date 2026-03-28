@@ -2662,6 +2662,13 @@ function _pmInjectStyles() {
 .pm-dragging{opacity:.4;transform:scale(.98);box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:10;position:relative}
 .pm-drag-over{border:2px dashed var(--red,#C8102E)!important;background:rgba(200,16,46,.04);transform:translateY(2px)}
 .pm-card{transition:background .15s,transform .15s,opacity .15s,box-shadow .15s}
+.pm-cat-grip{cursor:grab;padding:0 12px 0 4px;display:flex;align-items:center;flex-shrink:0;opacity:.35;transition:opacity .2s}
+.pm-cat-grip:hover{opacity:.8}
+.pm-cat-grip:active{cursor:grabbing}
+.pm-cat-dragging{opacity:.5;transform:scale(.99);box-shadow:0 8px 32px rgba(0,0,0,.12)}
+.pm-cat-drag-over{border:2px dashed var(--red,#C8102E)!important;border-radius:8px;background:rgba(200,16,46,.03)}
+.pm-category-group{transition:opacity .15s,transform .15s,box-shadow .15s}
+.pm-category-header{display:flex;align-items:center}
 /* Modal */
 .pm-overlay{position:fixed;inset:0;background:var(--bg-overlay);z-index:400;
   display:none;align-items:flex-end;justify-content:center;overscroll-behavior:none}
@@ -3343,8 +3350,18 @@ function _pmRenderList(list, isSearch) {
   container.innerHTML = groupOrder.map(tag => {
     const g = groups[tag];
     return `
-    <div class="pm-category-group">
+    <div class="pm-category-group" draggable="true" data-category="${_esc(tag)}">
       <div class="pm-category-header">
+        <div class="pm-cat-grip" title="Drag to reorder category">
+          <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
+            <circle cx="2" cy="2" r="1.5" fill="#C8A0A8"/>
+            <circle cx="8" cy="2" r="1.5" fill="#C8A0A8"/>
+            <circle cx="2" cy="8" r="1.5" fill="#C8A0A8"/>
+            <circle cx="8" cy="8" r="1.5" fill="#C8A0A8"/>
+            <circle cx="2" cy="14" r="1.5" fill="#C8A0A8"/>
+            <circle cx="8" cy="14" r="1.5" fill="#C8A0A8"/>
+          </svg>
+        </div>
         ${_esc(tag)}
         <span class="pm-category-es">/ ${_esc(g.tag_es)}</span>
         <span class="pm-category-count">${g.items.length} item${g.items.length !== 1 ? 's' : ''}</span>
@@ -3357,13 +3374,19 @@ function _pmRenderList(list, isSearch) {
   if (!isSearch) _pmAttachDragListeners();
 }
 
-/* ── Drag-and-drop reordering within category groups ── */
+/* ── Drag-and-drop reordering (products within groups + category groups) ── */
 function _pmAttachDragListeners() {
+  const container = document.getElementById('pm-list');
+  if (!container) return;
+
+  /* ── Product card drag (within same category) ── */
   document.querySelectorAll('.pm-category-group').forEach(group => {
     const cards = group.querySelectorAll('.pm-card[data-product-id]');
     cards.forEach(card => {
       card.addEventListener('dragstart', (e) => {
-        // Only allow drag from grip handle
+        // Don't fire when category grip is being used
+        if (window.__pmDraggingCat) { e.preventDefault(); return; }
+        e.stopPropagation();
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', card.dataset.productId);
         card.classList.add('pm-dragging');
@@ -3380,9 +3403,9 @@ function _pmAttachDragListeners() {
       });
 
       card.addEventListener('dragover', (e) => {
+        if (window.__pmDraggingCat) return; // category drag in progress
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
-        // Only allow drag-over within the same category group
         if (window.__pmDragging && window.__pmDragging !== card && window.__pmDragGroup === group) {
           card.classList.add('pm-drag-over');
         }
@@ -3393,14 +3416,14 @@ function _pmAttachDragListeners() {
       });
 
       card.addEventListener('drop', async (e) => {
+        if (window.__pmDraggingCat) return; // category drag in progress
         e.preventDefault();
+        e.stopPropagation();
         card.classList.remove('pm-drag-over');
 
         const draggedId = e.dataTransfer.getData('text/plain');
         const targetId = card.dataset.productId;
         if (draggedId === targetId) return;
-
-        // Only allow drop within the same category group
         if (window.__pmDragGroup !== group) return;
 
         const draggedCard = window.__pmDragging;
@@ -3416,13 +3439,78 @@ function _pmAttachDragListeners() {
           group.insertBefore(draggedCard, card);
         }
 
-        // Save new order to Supabase
         await _pmSaveOrder(group);
       });
     });
   });
+
+  /* ── Category group drag ── */
+  const catGroups = container.querySelectorAll('.pm-category-group[data-category]');
+  catGroups.forEach(group => {
+    group.addEventListener('dragstart', (e) => {
+      // Only trigger if drag started from the category grip
+      if (!e.target.closest('.pm-cat-grip')) {
+        // Let product card dragstart handle it instead
+        return;
+      }
+      e.stopPropagation();
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', group.dataset.category);
+      group.classList.add('pm-cat-dragging');
+      window.__pmDraggingCat = group;
+    });
+
+    group.addEventListener('dragend', () => {
+      group.classList.remove('pm-cat-dragging');
+      document.querySelectorAll('.pm-cat-drag-over')
+        .forEach(el => el.classList.remove('pm-cat-drag-over'));
+      window.__pmDraggingCat = null;
+    });
+
+    group.addEventListener('dragover', (e) => {
+      if (!window.__pmDraggingCat) return; // only for category drags
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (window.__pmDraggingCat !== group) {
+        group.classList.add('pm-cat-drag-over');
+      }
+    });
+
+    group.addEventListener('dragleave', (e) => {
+      if (!group.contains(e.relatedTarget)) {
+        group.classList.remove('pm-cat-drag-over');
+      }
+    });
+
+    group.addEventListener('drop', async (e) => {
+      if (!window.__pmDraggingCat) return; // only for category drags
+      e.preventDefault();
+      e.stopPropagation();
+      group.classList.remove('pm-cat-drag-over');
+
+      const draggedCat = e.dataTransfer.getData('text/plain');
+      const targetCat = group.dataset.category;
+      if (draggedCat === targetCat) return;
+
+      const draggedGroup = window.__pmDraggingCat;
+      if (!draggedGroup) return;
+
+      const allGroups = [...container.querySelectorAll('.pm-category-group[data-category]')];
+      const draggedIndex = allGroups.indexOf(draggedGroup);
+      const targetIndex = allGroups.indexOf(group);
+
+      if (draggedIndex < targetIndex) {
+        container.insertBefore(draggedGroup, group.nextSibling);
+      } else {
+        container.insertBefore(draggedGroup, group);
+      }
+
+      await _pmSaveCategoryOrder(container);
+    });
+  });
 }
 
+/* ── Save product order within a single category group ── */
 async function _pmSaveOrder(groupEl) {
   const cards = [...groupEl.querySelectorAll('.pm-card[data-product-id]')];
   const updates = cards.map((card, index) => ({
@@ -3443,19 +3531,57 @@ async function _pmSaveOrder(groupEl) {
       return;
     }
 
-    // Update local data to match new order
     updates.forEach(({ id, sort_order }) => {
       const p = _pmProducts.find(x => x.id === id);
       if (p) p.sort_order = sort_order;
     });
 
-    // Update data-sort-order attributes
     cards.forEach((card, i) => card.dataset.sortOrder = i);
-
     showToast('Order saved', 'success');
   } catch (err) {
     console.error('Failed to save order:', err);
     showToast('Failed to save order', 'error');
+  }
+}
+
+/* ── Save category order (renumber all products in blocks of 100) ── */
+async function _pmSaveCategoryOrder(container) {
+  const groups = [...container.querySelectorAll('.pm-category-group[data-category]')];
+  const updates = [];
+
+  groups.forEach((group, groupIndex) => {
+    const cards = [...group.querySelectorAll('.pm-card[data-product-id]')];
+    cards.forEach((card, productIndex) => {
+      updates.push({
+        id: card.dataset.productId,
+        sort_order: (groupIndex * 100) + productIndex
+      });
+    });
+  });
+
+  try {
+    const results = await Promise.all(updates.map(({ id, sort_order }) =>
+      sb.from('products')
+        .update({ sort_order, updated_at: new Date().toISOString() })
+        .eq('id', id)
+    ));
+
+    const failed = results.filter(r => r.error);
+    if (failed.length) {
+      showToast('Failed to save category order', 'error');
+      return;
+    }
+
+    // Update local data
+    updates.forEach(({ id, sort_order }) => {
+      const p = _pmProducts.find(x => x.id === id);
+      if (p) p.sort_order = sort_order;
+    });
+
+    showToast('Category order saved', 'success');
+  } catch (err) {
+    console.error('Failed to save category order:', err);
+    showToast('Failed to save category order', 'error');
   }
 }
 
