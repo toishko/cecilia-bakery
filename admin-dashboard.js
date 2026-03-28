@@ -564,20 +564,29 @@ async function subscribeToPush(userType, userId) {
 let _onlineOrdersChannel = null;
 
 async function loadOnlineOrders() {
-  if (!sb) return;
+  console.log('📦 loadOnlineOrders() called');
+  console.log('📦 sb client:', sb ? 'exists' : 'NULL');
+
+  if (!sb) { console.warn('📦 Aborting: sb is null'); return; }
 
   const container = document.getElementById('section-online-orders');
-  if (!container) return;
+  console.log('📦 container:', container ? 'found' : 'NOT FOUND');
+  if (!container) { console.warn('📦 Aborting: container not found'); return; }
 
   // Show loading
   container.innerHTML = '<div class="empty-state">Loading online orders...</div>';
 
   try {
+    console.log('📦 Querying orders table with source=website...');
     const { data, error } = await sb
       .from('orders')
       .select('*')
       .eq('source', 'website')
       .order('created_at', { ascending: false });
+
+    console.log('📦 Query result — error:', error, '| data:', data);
+    console.log('📦 Row count:', data ? data.length : 0);
+    if (data && data.length > 0) console.log('📦 First row:', JSON.stringify(data[0]).slice(0, 300));
 
     if (error) throw error;
 
@@ -592,6 +601,7 @@ async function loadOnlineOrders() {
     });
 
     if (!data || data.length === 0) {
+      console.log('📦 No data — showing empty state');
       container.innerHTML = `
         <div class="section-header">
           <h2 class="page-title" data-en="Online Orders" data-es="Pedidos en Línea">${lang === 'es' ? 'Pedidos en Línea' : 'Online Orders'}</h2>
