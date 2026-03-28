@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Checkout — Cecilia Bakery</title>
+  <meta name="description" content="Complete your order at Cecilia Bakery. Sign in and pay securely online." />
+  <link rel="manifest" href="/manifest-website.json">
+  <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E0507" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cecilia">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload"
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+    as="style">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    (function () {
+      const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
+      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
+      try {
+        if (window.supabase && window.supabase.createClient) {
+          window.__supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+      } catch (e) { console.warn('Supabase init failed:', e); }
+    })();
+  </script>
+
+  <!-- Clerk -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_cm9idXN0LXdpbGRjYXQtNzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://robust-wildcat-76.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+    type="text/javascript"
+  ></script>
+
+  <!-- Clover iframe SDK -->
+  <script src="https://checkout.clover.com/sdk.js"></script>
+
+  <style>
+    /* ════════════════════════════════════════
+       DESIGN TOKENS — matches menu.html
+       ════════════════════════════════════════ */
+    :root {
+      --red: #C8102E;
+      --red-dk: #9B0B22;
+      --red-lt: #E8213F;
+      --blue: #002D62;
+      --blue-lt: #1A4A8A;
+
+      --bg: #FAFAF8;
+      --bg-surface: #EDE0CC;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #FDFCFB;
+      --bg-input: #FFFFFF;
+      --bg-nav: rgba(250, 250, 248, .80);
+      --bg-overlay: rgba(0, 0, 0, .50);
+      --bg-footer: #18080D;
+
+      --tx: #18080D;
+      --tx-muted: #6B5057;
+      --tx-faint: #A08088;
+      --tx-on-footer: rgba(255, 255, 255, .52);
+      --tx-footer-head: rgba(255, 255, 255, .30);
+      --tx-footer-brand: rgba(255, 255, 255, .82);
+
+      --bd: rgba(200, 16, 46, .22);
+      --bd-hover: rgba(200, 16, 46, .55);
+      --bd-input: rgba(200, 16, 46, .25);
+      --bd-footer: rgba(255, 255, 255, .06);
+
+      --shadow-card: 0 4px 22px rgba(200, 16, 46, .09);
+      --shadow-nav: 0 1px 0 rgba(200, 16, 46, .10);
+
+      --lang-border: rgba(200, 16, 46, .20);
+      --lang-text: #6B5057;
+      --r: 3px;
+      --transition: color .25s ease, background .25s ease, border-color .25s ease;
+
+      --green: #1B7A4A;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0E0507;
+      --bg-surface: #1F0D14;
+      --bg-card: #1E0D12;
+      --bg-card-hover: #26101A;
+      --bg-input: #1E0D12;
+      --bg-nav: rgba(10, 3, 5, .80);
+      --bg-overlay: rgba(0, 0, 0, .70);
+      --bg-footer: #080305;
+
+      --tx: #F2E8E4;
+      --tx-muted: #BFA0A8;
+      --tx-faint: #7A5560;
+      --tx-on-footer: rgba(255, 255, 255, .45);
+      --tx-footer-head: rgba(255, 255, 255, .22);
+      --tx-footer-brand: rgba(255, 255, 255, .75);
+
+      --bd: rgba(200, 16, 46, .35);
+      --bd-hover: rgba(200, 16, 46, .65);
+      --bd-input: rgba(200, 16, 46, .40);
+      --bd-footer: rgba(255, 255, 255, .04);
+
+      --shadow-card: 0 4px 22px rgba(0, 0, 0, .40);
+      --shadow-nav: 0 1px 0 rgba(200, 16, 46, .12);
+
+      --lang-border: rgba(200, 16, 46, .25);
+      --lang-text: #BFA0A8;
+    }
+
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-padding-top: 100px; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--tx);
+      overflow-x: hidden;
+      transition: background .3s, color .3s;
+      padding-bottom: env(safe-area-inset-bottom);
+      min-height: 100vh;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--red);
+      outline-offset: 2px;
+      border-radius: var(--r);
+    }
+
+    /* ── Animated background blob ── */
+    .bg-blob {
+      position: fixed; inset: -40%; z-index: -1;
+      width: 180%; height: 180%;
+      animation: blobDrift 14s ease-in-out infinite alternate;
+      will-change: transform; pointer-events: none;
+      transition: background .3s;
+    }
+    [data-theme="light"] .bg-blob {
+      background:
+        radial-gradient(ellipse 55% 35% at 20% 30%, rgba(200,16,46,.07) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 40% at 78% 68%, rgba(200,16,46,.05) 0%, transparent 50%);
+    }
+    [data-theme="dark"] .bg-blob {
+      background:
+        radial-gradient(ellipse 55% 35% at 20% 30%, rgba(200,16,46,.10) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 40% at 78% 68%, rgba(200,16,46,.07) 0%, transparent 50%);
+    }
+    @keyframes blobDrift {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(2%,1.5%) scale(1.04); }
+    }
+
+    /* ════════════════════════════════════════
+       NAV — copied from menu.html
+       ════════════════════════════════════════ */
+    nav {
+      position: fixed; top: 0; width: 100%; z-index: 501;
+      padding: 18px 52px;
+      padding-top: 18px;
+      padding-top: calc(18px + env(safe-area-inset-top));
+      display: flex; justify-content: space-between; align-items: center;
+      transition: background .35s, box-shadow .35s, padding .35s;
+      background: var(--bg-nav);
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    }
+    nav.scrolled {
+      box-shadow: var(--shadow-nav);
+      padding: 12px 52px;
+      padding-top: 12px;
+      padding-top: calc(12px + env(safe-area-inset-top));
+    }
+    .nav-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .nav-logo-wrap {
+      width: 38px; height: 38px; border-radius: 50%; overflow: hidden;
+      border: 2px solid rgba(200,16,46,.25); flex-shrink: 0;
+      background: var(--red); display: flex; align-items: center; justify-content: center;
+      transition: transform .25s;
+    }
+    .nav-brand:hover .nav-logo-wrap { transform: scale(1.06); }
+    .nav-logo-fallback {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.1rem; font-weight: 700; color: #fff;
+    }
+    .nav-logo-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.45rem; font-weight: 600; color: var(--red);
+      letter-spacing: .02em;
+    }
+    .nav-logo-text span { color: var(--blue); font-style: italic; }
+    [data-theme="dark"] .nav-logo-text span { color: #A6CEFF; }
+
+    .nav-right-group { display: flex; align-items: center; gap: 0; }
+    .nav-back {
+      font-size: .78rem; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--tx-muted); text-decoration: none;
+      display: flex; align-items: center; gap: 7px; transition: color .2s;
+    }
+    .nav-back:hover { color: var(--red); }
+
+    .nav-controls { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .theme-btn {
+      font-family: 'Outfit', sans-serif;
+      font-size: .68rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+      padding: 4px; border-radius: 0; border: none; background: transparent;
+      cursor: pointer; transition: var(--transition); color: var(--lang-text);
+      width: auto; height: auto; display: inline-flex; justify-content: center; align-items: center; line-height: 1;
+    }
+    .theme-btn:hover { color: var(--red); }
+    .theme-btn svg { width: 18px !important; height: 18px !important; }
+
+    @media (max-width: 900px) {
+      nav { padding: 14px 16px; padding-top: calc(14px + env(safe-area-inset-top)); }
+      nav.scrolled { padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top)); }
+    }
+
+    /* ════════════════════════════════════════
+       CHECKOUT PAGE LAYOUT
+       ════════════════════════════════════════ */
+    .checkout-container {
+      max-width: 1100px; margin: 0 auto;
+      padding: 140px 52px 80px;
+      padding-top: 140px;
+      padding-top: calc(140px + env(safe-area-inset-top));
+    }
+    @media (max-width: 900px) {
+      .checkout-container { padding: 120px 16px 60px; padding-top: calc(120px + env(safe-area-inset-top)); }
+    }
+
+    .checkout-page-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      font-weight: 300; line-height: 1.1; letter-spacing: -.01em;
+      color: var(--tx); margin-bottom: 8px;
+    }
+    .checkout-page-title em { font-style: italic; color: var(--red); font-weight: 600; }
+
+    .checkout-eyebrow {
+      font-size: .72rem; letter-spacing: .24em; text-transform: uppercase;
+      color: var(--red); font-weight: 500; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .checkout-eyebrow::before {
+      content: ''; display: block; width: 28px; height: 1.5px; background: var(--red);
+    }
+
+    /* ── STATE CARDS ── */
+    .state-panel { display: none; }
+    .state-panel.active { display: block; animation: fadeUp .5s ease; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── STATE 1: SIGN IN ── */
+    .signin-card {
+      background: var(--bg-card); border: 1px solid var(--bd); border-radius: 16px;
+      padding: 60px 48px; max-width: 480px; margin: 60px auto 0;
+      text-align: center; box-shadow: var(--shadow-card);
+    }
+    .signin-icon {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: rgba(200,16,46,.08); display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 24px;
+    }
+    .signin-icon svg { width: 28px; height: 28px; stroke: var(--red); fill: none; stroke-width: 1.5; }
+    .signin-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem; font-weight: 600; margin-bottom: 12px; color: var(--tx);
+    }
+    .signin-sub {
+      font-size: .92rem; color: var(--tx-muted); line-height: 1.6; margin-bottom: 32px;
+    }
+    .signin-btn {
+      width: 100%; padding: 14px 28px; border-radius: 10px; border: none;
+      background: var(--red); color: #fff; font-family: 'Outfit', sans-serif;
+      font-size: .95rem; font-weight: 600; letter-spacing: .03em; cursor: pointer;
+      transition: background .2s, transform .15s; display: flex; align-items: center;
+      justify-content: center; gap: 10px;
+    }
+    .signin-btn:hover { background: var(--red-dk); }
+    .signin-btn:active { transform: scale(.97); }
+    .signin-btn svg { width: 20px; height: 20px; }
+
+    .signin-divider {
+      display: flex; align-items: center; gap: 16px; margin: 20px 0;
+      font-size: .78rem; color: var(--tx-faint); text-transform: uppercase; letter-spacing: .1em;
+    }
+    .signin-divider::before, .signin-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--bd);
+    }
+    .signin-email-btn {
+      width: 100%; padding: 12px 28px; border-radius: 10px;
+      border: 1px solid var(--bd); background: transparent; color: var(--tx);
+      font-family: 'Outfit', sans-serif; font-size: .9rem; font-weight: 500;
+      cursor: pointer; transition: border-color .2s, background .2s;
+    }
+    .signin-email-btn:hover { border-color: var(--red); background: rgba(200,16,46,.04); }
+    .signin-note {
+      font-size: .75rem; color: var(--tx-faint); margin-top: 20px; line-height: 1.5;
+    }
+
+    /* ── STATE 2: CHECKOUT LAYOUT ── */
+    .checkout-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 32px;
+    }
+    @media (max-width: 900px) {
+      .checkout-grid { grid-template-columns: 1fr; gap: 24px; }
+    }
+
+    .checkout-section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem; font-weight: 600; margin-bottom: 20px; color: var(--tx);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .checkout-section-title svg {
+      width: 22px; height: 22px; stroke: var(--red); fill: none; stroke-width: 1.5;
+    }
+
+    /* Order Summary */
+    .order-panel {
+      background: var(--bg-card); border: 1px solid var(--bd); border-radius: 12px;
+      padding: 28px; box-shadow: var(--shadow-card);
+    }
+    .order-items { margin-bottom: 20px; }
+    .order-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 0; border-bottom: 1px solid var(--bd);
+    }
+    .order-item:last-child { border-bottom: none; }
+    .order-item-info { flex: 1; }
+    .order-item-name { font-weight: 500; font-size: .92rem; color: var(--tx); }
+    .order-item-detail {
+      font-size: .78rem; color: var(--tx-muted); margin-top: 2px;
+    }
+    .order-item-price {
+      font-weight: 600; font-size: .95rem; color: var(--tx); white-space: nowrap; margin-left: 16px;
+    }
+
+    .order-divider { height: 1px; background: var(--bd); margin: 16px 0; }
+
+    .order-total-row {
+      display: flex; justify-content: space-between; align-items: center; padding: 4px 0;
+    }
+    .order-total-label { font-size: .85rem; color: var(--tx-muted); }
+    .order-total-amount { font-size: .95rem; font-weight: 600; color: var(--tx); }
+    .order-total-row.grand {
+      margin-top: 8px; padding-top: 12px; border-top: 2px solid var(--red);
+    }
+    .order-total-row.grand .order-total-label {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.3rem; font-weight: 600; color: var(--tx);
+    }
+    .order-total-row.grand .order-total-amount {
+      font-size: 1.4rem; font-weight: 700; color: var(--red);
+    }
+
+    /* Checkout Form Fields */
+    .checkout-form { margin-top: 24px; }
+    .checkout-form-row { margin-bottom: 16px; }
+    .checkout-form-row-double { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    @media (max-width: 600px) {
+      .checkout-form-row-double { grid-template-columns: 1fr; }
+    }
+    .checkout-form-label {
+      display: block; font-size: .78rem; font-weight: 500; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--tx-muted); margin-bottom: 6px;
+    }
+    .checkout-form-req { color: var(--red); }
+    .checkout-form-opt { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--tx-faint); font-size: .72rem; }
+    .checkout-form-input {
+      width: 100%; padding: 12px 14px; border: 1px solid var(--bd-input);
+      border-radius: 6px; background: var(--bg-input); color: var(--tx);
+      font-family: 'Outfit', sans-serif; font-size: .9rem; transition: border-color .2s;
+    }
+    .checkout-form-input:focus { border-color: var(--red); outline: none; }
+    .checkout-form-textarea { min-height: 80px; resize: vertical; }
+
+    /* Payment Panel */
+    .payment-panel {
+      background: var(--bg-card); border: 1px solid var(--bd); border-radius: 12px;
+      padding: 28px; box-shadow: var(--shadow-card); position: sticky; top: 100px;
+    }
+    @media (max-width: 900px) {
+      .payment-panel { position: static; }
+    }
+
+    /* Clover Card Form */
+    .clover-card-form { margin-top: 16px; }
+    .card-field { margin-bottom: 16px; }
+    .card-field label {
+      display: block; font-size: .78rem; font-weight: 500; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--tx-muted); margin-bottom: 6px;
+    }
+    .clover-field {
+      border: 1px solid var(--bd-input); border-radius: 6px;
+      background: var(--bg-input); padding: 12px 14px; min-height: 44px;
+      transition: border-color .2s;
+    }
+    .clover-field:focus-within { border-color: var(--red); }
+    .card-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* Place Order Button */
+    .place-order-btn {
+      width: 100%; padding: 16px 28px; border-radius: 10px; border: none;
+      background: var(--red); color: #fff; font-family: 'Outfit', sans-serif;
+      font-size: 1rem; font-weight: 600; letter-spacing: .04em; cursor: pointer;
+      transition: background .2s, transform .15s, opacity .2s;
+      margin-top: 24px; text-transform: uppercase;
+    }
+    .place-order-btn:hover { background: var(--red-dk); }
+    .place-order-btn:active { transform: scale(.97); }
+    .place-order-btn:disabled {
+      opacity: .6; cursor: not-allowed; transform: none;
+    }
+
+    .payment-secured {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      margin-top: 12px; font-size: .75rem; color: var(--tx-faint);
+    }
+    .payment-secured svg { width: 14px; height: 14px; stroke: var(--green); fill: none; stroke-width: 2; }
+
+    .payment-charge-note {
+      text-align: center; font-size: .72rem; color: var(--tx-faint); margin-top: 10px;
+      line-height: 1.5;
+    }
+
+    .payment-error {
+      color: var(--red); font-size: .82rem; margin-top: 10px; text-align: center;
+      min-height: 20px;
+    }
+
+    /* ── STATE 3: PROCESSING ── */
+    .processing-card {
+      background: var(--bg-card); border: 1px solid var(--bd); border-radius: 16px;
+      padding: 60px 48px; max-width: 420px; margin: 80px auto 0;
+      text-align: center; box-shadow: var(--shadow-card);
+    }
+    .processing-spinner {
+      width: 48px; height: 48px; border: 3px solid var(--bd);
+      border-top-color: var(--red); border-radius: 50%;
+      animation: spin .8s linear infinite; margin: 0 auto 24px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .processing-text {
+      font-size: 1rem; color: var(--tx-muted); font-weight: 400;
+    }
+
+    /* ── Empty Cart ── */
+    .empty-cart-card {
+      background: var(--bg-card); border: 1px solid var(--bd); border-radius: 16px;
+      padding: 60px 48px; max-width: 420px; margin: 80px auto 0;
+      text-align: center; box-shadow: var(--shadow-card);
+    }
+    .empty-cart-icon {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: rgba(200,16,46,.08); display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .empty-cart-icon svg { width: 28px; height: 28px; stroke: var(--red); fill: none; stroke-width: 1.5; }
+    .empty-cart-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.4rem; font-weight: 600; margin-bottom: 10px; color: var(--tx);
+    }
+    .empty-cart-sub { font-size: .9rem; color: var(--tx-muted); margin-bottom: 28px; line-height: 1.6; }
+    .empty-cart-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--red); color: #fff; border: none;
+      padding: 14px 28px; border-radius: 10px;
+      font-family: 'Outfit', sans-serif; font-size: .9rem; font-weight: 600;
+      letter-spacing: .03em; cursor: pointer; text-decoration: none;
+      transition: background .2s, transform .15s;
+    }
+    .empty-cart-btn:hover { background: var(--red-dk); }
+    .empty-cart-btn:active { transform: scale(.97); }
+    .empty-cart-btn svg {
+      width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2;
+    }
+
+    /* ── Stripe / decorative ── */
+    .checkout-container::after {
+      content: ''; position: fixed; right: 0; top: 0; bottom: 0; width: 4px;
+      background: linear-gradient(to bottom, var(--blue) 33%, var(--red) 33% 66%, var(--blue) 66%);
+      opacity: .1; pointer-events: none;
+    }
+
+    /* ── User info bar ── */
+    .user-bar {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 24px; padding: 12px 16px;
+      background: rgba(200,16,46,.04); border-radius: 8px; border: 1px solid var(--bd);
+    }
+    .user-avatar {
+      width: 36px; height: 36px; border-radius: 50%; background: var(--red);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: .85rem; flex-shrink: 0;
+      overflow: hidden;
+    }
+    .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .user-info { flex: 1; }
+    .user-name { font-weight: 500; font-size: .88rem; color: var(--tx); }
+    .user-email { font-size: .75rem; color: var(--tx-muted); }
+    .user-signout {
+      font-size: .72rem; font-weight: 500; color: var(--red); cursor: pointer;
+      text-decoration: none; letter-spacing: .06em; text-transform: uppercase;
+      border: none; background: none; font-family: 'Outfit', sans-serif;
+      transition: opacity .2s;
+    }
+    .user-signout:hover { opacity: .7; }
+
+    /* ── Responsive helpers ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-blob"></div>
+
+  <!-- ═══ NAV ═══ -->
+  <nav id="main-nav">
+    <a href="/index.html" class="nav-brand">
+      <div class="nav-logo-wrap">
+        <span class="nav-logo-fallback">C</span>
+      </div>
+      <span class="nav-logo-text">Cecilia <span>Bakery</span></span>
+    </a>
+    <div class="nav-right-group">
+      <a href="/menu.html" class="nav-back">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back to Menu
+      </a>
+      <div class="nav-controls">
+        <button class="theme-btn" onclick="toggleTheme()" aria-label="Toggle theme">
+          <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <div class="checkout-container">
+
+    <!-- ── EMPTY CART ── -->
+    <div id="state-empty" class="state-panel">
+      <div class="empty-cart-card">
+        <div class="empty-cart-icon">
+          <svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        </div>
+        <div class="empty-cart-title">Your Cart is Empty</div>
+        <p class="empty-cart-sub">Looks like you haven't added anything yet. Head to the menu to start your order.</p>
+        <a href="/menu.html" class="empty-cart-btn">
+          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back to Menu
+        </a>
+      </div>
+    </div>
+
+    <!-- ── STATE 1: SIGN IN ── -->
+    <div id="state-signin" class="state-panel">
+      <div class="signin-card">
+        <div class="signin-icon">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div class="signin-title">Sign in to complete your order</div>
+        <p class="signin-sub">Create an account or sign in to proceed with your purchase.</p>
+
+        <button class="signin-btn" id="google-signin" type="button">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.99 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          Sign in with Google
+        </button>
+
+        <div class="signin-divider"><span>or</span></div>
+
+        <button class="signin-email-btn" id="email-signin" type="button">
+          Sign in with Email
+        </button>
+
+        <p class="signin-note">We use your account to track your order status and send you updates.</p>
+      </div>
+    </div>
+
+    <!-- ── STATE 2: CHECKOUT FORM ── -->
+    <div id="state-checkout" class="state-panel">
+      <div class="checkout-eyebrow">Checkout</div>
+      <h1 class="checkout-page-title">Complete Your <em>Order</em></h1>
+
+      <!-- User info bar -->
+      <div class="user-bar" id="user-bar">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-info">
+          <div class="user-name" id="user-display-name">—</div>
+          <div class="user-email" id="user-display-email">—</div>
+        </div>
+        <button class="user-signout" id="signout-btn" type="button">Sign Out</button>
+      </div>
+
+      <div class="checkout-grid">
+        <!-- LEFT: Order Summary -->
+        <div>
+          <div class="order-panel">
+            <div class="checkout-section-title">
+              <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              Your Order
+            </div>
+            <div class="order-items" id="order-items">
+              <!-- Cart items rendered by JS -->
+            </div>
+            <div class="order-divider"></div>
+            <div class="order-total-row">
+              <span class="order-total-label">Subtotal</span>
+              <span class="order-total-amount" id="order-subtotal">$0.00</span>
+            </div>
+            <div class="order-total-row grand">
+              <span class="order-total-label">Total</span>
+              <span class="order-total-amount" id="order-total">$0.00</span>
+            </div>
+          </div>
+
+          <!-- Customer info form -->
+          <div class="checkout-form">
+            <div class="checkout-form-row-double">
+              <div>
+                <label class="checkout-form-label" for="checkout-name">
+                  Your Name <span class="checkout-form-req">*</span>
+                </label>
+                <input class="checkout-form-input" id="checkout-name" type="text" placeholder="e.g. Maria" />
+              </div>
+              <div>
+                <label class="checkout-form-label" for="checkout-phone">
+                  Phone <span class="checkout-form-req">*</span>
+                </label>
+                <input class="checkout-form-input" id="checkout-phone" type="tel" placeholder="(201) 555-0123" />
+              </div>
+            </div>
+            <div class="checkout-form-row">
+              <label class="checkout-form-label" for="checkout-pickup-date">
+                Pickup Date <span class="checkout-form-opt">(optional)</span>
+              </label>
+              <input class="checkout-form-input" id="checkout-pickup-date" type="date" />
+            </div>
+            <div class="checkout-form-row" id="checkout-time-row" style="display:none">
+              <label class="checkout-form-label" for="checkout-pickup-time">
+                Pickup Time <span class="checkout-form-opt">(optional)</span>
+              </label>
+              <select class="checkout-form-input" id="checkout-pickup-time"></select>
+            </div>
+            <div class="checkout-form-row">
+              <label class="checkout-form-label" for="checkout-note">
+                Order Note <span class="checkout-form-opt">(optional)</span>
+              </label>
+              <textarea class="checkout-form-input checkout-form-textarea" id="checkout-note"
+                placeholder="e.g. allergies, custom message, special requests..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Payment -->
+        <div>
+          <div class="payment-panel">
+            <div class="checkout-section-title">
+              <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              Payment
+            </div>
+
+            <div class="clover-card-form">
+              <div class="card-field">
+                <label>Card Number</label>
+                <div id="card-number" class="clover-field"></div>
+              </div>
+              <div class="card-field-row">
+                <div class="card-field">
+                  <label>Expiry</label>
+                  <div id="card-date" class="clover-field"></div>
+                </div>
+                <div class="card-field">
+                  <label>CVV</label>
+                  <div id="card-cvv" class="clover-field"></div>
+                </div>
+              </div>
+              <div class="card-field">
+                <label>ZIP Code</label>
+                <div id="card-postal" class="clover-field"></div>
+              </div>
+            </div>
+
+            <p class="payment-error" id="payment-error"></p>
+
+            <button class="place-order-btn" id="place-order-btn" type="button" onclick="placeOrder()">
+              Place Order
+            </button>
+
+            <div class="payment-secured">
+              <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Secured by Clover
+            </div>
+
+            <p class="payment-charge-note" id="charge-note">
+              You will be charged <strong id="charge-amount">$0.00</strong> when you click Place Order.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STATE 3: PROCESSING ── -->
+    <div id="state-processing" class="state-panel">
+      <div class="processing-card">
+        <div class="processing-spinner"></div>
+        <p class="processing-text">Processing your payment...</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ SCRIPTS ═══ -->
+  <script>
+    /* ════════════════════════════════════════
+       THEME TOGGLE
+       ════════════════════════════════════════ */
+    (function () {
+      const saved = localStorage.getItem('cecilia_theme');
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+      } else {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+      }
+    })();
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('cecilia_theme', next);
+    }
+
+    /* ════════════════════════════════════════
+       SCROLL EFFECT ON NAV
+       ════════════════════════════════════════ */
+    window.addEventListener('scroll', () => {
+      const nav = document.getElementById('main-nav');
+      if (nav) nav.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    /* ════════════════════════════════════════
+       CART LOADING (Part 4)
+       ════════════════════════════════════════ */
+    const cartData = localStorage.getItem('cecilia_cart')
+      || sessionStorage.getItem('cecilia_cart')
+      || '[]';
+
+    let cart = [];
+    try { cart = JSON.parse(cartData); } catch (e) { cart = []; }
+
+    // Calculate total
+    const cartTotal = cart.reduce((sum, item) => {
+      return sum + (parseFloat(item.price || 0) * (item.qty || 1));
+    }, 0);
+
+    /* ════════════════════════════════════════
+       STATE MANAGEMENT
+       ════════════════════════════════════════ */
+    function showState(stateName) {
+      document.querySelectorAll('.state-panel').forEach(p => p.classList.remove('active'));
+      const el = document.getElementById('state-' + stateName);
+      if (el) el.classList.add('active');
+    }
+
+    /* ════════════════════════════════════════
+       RENDER ORDER SUMMARY
+       ════════════════════════════════════════ */
+    function renderOrderSummary() {
+      const container = document.getElementById('order-items');
+      if (!container) return;
+
+      if (cart.length === 0) {
+        container.innerHTML = '<p style="color:var(--tx-muted);font-size:.9rem;padding:12px 0;">No items in cart.</p>';
+        return;
+      }
+
+      let html = '';
+      cart.forEach(item => {
+        const name = item.nameEn || item.name || item.key || 'Item';
+        const size = item.size ? ` · ${item.sizeDisplay || item.size}` : '';
+        const qty = item.qty || 1;
+        const price = parseFloat(item.price || 0);
+        const lineTotal = price * qty;
+
+        html += `
+          <div class="order-item">
+            <div class="order-item-info">
+              <div class="order-item-name">${name}</div>
+              <div class="order-item-detail">Qty: ${qty}${size}</div>
+            </div>
+            <div class="order-item-price">${price > 0 ? '$' + lineTotal.toFixed(2) : '—'}</div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+
+      // Update totals
+      const subtotalEl = document.getElementById('order-subtotal');
+      const totalEl = document.getElementById('order-total');
+      const chargeEl = document.getElementById('charge-amount');
+
+      if (subtotalEl) subtotalEl.textContent = '$' + cartTotal.toFixed(2);
+      if (totalEl) totalEl.textContent = '$' + cartTotal.toFixed(2);
+      if (chargeEl) chargeEl.textContent = '$' + cartTotal.toFixed(2);
+    }
+
+    /* ════════════════════════════════════════
+       TIME SLOTS (for pickup)
+       ════════════════════════════════════════ */
+    function buildTimeSlots(dateVal) {
+      const select = document.getElementById('checkout-pickup-time');
+      const timeRow = document.getElementById('checkout-time-row');
+      if (!select || !timeRow) return;
+
+      const OPEN_H = 8, OPEN_M = 30;
+      const CLOSE_H = 17, CLOSE_M = 30;
+
+      const now = new Date();
+      const isToday = dateVal === now.toISOString().split('T')[0];
+
+      const slots = [];
+      let h = OPEN_H, m = OPEN_M;
+      while (h < CLOSE_H || (h === CLOSE_H && m <= CLOSE_M)) {
+        if (!isToday || h > now.getHours() || (h === now.getHours() && m > now.getMinutes())) {
+          const ampm = h < 12 ? 'AM' : 'PM';
+          const displayH = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+          const displayM = m === 0 ? '00' : m;
+          slots.push({ value: `${String(h).padStart(2, '0')}:${displayM}`, label: `${displayH}:${displayM} ${ampm}` });
+        }
+        m += 30;
+        if (m >= 60) { m = 0; h++; }
+      }
+
+      if (!slots.length) { timeRow.style.display = 'none'; return; }
+
+      timeRow.style.display = 'block';
+      select.innerHTML = '<option value="">Select a time...</option>' +
+        slots.map(s => `<option value="${s.value}">${s.label}</option>`).join('');
+    }
+
+    function initPickupDate() {
+      const today = new Date().toISOString().split('T')[0];
+      const pickupEl = document.getElementById('checkout-pickup-date');
+      if (!pickupEl) return;
+      pickupEl.min = today;
+      pickupEl.addEventListener('change', () => {
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (pickupEl.value < todayStr) pickupEl.value = todayStr;
+        if (pickupEl.value) {
+          buildTimeSlots(pickupEl.value);
+        } else {
+          document.getElementById('checkout-time-row').style.display = 'none';
+        }
+      });
+    }
+
+    /* ════════════════════════════════════════
+       CLOVER IFRAME INIT (Part 3)
+       ════════════════════════════════════════ */
+    let cloverInstance = null;
+    let cloverTokenizer = null;
+
+    function initClover() {
+      try {
+        if (typeof Clover === 'undefined') {
+          console.warn('Clover SDK not loaded yet');
+          return;
+        }
+
+        cloverInstance = new Clover('YOUR_CLOVER_PUBLISHABLE_KEY', {
+          merchantId: 'YOUR_CLOVER_MERCHANT_ID'
+        });
+
+        const elements = cloverInstance.elements();
+
+        const cloverStyles = {
+          body: {
+            fontFamily: 'Outfit, sans-serif',
+          },
+          input: {
+            fontSize: '16px',
+            color: '#18080D',
+          }
+        };
+
+        const cardNumber = elements.create('CARD_NUMBER', { style: cloverStyles });
+        const cardDate = elements.create('CARD_DATE', { style: cloverStyles });
+        const cardCvv = elements.create('CARD_CVV', { style: cloverStyles });
+        const cardPostalCode = elements.create('CARD_POSTAL_CODE', { style: cloverStyles });
+
+        cardNumber.mount('#card-number');
+        cardDate.mount('#card-date');
+        cardCvv.mount('#card-cvv');
+        cardPostalCode.mount('#card-postal');
+
+        cloverTokenizer = cloverInstance;
+
+        console.log('Clover iframe elements mounted');
+      } catch (err) {
+        console.error('Clover init error:', err);
+      }
+    }
+
+    /* ════════════════════════════════════════
+       PLACE ORDER — Placeholder (Part 2 pending)
+       ════════════════════════════════════════ */
+    async function placeOrder() {
+      console.log('Place order clicked');
+
+      const name = (document.getElementById('checkout-name')?.value || '').trim();
+      const phone = (document.getElementById('checkout-phone')?.value || '').trim();
+      const errorEl = document.getElementById('payment-error');
+
+      // Basic validation
+      if (!name) {
+        if (errorEl) errorEl.textContent = 'Please enter your name.';
+        return;
+      }
+      if (!phone) {
+        if (errorEl) errorEl.textContent = 'Please enter your phone number.';
+        return;
+      }
+      if (errorEl) errorEl.textContent = '';
+
+      // TODO: Part 2 — tokenize with Clover, send to n8n webhook, handle response
+      console.log('Order data:', {
+        name,
+        phone,
+        pickupDate: document.getElementById('checkout-pickup-date')?.value || '',
+        pickupTime: document.getElementById('checkout-pickup-time')?.value || '',
+        note: document.getElementById('checkout-note')?.value || '',
+        cart,
+        total: cartTotal,
+      });
+
+      // For now just show processing state
+      // showState('processing');
+      // document.getElementById('place-order-btn').disabled = true;
+
+      alert('Place Order clicked! Part 2 handler not yet implemented.');
+    }
+
+    /* ════════════════════════════════════════
+       CLERK INIT (Part 5)
+       ════════════════════════════════════════ */
+    function populateUserInfo(user) {
+      // Avatar
+      const avatarEl = document.getElementById('user-avatar');
+      if (avatarEl) {
+        if (user.imageUrl) {
+          avatarEl.innerHTML = `<img src="${user.imageUrl}" alt="avatar" />`;
+        } else {
+          const initials = (user.firstName || '').charAt(0).toUpperCase() || '?';
+          avatarEl.textContent = initials;
+        }
+      }
+
+      // Name
+      const nameEl = document.getElementById('user-display-name');
+      if (nameEl) nameEl.textContent = user.fullName || user.firstName || 'Customer';
+
+      // Email
+      const emailEl = document.getElementById('user-display-email');
+      if (emailEl) {
+        const email = user.primaryEmailAddress?.emailAddress || '';
+        emailEl.textContent = email;
+      }
+
+      // Pre-fill checkout name
+      const checkoutName = document.getElementById('checkout-name');
+      if (checkoutName && user.fullName) {
+        checkoutName.value = user.fullName;
+      }
+    }
+
+    window.addEventListener('load', async () => {
+      // Check cart first — redirect if empty
+      if (!cart || cart.length === 0) {
+        showState('empty');
+        return;
+      }
+
+      // Render the order summary
+      renderOrderSummary();
+      initPickupDate();
+
+      // Wait for Clerk
+      try {
+        if (window.Clerk) {
+          await window.Clerk.load();
+
+          const user = window.Clerk.user;
+
+          if (!user) {
+            showState('signin');
+          } else {
+            showState('checkout');
+            populateUserInfo(user);
+            initClover();
+          }
+        } else {
+          // Clerk not loaded — show signin state with note
+          console.warn('Clerk not available');
+          showState('signin');
+        }
+      } catch (err) {
+        console.error('Clerk init error:', err);
+        showState('signin');
+      }
+    });
+
+    // Google sign-in
+    document.getElementById('google-signin')?.addEventListener('click', () => {
+      if (window.Clerk) {
+        window.Clerk.openSignIn({
+          afterSignInUrl: '/checkout.html',
+          afterSignUpUrl: '/checkout.html',
+        });
+      }
+    });
+
+    // Email sign-in
+    document.getElementById('email-signin')?.addEventListener('click', () => {
+      if (window.Clerk) {
+        window.Clerk.openSignIn({
+          afterSignInUrl: '/checkout.html',
+          afterSignUpUrl: '/checkout.html',
+        });
+      }
+    });
+
+    // Sign out
+    document.getElementById('signout-btn')?.addEventListener('click', async () => {
+      if (window.Clerk) {
+        await window.Clerk.signOut();
+        showState('signin');
+      }
+    });
+  </script>
+
+  <!-- Service Worker Update Banner -->
+  <div id="update-banner" hidden>
+    <span>New update available</span>
+    <button id="update-banner-btn">Update</button>
+  </div>
+  <style>
+    #update-banner {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
+      background: #C8102E; color: #fff;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      padding: 14px 20px; padding-top: calc(14px + env(safe-area-inset-top));
+      font-family: 'Outfit', sans-serif; font-size: 0.82rem; font-weight: 500; letter-spacing: 0.04em;
+      transform: translateY(-100%);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 16px rgba(200, 16, 46, 0.4);
+    }
+    #update-banner.visible { transform: translateY(0); }
+    #update-banner-btn {
+      background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5);
+      color: #fff; padding: 6px 16px; border-radius: 20px; font-size: 0.78rem;
+      font-weight: 600; cursor: pointer; font-family: 'Outfit', sans-serif;
+      letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+    }
+  </style>
+  <script>
+    function showUpdateBanner() {
+      var b = document.getElementById('update-banner');
+      if (!b) return;
+      b.hidden = false;
+      setTimeout(function () { b.classList.add('visible'); }, 100);
+      var btn = document.getElementById('update-banner-btn');
+      if (btn) btn.addEventListener('click', function () {
+        navigator.serviceWorker.ready.then(function (reg) {
+          if (reg.waiting) {
+            navigator.serviceWorker.addEventListener(
+              'controllerchange',
+              function () { window.location.reload(); },
+              { once: true }
+            );
+            reg.waiting.postMessage('skipWaiting');
+          } else {
+            window.location.reload();
+          }
+        });
+      });
+    }
+    function initUpdateBanner() {
+      if (!('serviceWorker' in navigator)) return;
+      var hadController = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register('/sw.js').then(function (reg) {
+        reg.addEventListener('updatefound', function () {
+          var nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener('statechange', function () {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller)
+              showUpdateBanner();
+          });
+        });
+        if (reg.waiting && hadController) { showUpdateBanner(); return; }
+        reg.update().catch(function () { });
+      }).catch(function () { });
+    }
+    initUpdateBanner();
+  </script>
+
+</body>
+</html>
