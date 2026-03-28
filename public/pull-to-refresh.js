@@ -10,10 +10,9 @@
   const kf = document.createElement('style');
   kf.id = 'ptr-keyframes';
   kf.textContent = `
-    @keyframes ptrShimmer {
-      0%   { opacity: 1; }
-      50%  { opacity: 0.5; }
-      100% { opacity: 1; }
+    @keyframes ptrLoading {
+      0%   { background-position: -200% center; }
+      100% { background-position:  200% center; }
     }
   `;
   document.head.appendChild(kf);
@@ -69,13 +68,32 @@
   let active     = false;
   let refreshing = false;
 
-  /* ── Helpers ────────────────────────────────────────────────────── */
-  function resetBar() {
+  /* PHASE 3 helper — called after data finishes loading */
+  function doneBar() {
+    bar.style.animation        = 'none';
+    bar.style.background       = '#C8102E';
+    bar.style.backgroundSize   = '';
+    bar.style.transition       = 'opacity 0.4s ease';
+    bar.style.opacity          = '0';
+    setTimeout(function () {
+      bar.style.width      = '0%';
+      bar.style.opacity    = '1';
+      bar.style.transition = '';
+    }, 400);
+  }
+
+  /* Snap-back helper — called when pull released before threshold */
+  function snapBack() {
     bar.style.animation  = 'none';
-    bar.style.transition = 'width 0.1s ease, opacity 0.4s ease';
+    bar.style.background = '#C8102E';
+    bar.style.backgroundSize = '';
+    bar.style.transition = 'width 0.3s ease, opacity 0.3s ease';
+    bar.style.width      = '0%';
     bar.style.opacity    = '0';
-    // Reset width after fade completes so it's invisible before next pull
-    setTimeout(function () { bar.style.width = '0%'; }, 400);
+    setTimeout(function () {
+      bar.style.opacity    = '1';
+      bar.style.transition = '';
+    }, 300);
   }
 
   /* ── Touch: start ───────────────────────────────────────────────── */
@@ -93,16 +111,18 @@
     const dist = Math.min(e.touches[0].clientY - startY, MAX_PULL);
     if (dist <= 0) {
       active = false;
-      resetBar();
+      snapBack();
       return;
     }
 
+    /* Phase 1 — width tracks finger, no animation */
     const progress = Math.min(dist / THRESHOLD, 1);
-
-    bar.style.animation  = 'none';
-    bar.style.transition = 'width 0.1s ease, opacity 0.15s ease';
-    bar.style.width      = (progress * 100) + '%';
-    bar.style.opacity    = String(progress);
+    bar.style.animation      = 'none';
+    bar.style.background     = '#C8102E';
+    bar.style.backgroundSize = '';
+    bar.style.transition     = 'none';
+    bar.style.width          = (progress * 100) + '%';
+    bar.style.opacity        = String(progress);
   }, { passive: true });
 
   /* ── Touch: end ─────────────────────────────────────────────────── */
@@ -113,19 +133,21 @@
     const dist = e.changedTouches[0].clientY - startY;
 
     if (dist < THRESHOLD) {
-      resetBar();
+      snapBack();
       return;
     }
 
-    /* ── Threshold met — show loading state ── */
+    /* Phase 2 — LOADING: indeterminate highlight sweeps left → right */
     refreshing = true;
-    bar.style.transition = 'width 0.15s ease';
-    bar.style.width      = '100%';
-    bar.style.opacity    = '1';
-    // Start shimmer after bar reaches full width
+    bar.style.transition     = 'width 0.15s ease';
+    bar.style.width          = '100%';
+    bar.style.opacity        = '1';
     setTimeout(function () {
-      bar.style.transition = 'none';
-      bar.style.animation  = 'ptrShimmer 0.8s ease-in-out infinite';
+      bar.style.transition       = 'none';
+      bar.style.background       =
+        'linear-gradient(90deg, #C8102E 30%, #E8213F 50%, #C8102E 70%)';
+      bar.style.backgroundSize   = '200% 100%';
+      bar.style.animation        = 'ptrLoading 1s linear infinite';
     }, 150);
 
     try {
@@ -143,8 +165,9 @@
       // Silently swallow — PTR must never break the page
     }
 
+    /* Phase 3 — DONE: stop animation, fade out, reset */
     setTimeout(function () {
-      resetBar();
+      doneBar();
       refreshing = false;
     }, 600);
 
