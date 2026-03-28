@@ -2841,7 +2841,7 @@ function _pmModalHTML() {
           <div class="pm-form-field full">
             <label class="pm-form-label">Category Icon</label>
             <div class="pm-icon-grid" id="pm-icon-grid">
-              ${['cake','cake-slice','star','cup-soda','layers','cookie','wheat','coffee','gift','heart','sparkles','flame','leaf','droplets','zap','chef-hat','utensils','egg','apple','banana','ice-cream','candy','croissant','sandwich','glass-water','gem','rosette']
+              ${['cake','cake-slice','star','cup-soda','layers','cookie','wheat','coffee','gift','heart','sparkles','flame','leaf','droplets','zap','chef-hat','utensils','egg','apple','banana','ice-cream-cone','candy','croissant','sandwich','glass-water','gem','award']
                 .map(ic => `<button type="button" class="pm-icon-opt" data-icon="${ic}" onclick="window._pmSelectIcon('${ic}')">
                   <i data-lucide="${ic}"></i>
                   <span class="pm-icon-lbl">${ic}</span>

@@ -3,7 +3,7 @@
 //  Network-first + Offline Fallback + Push Notifications
 // ═══════════════════════════════════
 
-const CACHE_VERSION = 'v7';                       // bump on each release
+const CACHE_VERSION = 'v8';                       // bump on each release
 const CACHE_NAME = `cecilia-cache-${CACHE_VERSION}`;
 const OFFLINE_URL = '/offline.html';
 
