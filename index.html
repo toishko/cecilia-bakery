@@ -5448,8 +5448,11 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
 
         const currentLang = localStorage.getItem('lang') || 'en';
 
+        function slugify(text) {
+          return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        }
         footerMenu.innerHTML = categories.map(c => {
-          const slug = c.tag_en.toLowerCase().replace(/\s+/g, '-');
+          const slug = slugify(c.tag_en);
           const label = currentLang === 'es' ? c.tag_es : c.tag_en;
           return `<li><a href="/menu.html#${slug}" data-en="${c.tag_en}" data-es="${c.tag_es}">${label}</a></li>`;
         }).join('');

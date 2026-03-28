@@ -201,6 +201,8 @@ function enterDashboard() {
   showSection(savedSection);
   loadDriversCache();
   setupRealtime();
+  setupOnlineOrdersRealtime();
+  updateOnlineOrdersBadge();
   requestNotifPermission();
   // Push opt-in: only auto-subscribe if permission already granted
   if ('Notification' in window && Notification.permission === 'granted') {
@@ -384,6 +386,7 @@ function startRealtimeGuard() {
       setupRealtime();
       // Immediately fetch latest orders
       silentRefreshOrders();
+      updateOnlineOrdersBadge();
     }
   });
 
@@ -563,6 +566,33 @@ async function subscribeToPush(userType, userId) {
    ═══════════════════════════════════ */
 let _onlineOrdersChannel = null;
 
+async function updateOnlineOrdersBadge() {
+  if (!sb) return;
+  try {
+    const { count } = await sb
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('source', 'website')
+      .in('delivery_status', ['pending', 'preparing']);
+
+    const badges = [
+      document.getElementById('online-orders-badge'),
+      document.getElementById('online-orders-badge-mobile')
+    ];
+    badges.forEach(badge => {
+      if (!badge) return;
+      if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'inline-flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    });
+  } catch (e) {
+    console.warn('Online orders badge update failed:', e);
+  }
+}
+
 function generateTimeOptions(selectedValue) {
   const times = [];
   for (let h = 8; h <= 20; h++) {
@@ -605,15 +635,8 @@ async function loadOnlineOrders() {
 
     if (error) throw error;
 
-    // Update badge
-    const pendingCount = (data || []).filter(o => !o.delivery_status || o.delivery_status === 'pending').length;
-    const badges = [document.getElementById('online-orders-badge'), document.getElementById('online-orders-badge-mobile')];
-    badges.forEach(badge => {
-      if (badge) {
-        badge.style.display = pendingCount > 0 ? 'inline' : 'none';
-        badge.textContent = pendingCount;
-      }
-    });
+    // Update badge (pending + preparing)
+    updateOnlineOrdersBadge();
 
     if (!data || data.length === 0) {
       console.log('📦 No data — showing empty state');
@@ -739,6 +762,7 @@ function setupOnlineOrdersRealtime() {
       filter: 'source=eq.website'
     }, (payload) => {
       console.log('New online order:', payload);
+      updateOnlineOrdersBadge();
       if (currentSection === 'online-orders') loadOnlineOrders();
       showToast(lang === 'es' ? '🛒 ¡Nuevo pedido en línea!' : '🛒 New online order received!', 'info');
       if (notificationsEnabled) playNotification();
@@ -750,6 +774,7 @@ function setupOnlineOrdersRealtime() {
       filter: 'source=eq.website'
     }, (payload) => {
       console.log('Online order updated:', payload);
+      updateOnlineOrdersBadge();
       if (currentSection === 'online-orders') loadOnlineOrders();
     })
     .subscribe();
@@ -787,6 +812,7 @@ async function updateOnlineOrderStatus(orderId, newStatus) {
     }
 
     showToast(lang === 'es' ? 'Estado del pedido actualizado' : 'Order status updated');
+    updateOnlineOrdersBadge();
 
   } catch (err) {
     console.error('Failed to update order status:', err);
