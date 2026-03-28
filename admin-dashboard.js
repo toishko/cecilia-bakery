@@ -563,6 +563,21 @@ async function subscribeToPush(userType, userId) {
    ═══════════════════════════════════ */
 let _onlineOrdersChannel = null;
 
+function generateTimeOptions(selectedValue) {
+  const times = [];
+  for (let h = 8; h <= 20; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const hour12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+      const ampm = h < 12 ? 'AM' : 'PM';
+      const display = `${hour12}:${m === 0 ? '00' : m} ${ampm}`;
+      const value = `${String(h).padStart(2, '0')}:${m === 0 ? '00' : m}`;
+      const selected = selectedValue === value ? 'selected' : '';
+      times.push(`<option value="${value}" ${selected}>${display}</option>`);
+    }
+  }
+  return '<option value="">Set pickup time...</option>' + times.join('');
+}
+
 async function loadOnlineOrders() {
   console.log('📦 loadOnlineOrders() called');
   console.log('📦 sb client:', sb ? 'exists' : 'NULL');
@@ -682,14 +697,16 @@ async function loadOnlineOrders() {
             </div>
           </div>
           <div class="online-order-time-set">
-            <label>${lang === 'es' ? 'Hora estimada de recogida:' : 'Estimated Pickup Time:'}</label>
-            <input
-              type="time"
+            <label>${lang === 'es' ? 'Hora de recogida:' : 'Pickup Time:'}</label>
+            <select
               class="online-order-time-input"
-              id="pickup-time-${order.id}"
-              value="${order.estimated_pickup_at ? new Date(order.estimated_pickup_at).toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit'}) : ''}"
-              onchange="setEstimatedPickupTime('${order.id}', this.value)"
-            />
+              id="pickup-time-${order.id}">
+              ${generateTimeOptions(order.estimated_pickup_at ? new Date(order.estimated_pickup_at).toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit'}) : '')}
+            </select>
+            <button class="online-order-time-btn"
+              onclick="setEstimatedPickupTime('${order.id}', document.getElementById('pickup-time-${order.id}').value)">
+              Set
+            </button>
           </div>
         </div>
       `;

@@ -929,6 +929,22 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   outline: none;
   box-shadow: 0 0 0 2px rgba(200,16,46,0.08);
 }
+.online-order-time-btn {
+  padding: 6px 14px;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+.online-order-time-btn:hover {
+  background: var(--red-dk);
+}
 
 /* ── Push Opt-In Banner ── */
 .push-opt-in {
