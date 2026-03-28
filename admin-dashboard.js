@@ -2658,12 +2658,12 @@ function _pmInjectStyles() {
 .pm-badge-hidden{background:rgba(220,38,38,.1);color:#dc2626}
 /* Modal */
 .pm-overlay{position:fixed;inset:0;background:var(--bg-overlay);z-index:400;
-  display:none;align-items:flex-end;justify-content:center}
+  display:none;align-items:flex-end;justify-content:center;overscroll-behavior:none}
 .pm-overlay.open{display:flex}
 .pm-overlay.open .pm-modal{animation:slideUp .3s ease}
 .pm-modal{background:var(--bg-card);border-radius:20px 20px 0 0;width:100%;max-width:640px;
-  max-height:92vh;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.2)}
-@media(min-width:680px){.pm-overlay{align-items:center}.pm-modal{border-radius:16px;max-height:88vh}}
+  max-height:calc(100dvh - 20px);display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.2)}
+@media(min-width:680px){.pm-overlay{align-items:center}.pm-modal{border-radius:16px;max-height:calc(100dvh - 40px)}}
 .pm-modal-handle{width:40px;height:4px;background:var(--bd);border-radius:2px;margin:12px auto 0;flex-shrink:0}
 .pm-modal-header{display:flex;align-items:center;justify-content:space-between;
   padding:16px 20px 12px;border-bottom:1px solid var(--bd);flex-shrink:0}
@@ -2677,7 +2677,7 @@ function _pmInjectStyles() {
   font-family:inherit;font-size:.78rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
   color:var(--tx-muted);cursor:pointer;transition:color .2s,border-color .2s}
 .pm-tab.active{color:var(--red);border-bottom-color:var(--red)}
-.pm-modal-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px}
+.pm-modal-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px;overscroll-behavior:contain}
 .pm-panel{display:none}.pm-panel.active{display:block}
 .pm-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:520px){.pm-form-grid{grid-template-columns:1fr}}
