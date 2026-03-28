@@ -3978,11 +3978,9 @@
       </div>
       <div class="footer-col">
         <h4 data-en="Menu" data-es="Menú">Menu</h4>
-        <a href="menu.html">Tres Leches</a>
-        <a href="menu.html" data-en="Birthday Cakes" data-es="Cumpleaños">Birthday Cakes</a>
-        <a href="menu.html" data-en="Square Cakes" data-es="Cuadrados">Square Cakes</a>
-        <a href="menu.html" data-en="Slices" data-es="Piezas">Slices</a>
-        <a href="menu.html" data-en="Cups" data-es="Basos">Cups</a>
+        <ul id="footer-menu-links" style="list-style:none;margin:0;padding:0;">
+          <li><a href="menu.html" data-en="View Menu" data-es="Ver Menú">View Menu</a></li>
+        </ul>
       </div>
       <div class="footer-col">
         <h4 data-en="Company" data-es="Empresa">Company</h4>
@@ -5422,6 +5420,44 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       });
     }
 
+    /* ── Dynamic Footer Menu Categories ── */
+    async function loadFooterMenu() {
+      try {
+        const sb = window.__supabase;
+        if (!sb) return;
+        const { data, error } = await sb
+          .from('products')
+          .select('tag_en, tag_es')
+          .eq('available', true)
+          .order('sort_order', { ascending: true });
+        if (error || !data || data.length === 0) return;
+
+        // Deduplicate preserving sort_order
+        const seen = new Set();
+        const categories = [];
+        for (const p of data) {
+          if (p.tag_en && !seen.has(p.tag_en)) {
+            seen.add(p.tag_en);
+            categories.push({ tag_en: p.tag_en, tag_es: p.tag_es || p.tag_en });
+          }
+        }
+        if (categories.length === 0) return;
+
+        const footerMenu = document.getElementById('footer-menu-links');
+        if (!footerMenu) return;
+
+        const currentLang = localStorage.getItem('lang') || 'en';
+
+        footerMenu.innerHTML = categories.map(c => {
+          const slug = c.tag_en.toLowerCase().replace(/\s+/g, '-');
+          const label = currentLang === 'es' ? c.tag_es : c.tag_en;
+          return `<li><a href="/menu.html#${slug}" data-en="${c.tag_en}" data-es="${c.tag_es}">${label}</a></li>`;
+        }).join('');
+      } catch (e) {
+        // Keep fallback link on error
+      }
+    }
+
     /* ── Init ── */
     document.addEventListener('DOMContentLoaded', async () => {
       loadCart();
@@ -5433,6 +5469,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       await loadProductsFromSupabase();
       applyHiddenProducts();
       applySOldOutState();
+      loadFooterMenu();
     });
 
   </script>
