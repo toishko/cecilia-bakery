@@ -406,9 +406,21 @@
       text-transform: uppercase; color: var(--tx-muted); margin-bottom: 6px;
     }
     .clover-field {
-      border: 1px solid var(--bd-input); border-radius: 6px;
-      background: var(--bg-input); padding: 12px 14px; min-height: 44px;
+      border: 1px solid var(--bd-input);
+      border-radius: 6px;
+      background: var(--bg-input);
+      height: 46px;
+      overflow: hidden;
       transition: border-color .2s;
+      display: flex;
+      align-items: center;
+    }
+
+    .clover-field > iframe {
+      width: 100% !important;
+      height: 100% !important;
+      border: none !important;
+      display: block !important;
     }
     .clover-field:focus-within { border-color: var(--red); }
     .card-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -717,9 +729,7 @@
               Secured by Clover
             </div>
 
-            <p class="payment-charge-note" id="charge-note">
-              You will be charged <strong id="charge-amount">$0.00</strong> when you click Place Order.
-            </p>
+
           </div>
         </div>
       </div>
@@ -825,11 +835,8 @@
       // Update totals
       const subtotalEl = document.getElementById('order-subtotal');
       const totalEl = document.getElementById('order-total');
-      const chargeEl = document.getElementById('charge-amount');
-
       if (subtotalEl) subtotalEl.textContent = '$' + cartTotal.toFixed(2);
       if (totalEl) totalEl.textContent = '$' + cartTotal.toFixed(2);
-      if (chargeEl) chargeEl.textContent = '$' + cartTotal.toFixed(2);
     }
 
     /* ════════════════════════════════════════
@@ -895,8 +902,8 @@
           return;
         }
 
-        cloverInstance = new Clover('YOUR_CLOVER_PUBLISHABLE_KEY', {
-          merchantId: 'YOUR_CLOVER_MERCHANT_ID'
+        cloverInstance = new Clover('526684090883', {
+          merchantId: '526684090883'
         });
 
         const elements = cloverInstance.elements();
