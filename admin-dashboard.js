@@ -100,6 +100,7 @@ async function showSection(name) {
 
   // Load section data
   if (name === 'overview') loadOverview();
+  if (name === 'online-orders') loadOnlineOrders();
   if (name === 'incoming') loadIncomingOrders();
   if (name === 'history') loadHistoryOrders(true);
   if (name === 'drivers') {
@@ -118,6 +119,7 @@ async function showSection(name) {
 window.__adminRefresh = async function () {
   const fnMap = {
     overview:  loadOverview,
+    'online-orders': loadOnlineOrders,
     incoming:  loadIncomingOrders,
     drivers:   loadDriverList,
     history:   () => loadHistoryOrders(true),
@@ -555,6 +557,208 @@ async function showBrowserNotification(title, body, section, orderId) {
 async function subscribeToPush(userType, userId) {
   return _subscribeToPush(sb, userType, userId, lang, showToast);
 }
+
+/* ═══════════════════════════════════
+   ONLINE ORDERS (website checkout)
+   ═══════════════════════════════════ */
+let _onlineOrdersChannel = null;
+
+async function loadOnlineOrders() {
+  if (!sb) return;
+
+  const container = document.getElementById('section-online-orders');
+  if (!container) return;
+
+  // Show loading
+  container.innerHTML = '<div class="empty-state">Loading online orders...</div>';
+
+  try {
+    const { data, error } = await sb
+      .from('orders')
+      .select('*')
+      .eq('source', 'website')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Update badge
+    const pendingCount = (data || []).filter(o => !o.delivery_status || o.delivery_status === 'pending').length;
+    const badges = [document.getElementById('online-orders-badge'), document.getElementById('online-orders-badge-mobile')];
+    badges.forEach(badge => {
+      if (badge) {
+        badge.style.display = pendingCount > 0 ? 'inline' : 'none';
+        badge.textContent = pendingCount;
+      }
+    });
+
+    if (!data || data.length === 0) {
+      container.innerHTML = `
+        <div class="section-header">
+          <h2 class="page-title" data-en="Online Orders" data-es="Pedidos en Línea">${lang === 'es' ? 'Pedidos en Línea' : 'Online Orders'}</h2>
+        </div>
+        <div class="empty-state" data-en="No online orders yet." data-es="Aún no hay pedidos en línea.">${lang === 'es' ? 'Aún no hay pedidos en línea.' : 'No online orders yet.'}</div>
+      `;
+      setupOnlineOrdersRealtime();
+      return;
+    }
+
+    // Render header with count
+    let html = `
+      <div class="section-header">
+        <h2 class="page-title" data-en="Online Orders" data-es="Pedidos en Línea">${lang === 'es' ? 'Pedidos en Línea' : 'Online Orders'}
+          <span class="badge badge-confirmed" style="font-size:.7rem;vertical-align:middle;margin-left:8px">${data.length}</span>
+        </h2>
+        <button class="link-btn" onclick="loadOnlineOrders()" data-en="Refresh" data-es="Actualizar">${lang === 'es' ? 'Actualizar' : 'Refresh'}</button>
+      </div>
+    `;
+
+    // Render each order as a card
+    data.forEach(order => {
+      const date = new Date(order.created_at).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+
+      const items = Array.isArray(order.items)
+        ? order.items.map(i => `${i.qty || 1}× ${i.name}`).join(', ')
+        : 'No items';
+
+      const status = order.delivery_status || 'pending';
+      const statusColors = {
+        'pending': 'var(--yellow)',
+        'preparing': 'var(--blue)',
+        'ready': '#8B5CF6',
+        'completed': 'var(--green)',
+        'cancelled': 'var(--red)'
+      };
+      const statusLabelsEn = { pending: 'Pending', preparing: 'Preparing', ready: 'Ready for Pickup', completed: 'Completed', cancelled: 'Cancelled' };
+      const statusLabelsEs = { pending: 'Pendiente', preparing: 'Preparando', ready: 'Listo para Recoger', completed: 'Completado', cancelled: 'Cancelado' };
+      const statusLabel = lang === 'es' ? (statusLabelsEs[status] || status) : (statusLabelsEn[status] || status);
+      const statusColor = statusColors[status] || 'var(--tx-muted)';
+
+      const pickupInfo = order.pickup_date
+        ? `<span class="online-order-pickup">📅 ${order.pickup_date}${order.pickup_time ? ' · ' + order.pickup_time : ''}</span>`
+        : '';
+
+      html += `
+        <div class="online-order-card" id="online-order-${order.id}">
+          <div class="online-order-header">
+            <div class="online-order-customer">
+              <span class="online-order-name">${order.customer_name || 'Customer'}</span>
+              <span class="online-order-phone">${order.customer_phone || ''}</span>
+            </div>
+            <div class="online-order-meta">
+              <span class="online-order-date">${date}</span>
+              <span class="online-order-total">$${parseFloat(order.total_amount || 0).toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div class="online-order-items">${items}</div>
+
+          ${pickupInfo ? `<div class="online-order-pickup-row">${pickupInfo}</div>` : ''}
+          ${order.order_note ? `<div class="online-order-note">📝 ${order.order_note}</div>` : ''}
+
+          <div class="online-order-footer">
+            <span class="online-order-status" style="color:${statusColor}">● ${statusLabel}</span>
+            <div class="online-order-actions">
+              <select class="online-order-status-select"
+                onchange="updateOnlineOrderStatus('${order.id}', this.value)">
+                <option value="pending" ${status === 'pending' ? 'selected' : ''}>${lang === 'es' ? 'Pendiente' : 'Pending'}</option>
+                <option value="preparing" ${status === 'preparing' ? 'selected' : ''}>${lang === 'es' ? 'Preparando' : 'Preparing'}</option>
+                <option value="ready" ${status === 'ready' ? 'selected' : ''}>${lang === 'es' ? 'Listo para Recoger' : 'Ready for Pickup'}</option>
+                <option value="completed" ${status === 'completed' ? 'selected' : ''}>${lang === 'es' ? 'Completado' : 'Completed'}</option>
+                <option value="cancelled" ${status === 'cancelled' ? 'selected' : ''}>${lang === 'es' ? 'Cancelado' : 'Cancelled'}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+    setupOnlineOrdersRealtime();
+
+  } catch (err) {
+    console.error('Failed to load online orders:', err);
+    container.innerHTML = '<div class="empty-state" style="color:var(--red)">Failed to load orders. Please try again.</div>';
+  }
+}
+
+function setupOnlineOrdersRealtime() {
+  if (!sb) return;
+  // Remove existing channel if any
+  if (_onlineOrdersChannel) {
+    sb.removeChannel(_onlineOrdersChannel);
+    _onlineOrdersChannel = null;
+  }
+
+  _onlineOrdersChannel = sb
+    .channel('online-orders-live')
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'orders',
+      filter: 'source=eq.website'
+    }, (payload) => {
+      console.log('New online order:', payload);
+      if (currentSection === 'online-orders') loadOnlineOrders();
+      showToast(lang === 'es' ? '🛒 ¡Nuevo pedido en línea!' : '🛒 New online order received!', 'info');
+      if (notificationsEnabled) playNotification();
+    })
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'orders',
+      filter: 'source=eq.website'
+    }, (payload) => {
+      console.log('Online order updated:', payload);
+      if (currentSection === 'online-orders') loadOnlineOrders();
+    })
+    .subscribe();
+}
+
+async function updateOnlineOrderStatus(orderId, newStatus) {
+  if (!sb) return;
+
+  try {
+    const { error } = await sb
+      .from('orders')
+      .update({ delivery_status: newStatus })
+      .eq('id', orderId);
+
+    if (error) throw error;
+
+    // Update the status display on the card inline
+    const card = document.getElementById('online-order-' + orderId);
+    if (card) {
+      const statusEl = card.querySelector('.online-order-status');
+      const statusColors = {
+        'pending': 'var(--yellow)',
+        'preparing': 'var(--blue)',
+        'ready': '#8B5CF6',
+        'completed': 'var(--green)',
+        'cancelled': 'var(--red)'
+      };
+      const statusLabelsEn = { pending: 'Pending', preparing: 'Preparing', ready: 'Ready for Pickup', completed: 'Completed', cancelled: 'Cancelled' };
+      const statusLabelsEs = { pending: 'Pendiente', preparing: 'Preparando', ready: 'Listo para Recoger', completed: 'Completado', cancelled: 'Cancelado' };
+      const label = lang === 'es' ? (statusLabelsEs[newStatus] || newStatus) : (statusLabelsEn[newStatus] || newStatus);
+      if (statusEl) {
+        statusEl.style.color = statusColors[newStatus] || 'var(--tx-muted)';
+        statusEl.textContent = '● ' + label;
+      }
+    }
+
+    showToast(lang === 'es' ? 'Estado del pedido actualizado' : 'Order status updated');
+
+  } catch (err) {
+    console.error('Failed to update order status:', err);
+    showToast(lang === 'es' ? 'Error al actualizar estado' : 'Failed to update status', 'error');
+  }
+}
+
+// Make functions globally accessible (called via onclick in rendered HTML)
+window.loadOnlineOrders = loadOnlineOrders;
+window.updateOnlineOrderStatus = updateOnlineOrderStatus;
 
 /* ═══════════════════════════════════
    TOAST

@@ -95,6 +95,11 @@
         <i data-lucide="bar-chart-3"></i>
         <span data-en="Overview" data-es="Resumen">Overview</span>
       </button>
+      <button class="sidebar-nav-item" data-section="online-orders">
+        <i data-lucide="shopping-cart"></i>
+        <span data-en="Online Orders" data-es="Pedidos en Línea">Online Orders</span>
+        <span class="nav-badge" id="online-orders-badge" style="display:none">0</span>
+      </button>
       <button class="sidebar-nav-item" data-section="incoming">
         <i data-lucide="inbox"></i>
         <span data-en="Incoming Orders" data-es="Pedidos Entrantes">Incoming Orders</span>
@@ -133,6 +138,11 @@
     <button class="mobile-nav-item active" data-section="overview">
       <i data-lucide="bar-chart-3"></i>
       <span data-en="Overview" data-es="Resumen">Overview</span>
+    </button>
+    <button class="mobile-nav-item" data-section="online-orders">
+      <i data-lucide="shopping-cart"></i>
+      <span data-en="Online Orders" data-es="Pedidos en Línea">Online Orders</span>
+      <span class="nav-badge mobile-badge" id="online-orders-badge-mobile" style="display:none">0</span>
     </button>
     <button class="mobile-nav-item" data-section="incoming">
       <i data-lucide="inbox"></i>
@@ -440,6 +450,9 @@
       <div class="admin-info" id="admin-info"></div>
       <button class="logout-btn" id="logout-btn" data-en="Log Out" data-es="Cerrar Sesión">Log Out</button>
     </div>
+
+    <!-- ── ONLINE ORDERS ── -->
+    <div id="section-online-orders" class="dash-section" style="display:none"></div>
 
     <!-- ── PRODUCTS ── -->
     <div id="section-products" class="dash-section" style="display:none"></div>

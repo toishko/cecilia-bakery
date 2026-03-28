@@ -796,6 +796,106 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   width:24px;height:24px;font-size:14px;cursor:pointer;flex-shrink:0
 }
 
+/* ═══════════════════════════════════
+   ONLINE ORDER CARDS
+   ═══════════════════════════════════ */
+.online-order-card {
+  background: var(--bg-card);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.online-order-card:hover {
+  box-shadow: 0 4px 20px rgba(200,16,46,0.1);
+  transform: translateY(-1px);
+}
+.online-order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+.online-order-customer {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.online-order-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--tx);
+}
+.online-order-phone {
+  font-size: 0.78rem;
+  color: var(--tx-muted);
+}
+.online-order-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+.online-order-date {
+  font-size: 0.75rem;
+  color: var(--tx-muted);
+}
+.online-order-total {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--red);
+}
+.online-order-items {
+  font-size: 0.82rem;
+  color: var(--tx-muted);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+.online-order-pickup-row {
+  font-size: 0.78rem;
+  color: var(--tx-muted);
+  margin-bottom: 8px;
+}
+.online-order-note {
+  font-size: 0.78rem;
+  color: var(--tx-muted);
+  background: var(--bg-surface);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+.online-order-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid var(--bd);
+}
+.online-order-status {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.online-order-status-select {
+  font-size: 0.78rem;
+  padding: 6px 10px;
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--tx);
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  transition: border-color 0.2s;
+}
+.online-order-status-select:focus {
+  border-color: var(--red);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(200,16,46,0.08);
+}
+
 /* ── Push Opt-In Banner ── */
 .push-opt-in {
   position: fixed;
