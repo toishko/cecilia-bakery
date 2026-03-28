@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Privacy Policy — Cecilia Bakery</title>
+  <meta name="description" content="Privacy policy for Cecilia Bakery. Learn how we collect, use, and protect your personal information." />
+  <link rel="manifest" href="/manifest-website.json">
+  <meta name="theme-color" content="#FAFAF8">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cecilia">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload"
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+    as="style">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+
+  <style>
+    /* ════════════════════════════════════════
+       DESIGN TOKENS
+       ════════════════════════════════════════ */
+    :root {
+      --red: #C8102E;
+      --red-dk: #9B0B22;
+      --red-lt: #E8213F;
+      --blue: #002D62;
+      --blue-lt: #1A4A8A;
+
+      --bg: #FAFAF8;
+      --bg-surface: #EDE0CC;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #FDFCFB;
+      --bg-input: #FFFFFF;
+      --bg-nav: rgba(250, 250, 248, .80);
+      --bg-overlay: rgba(0, 0, 0, .50);
+      --bg-footer: #18080D;
+
+      --tx: #18080D;
+      --tx-muted: #6B5057;
+      --tx-faint: #A08088;
+      --tx-on-footer: rgba(255, 255, 255, .52);
+      --tx-footer-head: rgba(255, 255, 255, .30);
+      --tx-footer-brand: rgba(255, 255, 255, .82);
+
+      --bd: rgba(200, 16, 46, .22);
+      --bd-hover: rgba(200, 16, 46, .55);
+      --bd-input: rgba(200, 16, 46, .25);
+      --bd-footer: rgba(255, 255, 255, .06);
+
+      --shadow-card: 0 4px 22px rgba(200, 16, 46, .09);
+      --shadow-nav: 0 1px 0 rgba(200, 16, 46, .10);
+
+      --lang-border: rgba(200, 16, 46, .20);
+      --lang-text: #6B5057;
+      --r: 3px;
+      --transition: color .25s ease, background .25s ease, border-color .25s ease;
+
+      --green: #1B7A4A;
+    }
+
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-padding-top: 100px; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--tx);
+      overflow-x: hidden;
+      transition: background .3s, color .3s;
+      padding-bottom: env(safe-area-inset-bottom);
+      min-height: 100vh;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--red);
+      outline-offset: 2px;
+      border-radius: var(--r);
+    }
+
+    /* ── Animated background blob ── */
+    .bg-blob {
+      position: fixed; inset: -40%; z-index: -1;
+      width: 180%; height: 180%;
+      animation: blobDrift 14s ease-in-out infinite alternate;
+      will-change: transform; pointer-events: none;
+      transition: background .3s;
+      background:
+        radial-gradient(ellipse 55% 35% at 20% 30%, rgba(200,16,46,.07) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 40% at 78% 68%, rgba(200,16,46,.05) 0%, transparent 50%);
+    }
+    @keyframes blobDrift {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(2%,1.5%) scale(1.04); }
+    }
+
+    /* ════════════════════════════════════════
+       NAV
+       ════════════════════════════════════════ */
+    nav {
+      position: fixed; top: 0; width: 100%; z-index: 501;
+      padding: 18px 52px;
+      padding-top: 18px;
+      padding-top: calc(18px + env(safe-area-inset-top));
+      display: flex; justify-content: space-between; align-items: center;
+      transition: background .35s, box-shadow .35s, padding .35s;
+      background: var(--bg-nav);
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    }
+    nav.scrolled {
+      box-shadow: var(--shadow-nav);
+      padding: 12px 52px;
+      padding-top: 12px;
+      padding-top: calc(12px + env(safe-area-inset-top));
+    }
+    .nav-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .nav-logo-wrap {
+      width: 38px; height: 38px; border-radius: 50%; overflow: hidden;
+      border: 2px solid rgba(200,16,46,.25); flex-shrink: 0;
+      background: var(--red); display: flex; align-items: center; justify-content: center;
+      transition: transform .25s;
+    }
+    .nav-brand:hover .nav-logo-wrap { transform: scale(1.06); }
+    .nav-logo-fallback {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.1rem; font-weight: 700; color: #fff;
+    }
+    .nav-logo-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.45rem; font-weight: 600; color: var(--red);
+      letter-spacing: .02em;
+    }
+    .nav-logo-text span { color: var(--blue); font-style: italic; }
+
+    .nav-right-group { display: flex; align-items: center; gap: 0; }
+    .nav-back {
+      font-size: .78rem; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--tx-muted); text-decoration: none;
+      display: flex; align-items: center; gap: 7px; transition: color .2s;
+    }
+    .nav-back:hover { color: var(--red); }
+
+    @media (max-width: 900px) {
+      nav { padding: 14px 16px; padding-top: calc(14px + env(safe-area-inset-top)); }
+      nav.scrolled { padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top)); }
+    }
+
+    /* ════════════════════════════════════════
+       TERMS PAGE LAYOUT
+       ════════════════════════════════════════ */
+    .terms-container {
+      max-width: 760px; margin: 0 auto;
+      padding: 140px 52px 80px;
+      padding-top: 140px;
+      padding-top: calc(140px + env(safe-area-inset-top));
+    }
+    @media (max-width: 900px) {
+      .terms-container { padding: 120px 20px 60px; padding-top: calc(120px + env(safe-area-inset-top)); }
+    }
+
+    .terms-eyebrow {
+      font-size: .72rem; letter-spacing: .24em; text-transform: uppercase;
+      color: var(--red); font-weight: 500; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .terms-eyebrow::before {
+      content: ''; display: block; width: 28px; height: 1.5px; background: var(--red);
+    }
+
+    .terms-page-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      font-weight: 300; line-height: 1.1; letter-spacing: -.01em;
+      color: var(--tx); margin-bottom: 8px;
+    }
+    .terms-page-title em { font-style: italic; color: var(--red); font-weight: 600; }
+
+    .terms-updated {
+      font-size: .78rem; color: var(--tx-faint); margin-bottom: 40px;
+      font-weight: 400;
+    }
+
+    .terms-intro {
+      font-size: .95rem; color: var(--tx-muted); line-height: 1.8;
+      margin-bottom: 40px; max-width: 620px;
+    }
+
+    /* ── Section Styles ── */
+    .terms-section {
+      margin-bottom: 40px;
+    }
+
+    .terms-section-number {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: .85rem; font-weight: 700; color: var(--red);
+      letter-spacing: .1em; text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .terms-section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem; font-weight: 600; color: var(--tx);
+      margin-bottom: 16px; line-height: 1.2;
+    }
+
+    .terms-section p {
+      font-size: .9rem; color: var(--tx-muted); line-height: 1.8;
+      margin-bottom: 12px;
+    }
+
+    .terms-section ul {
+      list-style: none; padding: 0; margin: 0 0 12px 0;
+    }
+
+    .terms-section ul li {
+      font-size: .9rem; color: var(--tx-muted); line-height: 1.8;
+      padding-left: 20px; position: relative; margin-bottom: 4px;
+    }
+
+    .terms-section ul li::before {
+      content: '';
+      position: absolute; left: 0; top: 11px;
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--red); opacity: .5;
+    }
+
+    .terms-address {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(200,16,46,.05); border: 1px solid var(--bd);
+      padding: 6px 14px; border-radius: 6px;
+      font-size: .85rem; color: var(--tx); font-weight: 500;
+      margin: 4px 0 8px;
+    }
+
+    .terms-service-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--red); text-decoration: none; font-weight: 500;
+      font-size: .88rem; transition: opacity .2s;
+    }
+    .terms-service-link:hover { opacity: .7; }
+
+    /* ── Divider ── */
+    .terms-divider {
+      width: 40px; height: 2px; background: var(--red); opacity: .2;
+      margin: 40px 0;
+    }
+
+    /* ── Footer note ── */
+    .terms-footer {
+      text-align: center; padding: 40px 20px 20px;
+      font-size: .78rem; color: var(--tx-faint); line-height: 1.6;
+    }
+    .terms-footer a {
+      color: var(--red); text-decoration: none; font-weight: 500;
+    }
+    .terms-footer a:hover { text-decoration: underline; }
+
+    /* ── Decorative stripe ── */
+    .terms-container::after {
+      content: ''; position: fixed; right: 0; top: 0; bottom: 0; width: 4px;
+      background: linear-gradient(to bottom, var(--blue) 33%, var(--red) 33% 66%, var(--blue) 66%);
+      opacity: .1; pointer-events: none;
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-blob"></div>
+
+  <!-- ═══ NAV ═══ -->
+  <nav id="main-nav">
+    <a href="/index.html" class="nav-brand">
+      <div class="nav-logo-wrap">
+        <span class="nav-logo-fallback">C</span>
+      </div>
+      <span class="nav-logo-text">Cecilia <span>Bakery</span></span>
+    </a>
+    <div class="nav-right-group">
+      <a href="/menu.html" class="nav-back">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back to Menu
+      </a>
+    </div>
+  </nav>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <div class="terms-container">
+
+    <div class="terms-eyebrow">Privacy</div>
+    <h1 class="terms-page-title">Privacy <em>Policy</em></h1>
+    <p class="terms-updated">Last Updated: March 2026</p>
+
+    <p class="terms-intro">
+      At Cecilia Bakery, your privacy matters to us. This policy explains what information we collect when
+      you use our website and place an order, how we use it, and how we keep it safe. We believe in transparency
+      and keeping things simple.
+    </p>
+
+    <!-- ── 1. Information We Collect ── -->
+    <div class="terms-section">
+      <div class="terms-section-number">Section 01</div>
+      <h2 class="terms-section-title">Information We Collect</h2>
+      <p>When you place an order or create an account, we may collect the following information:</p>
+      <ul>
+        <li><strong>Personal details</strong> — your name, email address, and phone number</li>
+        <li><strong>Order information</strong> — the items you order, order total, pickup date and time, and any special notes you include</li>
+        <li><strong>Payment information</strong> — processed securely by Clover. We <strong>never see or store</strong> your raw credit or debit card numbers. All card data is tokenized by Clover before reaching us.</li>
+        <li><strong>Account information</strong> — if you sign in with Google or email via Clerk, we receive your name, email, and profile photo</li>
+        <li><strong>Basic usage data</strong> — general information about how you interact with our website to help us improve the experience</li>
+      </ul>
+    </div>
+
+    <div class="terms-divider"></div>
+
+    <!-- ── 2. How We Use Your Information ── -->
+    <div class="terms-section">
+      <div class="terms-section-number">Section 02</div>
+      <h2 class="terms-section-title">How We Use Your Information</h2>
+      <p>We use the information we collect for the following purposes:</p>
+      <ul>
+        <li>To process and fulfill your orders</li>
+        <li>To send you order confirmations and status updates</li>
+        <li>To manage your account and provide customer support</li>
+        <li>To improve our website, menu, and overall service</li>
+      </ul>
+      <p><strong>What we don't do:</strong></p>
+      <ul>
+        <li>We do <strong>not</strong> use your personal data for advertising purposes</li>
+        <li>We do <strong>not</strong> sell, rent, or share your data with third parties for marketing</li>
+        <li>We will never spam you — we only contact you about your orders</li>
+      </ul>
+    </div>
+
+    <div class="terms-divider"></div>
+
+    <!-- ── 3. How We Store Your Data ── -->
+    <div class="terms-section">
+      <div class="terms-section-number">Section 03</div>
+      <h2 class="terms-section-title">How We Store Your Data</h2>
+      <p>We take the security of your data seriously and use industry-standard services to protect it:</p>
+      <ul>
+        <li><strong>Order and account data</strong> is stored securely via Supabase, which provides enterprise-grade database security with encryption at rest and in transit</li>
+        <li><strong>Payment data</strong> is handled entirely by Clover's PCI-compliant payment infrastructure — your raw card details never touch our servers</li>
+        <li><strong>Authentication</strong> is managed by Clerk, which uses industry-standard security practices including encrypted sessions and secure token management</li>
+      </ul>
+      <p>We retain your order data for business and accounting purposes. You may request deletion at any time (see Your Rights below).</p>
+    </div>
+
+    <div class="terms-divider"></div>
+
+    <!-- ── 4. Third Party Services ── -->
+    <div class="terms-section">
+      <div class="terms-section-number">Section 04</div>
+      <h2 class="terms-section-title">Third-Party Services</h2>
+      <p>We rely on trusted third-party providers to deliver a secure and reliable experience. Each of these services has their own privacy policy governing how they handle data:</p>
+      <ul>
+        <li><strong>Clover</strong> — payment processing<br><a href="https://www.clover.com/privacy-policy" target="_blank" rel="noopener" class="terms-service-link">clover.com/privacy-policy ↗</a></li>
+        <li><strong>Clerk</strong> — authentication and sign-in<br><a href="https://clerk.com/legal/privacy" target="_blank" rel="noopener" class="terms-service-link">clerk.com/legal/privacy ↗</a></li>
+        <li><strong>Supabase</strong> — secure data storage<br><a href="https://supabase.com/privacy" target="_blank" rel="noopener" class="terms-service-link">supabase.com/privacy ↗</a></li>
+      </ul>
+      <p>We only share the minimum data necessary with each provider to deliver our service to you.</p>
+    </div>
+
+    <div class="terms-divider"></div>
+
+    <!-- ── 5. Your Rights ── -->
+    <div class="terms-section">
+      <div class="terms-section-number">Section 05</div>
+      <h2 class="terms-section-title">Your Rights</h2>
+      <p>You have the right to understand and control how your data is used. Specifically, you can:</p>
+      <ul>
+        <li><strong>Request access</strong> — ask us for a copy of the personal data we hold about you at any time</li>
+        <li><strong>Request deletion</strong> — ask us to delete your account and all associated personal data</li>
+        <li><strong>Request correction</strong> — ask us to update or correct any inaccurate information</li>
+      </ul>
+      <p>To make any of these requests, please contact us through our website. We will respond to all requests within <strong>30 days</strong>.</p>
+    </div>
+
+    <div class="terms-divider"></div>
+
+    <!-- ── 6. Cookies & Tracking ── -->
+    <div class="terms-section">
+      <div class="terms-section-number">Section 06</div>
+      <h2 class="terms-section-title">Cookies & Tracking</h2>
+      <p>We believe in minimal data collection. Here's our approach to cookies and tracking:</p>
+      <ul>
+        <li>We use only the <strong>minimal cookies required</strong> for authentication and session management (keeping you signed in)</li>
+        <li>We do <strong>not</strong> use advertising cookies or tracking pixels</li>
+        <li>We do <strong>not</strong> use Google Analytics or similar third-party analytics tools</li>
+        <li>We do <strong>not</strong> track you across other websites</li>
+      </ul>
+    </div>
+
+    <div class="terms-divider"></div>
+
+    <!-- ── 7. Children's Privacy ── -->
+    <div class="terms-section">
+      <div class="terms-section-number">Section 07</div>
+      <h2 class="terms-section-title">Children's Privacy</h2>
+      <p>Our website and ordering service are not directed at children under the age of 13. We do not knowingly collect personal information from children under 13.</p>
+      <p>If you believe we have inadvertently collected information from a child under 13, please contact us immediately and we will take steps to delete that information.</p>
+    </div>
+
+    <div class="terms-divider"></div>
+
+    <!-- ── 8. Contact ── -->
+    <div class="terms-section">
+      <div class="terms-section-number">Section 08</div>
+      <h2 class="terms-section-title">Contact Us</h2>
+      <p>If you have any questions or concerns about this privacy policy or how we handle your data, we'd love to hear from you. Please reach out through our website.</p>
+      <p>You can also visit us in person at:</p>
+      <div class="terms-address">📍 6101 Park Ave, West New York, NJ</div>
+    </div>
+
+    <div class="terms-footer">
+      <p>&copy; 2026 Cecilia Bakery. All rights reserved.</p>
+      <p><a href="/terms.html">Terms & Conditions</a> · <a href="/menu.html">Browse Our Menu</a></p>
+    </div>
+
+  </div>
+
+  <!-- ═══ SCRIPTS ═══ -->
+  <script>
+    window.addEventListener('scroll', () => {
+      const nav = document.getElementById('main-nav');
+      if (nav) nav.classList.toggle('scrolled', window.scrollY > 20);
+    });
+  </script>
+</body>
+</html>

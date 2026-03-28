@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Terms & Conditions — Cecilia Bakery</title>
+  <meta name="description" content="Terms and conditions for ordering from Cecilia Bakery. Pickup policy, payment info, cancellations, and more." />
+  <link rel="manifest" href="/manifest-website.json">
+  <meta name="theme-color" content="#FAFAF8">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cecilia">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload"
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+    as="style">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+
+  <style>
+    /* ════════════════════════════════════════
+       DESIGN TOKENS
+       ════════════════════════════════════════ */
+    :root {
+      --red: #C8102E;
+      --red-dk: #9B0B22;
+      --red-lt: #E8213F;
+      --blue: #002D62;
+      --blue-lt: #1A4A8A;
+
+      --bg: #FAFAF8;
+      --bg-surface: #EDE0CC;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #FDFCFB;
+      --bg-input: #FFFFFF;
+      --bg-nav: rgba(250, 250, 248, .80);
+      --bg-overlay: rgba(0, 0, 0, .50);
+      --bg-footer: #18080D;
+
+      --tx: #18080D;
+      --tx-muted: #6B5057;
+      --tx-faint: #A08088;
+      --tx-on-footer: rgba(255, 255, 255, .52);
+      --tx-footer-head: rgba(255, 255, 255, .30);
+      --tx-footer-brand: rgba(255, 255, 255, .82);
+
+      --bd: rgba(200, 16, 46, .22);
+      --bd-hover: rgba(200, 16, 46, .55);
+      --bd-input: rgba(200, 16, 46, .25);
+      --bd-footer: rgba(255, 255, 255, .06);
+
+      --shadow-card: 0 4px 22px rgba(200, 16, 46, .09);
+      --shadow-nav: 0 1px 0 rgba(200, 16, 46, .10);
+
+      --lang-border: rgba(200, 16, 46, .20);
+      --lang-text: #6B5057;
+      --r: 3px;
+      --transition: color .25s ease, background .25s ease, border-color .25s ease;
+
+      --green: #1B7A4A;
+    }
+
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-padding-top: 100px; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--tx);
+      overflow-x: hidden;
+      transition: background .3s, color .3s;
+      padding-bottom: env(safe-area-inset-bottom);
+      min-height: 100vh;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--red);
+      outline-offset: 2px;
+      border-radius: var(--r);
+    }
+
+    /* ── Animated background blob ── */
+    .bg-blob {
+      position: fixed; inset: -40%; z-index: -1;
+      width: 180%; height: 180%;
+      animation: blobDrift 14s ease-in-out infinite alternate;
+      will-change: transform; pointer-events: none;
+      transition: background .3s;
+      background:
+        radial-gradient(ellipse 55% 35% at 20% 30%, rgba(200,16,46,.07) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 40% at 78% 68%, rgba(200,16,46,.05) 0%, transparent 50%);
+    }
+    @keyframes blobDrift {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(2%,1.5%) scale(1.04); }
+    }
+
+    /* ════════════════════════════════════════
+       NAV
+       ════════════════════════════════════════ */
+    nav {
+      position: fixed; top: 0; width: 100%; z-index: 501;
+      padding: 18px 52px;
+      padding-top: 18px;
+      padding-top: calc(18px + env(safe-area-inset-top));
+      display: flex; justify-content: space-between; align-items: center;
+      transition: background .35s, box-shadow .35s, padding .35s;
+      background: var(--bg-nav);
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    }
+    nav.scrolled {
+      box-shadow: var(--shadow-nav);
+      padding: 12px 52px;
+      padding-top: 12px;
+      padding-top: calc(12px + env(safe-area-inset-top));
+    }
+    .nav-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .nav-logo-wrap {
+      width: 38px; height: 38px; border-radius: 50%; overflow: hidden;
+      border: 2px solid rgba(200,16,46,.25); flex-shrink: 0;
+      background: var(--red); display: flex; align-items: center; justify-content: center;
+      transition: transform .25s;
+    }
+    .nav-brand:hover .nav-logo-wrap { transform: scale(1.06); }
+    .nav-logo-fallback {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.1rem; font-weight: 700; color: #fff;
+    }
+    .nav-logo-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.45rem; font-weight: 600; color: var(--red);
+      letter-spacing: .02em;
+    }
+    .nav-logo-text span { color: var(--blue); font-style: italic; }
+
+    .nav-right-group { display: flex; align-items: center; gap: 0; }
+    .nav-back {
+      font-size: .78rem; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--tx-muted); text-decoration: none;
+      display: flex; align-items: center; gap: 7px; transition: color .2s;
+    }
+    .nav-back:hover { color: var(--red); }
+
+    @media (max-width: 900px) {
+      nav { padding: 14px 16px; padding-top: calc(14px + env(safe-area-inset-top)); }
+      nav.scrolled { padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top)); }
+    }
+
+    /* ════════════════════════════════════════
+       TERMS PAGE LAYOUT
+       ════════════════════════════════════════ */
+    .terms-container {
+      max-width: 760px; margin: 0 auto;
+      padding: 140px 52px 80px;
+      padding-top: 140px;
+      padding-top: calc(140px + env(safe-area-inset-top));
+    }
+    @media (max-width: 900px) {
+      .terms-container { padding: 120px 20px 60px; padding-top: calc(120px + env(safe-area-inset-top)); }
+    }
+
+    .terms-eyebrow {
+      font-size: .72rem; letter-spacing: .24em; text-transform: uppercase;
+      color: var(--red); font-weight: 500; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .terms-eyebrow::before {
+      content: ''; display: block; width: 28px; height: 1.5px; background: var(--red);
+    }
+
+    .terms-page-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      font-weight: 300; line-height: 1.1; letter-spacing: -.01em;
+      color: var(--tx); margin-bottom: 8px;
+    }
+    .terms-page-title em { font-style: italic; color: var(--red); font-weight: 600; }
+
+    .terms-updated {
+      font-size: .78rem; color: var(--tx-faint); margin-bottom: 40px;
+      font-weight: 400;
+    }
+
+    .terms-intro {
+      font-size: .95rem; color: var(--tx-muted); line-height: 1.8;
+      margin-bottom: 40px; max-width: 620px;
+    }
+
+    /* ── Section Styles ── */
+    .terms-section {
+      margin-bottom: 40px;
+    }
+
+    .terms-section-number {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: .85rem; font-weight: 700; color: var(--red);
+      letter-spacing: .1em; text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .terms-section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem; font-weight: 600; color: var(--tx);
+      margin-bottom: 16px; line-height: 1.2;
+    }
+
+    .terms-section p {
+      font-size: .9rem; color: var(--tx-muted); line-height: 1.8;
+      margin-bottom: 12px;
+    }
+
+    .terms-section ul {
+      list-style: none; padding: 0; margin: 0 0 12px 0;
+    }
+
+    .terms-section ul li {
+      font-size: .9rem; color: var(--tx-muted); line-height: 1.8;
+      padding-left: 20px; position: relative; margin-bottom: 4px;
+    }
+
+    .terms-section ul li::before {
+      content: '';
+      position: absolute; left: 0; top: 11px;
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--red); opacity: .5;
+    }
+
+    .terms-address {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(200,16,46,.05); border: 1px solid var(--bd);
+      padding: 6px 14px; border-radius: 6px;
+      font-size: .85rem; color: var(--tx); font-weight: 500;
+      margin: 4px 0 8px;
+    }
+
+    /* ── Divider ── */
+    .terms-divider {
+      width: 40px; height: 2px; background: var(--red); opacity: .2;
+      margin: 40px 0;
+    }
+
+    /* ── Footer note ── */
+    .terms-footer {
+      text-align: center; padding: 40px 20px 20px;
+      font-size: .78rem; color: var(--tx-faint); line-height: 1.6;
+    }
+    .terms-footer a {
+      color: var(--red); text-decoration: none; font-weight: 500;
+    }
+    .terms-footer a:hover { text-decoration: underline; }
+
+    /* ── Decorative stripe ── */
+    .terms-container::after {
+      content: ''; position: fixed; right: 0; top: 0; bottom: 0; width: 4px;
+      background: linear-gradient(to bottom, var(--blue) 33%, var(--red) 33% 66%, var(--blue) 66%);
+      opacity: .1; pointer-events: none;
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-blob"></div>
+
+  <!-- ═══ NAV ═══ -->
+  <nav id="main-nav">
+    <a href="/index.html" class="nav-brand">
+      <div class="nav-logo-wrap">
+        <span class="nav-logo-fallback">C</span>
+      </div>
+      <span class="nav-logo-text">Cecilia <span>Bakery</span></span>
+    </a>
+    <div class="nav-right-group">
+      <a href="/menu.html" class="nav-back">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back to Menu
+      </a>
+    </div>
+  </nav>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <div class="terms-container">
+
+    <div class="terms-eyebrow">Legal</div>
+    <h1 class="terms-page-title">Terms & <em>Conditions</em></h1>
+    <p class="terms-updated">Last Updated: March 2026</p>
+
+    <p class="terms-intro">
+      Welcome to Cecilia Bakery. By placing an order through our website, you agree to the following terms and conditions.
+      Please read them carefully before completing your purchase.
+    </p>
+
+    <!-- ── 1. Orders & Pickup ── -->
+    <div class="terms-section">
+      <div class="terms-section-number">Section 01</div>
+      <h2 class="terms-section-title">Orders & Pickup</h2>
+      <p>All orders placed through the Cecilia Bakery website are for <strong>in-store pickup only</strong>. We do not currently offer delivery services.</p>
+      <p>Orders must be picked up at our bakery location:</p>
+      <div class="terms-address">📍 6101 Park Ave, West New York, NJ</div>
+      <p>Please ensure you collect your order at the scheduled pickup time. Uncollected orders that are not picked up within a reasonable timeframe are not eligible for a refund, as our products are prepared fresh and are perishable by nature.</p>
+    </div>
+
+    <div class="terms-divider"></div>
+
+    <!-- ── 2. Payment ── -->
+    <div class="terms-section">
+      <div class="terms-section-number">Section 02</div>
+      <h2 class="terms-section-title">Payment</h2>
+      <p>Payment is collected securely online at the time of placing your order. We accept all major credit and debit cards, processed through our payment partner, Clover.</p>
+      <ul>
+        <li>Full payment is required to confirm your order</li>
+        <li>All prices are listed in US Dollars (USD)</li>
+        <li>Your raw card details are <strong>never stored</strong> by Cecilia Bakery — all card information is tokenized and handled securely by Clover's payment infrastructure</li>
+      </ul>
+    </div>
+
+    <div class="terms-divider"></div>
+
+    <!-- ── 3. Cancellations ── -->
+    <div class="terms-section">
+      <div class="terms-section-number">Section 03</div>
+      <h2 class="terms-section-title">Cancellations & Refunds</h2>
+      <p>We understand plans change. If you need to cancel an order, please keep the following in mind:</p>
+      <ul>
+        <li>Cancellation requests must be made <strong>within 15 minutes</strong> of placing your order</li>
+        <li>Contact us immediately by phone to request a cancellation</li>
+        <li>After 15 minutes, orders cannot be cancelled as preparation may have already begun</li>
+        <li>Custom cake orders are <strong>non-refundable</strong> once preparation has started, as these items are made specifically to your request</li>
+      </ul>
+      <p>If we are unable to fulfill your order for any reason, you will receive a full refund.</p>
+    </div>
+
+    <div class="terms-divider"></div>
+
+    <!-- ── 4. Order Changes ── -->
+    <div class="terms-section">
+      <div class="terms-section-number">Section 04</div>
+      <h2 class="terms-section-title">Order Modifications</h2>
+      <p>Need to make a change to your order? We'll do our best to accommodate modifications, but we cannot guarantee changes can be made once preparation has started.</p>
+      <ul>
+        <li>Contact us as soon as possible after placing your order</li>
+        <li>Changes are subject to availability and preparation status</li>
+        <li>Any price differences resulting from modifications will be adjusted accordingly</li>
+      </ul>
+    </div>
+
+    <div class="terms-divider"></div>
+
+    <!-- ── 5. Our Rights ── -->
+    <div class="terms-section">
+      <div class="terms-section-number">Section 05</div>
+      <h2 class="terms-section-title">Our Rights</h2>
+      <ul>
+        <li>Cecilia Bakery reserves the right to cancel any order at our discretion, including but not limited to cases of suspected fraud, pricing errors, or product unavailability. In such cases, a full refund will be issued.</li>
+        <li>We reserve the right to update or modify these terms at any time without prior notice</li>
+        <li>Continued use of our website after changes have been made constitutes your acceptance of the updated terms</li>
+        <li>We reserve the right to limit order quantities or refuse service</li>
+      </ul>
+    </div>
+
+    <div class="terms-divider"></div>
+
+    <!-- ── 6. Contact ── -->
+    <div class="terms-section">
+      <div class="terms-section-number">Section 06</div>
+      <h2 class="terms-section-title">Contact Us</h2>
+      <p>If you have any questions about these terms, your order, or anything else, please don't hesitate to reach out. We're happy to help.</p>
+      <p>You can contact us through our website or visit us in person at:</p>
+      <div class="terms-address">📍 6101 Park Ave, West New York, NJ</div>
+    </div>
+
+    <div class="terms-footer">
+      <p>&copy; 2026 Cecilia Bakery. All rights reserved.</p>
+      <p><a href="/menu.html">Browse Our Menu</a></p>
+    </div>
+
+  </div>
+
+  <!-- ═══ SCRIPTS ═══ -->
+  <script>
+    window.addEventListener('scroll', () => {
+      const nav = document.getElementById('main-nav');
+      if (nav) nav.classList.toggle('scrolled', window.scrollY > 20);
+    });
+  </script>
+</body>
+</html>

@@ -400,6 +400,20 @@
     }
     .payment-secured svg { width: 14px; height: 14px; stroke: var(--green); fill: none; stroke-width: 2; }
 
+    .legal-note {
+      font-size: 0.72rem;
+      color: var(--tx-faint);
+      text-align: center;
+      margin-top: 12px;
+      line-height: 1.6;
+    }
+    .legal-note a {
+      color: var(--red);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .legal-note a:hover { text-decoration: underline; }
+
     .payment-charge-note {
       text-align: center; font-size: .72rem; color: var(--tx-faint); margin-top: 10px;
       line-height: 1.5;
@@ -679,6 +693,13 @@
               <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
               Secured by Clover
             </div>
+
+            <p class="legal-note">
+              By placing your order you agree to our
+              <a href="/terms.html">Terms & Conditions</a>,
+              <a href="/privacy.html">Privacy Policy</a>,
+              and <a href="/refunds.html">Refund Policy</a>.
+            </p>
 
 
           </div>
