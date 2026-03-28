@@ -799,9 +799,20 @@
     }
 
     /* ── Supabase Realtime subscription ── */
+    let _orderChannel = null;
+    let _currentOrderId = null;
+
     function subscribeToUpdates(orderId) {
       if (!sb) return;
-      sb.channel('order-tracker-' + orderId)
+      _currentOrderId = orderId;
+
+      // Clean up existing channel before resubscribing
+      if (_orderChannel) {
+        sb.removeChannel(_orderChannel);
+        _orderChannel = null;
+      }
+
+      _orderChannel = sb.channel('order-tracker-' + orderId)
         .on('postgres_changes', {
           event: 'UPDATE',
           schema: 'public',
@@ -812,8 +823,36 @@
           updateTracker(payload.new.delivery_status);
           updatePickupTime(payload.new.estimated_pickup_at);
         })
-        .subscribe();
+        .subscribe((status) => {
+          console.log('Realtime subscription status:', status);
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('Realtime disconnected, reconnecting in 3s...');
+            setTimeout(() => subscribeToUpdates(orderId), 3000);
+          }
+        });
     }
+
+    /* ── Reconnect on visibility change (tab switch, phone unlock) ── */
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && _currentOrderId && sb) {
+        console.log('Tab visible — reconnecting realtime');
+        subscribeToUpdates(_currentOrderId);
+        // Also re-fetch the latest order state in case updates were missed
+        (async () => {
+          try {
+            const { data } = await sb
+              .from('orders')
+              .select('*')
+              .eq('id', _currentOrderId)
+              .single();
+            if (data) {
+              updateTracker(data.delivery_status || 'pending');
+              updatePickupTime(data.estimated_pickup_at);
+            }
+          } catch (e) { console.warn('Re-fetch on visibility failed:', e); }
+        })();
+      }
+    });
 
     /* ═══ INIT ═══ */
     loadOrder();
