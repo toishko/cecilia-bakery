@@ -3277,6 +3277,14 @@ function _pmUpdateCard(id, data) {
   card.style.transition = 'box-shadow 0.3s ease';
   card.style.boxShadow = '0 0 0 2px #C8102E';
   setTimeout(() => { card.style.boxShadow = ''; }, 800);
+
+  // Re-attach drag listeners (clone to clear old listeners, preserve inline handlers)
+  const group = card.closest('.pm-category-group');
+  if (group) {
+    const fresh = card.cloneNode(true);
+    card.replaceWith(fresh);
+    _pmAttachCardDrag(fresh, group);
+  }
 }
 
 /* ── Fetch products from Supabase ── */
@@ -3507,6 +3515,67 @@ function _pmRenderList(list, isSearch) {
   if (!isSearch) _pmAttachDragListeners();
 }
 
+/* ── Attach drag listeners to a single product card ── */
+function _pmAttachCardDrag(card, group) {
+  card.addEventListener('dragstart', (e) => {
+    if (window.__pmDraggingCategory) { e.preventDefault(); return; }
+    e.stopPropagation();
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', card.dataset.productId);
+    card.classList.add('pm-dragging');
+    window.__pmDragging = card;
+    window.__pmDragGroup = group;
+  });
+
+  card.addEventListener('dragend', () => {
+    card.classList.remove('pm-dragging');
+    document.querySelectorAll('.pm-drag-over')
+      .forEach(el => el.classList.remove('pm-drag-over'));
+    window.__pmDragging = null;
+    window.__pmDragGroup = null;
+  });
+
+  card.addEventListener('dragover', (e) => {
+    if (window.__pmDraggingCategory) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (window.__pmDragging && window.__pmDragging !== card && window.__pmDragGroup === group) {
+      card.classList.add('pm-drag-over');
+    }
+  });
+
+  card.addEventListener('dragleave', () => {
+    card.classList.remove('pm-drag-over');
+  });
+
+  card.addEventListener('drop', async (e) => {
+    if (window.__pmDraggingCategory) return;
+    e.preventDefault();
+    e.stopPropagation();
+    card.classList.remove('pm-drag-over');
+
+    const draggedId = e.dataTransfer.getData('text/plain');
+    const targetId = card.dataset.productId;
+    if (draggedId === targetId) return;
+    if (window.__pmDragGroup !== group) return;
+
+    const draggedCard = window.__pmDragging;
+    if (!draggedCard) return;
+
+    const allCards = [...group.querySelectorAll('.pm-card[data-product-id]')];
+    const draggedIndex = allCards.indexOf(draggedCard);
+    const targetIndex = allCards.indexOf(card);
+
+    if (draggedIndex < targetIndex) {
+      group.insertBefore(draggedCard, card.nextSibling);
+    } else {
+      group.insertBefore(draggedCard, card);
+    }
+
+    await _pmSaveOrder(group);
+  });
+}
+
 /* ── Drag-and-drop reordering (products within groups + category groups) ── */
 function _pmAttachDragListeners() {
   const container = document.getElementById('pm-list');
@@ -3515,66 +3584,7 @@ function _pmAttachDragListeners() {
   /* ── Product card drag (within same category) ── */
   document.querySelectorAll('.pm-category-group').forEach(group => {
     const cards = group.querySelectorAll('.pm-card[data-product-id]');
-    cards.forEach(card => {
-      card.addEventListener('dragstart', (e) => {
-        // Don't fire when category drag is active
-        if (window.__pmDraggingCategory) { e.preventDefault(); return; }
-        e.stopPropagation();
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', card.dataset.productId);
-        card.classList.add('pm-dragging');
-        window.__pmDragging = card;
-        window.__pmDragGroup = group;
-      });
-
-      card.addEventListener('dragend', () => {
-        card.classList.remove('pm-dragging');
-        document.querySelectorAll('.pm-drag-over')
-          .forEach(el => el.classList.remove('pm-drag-over'));
-        window.__pmDragging = null;
-        window.__pmDragGroup = null;
-      });
-
-      card.addEventListener('dragover', (e) => {
-        if (window.__pmDraggingCategory) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        if (window.__pmDragging && window.__pmDragging !== card && window.__pmDragGroup === group) {
-          card.classList.add('pm-drag-over');
-        }
-      });
-
-      card.addEventListener('dragleave', () => {
-        card.classList.remove('pm-drag-over');
-      });
-
-      card.addEventListener('drop', async (e) => {
-        if (window.__pmDraggingCategory) return;
-        e.preventDefault();
-        e.stopPropagation();
-        card.classList.remove('pm-drag-over');
-
-        const draggedId = e.dataTransfer.getData('text/plain');
-        const targetId = card.dataset.productId;
-        if (draggedId === targetId) return;
-        if (window.__pmDragGroup !== group) return;
-
-        const draggedCard = window.__pmDragging;
-        if (!draggedCard) return;
-
-        const allCards = [...group.querySelectorAll('.pm-card[data-product-id]')];
-        const draggedIndex = allCards.indexOf(draggedCard);
-        const targetIndex = allCards.indexOf(card);
-
-        if (draggedIndex < targetIndex) {
-          group.insertBefore(draggedCard, card.nextSibling);
-        } else {
-          group.insertBefore(draggedCard, card);
-        }
-
-        await _pmSaveOrder(group);
-      });
-    });
+    cards.forEach(card => _pmAttachCardDrag(card, group));
   });
 
   /* ── Category group drag ── */
