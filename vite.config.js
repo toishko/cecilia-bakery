@@ -29,6 +29,7 @@ export default defineConfig({
         terms: resolve(__dirname, 'terms.html'),
         privacy: resolve(__dirname, 'privacy.html'),
         refunds: resolve(__dirname, 'refunds.html'),
+        account: resolve(__dirname, 'account.html'),
       },
     },
   },

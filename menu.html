@@ -2434,6 +2434,27 @@
     }
 
     /* ═══════════════════════════════════════
+   ACCOUNT ICON IN NAV
+═══════════════════════════════════════ */
+    .nav-account-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(200,16,46,0.08);
+      color: var(--red);
+      text-decoration: none;
+      transition: background 0.2s;
+      flex-shrink: 0;
+      margin-right: 8px;
+    }
+    .nav-account-btn:hover {
+      background: rgba(200,16,46,0.15);
+    }
+
+/* ═══════════════════════════════════════
    CART ICON IN NAV
 ═══════════════════════════════════════ */
     .cart-nav-btn {
@@ -3844,6 +3865,12 @@
         <span></span><span></span><span></span>
       </button>
       <div class="nav-sep"></div>
+      <a href="/account.html" class="nav-account-btn" aria-label="My Account">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      </a>
       <button class="cart-nav-btn" onclick="openCart()" aria-label="View cart">
         <span class="cart-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -3990,9 +4017,12 @@
       <div class="footer-col">
         <h4 data-en="Portals" data-es="Portales">Portals</h4>
         <a href="driver-order.html" data-en="Driver Portal" data-es="Portal de Conductores">Driver Portal</a>
+      </div>
+      <div class="footer-col">
+        <h4 data-en="Connect" data-es="Conectar">Connect</h4>
         <a href="https://www.facebook.com/ReposteriaCeciliaBakery/" target="_blank" rel="noopener" class="footer-col-link">Facebook</a>
-        <a href="https://www.doordash.com/store/cecilia-bakery-west-new-york-1330281/1890116/" target="_blank" rel="noopener" class="footer-col-link" data-en="Order on DoorDash" data-es="Pedir en DoorDash">Order on DoorDash</a>
-        <a href="https://wa.me/12018697633" target="_blank" rel="noopener" class="footer-col-link">WhatsApp</a>
+        <a href="https://www.doordash.com/store/cecilia-bakery-west-new-york-1330281/1890116/" target="_blank" rel="noopener" class="footer-col-link">Order on DoorDash</a>
+        <a href="https://wa.me/12018697633" target="_blank" rel="noopener" class="footer-col-link">WhatsApp Us</a>
       </div>
       <div class="footer-col">
         <h4 data-en="Visit Us" data-es="Visítanos">Visit Us</h4>

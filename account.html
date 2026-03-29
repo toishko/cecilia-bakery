@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>My Account — Cecilia Bakery</title>
+  <meta name="description" content="View your order history, loyalty points, and account details at Cecilia Bakery." />
+  <link rel="manifest" href="/manifest-website.json">
+  <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E0507" media="(prefers-color-scheme: dark)">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cecilia">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload"
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+    as="style">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    (function () {
+      const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
+      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
+      try {
+        if (window.supabase && window.supabase.createClient) {
+          window.__supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+      } catch (e) { console.warn('Supabase init failed:', e); }
+    })();
+  </script>
+
+  <!-- Clerk -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_cm9idXN0LXdpbGRjYXQtNzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://robust-wildcat-76.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+    type="text/javascript"
+  ></script>
+
+  <style>
+    /* ════════════════════════════════════════
+       DESIGN TOKENS — matches menu.html
+       ════════════════════════════════════════ */
+    :root {
+      --red: #C8102E;
+      --red-dk: #9B0B22;
+      --red-lt: #E8213F;
+      --blue: #002D62;
+      --blue-lt: #1A4A8A;
+
+      --bg: #FAFAF8;
+      --bg-surface: #EDE0CC;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #FDFCFB;
+      --bg-input: #FFFFFF;
+      --bg-nav: rgba(250, 250, 248, .80);
+      --bg-overlay: rgba(0, 0, 0, .50);
+      --bg-footer: #18080D;
+
+      --tx: #18080D;
+      --tx-muted: #6B5057;
+      --tx-faint: #A08088;
+      --tx-on-footer: rgba(255, 255, 255, .52);
+      --tx-footer-head: rgba(255, 255, 255, .30);
+      --tx-footer-brand: rgba(255, 255, 255, .82);
+
+      --bd: rgba(200, 16, 46, .22);
+      --bd-hover: rgba(200, 16, 46, .55);
+      --bd-input: rgba(200, 16, 46, .25);
+      --bd-footer: rgba(255, 255, 255, .06);
+
+      --shadow-card: 0 4px 22px rgba(200, 16, 46, .09);
+      --shadow-nav: 0 1px 0 rgba(200, 16, 46, .10);
+
+      --lang-border: rgba(200, 16, 46, .20);
+      --lang-text: #6B5057;
+      --r: 3px;
+      --transition: color .25s ease, background .25s ease, border-color .25s ease;
+
+      --green: #1B7A4A;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0E0507;
+      --bg-surface: #1F0D14;
+      --bg-card: #1E0D12;
+      --bg-card-hover: #26101A;
+      --bg-input: #1E0D12;
+      --bg-nav: rgba(10, 3, 5, .80);
+      --bg-overlay: rgba(0, 0, 0, .70);
+      --bg-footer: #080305;
+
+      --tx: #F2E8E4;
+      --tx-muted: #BFA0A8;
+      --tx-faint: #7A5560;
+
+      --bd: rgba(200, 16, 46, .35);
+      --bd-hover: rgba(200, 16, 46, .65);
+      --bd-input: rgba(200, 16, 46, .40);
+
+      --shadow-card: 0 4px 22px rgba(0, 0, 0, .40);
+      --shadow-nav: 0 1px 0 rgba(200, 16, 46, .12);
+
+      --lang-border: rgba(200, 16, 46, .25);
+      --lang-text: #BFA0A8;
+    }
+
+    /* ── Utilities ── */
+    .hidden { display: none !important; }
+
+    /* ── Theme Toggle Button ── */
+    .theme-btn {
+      border: none !important;
+      outline: none !important;
+      background: transparent !important;
+      cursor: pointer;
+      color: var(--lang-text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      border-radius: 50%;
+      transition: color .2s, background .2s;
+      flex-shrink: 0;
+    }
+    .theme-btn:hover {
+      background: rgba(200,16,46,0.08) !important;
+      color: var(--red);
+    }
+    .theme-btn:focus {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+
+    /* ── Account Icon ── */
+    .nav-account-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(200,16,46,0.08);
+      color: var(--red);
+      text-decoration: none;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .nav-account-btn:hover {
+      background: rgba(200,16,46,0.15);
+    }
+
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-padding-top: 100px; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--tx);
+      overflow-x: hidden;
+      transition: background .3s, color .3s;
+      padding-bottom: env(safe-area-inset-bottom);
+      min-height: 100vh;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--red);
+      outline-offset: 2px;
+      border-radius: var(--r);
+    }
+    .cl-rootBox :focus-visible,
+    .cl-card :focus-visible,
+    .cl-modalBackdrop :focus-visible,
+    [class^="cl-"] :focus-visible,
+    [class*=" cl-"] :focus-visible {
+      outline: revert;
+      box-shadow: none;
+    }
+
+    /* ── Animated background blob ── */
+    .bg-blob {
+      position: fixed; inset: -40%; z-index: -1;
+      width: 180%; height: 180%;
+      animation: blobDrift 14s ease-in-out infinite alternate;
+      will-change: transform; pointer-events: none;
+      transition: background .3s;
+    }
+    .bg-blob {
+      background:
+        radial-gradient(ellipse 55% 35% at 20% 30%, rgba(200,16,46,.07) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 40% at 78% 68%, rgba(200,16,46,.05) 0%, transparent 50%);
+    }
+    [data-theme="dark"] .bg-blob {
+      background:
+        radial-gradient(ellipse 55% 35% at 20% 30%, rgba(200,16,46,.10) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 40% at 78% 68%, rgba(200,16,46,.07) 0%, transparent 50%);
+    }
+    @keyframes blobDrift {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(2%,1.5%) scale(1.04); }
+    }
+
+    /* ════════════════════════════════════════
+       NAV — copied from checkout.html
+       ════════════════════════════════════════ */
+    nav {
+      position: fixed; top: 0; width: 100%; z-index: 501;
+      padding: 18px 52px;
+      padding-top: 18px;
+      padding-top: calc(18px + env(safe-area-inset-top));
+      display: flex; justify-content: space-between; align-items: center;
+      transition: background .35s, box-shadow .35s, padding .35s;
+      background: var(--bg-nav);
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    }
+    nav.scrolled {
+      box-shadow: var(--shadow-nav);
+      padding: 12px 52px;
+      padding-top: 12px;
+      padding-top: calc(12px + env(safe-area-inset-top));
+    }
+    .nav-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .nav-logo-wrap {
+      width: 38px; height: 38px; border-radius: 50%; overflow: hidden;
+      border: 2px solid rgba(200,16,46,.25); flex-shrink: 0;
+      background: var(--red); display: flex; align-items: center; justify-content: center;
+      transition: transform .25s;
+    }
+    .nav-brand:hover .nav-logo-wrap { transform: scale(1.06); }
+    .nav-logo-fallback {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.1rem; font-weight: 700; color: #fff;
+    }
+    .nav-logo-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.45rem; font-weight: 600; color: var(--red);
+      letter-spacing: .02em;
+    }
+    .nav-logo-text span { color: var(--blue); font-style: italic; }
+    [data-theme="dark"] .nav-logo-text span { color: #A6CEFF; }
+
+    .nav-right-group { display: flex; align-items: center; gap: 10px; }
+    .nav-back {
+      font-size: .78rem; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--tx-muted); text-decoration: none;
+      display: flex; align-items: center; gap: 7px; transition: color .2s;
+    }
+    .nav-back:hover { color: var(--red); }
+
+    .nav-controls { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+
+    @media (max-width: 900px) {
+      nav { padding: 14px 16px; padding-top: calc(14px + env(safe-area-inset-top)); }
+      nav.scrolled { padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top)); }
+    }
+
+    /* ════════════════════════════════════════
+       ACCOUNT PAGE LAYOUT
+       ════════════════════════════════════════ */
+    .account-container {
+      max-width: 800px; margin: 0 auto;
+      padding: 140px 52px 80px;
+      padding-top: 140px;
+      padding-top: calc(140px + env(safe-area-inset-top));
+    }
+    @media (max-width: 900px) {
+      .account-container { padding: 120px 16px 60px; padding-top: calc(120px + env(safe-area-inset-top)); }
+    }
+
+    .account-eyebrow {
+      font-size: .72rem; letter-spacing: .24em; text-transform: uppercase;
+      color: var(--red); font-weight: 500; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .account-eyebrow::before {
+      content: ''; display: block; width: 28px; height: 1.5px; background: var(--red);
+    }
+
+    .account-page-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      font-weight: 300; line-height: 1.1; letter-spacing: -.01em;
+      color: var(--tx); margin-bottom: 8px;
+    }
+    .account-page-title em { font-style: italic; color: var(--red); font-weight: 600; }
+
+    /* ── STATE CARDS ── */
+    .state-panel { display: none; }
+    .state-panel.active { display: block; animation: fadeUp .5s ease; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Clerk: only kill focus outlines, preserve form borders ── */
+    #state-signin:focus,
+    #state-signin *:focus {
+      outline: none !important;
+    }
+    #state-signin:focus-visible,
+    #state-signin *:focus-visible {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    /* ── Clerk embedded sign-in styling ── */
+    .clerk-signin-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      padding: 40px 0;
+    }
+    .clerk-signin-heading {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .clerk-signin-heading .account-eyebrow {
+      justify-content: center;
+    }
+    .clerk-signin-heading .account-eyebrow::before {
+      display: none;
+    }
+    .clerk-mount-target {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    /* ════════════════════════════════════════
+       STATE 2: ACCOUNT CONTENT
+       ════════════════════════════════════════ */
+
+    /* ── User Header ── */
+    .account-header {
+      display: flex; align-items: center; gap: 20px;
+      padding: 28px; margin-bottom: 28px;
+      background: var(--bg-card); border: 1px solid var(--bd); border-radius: 16px;
+      box-shadow: var(--shadow-card);
+    }
+    .account-avatar {
+      width: 64px; height: 64px; border-radius: 50%; background: var(--red);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 1.5rem; flex-shrink: 0;
+      overflow: hidden; border: 3px solid rgba(200,16,46,.25);
+    }
+    .account-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .account-user-info { flex: 1; min-width: 0; }
+    .account-greeting {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem; font-weight: 600; color: var(--tx); line-height: 1.2;
+    }
+    .account-email {
+      font-size: .85rem; color: var(--tx-muted); margin-top: 2px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .account-signout-btn {
+      font-size: .72rem; font-weight: 500; color: var(--red); cursor: pointer;
+      text-decoration: none; letter-spacing: .06em; text-transform: uppercase;
+      border: 1px solid var(--bd); background: transparent; font-family: 'Outfit', sans-serif;
+      padding: 8px 18px; border-radius: 8px; transition: background .2s, border-color .2s;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .account-signout-btn:hover { background: rgba(200,16,46,.06); border-color: var(--red); }
+
+    @media (max-width: 600px) {
+      .account-header { flex-wrap: wrap; padding: 20px; gap: 14px; }
+      .account-avatar { width: 52px; height: 52px; font-size: 1.2rem; }
+      .account-greeting { font-size: 1.3rem; }
+      .account-signout-btn { width: 100%; text-align: center; margin-top: 4px; }
+    }
+
+    /* ── Loyalty Card ── */
+    .loyalty-card {
+      background: var(--bg-card); border: 1px solid var(--bd); border-radius: 16px;
+      padding: 32px; margin-bottom: 28px; box-shadow: var(--shadow-card);
+      position: relative; overflow: hidden;
+    }
+    .loyalty-card::before {
+      content: ''; position: absolute; top: 0; right: 0; width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(200,16,46,.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .loyalty-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+    }
+    .loyalty-tier-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 18px; border-radius: 100px; font-weight: 600;
+      font-size: .88rem; letter-spacing: .02em;
+    }
+    .loyalty-tier-emoji { font-size: 1.2rem; }
+    .loyalty-earn-note {
+      font-size: .78rem; color: var(--tx-muted); font-weight: 400;
+      background: rgba(200,16,46,.05); padding: 6px 14px; border-radius: 100px;
+    }
+    .loyalty-points-display {
+      text-align: center; margin-bottom: 28px;
+    }
+    .loyalty-points-number {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(3rem, 6vw, 4.5rem); font-weight: 700; line-height: 1;
+      color: var(--tx); letter-spacing: -.02em;
+    }
+    .loyalty-points-label {
+      font-size: .85rem; color: var(--tx-muted); font-weight: 400;
+      text-transform: uppercase; letter-spacing: .15em; margin-top: 4px;
+    }
+    .loyalty-progress-section { position: relative; }
+    .loyalty-progress-labels {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px;
+    }
+    .loyalty-progress-current {
+      font-size: .82rem; font-weight: 500; color: var(--tx);
+    }
+    .loyalty-progress-next {
+      font-size: .78rem; color: var(--tx-muted);
+    }
+    .loyalty-progress-track {
+      width: 100%; height: 10px; background: rgba(200,16,46,.10);
+      border-radius: 100px; overflow: hidden; position: relative;
+    }
+    .loyalty-progress-fill {
+      height: 100%; border-radius: 100px;
+      transition: width .8s cubic-bezier(.4,0,.2,1);
+      position: relative;
+    }
+    .loyalty-progress-fill::after {
+      content: ''; position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+      width: 16px; height: 16px; border-radius: 50%;
+      background: inherit; border: 3px solid var(--bg-card);
+      box-shadow: 0 0 0 2px rgba(0,0,0,.08);
+    }
+    .loyalty-tier-milestones {
+      display: flex; justify-content: space-between; margin-top: 12px;
+      font-size: .72rem; color: var(--tx-faint); letter-spacing: .04em;
+    }
+    .loyalty-tier-milestones span { text-align: center; }
+    .loyalty-tier-milestones .milestone-active { color: var(--red); font-weight: 600; }
+    .loyalty-next-tier-note {
+      text-align: center; margin-top: 20px; font-size: .85rem; color: var(--tx-muted);
+      line-height: 1.6;
+    }
+    .loyalty-next-tier-note strong { color: var(--tx); font-weight: 600; }
+
+    /* ── Orders Section ── */
+    .orders-section { margin-top: 8px; }
+    .orders-heading {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem; font-weight: 600; color: var(--tx);
+      margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+    }
+    .orders-heading svg {
+      width: 22px; height: 22px; stroke: var(--red); fill: none; stroke-width: 1.5;
+    }
+
+    /* Order Card */
+    .order-card {
+      background: var(--bg-card); border: 1px solid var(--bd); border-radius: 12px;
+      padding: 24px; margin-bottom: 14px; box-shadow: var(--shadow-card);
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .order-card:hover { border-color: var(--bd-hover); }
+    .order-card-top {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 14px; flex-wrap: wrap; gap: 8px;
+    }
+    .order-card-id {
+      font-family: 'Outfit', sans-serif; font-size: .82rem; font-weight: 600;
+      color: var(--tx); letter-spacing: .04em;
+    }
+    .order-card-id span { color: var(--tx-faint); font-weight: 400; }
+    .order-card-date {
+      font-size: .78rem; color: var(--tx-muted); margin-top: 2px;
+    }
+    .order-status-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: 100px;
+      font-size: .72rem; font-weight: 600; letter-spacing: .05em;
+      text-transform: uppercase; white-space: nowrap;
+    }
+    .order-status-badge.status-pending {
+      background: rgba(245, 158, 11, .12); color: #B45309;
+    }
+    [data-theme="dark"] .order-status-badge.status-pending {
+      background: rgba(245, 158, 11, .18); color: #FBBF24;
+    }
+    .order-status-badge.status-preparing {
+      background: rgba(59, 130, 246, .12); color: #1D4ED8;
+    }
+    [data-theme="dark"] .order-status-badge.status-preparing {
+      background: rgba(59, 130, 246, .18); color: #60A5FA;
+    }
+    .order-status-badge.status-ready {
+      background: rgba(16, 185, 129, .12); color: #047857;
+    }
+    [data-theme="dark"] .order-status-badge.status-ready {
+      background: rgba(16, 185, 129, .18); color: #34D399;
+    }
+    .order-status-badge.status-completed {
+      background: rgba(107, 114, 128, .12); color: #4B5563;
+    }
+    [data-theme="dark"] .order-status-badge.status-completed {
+      background: rgba(107, 114, 128, .18); color: #9CA3AF;
+    }
+    .order-status-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+    }
+
+    .order-card-items {
+      font-size: .85rem; color: var(--tx-muted); line-height: 1.7;
+      margin-bottom: 14px; padding-bottom: 14px;
+      border-bottom: 1px solid var(--bd);
+    }
+    .order-card-items .order-item-line {
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .order-item-line-name { flex: 1; }
+    .order-item-line-price { font-weight: 500; color: var(--tx); white-space: nowrap; margin-left: 12px; }
+
+    .order-card-bottom {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px;
+    }
+    .order-card-total {
+      font-size: .95rem; font-weight: 700; color: var(--tx);
+    }
+    .order-card-total span { font-weight: 400; font-size: .78rem; color: var(--tx-muted); margin-right: 6px; }
+    .order-track-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; border-radius: 8px; border: 1px solid var(--bd);
+      background: transparent; color: var(--red); font-family: 'Outfit', sans-serif;
+      font-size: .78rem; font-weight: 600; letter-spacing: .04em;
+      text-transform: uppercase; cursor: pointer; text-decoration: none;
+      transition: background .2s, border-color .2s;
+    }
+    .order-track-btn:hover { background: rgba(200,16,46,.06); border-color: var(--red); }
+    .order-track-btn svg {
+      width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2;
+    }
+    .order-reorder-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; border-radius: 8px; border: none;
+      background: var(--red); color: #fff; font-family: 'Outfit', sans-serif;
+      font-size: .78rem; font-weight: 600; letter-spacing: .04em;
+      text-transform: uppercase; cursor: pointer;
+      transition: background .2s, transform .15s;
+    }
+    .order-reorder-btn:hover { background: var(--red-dk); }
+    .order-reorder-btn:active { transform: scale(0.97); }
+    .order-reorder-btn svg {
+      width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2;
+    }
+
+    /* ── Empty State ── */
+    .empty-orders-card {
+      background: var(--bg-card); border: 1px solid var(--bd); border-radius: 16px;
+      padding: 60px 48px; text-align: center; box-shadow: var(--shadow-card);
+    }
+    .empty-orders-icon {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: rgba(200,16,46,.08); display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .empty-orders-icon svg { width: 28px; height: 28px; stroke: var(--red); fill: none; stroke-width: 1.5; }
+    .empty-orders-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.4rem; font-weight: 600; margin-bottom: 10px; color: var(--tx);
+    }
+    .empty-orders-sub { font-size: .9rem; color: var(--tx-muted); margin-bottom: 28px; line-height: 1.6; }
+    .empty-orders-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--red); color: #fff; border: none;
+      padding: 14px 28px; border-radius: 10px;
+      font-family: 'Outfit', sans-serif; font-size: .9rem; font-weight: 600;
+      letter-spacing: .03em; cursor: pointer; text-decoration: none;
+      transition: background .2s, transform .15s;
+    }
+    .empty-orders-btn:hover { background: var(--red-dk); }
+    .empty-orders-btn:active { transform: scale(.97); }
+    .empty-orders-btn svg {
+      width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2;
+    }
+
+    /* ── Loading Skeleton ── */
+    .skeleton-card {
+      background: var(--bg-card); border: 1px solid var(--bd); border-radius: 12px;
+      padding: 24px; margin-bottom: 14px; box-shadow: var(--shadow-card);
+    }
+    .skeleton-line {
+      height: 14px; border-radius: 6px; margin-bottom: 10px;
+      background: linear-gradient(90deg, var(--bd) 25%, rgba(200,16,46,.08) 50%, var(--bd) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s ease-in-out infinite;
+    }
+    .skeleton-line-short { width: 40%; }
+    .skeleton-line-med { width: 65%; }
+    .skeleton-line-long { width: 90%; }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── Stripe / decorative ── */
+    .account-container::after {
+      content: ''; position: fixed; right: 0; top: 0; bottom: 0; width: 4px;
+      background: linear-gradient(to bottom, var(--blue) 33%, var(--red) 33% 66%, var(--blue) 66%);
+      opacity: .1; pointer-events: none;
+    }
+
+    /* ── NAV LOGO IMAGE ── */
+    .nav-logo-img {
+      height: 64px;
+      width: auto;
+      display: block;
+      object-fit: contain;
+      transition: filter .3s, transform .3s;
+      cursor: pointer;
+    }
+
+    .nav-logo-img:hover {
+      transform: scale(1.15);
+    }
+
+    [data-theme="dark"] .nav-logo-img {
+      filter: brightness(0) invert(1) sepia(1) saturate(2) hue-rotate(310deg);
+    }
+
+    [data-theme="dark"] .nav-logo-img:hover {
+      filter: brightness(0) invert(1) sepia(1) saturate(2) hue-rotate(310deg) drop-shadow(0 0 8px rgba(200, 16, 46, .6));
+    }
+
+    .nav-logo-img:hover {
+      filter: drop-shadow(0 4px 12px rgba(200, 16, 46, .3));
+    }
+
+    @media(max-width:900px) {
+      .nav-logo-img {
+        height: 48px;
+      }
+    }
+
+    /* ── Responsive helpers ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-blob"></div>
+
+  <!-- ═══ NAV ═══ -->
+  <nav id="main-nav">
+    <a href="/index.html" class="nav-brand">
+      <img
+        src="assets/logo.png"
+        alt="Cecilia Bakery" class="nav-logo-img" />
+    </a>
+    <div class="nav-right-group">
+      <a href="/index.html" class="nav-back">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back to Home
+      </a>
+      <button class="theme-btn" onclick="toggleTheme()" aria-label="Toggle theme">
+        <!-- Moon icon (shown in light mode) -->
+        <svg id="theme-icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+        <!-- Sun icon (shown in dark mode) -->
+        <svg id="theme-icon-sun" class="hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <div class="account-container">
+    <!-- ── STATE 1: SIGN IN (embedded in page) ── -->
+    <div id="state-signin" class="state-panel">
+      <div class="clerk-signin-wrapper">
+        <div class="clerk-signin-heading">
+          <div class="account-eyebrow">Welcome</div>
+          <h1 class="account-page-title">Sign in to <em>Cecilia Bakery</em></h1>
+        </div>
+        <div id="clerk-mount-target" class="clerk-mount-target"></div>
+      </div>
+    </div>
+
+    <!-- ── STATE 2: ACCOUNT ── -->
+    <div id="state-account" class="state-panel">
+      <div class="account-eyebrow">My Account</div>
+      <h1 class="account-page-title">Your <em>Account</em></h1>
+
+      <!-- User Header -->
+      <div class="account-header" id="account-header">
+        <div class="account-avatar" id="account-avatar">?</div>
+        <div class="account-user-info">
+          <div class="account-greeting" id="account-greeting">Hi!</div>
+          <div class="account-email" id="account-email">—</div>
+        </div>
+        <button class="account-signout-btn" id="account-signout-btn" type="button">Sign Out</button>
+      </div>
+
+      <!-- Loyalty Card -->
+      <div class="loyalty-card" id="loyalty-card" style="display:none">
+        <div class="loyalty-card-header">
+          <div class="loyalty-tier-badge" id="loyalty-tier-badge">
+            <span class="loyalty-tier-emoji" id="loyalty-tier-emoji">🥉</span>
+            <span id="loyalty-tier-name">Bronze</span>
+          </div>
+          <div class="loyalty-earn-note">Every $1 spent = 10 points</div>
+        </div>
+
+        <div class="loyalty-points-display">
+          <div class="loyalty-points-number" id="loyalty-points-number">0</div>
+          <div class="loyalty-points-label">Loyalty Points</div>
+        </div>
+
+        <div class="loyalty-progress-section">
+          <div class="loyalty-progress-labels">
+            <span class="loyalty-progress-current" id="loyalty-progress-current">Bronze</span>
+            <span class="loyalty-progress-next" id="loyalty-progress-next">Silver</span>
+          </div>
+          <div class="loyalty-progress-track">
+            <div class="loyalty-progress-fill" id="loyalty-progress-fill" style="width: 0%;"></div>
+          </div>
+          <div class="loyalty-tier-milestones">
+            <span id="milestone-bronze">🥉 0</span>
+            <span id="milestone-silver">🥈 500</span>
+            <span id="milestone-gold">🥇 1000</span>
+          </div>
+        </div>
+
+        <div class="loyalty-next-tier-note" id="loyalty-next-tier-note"></div>
+      </div>
+
+      <!-- Orders Section -->
+      <div class="orders-section">
+        <div class="orders-heading">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Your Orders
+        </div>
+
+        <div id="orders-list">
+          <!-- Loading skeleton -->
+          <div class="skeleton-card">
+            <div class="skeleton-line skeleton-line-short"></div>
+            <div class="skeleton-line skeleton-line-long"></div>
+            <div class="skeleton-line skeleton-line-med"></div>
+          </div>
+          <div class="skeleton-card">
+            <div class="skeleton-line skeleton-line-short"></div>
+            <div class="skeleton-line skeleton-line-long"></div>
+            <div class="skeleton-line skeleton-line-med"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ SCRIPTS ═══ -->
+  <script>
+    /* ════════════════════════════════════════
+       THEME TOGGLE — copied from checkout.html
+       ════════════════════════════════════════ */
+    const THEME_KEY = 'cb-theme';
+
+    function applyTheme(t) {
+      document.documentElement.setAttribute('data-theme', t);
+      const moonEl = document.getElementById('theme-icon-moon');
+      const sunEl = document.getElementById('theme-icon-sun');
+      if (t === 'dark') {
+        if (moonEl) moonEl.classList.add('hidden');
+        if (sunEl) sunEl.classList.remove('hidden');
+      } else {
+        if (moonEl) moonEl.classList.remove('hidden');
+        if (sunEl) sunEl.classList.add('hidden');
+      }
+      try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      applyTheme(current === 'light' ? 'dark' : 'light');
+    }
+
+    // Theme initialization IIFE
+    (function () {
+      let saved;
+      try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
+      applyTheme(saved || 'light');
+    })();
+
+    /* ════════════════════════════════════════
+       SCROLL EFFECT ON NAV
+       ════════════════════════════════════════ */
+    window.addEventListener('scroll', () => {
+      const nav = document.getElementById('main-nav');
+      if (nav) nav.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    /* ════════════════════════════════════════
+       STATE MANAGEMENT
+       ════════════════════════════════════════ */
+    function showState(stateName) {
+      // Hide all panels
+      document.querySelectorAll('.state-panel').forEach(p => p.classList.remove('active'));
+
+      if (stateName === 'signin') {
+        // Mount Clerk sign-in directly in the page
+        const el = document.getElementById('state-signin');
+        if (el) el.classList.add('active');
+        const mount = document.getElementById('clerk-mount-target');
+        if (mount && window.Clerk) {
+          mount.innerHTML = ''; // Clear any previous mount
+          window.Clerk.mountSignIn(mount, {
+            afterSignInUrl: '/account.html',
+            afterSignUpUrl: '/account.html',
+          });
+        }
+        return;
+      }
+
+      const el = document.getElementById('state-' + stateName);
+      if (el) el.classList.add('active');
+    }
+
+    /* ════════════════════════════════════════
+       LOYALTY TIER LOGIC
+       ════════════════════════════════════════ */
+    function getTierInfo(points) {
+      if (points >= 1000) return {
+        tier: 'Gold',
+        emoji: '🥇',
+        color: '#F59E0B',
+        next: null,
+        nextPoints: null,
+        progress: 100
+      };
+      if (points >= 500) return {
+        tier: 'Silver',
+        emoji: '🥈',
+        color: '#6B7280',
+        next: 'Gold',
+        nextPoints: 1000,
+        progress: ((points - 500) / 500) * 100
+      };
+      return {
+        tier: 'Bronze',
+        emoji: '🥉',
+        color: '#92400E',
+        next: 'Silver',
+        nextPoints: 500,
+        progress: (points / 500) * 100
+      };
+    }
+
+    /* ════════════════════════════════════════
+       RENDER LOYALTY CARD
+       ════════════════════════════════════════ */
+    function renderLoyalty(profile) {
+      const points = profile?.loyalty_points || 0;
+      const tierInfo = getTierInfo(points);
+
+      // Points number w/ count-up animation
+      const pointsEl = document.getElementById('loyalty-points-number');
+      if (pointsEl) animateCount(pointsEl, points);
+
+      // Tier badge
+      const badgeEl = document.getElementById('loyalty-tier-badge');
+      if (badgeEl) {
+        badgeEl.style.background = tierInfo.color + '18';
+        badgeEl.style.color = tierInfo.color;
+      }
+      const emojiEl = document.getElementById('loyalty-tier-emoji');
+      if (emojiEl) emojiEl.textContent = tierInfo.emoji;
+      const nameEl = document.getElementById('loyalty-tier-name');
+      if (nameEl) nameEl.textContent = tierInfo.tier;
+
+      // Progress bar
+      const fillEl = document.getElementById('loyalty-progress-fill');
+      if (fillEl) {
+        fillEl.style.background = tierInfo.color;
+        setTimeout(() => { fillEl.style.width = tierInfo.progress + '%'; }, 100);
+      }
+
+      // Progress labels
+      const currentLabel = document.getElementById('loyalty-progress-current');
+      if (currentLabel) currentLabel.textContent = tierInfo.tier;
+      const nextLabel = document.getElementById('loyalty-progress-next');
+      if (nextLabel) nextLabel.textContent = tierInfo.next || '✨ Max Tier';
+
+      // Milestone highlights
+      const milestones = ['bronze', 'silver', 'gold'];
+      const thresholds = [0, 500, 1000];
+      milestones.forEach((m, i) => {
+        const el = document.getElementById('milestone-' + m);
+        if (el) {
+          el.classList.toggle('milestone-active', points >= thresholds[i]);
+        }
+      });
+
+      // Next tier note
+      const noteEl = document.getElementById('loyalty-next-tier-note');
+      if (noteEl) {
+        if (tierInfo.next) {
+          const needed = tierInfo.nextPoints - points;
+          noteEl.innerHTML = `<strong>${needed}</strong> more points to reach <strong>${tierInfo.next}</strong> tier`;
+        } else {
+          noteEl.innerHTML = '🎉 You\'ve reached the highest tier! Enjoy exclusive rewards.';
+        }
+      }
+    }
+
+    function animateCount(el, target) {
+      const duration = 800;
+      const start = performance.now();
+      const step = (now) => {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        el.textContent = Math.round(eased * target).toLocaleString();
+        if (progress < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }
+
+    /* ════════════════════════════════════════
+       RENDER ORDERS
+       ════════════════════════════════════════ */
+    function renderOrders(orders) {
+      const container = document.getElementById('orders-list');
+      if (!container) return;
+
+      if (!orders || orders.length === 0) {
+        container.innerHTML = `
+          <div class="empty-orders-card">
+            <div class="empty-orders-icon">
+              <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            </div>
+            <div class="empty-orders-title">No orders yet</div>
+            <p class="empty-orders-sub">Browse our menu and place your first order!</p>
+            <a href="/menu.html" class="empty-orders-btn">
+              <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+              Browse Menu
+            </a>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      orders.forEach(order => {
+        const orderId = (order.id || '').slice(-8).toUpperCase();
+        const date = order.created_at
+          ? new Date(order.created_at).toLocaleDateString('en-US', {
+            weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+            hour: 'numeric', minute: '2-digit'
+          })
+          : '—';
+
+        const status = (order.status || 'pending').toLowerCase();
+        const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+        const statusClass = 'status-' + status;
+
+        // Parse items
+        let items = [];
+        if (typeof order.items === 'string') {
+          try { items = JSON.parse(order.items); } catch (e) { items = []; }
+        } else if (Array.isArray(order.items)) {
+          items = order.items;
+        }
+
+        let itemsHtml = '';
+        items.forEach(item => {
+          const name = item.name || item.nameEn || 'Item';
+          const qty = item.qty || 1;
+          const price = parseFloat(item.price || 0);
+          itemsHtml += `
+            <div class="order-item-line">
+              <span class="order-item-line-name">${qty}× ${name}</span>
+              <span class="order-item-line-price">${price > 0 ? '$' + (price * qty).toFixed(2) : '—'}</span>
+            </div>
+          `;
+        });
+
+        const total = parseFloat(order.total_amount || 0);
+
+        html += `
+          <div class="order-card">
+            <div class="order-card-top">
+              <div>
+                <div class="order-card-id"><span>Order </span>#${orderId}</div>
+                <div class="order-card-date">${date}</div>
+              </div>
+              <div class="order-status-badge ${statusClass}">
+                <span class="order-status-dot"></span>
+                ${statusLabel}
+              </div>
+            </div>
+            <div class="order-card-items">
+              ${itemsHtml || '<span style="color:var(--tx-faint)">No item details</span>'}
+            </div>
+            <div class="order-card-bottom">
+              <div class="order-card-total"><span>Total</span>$${total.toFixed(2)}</div>
+              <a href="/order-confirmation.html?id=${order.id}" class="order-track-btn">
+                <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+                Track Order
+              </a>
+              <button class="order-reorder-btn" onclick="reorderItems('${order.id}')" data-items='${JSON.stringify(items).replace(/'/g, "&#39;")}'>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                Reorder
+              </button>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    /* ════════════════════════════════════════
+       REORDER FUNCTIONALITY
+       ════════════════════════════════════════ */
+    function reorderItems(orderId) {
+      const btn = document.querySelector(`[onclick="reorderItems('${orderId}')"]`);
+      if (!btn) return;
+
+      let items = [];
+      try {
+        items = JSON.parse(btn.getAttribute('data-items') || '[]');
+      } catch(e) { return; }
+
+      if (!items || items.length === 0) return;
+
+      const cartItems = items.map(item => ({
+        key: item.name || item.nameEn || 'item',
+        nameEn: item.name || item.nameEn || 'Item',
+        nameEs: item.name || item.nameEn || 'Item',
+        price: item.price || 0,
+        qty: item.qty || 1,
+        tag: item.tag || '',
+      }));
+
+      try {
+        localStorage.setItem('cecilia_cart', JSON.stringify(cartItems));
+        sessionStorage.setItem('cecilia_cart', JSON.stringify(cartItems));
+      } catch(e) {}
+
+      showReorderToast();
+
+      setTimeout(() => {
+        window.location.href = '/menu.html';
+      }, 1200);
+    }
+
+    function showReorderToast() {
+      let toast = document.getElementById('reorder-toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'reorder-toast';
+        toast.style.cssText = `
+          position: fixed;
+          bottom: 24px;
+          left: 50%;
+          transform: translateX(-50%) translateY(100px);
+          background: var(--green);
+          color: #fff;
+          padding: 12px 24px;
+          border-radius: 100px;
+          font-size: 0.88rem;
+          font-weight: 600;
+          font-family: 'Outfit', sans-serif;
+          z-index: 9999;
+          transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+          white-space: nowrap;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        `;
+        toast.textContent = '\u2713 Items added to cart!';
+        document.body.appendChild(toast);
+      }
+      setTimeout(() => {
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+      }, 50);
+    }
+
+    /* ════════════════════════════════════════
+       POPULATE USER INFO
+       ════════════════════════════════════════ */
+    function populateUserInfo(user) {
+      // Avatar
+      const avatarEl = document.getElementById('account-avatar');
+      if (avatarEl) {
+        if (user.imageUrl) {
+          avatarEl.innerHTML = `<img src="${user.imageUrl}" alt="avatar" />`;
+        } else {
+          const initials = (user.firstName || '').charAt(0).toUpperCase() || '?';
+          avatarEl.textContent = initials;
+        }
+      }
+
+      // Greeting
+      const greetingEl = document.getElementById('account-greeting');
+      if (greetingEl) greetingEl.textContent = `Hi, ${user.firstName || 'there'}!`;
+
+      // Email
+      const emailEl = document.getElementById('account-email');
+      if (emailEl) {
+        const email = user.primaryEmailAddress?.emailAddress || '';
+        emailEl.textContent = email;
+      }
+    }
+
+    /* ════════════════════════════════════════
+       FETCH ACCOUNT DATA
+       ════════════════════════════════════════ */
+    async function loadAccountData(userId) {
+      const sb = window.__supabase;
+      if (!sb) {
+        console.warn('Supabase not available');
+        renderLoyalty({});
+        renderOrders([]);
+        return;
+      }
+
+      try {
+        // Fetch loyalty profile and orders in parallel
+        const [profileResult, ordersResult] = await Promise.all([
+          sb.from('profiles')
+            .select('loyalty_points, loyalty_tier, total_spent, total_orders')
+            .eq('clerk_user_id', userId)
+            .single(),
+          sb.from('orders')
+            .select('*')
+            .eq('clerk_user_id', userId)
+            .order('created_at', { ascending: false })
+        ]);
+
+        renderLoyalty(profileResult.data || {});
+        renderOrders(ordersResult.data || []);
+      } catch (err) {
+        console.error('Error loading account data:', err);
+        renderLoyalty({});
+        renderOrders([]);
+      }
+    }
+
+    /* ════════════════════════════════════════
+       CLERK INIT
+       ════════════════════════════════════════ */
+    window.addEventListener('load', async () => {
+      try {
+        if (window.Clerk) {
+          await window.Clerk.load();
+
+          const user = window.Clerk.user;
+
+          if (!user) {
+            showState('signin');
+          } else {
+            showState('account');
+            populateUserInfo(user);
+            loadAccountData(user.id);
+          }
+        } else {
+          console.warn('Clerk not available');
+          showState('signin');
+        }
+      } catch (err) {
+        console.error('Clerk init error:', err);
+        showState('signin');
+      }
+    });
+
+    // Sign-in buttons removed — Clerk modal handles sign-in directly via showState('signin')
+
+    // Sign out
+    document.getElementById('account-signout-btn')?.addEventListener('click', async () => {
+      if (window.Clerk) {
+        await window.Clerk.signOut();
+        showState('signin');
+      }
+    });
+  </script>
+
+  <!-- Service Worker Update Banner -->
+  <div id="update-banner" hidden>
+    <span>New update available</span>
+    <button id="update-banner-btn">Update</button>
+  </div>
+  <style>
+    #update-banner {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
+      background: #C8102E; color: #fff;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      padding: 14px 20px; padding-top: calc(14px + env(safe-area-inset-top));
+      font-family: 'Outfit', sans-serif; font-size: 0.82rem; font-weight: 500; letter-spacing: 0.04em;
+      transform: translateY(-100%);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 16px rgba(200, 16, 46, 0.4);
+    }
+    #update-banner.visible { transform: translateY(0); }
+    #update-banner-btn {
+      background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5);
+      color: #fff; padding: 6px 16px; border-radius: 20px; font-size: 0.78rem;
+      font-weight: 600; cursor: pointer; font-family: 'Outfit', sans-serif;
+      letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+    }
+  </style>
+  <script>
+    function showUpdateBanner() {
+      var b = document.getElementById('update-banner');
+      if (!b) return;
+      b.hidden = false;
+      setTimeout(function () { b.classList.add('visible'); }, 100);
+      var btn = document.getElementById('update-banner-btn');
+      if (btn) btn.addEventListener('click', function () {
+        navigator.serviceWorker.ready.then(function (reg) {
+          if (reg.waiting) {
+            navigator.serviceWorker.addEventListener(
+              'controllerchange',
+              function () { window.location.reload(); },
+              { once: true }
+            );
+            reg.waiting.postMessage('skipWaiting');
+          } else {
+            window.location.reload();
+          }
+        });
+      });
+    }
+    function initUpdateBanner() {
+      if (!('serviceWorker' in navigator)) return;
+      var hadController = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register('/sw.js').then(function (reg) {
+        reg.addEventListener('updatefound', function () {
+          var nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener('statechange', function () {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller)
+              showUpdateBanner();
+          });
+        });
+        if (reg.waiting && hadController) { showUpdateBanner(); return; }
+        reg.update().catch(function () { });
+      }).catch(function () { });
+    }
+    initUpdateBanner();
+  </script>
+
+  <script type="module" src="/src/speed-insights.js"></script>
+</body>
+</html>
