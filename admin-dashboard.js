@@ -565,15 +565,19 @@ async function subscribeToPush(userType, userId) {
    ONLINE ORDERS (website checkout)
    ═══════════════════════════════════ */
 let _onlineOrdersChannel = null;
+let _cachedOnlineOrders = [];
 
 async function updateOnlineOrdersBadge() {
   if (!sb) return;
   try {
-    const { count } = await sb
+    const { data, error } = await sb
       .from('orders')
-      .select('*', { count: 'exact', head: true })
+      .select('id, customer_name, customer_phone, total_amount, delivery_status, created_at')
       .eq('source', 'website')
       .in('delivery_status', ['pending', 'preparing']);
+
+    if (!error && data) _cachedOnlineOrders = data;
+    const count = _cachedOnlineOrders.length;
 
     const badges = [
       document.getElementById('online-orders-badge'),
@@ -588,6 +592,9 @@ async function updateOnlineOrdersBadge() {
         badge.style.display = 'none';
       }
     });
+
+    // Re-render needs attention if on overview
+    if (currentSection === 'overview') renderNeedsAttention();
   } catch (e) {
     console.warn('Online orders badge update failed:', e);
   }
@@ -915,20 +922,40 @@ async function loadOverview() {
   } catch (e) { console.error('Overview load error:', e); }
 }
 
-/* ── Needs Attention (reads from global incomingOrders — no new queries) ── */
+/* ── Needs Attention (reads from global incomingOrders + _cachedOnlineOrders) ── */
 function renderNeedsAttention() {
   const container = document.getElementById('needs-attention-list');
   if (!container) return;
 
-  const pending = incomingOrders.filter(o => o.status === 'pending');
+  // Combine pending driver orders + pending/preparing online orders
+  const pendingDriver = incomingOrders.filter(o => o.status === 'pending');
+  const pendingOnline = _cachedOnlineOrders.filter(o => o.delivery_status === 'pending' || o.delivery_status === 'preparing');
 
-  if (pending.length === 0) {
+  if (pendingDriver.length === 0 && pendingOnline.length === 0) {
     container.innerHTML = `<div class="needs-attention-clear" data-en="All caught up ✓" data-es="Todo al día ✓">${lang === 'es' ? 'Todo al día ✓' : 'All caught up ✓'}</div>`;
     return;
   }
 
   let html = '';
-  pending.forEach(order => {
+
+  // Online orders first (website customers)
+  pendingOnline.forEach(order => {
+    const name = order.customer_name || (lang === 'es' ? 'Cliente web' : 'Online Customer');
+    const amount = formatCurrency(parseFloat(order.total_amount || 0));
+    html += `
+      <div class="needs-attention-item">
+        <div class="needs-attention-info">
+          <span class="needs-attention-name">🛒 ${name}</span>
+          <span class="needs-attention-amount">${amount}</span>
+        </div>
+        <button class="needs-attention-view-btn"
+          onclick="showSection('online-orders')"
+          data-en="View" data-es="Ver">${lang === 'es' ? 'Ver' : 'View'}</button>
+      </div>`;
+  });
+
+  // Driver orders
+  pendingDriver.forEach(order => {
     const name = order.business_name || getDriverName(order.driver_id);
     const amount = formatCurrency(parseFloat(order.total_amount || 0));
     html += `
