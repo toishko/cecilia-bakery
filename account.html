@@ -34,15 +34,15 @@
       window.__SUPABASE_KEY = SUPABASE_KEY;
     })();
 
-    // Authenticated Supabase client using Clerk JWT
+    // Authenticated Supabase client using Clerk JWT (singleton — created once, reused)
+    let _cachedSupabaseClient = null;
     async function getSupabaseClient() {
-      const sb = window.supabase ? window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY) : null;
-      if (!sb) return null;
+      if (_cachedSupabaseClient) return _cachedSupabaseClient;
+      if (!window.supabase) return null;
       try {
         const token = await window.Clerk?.session?.getToken({ template: 'supabase' });
         if (token) {
-          // Return a new client with the Clerk JWT as the Authorization header
-          return window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY, {
+          _cachedSupabaseClient = window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY, {
             global: {
               headers: {
                 Authorization: `Bearer ${token}`
@@ -54,12 +54,20 @@
               detectSessionInUrl: false
             }
           });
+          return _cachedSupabaseClient;
         }
       } catch (e) {
         console.warn('Clerk token fetch failed:', e);
       }
-      // Fallback: return unauthenticated client
-      return sb;
+      // Fallback: unauthenticated client (also cached)
+      _cachedSupabaseClient = window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false
+        }
+      });
+      return _cachedSupabaseClient;
     }
   </script>
 
