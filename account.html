@@ -1192,8 +1192,7 @@
         const [profileResult, ordersResult] = await Promise.all([
           sb.from('profiles')
             .select('loyalty_points, loyalty_tier, total_spent, total_orders')
-            .eq('clerk_user_id', userId)
-            .single(),
+            .maybeSingle(),
           sb.from('orders')
             .select('*')
             .eq('clerk_user_id', userId)
