@@ -12,7 +12,18 @@ webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
 
 const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   try {
     const raw = await req.json()
     console.log('Webhook payload received:', JSON.stringify(raw).slice(0, 500))
@@ -30,7 +41,7 @@ serve(async (req) => {
 
     if (table !== 'driver_orders') {
       console.log('Not driver_orders, skipping')
-      return new Response('Not relevant', { status: 200 })
+      return new Response('Not relevant', { status: 200, headers: corsHeaders })
     }
 
     // Idempotency guard: skip if this exact (record.id, type+detail) was processed recently
@@ -59,7 +70,7 @@ serve(async (req) => {
       if (existing && existing.length > 0) {
         console.log(`Idempotency: already processed ${eventKey} for ${recordId}, skipping`)
         return new Response(JSON.stringify({ skipped: true, reason: 'already_processed' }), {
-          status: 200, headers: { 'Content-Type': 'application/json' }
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
 
@@ -175,10 +186,13 @@ serve(async (req) => {
     console.log(`Done: sent=${sent}, failed=${failed}`)
     return new Response(JSON.stringify({ sent, failed }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   } catch (e) {
     console.error('Edge function error:', e)
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
   }
 })
