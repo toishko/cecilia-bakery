@@ -40,14 +40,30 @@
 
     // Authenticated Supabase client using Clerk JWT
     async function getSupabaseClient() {
-      const token = await window.Clerk?.session?.getToken({ template: 'supabase' });
-      return window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY, {
-        global: {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : ''
-          }
+      const sb = window.__supabase;
+      if (!sb) return null;
+      try {
+        const token = await window.Clerk?.session?.getToken({ template: 'supabase' });
+        if (token) {
+          // Return a new client with the Clerk JWT as the Authorization header
+          return window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY, {
+            global: {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            },
+            auth: {
+              persistSession: false,
+              autoRefreshToken: false,
+              detectSessionInUrl: false
+            }
+          });
         }
-      });
+      } catch (e) {
+        console.warn('Clerk token fetch failed:', e);
+      }
+      // Fallback: return unauthenticated client
+      return sb;
     }
   </script>
 
@@ -1180,7 +1196,7 @@
             .single(),
           sb.from('orders')
             .select('*')
-            .eq('clerk_user_id', userId)
+            .eq('id', userId)
             .order('created_at', { ascending: false })
         ]);
 
