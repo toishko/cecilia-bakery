@@ -185,21 +185,21 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
    STATS GRID
    ═══════════════════════════════════ */
 .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px}
-.stat-card{background:var(--bg-card);border:1px solid var(--bd);border-radius:14px;
-  padding:20px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow-card);
+.stat-card{background:var(--bg-card);border:1px solid var(--bd);border-radius:16px;
+  padding:28px 24px;display:flex;align-items:center;gap:20px;box-shadow:var(--shadow-card);
   transition:transform .2s,box-shadow .2s;overflow:hidden}
 .stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(200,16,46,.14)}
-.stat-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;
+.stat-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;
   justify-content:center;background:rgba(200,16,46,.08);flex-shrink:0}
-.stat-icon svg{width:24px;height:24px;color:var(--red)}
+.stat-icon svg{width:28px;height:28px;color:var(--red)}
 .stat-icon.revenue{background:rgba(27,122,74,.08)}
 .stat-icon.revenue svg{color:var(--green)}
 .stat-icon.unpaid{background:rgba(200,155,42,.08)}
 .stat-icon.unpaid svg{color:var(--yellow)}
 .stat-info{display:flex;flex-direction:column;min-width:0;overflow:hidden}
-.stat-value{font-family:'Outfit',sans-serif;font-size:1.8rem;font-weight:700;
+.stat-value{font-family:'Outfit',sans-serif;font-size:2.5rem;font-weight:700;
   line-height:1.1;color:var(--tx);overflow-wrap:break-word;word-break:break-all}
-.stat-label{font-size:.78rem;color:var(--tx-muted);margin-top:2px}
+.stat-label{font-size:1rem;color:var(--tx-muted);margin-top:4px;font-weight:400}
 
 /* ═══════════════════════════════════
    FILTER TABS
