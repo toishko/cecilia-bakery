@@ -62,6 +62,9 @@
       background: var(--bg);
       color: var(--tx);
       min-height: 100vh;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+      touch-action: pan-y;
     }
 
     /* ── TOP NAV ── */
@@ -217,6 +220,15 @@
       gap: 16px;
       padding: 16px;
       transition: box-shadow .2s;
+      overflow: hidden;
+    }
+
+    .pm-card-top-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+      min-width: 0;
     }
 
     .pm-card:hover { box-shadow: 0 8px 32px rgba(200,16,46,.14); }
@@ -737,42 +749,51 @@
     }
 
     /* ════════════════════════════════
-       MOBILE RESPONSIVE — PRODUCT CARDS
+       MOBILE RESPONSIVE — BULLETPROOF
+       Handles iOS Dynamic Type / large text / accessibility sizes.
+       Everything stacks vertically — nothing competes for horizontal space.
+       Interactive controls use fixed px so they never scale with text.
        ════════════════════════════════ */
     @media (max-width: 600px) {
-      /* Nav */
+      /* ── Nav ── */
       .pm-nav {
         padding: 0 14px;
         height: 54px;
       }
       .pm-nav-brand {
         font-size: 1.05rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
       }
       .pm-nav-email { display: none; }
 
-      /* Toolbar */
+      /* ── Toolbar ── */
       .pm-toolbar {
-        padding: 14px 14px;
+        padding: 14px;
         gap: 10px;
+        flex-direction: column;
       }
       .pm-toolbar-left {
         width: 100%;
-        justify-content: stretch;
+        display: flex;
       }
       .pm-toolbar-left .btn {
         flex: 1;
         justify-content: center;
-        font-size: .75rem;
-        padding: 9px 10px;
+        font-size: 13px;
+        padding: 9px 8px;
       }
       .pm-search {
         width: 100%;
       }
       .pm-search input {
         width: 100%;
+        font-size: 16px; /* prevents iOS auto-zoom on focus */
       }
 
-      /* List container */
+      /* ── List container ── */
       .pm-list {
         padding: 0 14px 40px;
       }
@@ -780,85 +801,138 @@
         padding: 0 14px 40px;
       }
 
-      /* Card — stack layout */
+      /* ───────────────────────────────
+         CARD — fully stacked layout
+         Row 1: [thumb] [name / tag / price / status]
+         Row 2: [all controls]
+         ─────────────────────────────── */
       .pm-card {
-        flex-wrap: wrap;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+
+      /* Top section: product info */
+      .pm-card-top-row {
+        display: flex;
+        align-items: center;
         gap: 12px;
         padding: 14px;
       }
 
-      /* Thumbnail smaller on mobile */
+      /* Thumbnail — fixed px, never scales */
       .pm-card-thumb,
       .pm-card-thumb-placeholder {
         width: 52px;
         height: 52px;
+        min-width: 52px;
+        min-height: 52px;
+        max-width: 52px;
+        max-height: 52px;
         border-radius: 6px;
       }
 
-      /* Info takes remaining space on first row */
+      /* Info takes all remaining horizontal space */
       .pm-card-info {
         flex: 1;
         min-width: 0;
       }
       .pm-card-name {
-        font-size: .88rem;
+        font-size: 15px;
+        word-break: break-word;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+      .pm-card-tag {
+        font-size: 11px;
       }
       .pm-card-price {
-        font-size: .8rem;
+        font-size: 14px;
         white-space: nowrap;
       }
-
-      /* Controls — full width below, scroll-safe */
-      .pm-card-controls {
-        width: 100%;
-        justify-content: space-between;
-        gap: 6px;
-        padding-top: 10px;
-        border-top: 1px solid var(--bd);
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        flex-shrink: 0;
+      .pm-status {
+        font-size: 10px;
       }
 
-      /* Sort buttons row on mobile */
+      /* ── Controls — own row below info ── */
+      .pm-card-controls {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        gap: 8px;
+        padding: 10px 14px;
+        border-top: 1px solid var(--bd);
+        background: rgba(200,16,46,.02);
+        flex-wrap: wrap;
+        justify-content: flex-start;
+      }
+
+      /* Sort arrows side by side */
       .pm-sort-btns {
         flex-direction: row;
         gap: 4px;
       }
 
-      /* Smaller icon buttons */
+      /* Icon buttons — fixed 32px, never scale */
       .btn-icon {
-        width: 30px;
-        height: 30px;
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        min-height: 32px;
+        max-width: 32px;
+        max-height: 32px;
+        flex-shrink: 0;
       }
 
-      /* Toggle sizing */
+      /* Toggles — fixed px sizing, immune to text scale */
+      .toggle-wrap {
+        flex-shrink: 0;
+      }
       .toggle-label {
-        font-size: .55rem;
+        font-size: 10px;
       }
       .toggle {
-        width: 36px;
-        height: 20px;
+        width: 42px;
+        height: 24px;
+        min-width: 42px;
+        min-height: 24px;
+      }
+      .toggle-track {
+        border-radius: 12px; /* re-enforce rounded corners at this size */
       }
       .toggle-thumb {
-        width: 14px;
-        height: 14px;
-        top: 2px;
-        left: 2px;
+        width: 16px;
+        height: 16px;
+        min-width: 16px;
+        min-height: 16px;
+        top: 3px;
+        left: 3px;
       }
       .toggle input:checked ~ .toggle-thumb {
-        transform: translateX(16px);
+        transform: translateX(18px);
+      }
+
+      /* Push edit/delete to the end */
+      .pm-card-controls > .btn-icon:nth-last-child(1),
+      .pm-card-controls > .btn-icon:nth-last-child(2) {
+        margin-left: auto;
+      }
+      .pm-card-controls > .btn-icon:nth-last-child(1) {
+        margin-left: 0;
       }
     }
 
-    /* Extra small phones (< 380px) */
-    @media (max-width: 380px) {
-      .pm-card-controls {
-        flex-wrap: wrap;
-        gap: 8px;
+    /* ── Extra safety: very small screens ── */
+    @media (max-width: 360px) {
+      .pm-toolbar-left .btn {
+        font-size: 11px;
+        padding: 8px 6px;
       }
-      .pm-sort-btns {
-        order: -1;
+      .pm-card-controls {
+        gap: 6px;
+        padding: 8px 10px;
       }
     }
   </style>
@@ -1107,12 +1181,14 @@ function renderList(list) {
 
     return `
       <div class="pm-card" data-id="${p.id}">
-        ${thumb}
-        <div class="pm-card-info">
-          <div class="pm-card-name">${escHtml(p.name_en)}</div>
-          <div class="pm-card-tag">${escHtml(p.tag_en)}</div>
-          <div class="pm-card-price">${priceStr}</div>
-          <span class="pm-status ${statusClass}">${statusLabel}</span>
+        <div class="pm-card-top-row">
+          ${thumb}
+          <div class="pm-card-info">
+            <div class="pm-card-name">${escHtml(p.name_en)}</div>
+            <div class="pm-card-tag">${escHtml(p.tag_en)}</div>
+            <div class="pm-card-price">${priceStr}</div>
+            <span class="pm-status ${statusClass}">${statusLabel}</span>
+          </div>
         </div>
         <div class="pm-card-controls">
           <div class="pm-sort-btns">
