@@ -1192,11 +1192,11 @@
         const [profileResult, ordersResult] = await Promise.all([
           sb.from('profiles')
             .select('loyalty_points, loyalty_tier, total_spent, total_orders')
-            .eq('id', userId)
+            .eq('clerk_user_id', userId)
             .single(),
           sb.from('orders')
             .select('*')
-            .eq('id', userId)
+            .eq('clerk_user_id', userId)
             .order('created_at', { ascending: false })
         ]);
 
