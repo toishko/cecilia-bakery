@@ -11,6 +11,7 @@
   <meta name="theme-color" content="#0E0507" media="(prefers-color-scheme: dark)">
 
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Cecilia">
   <link rel="apple-touch-icon" href="/assets/icon-192.png">
@@ -31,16 +32,11 @@
       const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
       window.__SUPABASE_URL = SUPABASE_URL;
       window.__SUPABASE_KEY = SUPABASE_KEY;
-      try {
-        if (window.supabase && window.supabase.createClient) {
-          window.__supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        }
-      } catch (e) { console.warn('Supabase init failed:', e); }
     })();
 
     // Authenticated Supabase client using Clerk JWT
     async function getSupabaseClient() {
-      const sb = window.__supabase;
+      const sb = window.supabase ? window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY) : null;
       if (!sb) return null;
       try {
         const token = await window.Clerk?.session?.getToken({ template: 'supabase' });
