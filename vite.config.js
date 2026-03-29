@@ -30,6 +30,7 @@ export default defineConfig({
         privacy: resolve(__dirname, 'privacy.html'),
         refunds: resolve(__dirname, 'refunds.html'),
         account: resolve(__dirname, 'account.html'),
+        productManager: resolve(__dirname, 'product-manager.html'),
       },
     },
   },
