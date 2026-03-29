@@ -94,8 +94,8 @@ serve(async (req) => {
         const driverName = record.business_name || 'Driver'
         targets.push({
           user_type: 'admin',
-          title: '🆕 New Order',
-          body: `New order from ${driverName}`,
+          title: '🚚 New Driver Order',
+          body: `${driverName} placed a new order`,
           url: '/admin-dashboard.html'
         })
       }
@@ -146,7 +146,7 @@ serve(async (req) => {
         targets.push({
           user_type: 'admin',
           title: '🛒 New Online Order',
-          body: `New order from ${customerName}${total ? ' — ' + total : ''}`,
+          body: `${customerName}${total ? ' — ' + total : ''}`,
           url: '/admin-dashboard.html'
         })
       }

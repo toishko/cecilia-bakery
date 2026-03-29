@@ -1142,15 +1142,6 @@
           localStorage.removeItem('cecilia_cart');
           sessionStorage.removeItem('cecilia_cart');
 
-          // Notify admins about the new online order (fire-and-forget)
-          triggerPushNotification('INSERT', 'orders', {
-            id: result.order_id || '',
-            customer_name: name,
-            total_amount: cartTotal,
-            clerk_user_id: user?.id || null,
-            source: 'website'
-          }, null);
-
           // Redirect to confirmation (fallback to menu with success param)
           const orderId = result.order_id || '';
           window.location.href = `/order-confirmation.html?id=${orderId}`;

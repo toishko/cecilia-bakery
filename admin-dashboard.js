@@ -822,13 +822,7 @@ async function updateOnlineOrderStatus(orderId, newStatus) {
     showToast(lang === 'es' ? 'Estado del pedido actualizado' : 'Order status updated');
     updateOnlineOrdersBadge();
 
-    // Trigger push notification to customer (fire-and-forget)
-    triggerPushNotification('UPDATE', 'orders', {
-      id: orderId,
-      delivery_status: newStatus,
-      clerk_user_id: card?.dataset?.clerkUserId || null,
-      customer_name: card?.dataset?.customerName || ''
-    }, { delivery_status: 'pending' });
+    // Push notification to customer is handled automatically by the database webhook
 
   } catch (err) {
     console.error('Failed to update order status:', err);
