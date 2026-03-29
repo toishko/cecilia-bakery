@@ -145,17 +145,9 @@ serve(async (req) => {
       if (error) { console.error('Sub lookup error:', error); continue }
       if (!subs || subs.length === 0) continue
 
-      // Deduplicate: only send to the most recent subscription per user_id
-      // This prevents double notifications when a user has multiple browsers
-      const seenUsers = new Set<string>()
-      const dedupedSubs = subs.filter(sub => {
-        if (seenUsers.has(sub.user_id)) return false
-        seenUsers.add(sub.user_id)
-        return true
-      })
-      console.log(`After dedup: ${dedupedSubs.length} unique users (from ${subs.length} subs)`)
+      console.log(`Sending to ${subs.length} subscriptions`)
 
-      for (const sub of dedupedSubs) {
+      for (const sub of subs) {
         const pushPayload = JSON.stringify({
           title: target.title,
           body: target.body,
