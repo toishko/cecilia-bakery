@@ -2982,6 +2982,7 @@ function _pmInjectStyles() {
   padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;
   box-shadow:var(--shadow-card);transition:background .15s}
 .pm-card:hover{background:var(--bg-card-hover)}
+.pm-card-top{display:flex;align-items:center;gap:12px;flex:1;min-width:0;padding:14px 0 14px 16px}
 .pm-thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1px solid var(--bd);background:var(--bg-surface)}
 .pm-thumb-ph{width:56px;height:56px;border-radius:8px;flex-shrink:0;border:1px solid var(--bd);
   background:var(--bg-surface);display:flex;align-items:center;justify-content:center;color:var(--tx-faint)}
@@ -3101,6 +3102,25 @@ textarea.pm-input{resize:vertical;min-height:68px}
   animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 @media(max-width:480px){.pm-controls{gap:5px}.pm-icon-btn{width:30px;height:30px}}
+/* ═══ MOBILE: bulletproof stacked card layout ═══ */
+@media(max-width:600px){
+.pm-card{flex-wrap:wrap;padding:0;overflow:hidden}
+.pm-card-top{display:flex;align-items:center;gap:10px;padding:12px;width:100%;min-width:0}
+.pm-grip{padding:0 6px 0 0}
+.pm-thumb,.pm-thumb-ph{width:48px;height:48px;min-width:48px;min-height:48px;max-width:48px;max-height:48px;border-radius:6px}
+.pm-info{flex:1;min-width:0}
+.pm-name{font-size:14px;white-space:normal;word-break:break-word;overflow-wrap:anywhere}
+.pm-price-txt{font-size:13px;white-space:nowrap}
+.pm-controls{width:100%;padding:8px 12px;border-top:1px solid var(--bd);background:rgba(200,16,46,.02);
+  gap:8px;flex-wrap:wrap;justify-content:flex-start}
+.pm-toggle-wrap{flex-shrink:0}
+.pm-toggle-lbl{font-size:10px}
+.pm-icon-btn{width:32px;height:32px;min-width:32px;min-height:32px;max-width:32px;max-height:32px;flex-shrink:0}
+.pm-header{flex-direction:column;align-items:stretch;gap:8px}
+.pm-header-actions{width:100%;justify-content:stretch}
+.btn-add-prod,.btn-seed-prod{flex:1;justify-content:center;font-size:13px}
+.pm-search{font-size:16px}
+}
 .pm-category-group{margin-bottom:24px}
 .pm-category-header{display:flex;align-items:baseline;gap:8px;padding:8px 0;margin-bottom:8px;
   border-bottom:2px solid var(--bd);font-family:'Cormorant Garamond',serif;font-size:1.05rem;
@@ -3760,21 +3780,23 @@ function _pmRenderList(list, isSearch) {
 
     return `
     <div class="pm-card${hasChange}" draggable="true" data-product-id="${p.id}" data-sort-order="${p.sort_order ?? 0}">
-      <div class="pm-grip" title="Drag to reorder">
-        <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
-          <circle cx="2" cy="2" r="1.5" fill="#C8A0A8"/>
-          <circle cx="8" cy="2" r="1.5" fill="#C8A0A8"/>
-          <circle cx="2" cy="8" r="1.5" fill="#C8A0A8"/>
-          <circle cx="8" cy="8" r="1.5" fill="#C8A0A8"/>
-          <circle cx="2" cy="14" r="1.5" fill="#C8A0A8"/>
-          <circle cx="8" cy="14" r="1.5" fill="#C8A0A8"/>
-        </svg>
-      </div>
-      ${thumb}
-      <div class="pm-info">
-        <div class="pm-name">${_esc(p.name_en)}</div>
-        <div class="pm-price-txt">${priceStr}</div>
-        <span class="badge ${badgeClass}" style="margin-top:4px">${badgeLabel}</span>
+      <div class="pm-card-top">
+        <div class="pm-grip" title="Drag to reorder">
+          <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
+            <circle cx="2" cy="2" r="1.5" fill="#C8A0A8"/>
+            <circle cx="8" cy="2" r="1.5" fill="#C8A0A8"/>
+            <circle cx="2" cy="8" r="1.5" fill="#C8A0A8"/>
+            <circle cx="8" cy="8" r="1.5" fill="#C8A0A8"/>
+            <circle cx="2" cy="14" r="1.5" fill="#C8A0A8"/>
+            <circle cx="8" cy="14" r="1.5" fill="#C8A0A8"/>
+          </svg>
+        </div>
+        ${thumb}
+        <div class="pm-info">
+          <div class="pm-name">${_esc(p.name_en)}</div>
+          <div class="pm-price-txt">${priceStr}</div>
+          <span class="badge ${badgeClass}" style="margin-top:4px">${badgeLabel}</span>
+        </div>
       </div>
       <div class="pm-controls">
         <div class="pm-toggle-wrap">
