@@ -735,6 +735,132 @@
       margin-bottom: 14px;
       line-height: 1.5;
     }
+
+    /* ════════════════════════════════
+       MOBILE RESPONSIVE — PRODUCT CARDS
+       ════════════════════════════════ */
+    @media (max-width: 600px) {
+      /* Nav */
+      .pm-nav {
+        padding: 0 14px;
+        height: 54px;
+      }
+      .pm-nav-brand {
+        font-size: 1.05rem;
+      }
+      .pm-nav-email { display: none; }
+
+      /* Toolbar */
+      .pm-toolbar {
+        padding: 14px 14px;
+        gap: 10px;
+      }
+      .pm-toolbar-left {
+        width: 100%;
+        justify-content: stretch;
+      }
+      .pm-toolbar-left .btn {
+        flex: 1;
+        justify-content: center;
+        font-size: .75rem;
+        padding: 9px 10px;
+      }
+      .pm-search {
+        width: 100%;
+      }
+      .pm-search input {
+        width: 100%;
+      }
+
+      /* List container */
+      .pm-list {
+        padding: 0 14px 40px;
+      }
+      .pm-loading {
+        padding: 0 14px 40px;
+      }
+
+      /* Card — stack layout */
+      .pm-card {
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 14px;
+      }
+
+      /* Thumbnail smaller on mobile */
+      .pm-card-thumb,
+      .pm-card-thumb-placeholder {
+        width: 52px;
+        height: 52px;
+        border-radius: 6px;
+      }
+
+      /* Info takes remaining space on first row */
+      .pm-card-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .pm-card-name {
+        font-size: .88rem;
+      }
+      .pm-card-price {
+        font-size: .8rem;
+        white-space: nowrap;
+      }
+
+      /* Controls — full width below, scroll-safe */
+      .pm-card-controls {
+        width: 100%;
+        justify-content: space-between;
+        gap: 6px;
+        padding-top: 10px;
+        border-top: 1px solid var(--bd);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-shrink: 0;
+      }
+
+      /* Sort buttons row on mobile */
+      .pm-sort-btns {
+        flex-direction: row;
+        gap: 4px;
+      }
+
+      /* Smaller icon buttons */
+      .btn-icon {
+        width: 30px;
+        height: 30px;
+      }
+
+      /* Toggle sizing */
+      .toggle-label {
+        font-size: .55rem;
+      }
+      .toggle {
+        width: 36px;
+        height: 20px;
+      }
+      .toggle-thumb {
+        width: 14px;
+        height: 14px;
+        top: 2px;
+        left: 2px;
+      }
+      .toggle input:checked ~ .toggle-thumb {
+        transform: translateX(16px);
+      }
+    }
+
+    /* Extra small phones (< 380px) */
+    @media (max-width: 380px) {
+      .pm-card-controls {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .pm-sort-btns {
+        order: -1;
+      }
+    }
   </style>
 </head>
 <body>
