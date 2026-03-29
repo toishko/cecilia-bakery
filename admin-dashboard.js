@@ -57,6 +57,7 @@ function showScreen(id) {
   document.getElementById('screen-' + id).classList.add('active');
 }
 
+window.showSection = showSection;
 async function showSection(name) {
   // Warn about unsaved Product Manager changes when navigating away
   if (typeof _pmHasPending === 'function' && _pmHasPending() && currentSection === 'products' && name !== 'products') {
@@ -936,37 +937,50 @@ function renderNeedsAttention() {
 
   let html = '';
 
-  // Online orders first (website customers)
-  pendingOnline.forEach(order => {
-    const name = order.customer_name || (lang === 'es' ? 'Cliente web' : 'Online Customer');
-    const amount = formatCurrency(parseFloat(order.total_amount || 0));
-    html += `
-      <div class="needs-attention-item">
-        <div class="needs-attention-info">
-          <span class="needs-attention-name">🛒 ${name}</span>
+  // ── Online Orders section ──
+  if (pendingOnline.length > 0) {
+    html += `<div class="needs-attention-group-header">
+      <span>🛒 ${lang === 'es' ? 'Pedidos en Línea' : 'Online Orders'} (${pendingOnline.length})</span>
+      <button class="needs-attention-view-all-btn" onclick="showSection('online-orders')"
+        data-en="View All" data-es="Ver Todos">${lang === 'es' ? 'Ver Todos' : 'View All'}</button>
+    </div>`;
+    pendingOnline.forEach(order => {
+      const name = order.customer_name || (lang === 'es' ? 'Cliente web' : 'Online Customer');
+      const amount = formatCurrency(parseFloat(order.total_amount || 0));
+      const statusLabel = order.delivery_status === 'preparing'
+        ? (lang === 'es' ? 'Preparando' : 'Preparing')
+        : (lang === 'es' ? 'Pendiente' : 'Pending');
+      html += `
+        <div class="needs-attention-item">
+          <div class="needs-attention-info">
+            <span class="needs-attention-name">${name}</span>
+            <span class="needs-attention-status na-status-${order.delivery_status}">${statusLabel}</span>
+          </div>
           <span class="needs-attention-amount">${amount}</span>
-        </div>
-        <button class="needs-attention-view-btn"
-          onclick="showSection('online-orders')"
-          data-en="View" data-es="Ver">${lang === 'es' ? 'Ver' : 'View'}</button>
-      </div>`;
-  });
+        </div>`;
+    });
+  }
 
-  // Driver orders
-  pendingDriver.forEach(order => {
-    const name = order.business_name || getDriverName(order.driver_id);
-    const amount = formatCurrency(parseFloat(order.total_amount || 0));
-    html += `
-      <div class="needs-attention-item">
-        <div class="needs-attention-info">
-          <span class="needs-attention-name">${name}</span>
+  // ── Driver Orders section ──
+  if (pendingDriver.length > 0) {
+    html += `<div class="needs-attention-group-header">
+      <span>🚚 ${lang === 'es' ? 'Pedidos de Conductores' : 'Driver Orders'} (${pendingDriver.length})</span>
+      <button class="needs-attention-view-all-btn" onclick="showSection('incoming')"
+        data-en="View All" data-es="Ver Todos">${lang === 'es' ? 'Ver Todos' : 'View All'}</button>
+    </div>`;
+    pendingDriver.forEach(order => {
+      const name = order.business_name || getDriverName(order.driver_id);
+      const amount = formatCurrency(parseFloat(order.total_amount || 0));
+      html += `
+        <div class="needs-attention-item">
+          <div class="needs-attention-info">
+            <span class="needs-attention-name">${name}</span>
+          </div>
           <span class="needs-attention-amount">${amount}</span>
-        </div>
-        <button class="needs-attention-view-btn"
-          onclick="showSection('incoming')"
-          data-en="View" data-es="Ver">${lang === 'es' ? 'Ver' : 'View'}</button>
-      </div>`;
-  });
+        </div>`;
+    });
+  }
+
   container.innerHTML = html;
 }
 

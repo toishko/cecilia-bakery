@@ -208,15 +208,31 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 #needs-attention-wrap{margin-bottom:28px}
 .needs-attention-title{font-family:'Cormorant Garamond',serif;font-size:1.5rem;
   font-weight:700;color:var(--tx);margin-bottom:14px}
+.needs-attention-group-header{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 0;margin-bottom:6px;margin-top:8px;border-bottom:1px solid var(--bd)}
+.needs-attention-group-header:first-child{margin-top:0}
+.needs-attention-group-header span{font-size:1rem;font-weight:600;color:var(--tx);
+  font-family:'Outfit',sans-serif}
+.needs-attention-view-all-btn{padding:6px 16px;border:none;border-radius:8px;
+  background:var(--red);color:#fff;font-size:.8rem;font-weight:600;
+  font-family:inherit;cursor:pointer;transition:background .2s,transform .1s;
+  white-space:nowrap;flex-shrink:0;letter-spacing:.03em;text-transform:uppercase}
+.needs-attention-view-all-btn:hover{background:var(--red-dk)}
+.needs-attention-view-all-btn:active{transform:scale(.97)}
 .needs-attention-item{background:var(--bg-card);border:1px solid var(--bd);border-radius:14px;
-  padding:20px 22px;margin-bottom:10px;display:flex;align-items:center;
+  padding:16px 20px;margin-bottom:8px;display:flex;align-items:center;
   justify-content:space-between;gap:16px;box-shadow:var(--shadow-card);
   transition:transform .2s,box-shadow .2s}
 .needs-attention-item:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(200,16,46,.12)}
-.needs-attention-info{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
-.needs-attention-name{font-size:1rem;font-weight:600;color:var(--tx);
+.needs-attention-info{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.needs-attention-name{font-size:.95rem;font-weight:600;color:var(--tx);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.needs-attention-amount{font-size:1rem;font-weight:500;color:var(--tx-muted)}
+.needs-attention-status{font-size:.72rem;font-weight:600;padding:3px 10px;
+  border-radius:20px;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+.na-status-pending{background:rgba(200,16,46,.1);color:var(--red)}
+.na-status-preparing{background:rgba(234,170,0,.15);color:#b8860b}
+.needs-attention-amount{font-size:1rem;font-weight:600;color:var(--tx);
+  white-space:nowrap;flex-shrink:0}
 .needs-attention-view-btn{padding:10px 22px;border:none;border-radius:10px;
   background:var(--red);color:#fff;font-size:.9rem;font-weight:600;
   font-family:inherit;cursor:pointer;transition:background .2s,transform .1s;
