@@ -909,7 +909,40 @@ async function loadOverview() {
     if (!e3 && recent) {
       renderOrderCards(recent, 'recent-orders-list');
     }
+
+    // Render Needs Attention from already-loaded incomingOrders
+    renderNeedsAttention();
   } catch (e) { console.error('Overview load error:', e); }
+}
+
+/* ── Needs Attention (reads from global incomingOrders — no new queries) ── */
+function renderNeedsAttention() {
+  const container = document.getElementById('needs-attention-list');
+  if (!container) return;
+
+  const pending = incomingOrders.filter(o => o.status === 'pending');
+
+  if (pending.length === 0) {
+    container.innerHTML = `<div class="needs-attention-clear" data-en="All caught up ✓" data-es="Todo al día ✓">${lang === 'es' ? 'Todo al día ✓' : 'All caught up ✓'}</div>`;
+    return;
+  }
+
+  let html = '';
+  pending.forEach(order => {
+    const name = order.business_name || getDriverName(order.driver_id);
+    const amount = formatCurrency(parseFloat(order.total_amount || 0));
+    html += `
+      <div class="needs-attention-item">
+        <div class="needs-attention-info">
+          <span class="needs-attention-name">${name}</span>
+          <span class="needs-attention-amount">${amount}</span>
+        </div>
+        <button class="needs-attention-view-btn"
+          onclick="showSection('incoming')"
+          data-en="View" data-es="Ver">${lang === 'es' ? 'Ver' : 'View'}</button>
+      </div>`;
+  });
+  container.innerHTML = html;
 }
 
 /* ═══════════════════════════════════
