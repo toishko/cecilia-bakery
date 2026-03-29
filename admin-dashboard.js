@@ -906,16 +906,6 @@ async function loadOverview() {
       document.getElementById('stat-outstanding').textContent = formatCurrency(outstanding);
     }
 
-    // Recent 5 orders
-    const { data: recent, error: e3 } = await sb
-      .from('driver_orders')
-      .select('id, driver_id, business_name, submitted_at, payment_status, status, order_number, total_amount')
-      .order('submitted_at', { ascending: false })
-      .limit(5);
-
-    if (!e3 && recent) {
-      renderOrderCards(recent, 'recent-orders-list');
-    }
 
     // Render Needs Attention from already-loaded incomingOrders
     renderNeedsAttention();
@@ -2638,7 +2628,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ── Overview ──
-  document.getElementById('view-all-orders-btn').addEventListener('click', () => showSection('incoming'));
+  document.getElementById('view-all-orders-btn')?.addEventListener('click', () => showSection('incoming'));
   document.getElementById('stat-outstanding-card').addEventListener('click', () => {
     // Pre-select the "unpaid" filter tab before navigating
     document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
