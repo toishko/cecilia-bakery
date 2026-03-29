@@ -5580,48 +5580,48 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
 
       let pickupStr = '';
 
-      // ── Save to Supabase if logged in ──
+      // ── Save to Supabase if logged in via Clerk ──
       let orderId = null;
       const sb = window.__supabase;
-      if (sb) {
+      const clerkUser = window.Clerk?.user;
+      if (sb && clerkUser) {
         try {
-          const { data: sessionData } = await sb.auth.getSession();
-          if (sessionData?.session?.user) {
-            const userId = sessionData.session.user.id;
-            const total = cart.reduce((sum, item) => {
-              const p = parseFloat(item.price || 0);
-              return sum + (p * item.qty);
-            }, 0);
+          const total = cart.reduce((sum, item) => {
+            const p = parseFloat(item.price || 0);
+            return sum + (p * item.qty);
+          }, 0);
 
-            const orderData = {
-              profile_id: userId,
-              role: 'customer',
-              status: 'active',
-              delivery_status: 'pending',
-              payment_method: 'at_pickup',
-              payment_status: 'pending',
-              items: cart.map(i => ({
-                name: i.nameEn || i.name,
-                qty: i.qty,
-                price: parseFloat(i.price || 0),
-                size: i.size || null,
-                tag: i.tagEn || i.tag || '',
-              })),
-              total_amount: total,
-              note: note || null,
-            };
+          const orderData = {
+            clerk_user_id: clerkUser.id,
+            customer_name: name,
+            customer_phone: phone,
+            customer_email: clerkUser.primaryEmailAddress?.emailAddress || null,
+            role: 'customer',
+            status: 'active',
+            delivery_status: 'pending',
+            payment_method: 'at_pickup',
+            payment_status: 'pending',
+            items: cart.map(i => ({
+              name: i.nameEn || i.name,
+              qty: i.qty,
+              price: parseFloat(i.price || 0),
+              size: i.size || null,
+              tag: i.tagEn || i.tag || '',
+            })),
+            total_amount: total,
+            note: note || null,
+          };
 
-            const { data: inserted, error } = await sb
-              .from('orders')
-              .insert(orderData)
-              .select('id')
-              .single();
+          const { data: inserted, error } = await sb
+            .from('orders')
+            .insert(orderData)
+            .select('id')
+            .single();
 
-            if (!error && inserted) {
-              orderId = inserted.id;
-            } else {
-              console.error('Order insert error:', error);
-            }
+          if (!error && inserted) {
+            orderId = inserted.id;
+          } else {
+            console.error('Order insert error:', error);
           }
         } catch (err) {
           console.error('Failed to save order:', err);
