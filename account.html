@@ -36,6 +36,7 @@
 
     // Authenticated Supabase client using Clerk JWT
     async function getSupabaseClient() {
+      const sb = window.supabase ? window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY) : null;
       if (!sb) return null;
       try {
         const token = await window.Clerk?.session?.getToken({ template: 'supabase' });
