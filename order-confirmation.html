@@ -687,9 +687,63 @@
         renderOrder(data);
         subscribeToUpdates(orderId);
 
+        // Subscribe customer to push notifications for status updates
+        subscribeCustomerToPush(data.clerk_user_id);
+
       } catch (err) {
         console.error('Failed to load order:', err);
         showState('error');
+      }
+    }
+
+    /* ── Customer push subscription ── */
+    const VAPID_PUBLIC_KEY = 'BPK9nQfqIXaf-kc5HHJ5G6trkWxjAX9MzeYwLTUfcnk4jWVYVO6gpzXS-d0tNgGTmHp0ntzYe3xRKT0Ud3t5a3Q';
+
+    async function subscribeCustomerToPush(clerkUserId) {
+      if (!clerkUserId || !sb) return;
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      if (Notification.permission === 'denied') return;
+
+      try {
+        // Only ask for permission, don't force a prompt on every page load
+        if (Notification.permission === 'default') {
+          const perm = await Notification.requestPermission();
+          if (perm !== 'granted') return;
+        }
+
+        const reg = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('SW timeout')), 10000))
+        ]);
+
+        // Convert VAPID key
+        const padding = '='.repeat((4 - VAPID_PUBLIC_KEY.length % 4) % 4);
+        const base64 = (VAPID_PUBLIC_KEY + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = atob(base64);
+        const appServerKey = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; i++) appServerKey[i] = rawData.charCodeAt(i);
+
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: appServerKey
+          });
+        }
+
+        // Save to Supabase
+        const subJson = sub.toJSON();
+        await sb.from('push_subscriptions').upsert({
+          user_type: 'customer',
+          user_id: clerkUserId,
+          endpoint: subJson.endpoint,
+          p256dh: subJson.keys.p256dh,
+          auth: subJson.keys.auth
+        }, { onConflict: 'user_type,user_id,endpoint' });
+
+        console.log('✅ Customer push subscription saved for', clerkUserId);
+      } catch (e) {
+        console.warn('Customer push subscription failed:', e.message || e);
       }
     }
 

@@ -696,7 +696,7 @@ async function loadOnlineOrders() {
         : '';
 
       html += `
-        <div class="online-order-card" id="online-order-${order.id}">
+        <div class="online-order-card" id="online-order-${order.id}" data-clerk-user-id="${order.clerk_user_id || ''}" data-customer-name="${_esc(order.customer_name || '')}">
           <div class="online-order-header">
             <div class="online-order-customer">
               <span class="online-order-name">${order.customer_name || 'Customer'}</span>
@@ -820,6 +820,14 @@ async function updateOnlineOrderStatus(orderId, newStatus) {
 
     showToast(lang === 'es' ? 'Estado del pedido actualizado' : 'Order status updated');
     updateOnlineOrdersBadge();
+
+    // Trigger push notification to customer (fire-and-forget)
+    triggerPushNotification('UPDATE', 'orders', {
+      id: orderId,
+      delivery_status: newStatus,
+      clerk_user_id: card?.dataset?.clerkUserId || null,
+      customer_name: card?.dataset?.customerName || ''
+    }, { delivery_status: 'pending' });
 
   } catch (err) {
     console.error('Failed to update order status:', err);

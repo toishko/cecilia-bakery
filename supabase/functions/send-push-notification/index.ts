@@ -28,10 +28,6 @@ serve(async (req) => {
     const raw = await req.json()
     console.log('Webhook payload received:', JSON.stringify(raw).slice(0, 500))
 
-    // Handle both webhook formats:
-    // Format 1 (direct): { type, table, record, old_record }
-    // Format 2 (DB webhook): { type, table, record, old_record } (same but type might be uppercase)
-    // Format 3 (trigger-based): { old_data, data, ... } wrapped in trigger_name etc.
     const type = (raw.type || '').toUpperCase()
     const table = raw.table || ''
     const record = raw.record || raw.data || raw.new || null
@@ -39,22 +35,28 @@ serve(async (req) => {
 
     console.log(`Event: ${type} on ${table}`)
 
-    if (table !== 'driver_orders') {
-      console.log('Not driver_orders, skipping')
+    // Only process driver_orders and orders tables
+    if (table !== 'driver_orders' && table !== 'orders') {
+      console.log(`Table "${table}" not relevant, skipping`)
       return new Response('Not relevant', { status: 200, headers: corsHeaders })
     }
 
-    // Idempotency guard: skip if this exact (record.id, type+detail) was processed recently
+    // ── Idempotency guard ──
     const recordId = record?.id
-    // Build a specific event key for dedup — e.g. "UPDATE:status=sent" or "INSERT"
     let eventKey = type
     if (type === 'UPDATE' && record) {
-      if (record.status && record.status !== old_record?.status) {
-        eventKey = `${type}:status=${record.status}`
-      } else if (record.payment_status && record.payment_status !== old_record?.payment_status) {
-        eventKey = `${type}:payment=${record.payment_status}`
-      } else if (record.admin_notes && record.admin_notes !== old_record?.admin_notes) {
-        eventKey = `${type}:notes`
+      if (table === 'driver_orders') {
+        if (record.status && record.status !== old_record?.status) {
+          eventKey = `${type}:status=${record.status}`
+        } else if (record.payment_status && record.payment_status !== old_record?.payment_status) {
+          eventKey = `${type}:payment=${record.payment_status}`
+        } else if (record.admin_notes && record.admin_notes !== old_record?.admin_notes) {
+          eventKey = `${type}:notes`
+        }
+      } else if (table === 'orders') {
+        if (record.delivery_status && record.delivery_status !== old_record?.delivery_status) {
+          eventKey = `${type}:delivery_status=${record.delivery_status}`
+        }
       }
     }
 
@@ -74,7 +76,6 @@ serve(async (req) => {
         })
       }
 
-      // Log this invocation
       await sb.from('notification_log').insert({
         order_id: recordId,
         event_type: eventKey
@@ -82,56 +83,129 @@ serve(async (req) => {
       console.log(`Idempotency: logged ${eventKey} for ${recordId}`)
     }
 
-    // Determine who to notify
+    // ── Determine who to notify ──
     let targets: { user_type: string; user_id?: string; title: string; body: string; url: string }[] = []
 
-    if (type === 'INSERT' && record) {
-      const driverName = record.business_name || 'Driver'
-      targets.push({
-        user_type: 'admin',
-        title: '🆕 New Order',
-        body: `New order from ${driverName}`,
-        url: '/admin-dashboard.html'
-      })
+    // ═══════════════════════════════════
+    //  DRIVER_ORDERS TABLE
+    // ═══════════════════════════════════
+    if (table === 'driver_orders') {
+      if (type === 'INSERT' && record) {
+        const driverName = record.business_name || 'Driver'
+        targets.push({
+          user_type: 'admin',
+          title: '🆕 New Order',
+          body: `New order from ${driverName}`,
+          url: '/admin-dashboard.html'
+        })
+      }
+
+      if (type === 'UPDATE' && record) {
+        if (record.status === 'sent' && old_record?.status !== 'sent') {
+          targets.push({
+            user_type: 'driver',
+            user_id: record.driver_id,
+            title: '✅ Order Confirmed',
+            body: `Order #${record.id?.slice(0, 8)} has been confirmed`,
+            url: '/driver-order.html'
+          })
+        }
+
+        if (record.payment_status && record.payment_status !== old_record?.payment_status) {
+          const statusLabel = record.payment_status === 'paid' ? 'Paid' :
+                             record.payment_status === 'partial' ? 'Partially Paid' : 'Updated'
+          targets.push({
+            user_type: 'driver',
+            user_id: record.driver_id,
+            title: '💰 Payment Update',
+            body: `Order #${record.id?.slice(0, 8)}: ${statusLabel}`,
+            url: '/driver-order.html'
+          })
+        }
+
+        if (record.admin_notes && record.admin_notes !== old_record?.admin_notes) {
+          targets.push({
+            user_type: 'driver',
+            user_id: record.driver_id,
+            title: '📝 Order Modified',
+            body: `Order #${record.id?.slice(0, 8)} was updated by admin`,
+            url: '/driver-order.html'
+          })
+        }
+      }
     }
 
-    if (type === 'UPDATE' && record) {
-      if (record.status === 'sent' && old_record?.status !== 'sent') {
+    // ═══════════════════════════════════
+    //  ORDERS TABLE (online customer orders)
+    // ═══════════════════════════════════
+    if (table === 'orders') {
+      if (type === 'INSERT' && record) {
+        // Notify ALL admins about new online order
+        const customerName = record.customer_name || 'Customer'
+        const total = record.total_amount ? `$${parseFloat(record.total_amount).toFixed(2)}` : ''
         targets.push({
-          user_type: 'driver',
-          user_id: record.driver_id,
-          title: '✅ Order Confirmed',
-          body: `Order #${record.id?.slice(0, 8)} has been confirmed`,
-          url: '/driver-order.html'
+          user_type: 'admin',
+          title: '🛒 New Online Order',
+          body: `New order from ${customerName}${total ? ' — ' + total : ''}`,
+          url: '/admin-dashboard.html'
         })
       }
 
-      if (record.payment_status && record.payment_status !== old_record?.payment_status) {
-        const statusLabel = record.payment_status === 'paid' ? 'Paid' :
-                           record.payment_status === 'partial' ? 'Partially Paid' : 'Updated'
-        targets.push({
-          user_type: 'driver',
-          user_id: record.driver_id,
-          title: '💰 Payment Update',
-          body: `Order #${record.id?.slice(0, 8)}: ${statusLabel}`,
-          url: '/driver-order.html'
-        })
-      }
+      if (type === 'UPDATE' && record) {
+        const newStatus = record.delivery_status
+        const oldStatus = old_record?.delivery_status
 
-      if (record.admin_notes && record.admin_notes !== old_record?.admin_notes) {
-        targets.push({
-          user_type: 'driver',
-          user_id: record.driver_id,
-          title: '📝 Order Modified',
-          body: `Order #${record.id?.slice(0, 8)} was updated by admin`,
-          url: '/driver-order.html'
-        })
+        // Only notify customer if delivery_status actually changed
+        if (newStatus && newStatus !== oldStatus) {
+          const clerkUserId = record.clerk_user_id
+          const shortId = record.id?.slice(-8).toUpperCase() || '???'
+
+          const statusMessages: Record<string, { title: string; body: string }> = {
+            'preparing': {
+              title: '👨‍🍳 Order Being Prepared',
+              body: `Order #${shortId} is now being prepared!`
+            },
+            'ready': {
+              title: '✅ Ready for Pickup!',
+              body: `Order #${shortId} is ready! Come pick it up.`
+            },
+            'completed': {
+              title: '🎉 Order Complete',
+              body: `Order #${shortId} has been completed. Thank you!`
+            },
+            'cancelled': {
+              title: '❌ Order Cancelled',
+              body: `Order #${shortId} has been cancelled. Please contact us for details.`
+            }
+          }
+
+          const msg = statusMessages[newStatus]
+          if (msg && clerkUserId) {
+            targets.push({
+              user_type: 'customer',
+              user_id: clerkUserId,
+              title: msg.title,
+              body: msg.body,
+              url: `/order-confirmation.html?id=${record.id}`
+            })
+          }
+
+          // Also notify admins about status changes (so other admin devices get notified)
+          if (msg) {
+            targets.push({
+              user_type: 'admin',
+              title: `📋 Order #${shortId}`,
+              body: `Status changed to: ${newStatus}`,
+              url: '/admin-dashboard.html'
+            })
+          }
+        }
       }
     }
 
     console.log(`Targets: ${targets.length}`, targets.map(t => `${t.user_type}:${t.user_id || 'all'}`))
 
-    // Send push to each target
+    // ── Send push to each target ──
     let sent = 0
     let failed = 0
 
@@ -141,7 +215,7 @@ serve(async (req) => {
       query = query.order('created_at', { ascending: false })
 
       const { data: subs, error } = await query
-      console.log(`Found ${subs?.length || 0} subscriptions for ${target.user_type}`)
+      console.log(`Found ${subs?.length || 0} subscriptions for ${target.user_type}${target.user_id ? ':' + target.user_id : ''}`)
       if (error) { console.error('Sub lookup error:', error); continue }
       if (!subs || subs.length === 0) continue
 
@@ -152,7 +226,7 @@ serve(async (req) => {
           title: target.title,
           body: target.body,
           url: target.url,
-          tag: `cecilia-order-${record?.id || Date.now()}`
+          tag: `cecilia-${table}-${record?.id || Date.now()}`
         })
 
         const pushSub = {
