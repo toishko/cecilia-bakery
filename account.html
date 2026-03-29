@@ -29,12 +29,26 @@
     (function () {
       const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
       const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
+      window.__SUPABASE_URL = SUPABASE_URL;
+      window.__SUPABASE_KEY = SUPABASE_KEY;
       try {
         if (window.supabase && window.supabase.createClient) {
           window.__supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
       } catch (e) { console.warn('Supabase init failed:', e); }
     })();
+
+    // Authenticated Supabase client using Clerk JWT
+    async function getSupabaseClient() {
+      const token = await window.Clerk?.session?.getToken({ template: 'supabase' });
+      return window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY, {
+        global: {
+          headers: {
+            Authorization: token ? `Bearer ${token}` : ''
+          }
+        }
+      });
+    }
   </script>
 
   <!-- Clerk -->
@@ -1143,7 +1157,13 @@
        FETCH ACCOUNT DATA
        ════════════════════════════════════════ */
     async function loadAccountData(userId) {
-      const sb = window.__supabase;
+      let sb;
+      try {
+        sb = await getSupabaseClient();
+      } catch (e) {
+        console.warn('Supabase authenticated client not available:', e);
+        sb = window.__supabase;
+      }
       if (!sb) {
         console.warn('Supabase not available');
         renderLoyalty({});
@@ -1156,7 +1176,7 @@
         const [profileResult, ordersResult] = await Promise.all([
           sb.from('profiles')
             .select('loyalty_points, loyalty_tier, total_spent, total_orders')
-            .eq('clerk_user_id', userId)
+            .eq('id', userId)
             .single(),
           sb.from('orders')
             .select('*')
