@@ -243,6 +243,12 @@ async function handleLogin() {
     const role = currentUser.user_metadata?.role || currentUser.app_metadata?.role || '';
     if (role !== 'admin' && role !== 'staff') {
       console.warn('User role not set to admin/staff. Role:', role);
+      const errorEl = document.getElementById('login-error');
+      errorEl.textContent = lang === 'es' ? 'Acceso no autorizado' : 'Unauthorized access';
+      await sb.auth.signOut();
+      currentUser = null;
+      btn.disabled = false;
+      return;
     }
 
     enterDashboard();
@@ -257,6 +263,12 @@ async function checkSession() {
   try {
     const { data: { session } } = await sb.auth.getSession();
     if (session && session.user) {
+      const role = session.user.user_metadata?.role || session.user.app_metadata?.role || '';
+      if (role !== 'admin' && role !== 'staff') {
+        console.warn('Session user is not admin/staff. Signing out.');
+        await sb.auth.signOut();
+        return false;
+      }
       currentUser = session.user;
       enterDashboard();
       return true;
@@ -764,8 +776,8 @@ async function loadOnlineOrders() {
         <div class="online-order-card${isOnlineOrderSeen(order.id) ? '' : ' order-unseen'}" id="online-order-${order.id}" data-clerk-user-id="${order.clerk_user_id || ''}" data-customer-name="${_esc(order.customer_name || '')}">
           <div class="online-order-header">
             <div class="online-order-customer">
-              <span class="online-order-name">${order.customer_name || 'Customer'}</span>
-              <span class="online-order-phone">${order.customer_phone || ''}</span>
+              <span class="online-order-name">${_esc(order.customer_name || 'Customer')}</span>
+              <span class="online-order-phone">${_esc(order.customer_phone || '')}</span>
             </div>
             <div class="online-order-meta">
               <span class="online-order-date">${date}</span>
@@ -773,10 +785,10 @@ async function loadOnlineOrders() {
             </div>
           </div>
 
-          <div class="online-order-items">${items}</div>
+          <div class="online-order-items">${_esc(items)}</div>
 
           ${pickupInfo ? `<div class="online-order-pickup-row">${pickupInfo}</div>` : ''}
-          ${order.order_note ? `<div class="online-order-note">📝 ${order.order_note}</div>` : ''}
+          ${order.order_note ? `<div class="online-order-note">📝 ${_esc(order.order_note)}</div>` : ''}
 
           <div class="online-order-footer">
             <span class="online-order-status" style="color:${statusColor}">● ${statusLabel}</span>
@@ -930,9 +942,15 @@ function showToast(message, type = 'success') {
 
   const toast = document.createElement('div');
   toast.className = `app-toast ${type}`;
-  toast.innerHTML = `<span>${message}</span><button class="toast-close">✕</button>`;
+  const msgSpan = document.createElement('span');
+  msgSpan.textContent = message;
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'toast-close';
+  closeBtn.textContent = '✕';
+  closeBtn.addEventListener('click', () => toast.remove());
+  toast.appendChild(msgSpan);
+  toast.appendChild(closeBtn);
   document.body.appendChild(toast);
-  toast.querySelector('.toast-close').addEventListener('click', () => toast.remove());
   requestAnimationFrame(() => toast.classList.add('show'));
   setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 4000);
 }
@@ -1022,14 +1040,14 @@ function renderNeedsAttention() {
         data-en="View All" data-es="Ver Todos">${lang === 'es' ? 'Ver Todos' : 'View All'}</button>
     </div>`;
     activeOnline.forEach(order => {
-      const name = order.customer_name || (lang === 'es' ? 'Cliente web' : 'Online Customer');
+      const name = _esc(order.customer_name || (lang === 'es' ? 'Cliente web' : 'Online Customer'));
       const amount = formatCurrency(parseFloat(order.total_amount || 0));
       const statusLabels = {
         pending:   lang === 'es' ? 'Pendiente'  : 'Pending',
         preparing: lang === 'es' ? 'Preparando' : 'Preparing',
         ready:     lang === 'es' ? 'Listo'      : 'Ready'
       };
-      const statusLabel = statusLabels[order.delivery_status] || order.delivery_status;
+      const statusLabel = statusLabels[order.delivery_status] || _esc(order.delivery_status);
       const unseenClass = isOnlineOrderSeen(order.id) ? '' : ' order-unseen';
       html += `
         <div class="needs-attention-item${unseenClass}">
@@ -1051,7 +1069,7 @@ function renderNeedsAttention() {
         data-en="View All" data-es="Ver Todos">${lang === 'es' ? 'Ver Todos' : 'View All'}</button>
     </div>`;
     activeDriver.forEach(order => {
-      const name = order.business_name || getDriverName(order.driver_id);
+      const name = _esc(order.business_name || getDriverName(order.driver_id));
       const amount = formatCurrency(parseFloat(order.total_amount || 0));
       const statusLabels = {
         pending:   lang === 'es' ? 'Pendiente'  : 'Pending',
@@ -1213,8 +1231,8 @@ function renderOrderCards(orders, containerId, showLive = false) {
   }
 
   orders.forEach(order => {
-    const driverName = getDriverName(order.driver_id);
-    const business = order.business_name || (lang === 'es' ? 'Sin negocio' : 'No business');
+    const driverName = _esc(getDriverName(order.driver_id));
+    const business = _esc(order.business_name || (lang === 'es' ? 'Sin negocio' : 'No business'));
     const time = formatTime(order.submitted_at);
     const orderNum = order.order_number ? `#${order.order_number}` : '';
 
@@ -1366,14 +1384,14 @@ function renderOrderDetail() {
 
   // Meta info
   html += '<div class="detail-meta">';
-  html += `<div class="detail-meta-item"><span class="detail-meta-label">${lang === 'es' ? 'Conductor' : 'Driver'}</span><span class="detail-meta-value">${driverName}</span></div>`;
+  html += `<div class="detail-meta-item"><span class="detail-meta-label">${lang === 'es' ? 'Conductor' : 'Driver'}</span><span class="detail-meta-value">${_esc(driverName)}</span></div>`;
   if (order.business_name) {
-    html += `<div class="detail-meta-item"><span class="detail-meta-label">${lang === 'es' ? 'Negocio' : 'Business'}</span><span class="detail-meta-value">${order.business_name}</span></div>`;
+    html += `<div class="detail-meta-item"><span class="detail-meta-label">${lang === 'es' ? 'Negocio' : 'Business'}</span><span class="detail-meta-value">${_esc(order.business_name)}</span></div>`;
   }
   // Smart date/time labels
   html += renderSmartDateTime(order);
   if (order.driver_ref) {
-    html += `<div class="detail-meta-item"><span class="detail-meta-label">${lang === 'es' ? 'Ref del Conductor' : "Driver's Ref"}</span><span class="detail-meta-value">${order.driver_ref}</span></div>`;
+    html += `<div class="detail-meta-item"><span class="detail-meta-label">${lang === 'es' ? 'Ref del Conductor' : "Driver's Ref"}</span><span class="detail-meta-value">${_esc(order.driver_ref)}</span></div>`;
   }
   html += '</div>';
 
@@ -1421,9 +1439,9 @@ function renderOrderDetail() {
     label = label.replace(/_nt\b/g, '');  // clean redondo column suffixes
 
     html += '<tr>';
-    html += `<td>${label}`;
+    html += `<td>${_esc(label)}`;
     if (isNoTicket) html += `<span class="no-ticket-tag">✕ No Ticket</span>`;
-    if (item.adjustment_note) html += `<span class="adj-note">${item.adjustment_note}</span>`;
+    if (item.adjustment_note) html += `<span class="adj-note">${_esc(item.adjustment_note)}</span>`;
     html += '</td>';
     html += `<td class="col-qty">${item.quantity}</td>`;
     html += `<td class="col-qty">`;
@@ -2246,9 +2264,9 @@ function renderDriverTable() {
       : (lang === 'es' ? 'Desactivado' : 'Disabled');
     const balClass = d.balance > 0 ? 'has-balance' : 'no-balance';
     return `<tr onclick="showDriverProfile('${d.id}')">
-      <td class="driver-name">${d.name}</td>
-      <td class="driver-code"><span class="code-masked" data-code="${d.code}">••••••</span> <button class="code-eye-btn" onclick="event.stopPropagation();toggleCode(this)" title="Show code"><i data-lucide="eye"></i></button></td>
-      <td class="driver-phone hide-mobile">${d.phone || '—'}</td>
+      <td class="driver-name">${_esc(d.name)}</td>
+      <td class="driver-code"><span class="code-masked" data-code="${_escAttr(d.code)}">••••••</span> <button class="code-eye-btn" onclick="event.stopPropagation();toggleCode(this)" title="Show code"><i data-lucide="eye"></i></button></td>
+      <td class="driver-phone hide-mobile">${_esc(d.phone || '—')}</td>
       <td><span class="${statusClass}">${statusText}</span></td>
       <td class="driver-balance ${balClass}">${formatCurrency(d.balance)}</td>
     </tr>`;
@@ -2521,11 +2539,11 @@ window.showDriverProfile = async function(driverId) {
 
   document.getElementById('driver-profile-header').innerHTML = `
     <div class="profile-info">
-      <div class="profile-name">${driver.name}</div>
+      <div class="profile-name">${_esc(driver.name)}</div>
       <div class="profile-meta">
-        <span class="code-masked" data-code="${driver.code}">••••••</span>
+        <span class="code-masked" data-code="${_escAttr(driver.code)}">••••••</span>
         <button class="code-eye-btn" onclick="toggleCode(this)" title="Show code"><i data-lucide="eye"></i></button>
-        ${driver.phone ? `<span>${driver.phone}</span>` : ''}
+        ${driver.phone ? `<span>${_esc(driver.phone)}</span>` : ''}
         ${statusBadge}
       </div>
     </div>
@@ -2542,7 +2560,7 @@ window.showDriverProfile = async function(driverId) {
       return `<div class="balance-row" onclick="openOrderDetail('${o.id}')">
         <div class="balance-row-info">
           <span class="balance-row-date">${formatDate(o.submitted_at)} — #${o.order_number}</span>
-          <span class="balance-row-business">${o.business_name || (lang === 'es' ? 'Sin negocio' : 'No business')}</span>
+          <span class="balance-row-business">${_esc(o.business_name || (lang === 'es' ? 'Sin negocio' : 'No business'))}</span>
         </div>
         <div class="balance-row-amounts">
           <span class="balance-row-total">${lang === 'es' ? 'Total:' : 'Total:'} ${formatCurrency(o.total_amount)}</span>
@@ -2572,7 +2590,7 @@ window.showDriverProfile = async function(driverId) {
       return `<div class="order-card" onclick="openOrderDetail('${o.id}')">
         <div class="order-card-top">
           <div class="order-card-info">
-            <div class="order-card-driver">${o.business_name || (lang === 'es' ? 'Sin negocio' : 'No business')}</div>
+            <div class="order-card-driver">${_esc(o.business_name || (lang === 'es' ? 'Sin negocio' : 'No business'))}</div>
             <div class="order-card-meta">
               <span class="order-card-number">#${o.order_number}</span>
               <span class="order-card-time"><i data-lucide="clock" style="width:12px;height:12px"></i> ${formatTime(o.submitted_at)}</span>
@@ -4478,4 +4496,4 @@ async function _pmSeed() {
 
 /* ── Escape helpers (scoped to avoid conflicts) ── */
 function _esc(s)     { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function _escAttr(s) { return String(s||'').replace(/'/g,"\\'"); }
+function _escAttr(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }

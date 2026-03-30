@@ -12,16 +12,20 @@ webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
 
 const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') || 'https://ceciliabakery.com,https://www.ceciliabakery.com').split(',')
+
+const corsHeaders = (origin: string) => ({
+  'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+})
 
 serve(async (req) => {
+  const origin = req.headers.get('origin') || ''
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders(origin) })
   }
 
   try {
@@ -38,7 +42,7 @@ serve(async (req) => {
     // Only process driver_orders and orders tables
     if (table !== 'driver_orders' && table !== 'orders') {
       console.log(`Table "${table}" not relevant, skipping`)
-      return new Response('Not relevant', { status: 200, headers: corsHeaders })
+      return new Response('Not relevant', { status: 200, headers: corsHeaders(origin) })
     }
 
     // ── Idempotency guard ──
@@ -72,7 +76,7 @@ serve(async (req) => {
       if (existing && existing.length > 0) {
         console.log(`Idempotency: already processed ${eventKey} for ${recordId}, skipping`)
         return new Response(JSON.stringify({ skipped: true, reason: 'already_processed' }), {
-          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 200, headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' }
         })
       }
 
@@ -243,13 +247,13 @@ serve(async (req) => {
     console.log(`Done: sent=${sent}, failed=${failed}`)
     return new Response(JSON.stringify({ sent, failed }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' }
     })
   } catch (e) {
     console.error('Edge function error:', e)
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' }
     })
   }
 })

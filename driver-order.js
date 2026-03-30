@@ -43,8 +43,14 @@ let lang = localStorage.getItem('cecilia_lang') || 'en';
 let failedAttempts = parseInt(localStorage.getItem('cecilia_code_attempts') || '0');
 let lockoutUntil = parseInt(localStorage.getItem('cecilia_lockout_until') || '0');
 
+// Session timeout: 24 hours
+const DRIVER_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+
 // My Products — hidden product keys
 let hiddenProducts = new Set(JSON.parse(localStorage.getItem('cecilia_hidden_products') || '[]'));
+
+/* ── Escape helper for XSS prevention ── */
+function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 /* ═══════════════════════════════════
    SCREEN MANAGEMENT
@@ -143,7 +149,11 @@ async function handleLogin() {
     failedAttempts = 0;
     localStorage.setItem('cecilia_code_attempts', '0');
     currentDriver = data;
-    localStorage.setItem('cecilia_driver', JSON.stringify(data));
+    // Store session without the code, with a timestamp for expiry
+    const sessionData = { ...data };
+    delete sessionData.code;
+    sessionData._session_ts = Date.now();
+    localStorage.setItem('cecilia_driver', JSON.stringify(sessionData));
     if (data.language) { lang = data.language; localStorage.setItem('cecilia_lang', lang); }
     enterDashboard();
   } catch (e) {
@@ -319,12 +329,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check lockout
   if (Date.now() < lockoutUntil) startLockoutTimer();
 
-  // Auto-login if session exists
+  // Auto-login if session exists (with 24h expiry)
   const saved = localStorage.getItem('cecilia_driver');
   if (saved) {
     try {
-      currentDriver = JSON.parse(saved);
-      enterDashboard();
+      const parsed = JSON.parse(saved);
+      const sessionAge = Date.now() - (parsed._session_ts || 0);
+      if (sessionAge > DRIVER_SESSION_TTL_MS) {
+        // Session expired
+        localStorage.removeItem('cecilia_driver');
+      } else {
+        currentDriver = parsed;
+        enterDashboard();
+      }
     } catch (e) { localStorage.removeItem('cecilia_driver'); }
   }
 
@@ -1284,7 +1301,13 @@ function showToast(message, type = 'info') {
   const toast = document.createElement('div');
   toast.id = 'app-toast';
   toast.className = 'app-toast ' + type;
-  toast.innerHTML = `<span>${message}</span><button class="toast-close">✕</button>`;
+  const msgSpan = document.createElement('span');
+  msgSpan.textContent = message;
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'toast-close';
+  closeBtn.textContent = '✕';
+  toast.appendChild(msgSpan);
+  toast.appendChild(closeBtn);
   document.body.appendChild(toast);
 
   // Trigger animation
@@ -1520,7 +1543,7 @@ function renderOrderCard(batch) {
   }
 
   // Business names
-  const bizNames = batch.map(o => o.business_name || (lang === 'es' ? 'Sin nombre' : 'No name'));
+  const bizNames = batch.map(o => _esc(o.business_name || (lang === 'es' ? 'Sin nombre' : 'No name')));
   const bizDisplay = isBatch ? bizNames.join(' · ') : bizNames[0];
 
   // Combined total
@@ -1652,14 +1675,14 @@ function renderOrderInDetail(idx) {
   // Meta
   const dateInfo = smartDateLabel(order);
   const timeInfo = smartTimeLabel(order);
-  const bizName = order.business_name || (lang === 'es' ? 'Sin nombre' : 'No name');
+  const bizName = _esc(order.business_name || (lang === 'es' ? 'Sin nombre' : 'No name'));
   let metaHtml = `
     <span><i data-lucide="store"></i>${bizName}</span>
     <span><i data-lucide="calendar"></i>${dateInfo.label}: ${dateInfo.value}</span>
     <span><i data-lucide="clock"></i>${timeInfo.label}: ${timeInfo.value}</span>
   `;
   if (order.driver_ref) {
-    metaHtml += `<span><i data-lucide="hash"></i>${lang === 'es' ? 'Ref' : 'Ref'}: ${order.driver_ref}</span>`;
+    metaHtml += `<span><i data-lucide="hash"></i>${lang === 'es' ? 'Ref' : 'Ref'}: ${_esc(order.driver_ref)}</span>`;
   }
   document.getElementById('order-detail-meta').innerHTML = batchNavHtml + editBannerHtml + `<div class="order-detail-meta-inner">${metaHtml}</div>`;
 
@@ -1714,7 +1737,7 @@ function renderOrderInDetail(idx) {
 
       itemsHtml += `
         <div class="order-detail-item">
-          <span class="order-detail-item-name">${cleanLabel}${isNT ? `<span class="no-ticket-tag">✕ ${lang === 'es' ? 'Sin Ticket' : 'No Ticket'}</span>` : ''}${adjHtml}</span>
+          <span class="order-detail-item-name">${_esc(cleanLabel)}${isNT ? `<span class="no-ticket-tag">✕ ${lang === 'es' ? 'Sin Ticket' : 'No Ticket'}</span>` : ''}${adjHtml}</span>
           <span class="order-detail-item-qty">${qtyDisplay}${showPrices ? ` · $${lineTotal.toFixed(2)}` : ''}</span>
         </div>`;
     });
@@ -1734,7 +1757,7 @@ function renderOrderInDetail(idx) {
   const notesEl = document.getElementById('order-detail-notes');
   if (order.notes) {
     notesEl.style.display = 'block';
-    notesEl.innerHTML = `<strong>${lang === 'es' ? 'Notas' : 'Notes'}</strong>${order.notes}`;
+    notesEl.innerHTML = `<strong>${lang === 'es' ? 'Notas' : 'Notes'}</strong>${_esc(order.notes)}`;
   } else {
     notesEl.style.display = 'none';
   }

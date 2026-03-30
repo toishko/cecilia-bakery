@@ -840,6 +840,9 @@
       applyTheme(saved || 'light');
     })();
 
+    /* ── Escape helper for XSS prevention ── */
+    function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
 
     const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
@@ -914,8 +917,8 @@
         html += `
           <div class="order-item">
             <div class="order-item-info">
-              <div class="order-item-name">${name}</div>
-              <div class="order-item-detail">Qty: ${qty}${size}</div>
+              <div class="order-item-name">${_esc(name)}</div>
+              <div class="order-item-detail">Qty: ${qty}${_esc(size)}</div>
             </div>
             <div class="order-item-price">${price > 0 ? '$' + lineTotal.toFixed(2) : '—'}</div>
           </div>
@@ -1180,7 +1183,7 @@
       const avatarEl = document.getElementById('user-avatar');
       if (avatarEl) {
         if (user.imageUrl) {
-          avatarEl.innerHTML = `<img src="${user.imageUrl}" alt="avatar" />`;
+          avatarEl.innerHTML = `<img src="${_esc(user.imageUrl)}" alt="avatar" />`;
         } else {
           const initials = (user.firstName || '').charAt(0).toUpperCase() || '?';
           avatarEl.textContent = initials;
