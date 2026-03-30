@@ -640,8 +640,8 @@ async function updateOnlineOrdersBadge() {
 
     if (!error && data) _cachedOnlineOrders = data;
 
-    // Badge counts UNSEEN active orders only
-    const unseenCount = _cachedOnlineOrders.filter(o => !isOnlineOrderSeen(o.id)).length;
+    // Badge counts ALL non-completed active orders
+    const activeCount = _cachedOnlineOrders.length;
 
     const badges = [
       document.getElementById('online-orders-badge'),
@@ -649,8 +649,8 @@ async function updateOnlineOrdersBadge() {
     ];
     badges.forEach(badge => {
       if (!badge) return;
-      if (unseenCount > 0) {
-        badge.textContent = unseenCount;
+      if (activeCount > 0) {
+        badge.textContent = activeCount;
         badge.style.display = 'inline-flex';
       } else {
         badge.style.display = 'none';
@@ -1117,15 +1117,15 @@ function renderIncomingOrders() {
 }
 
 function updateIncomingBadge() {
-  // Badge counts UNSEEN active driver orders only
-  const unseenCount = incomingOrders.filter(o =>
-    (o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent') && !isDriverOrderSeen(o.id)
+  // Badge counts ALL non-completed active driver orders
+  const activeCount = incomingOrders.filter(o =>
+    o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent'
   ).length;
   const badges = [document.getElementById('incoming-badge'), document.getElementById('incoming-badge-mobile')];
   badges.forEach(badge => {
     if (badge) {
-      badge.style.display = unseenCount > 0 ? 'inline' : 'none';
-      badge.textContent = unseenCount;
+      badge.style.display = activeCount > 0 ? 'inline' : 'none';
+      badge.textContent = activeCount;
     }
   });
 }
