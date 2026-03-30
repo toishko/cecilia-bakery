@@ -1068,11 +1068,11 @@
 
       try {
         // Step 1 — Tokenize card with Clover
-        const { token, errors } = await cloverTokenizer.createToken();
+        const tokenResult = await cloverTokenizer.createToken();
 
         // Check for card errors
-        if (errors) {
-          const cardErrors = Object.values(errors).filter(Boolean);
+        if (tokenResult.errors) {
+          const cardErrors = Object.values(tokenResult.errors).filter(Boolean);
           if (cardErrors.length > 0) {
             showState('checkout');
             if (btn) btn.disabled = false;
@@ -1081,7 +1081,9 @@
           }
         }
 
-        if (!token || !token.id) {
+        // result.token is a string like "clv_1ABCDefg..."
+        const token = tokenResult.token;
+        if (!token) {
           showState('checkout');
           if (btn) btn.disabled = false;
           if (errorEl) errorEl.textContent = 'Could not process your card. Please try again.';
@@ -1111,7 +1113,7 @@
           pickup_date: pickupDate,
           pickup_time: pickupTime,
           order_note: note,
-          clover_token: token.id,
+          clover_token: token,
           source: 'website',
           timestamp: new Date().toISOString(),
         };
