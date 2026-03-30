@@ -188,6 +188,7 @@ async function showSection(name) {
   }
   if (name === 'settings') loadActiveInvites();
   if (name === 'products') loadProductManager();
+  if (name === 'staff') loadStaffSection();
 }
 
 /* Exposed for pull-to-refresh.js — reloads the current active section */
@@ -200,6 +201,7 @@ window.__adminRefresh = async function () {
     history:   () => loadHistoryOrders(true),
     products:  loadProductManager,
     settings:  () => {},
+    staff:     loadStaffSection,
   };
   const fn = fnMap[currentSection];
   if (fn) await fn();
@@ -4499,6 +4501,238 @@ async function _pmSeed() {
   showToast(`Done! ${toInsert.length} added, ${skipped} skipped`, 'success');
   await _pmFetch();
 }
+
+/* ═══════════════════════════════════════════════════════════
+   STAFF MANAGEMENT — Section: "staff"
+   ═══════════════════════════════════════════════════════════ */
+
+async function loadStaffSection() {
+  if (!sb || !currentUser) return;
+  await Promise.all([loadPendingStaff(), loadCurrentStaff()]);
+  lucide.createIcons();
+}
+
+/* ── Pending Users (role = 'customer', has clerk_user_id, last 30 days) ── */
+async function loadPendingStaff() {
+  const container = document.getElementById('pending-staff-list');
+  const badge = document.getElementById('pending-staff-badge');
+  if (!container) return;
+
+  try {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: pending, error } = await sb
+      .from('profiles')
+      .select('id, clerk_user_id, email, created_at, role')
+      .eq('role', 'customer')
+      .not('clerk_user_id', 'is', null)
+      .gte('created_at', thirtyDaysAgo)
+      .order('created_at', { ascending: false });
+
+    if (error) { console.error('Pending staff error:', error); return; }
+
+    if (!pending || pending.length === 0) {
+      container.innerHTML = `<div class="empty-state" style="padding:20px" data-en="No pending users" data-es="No hay usuarios pendientes">${lang === 'es' ? 'No hay usuarios pendientes' : 'No pending users'}</div>`;
+      if (badge) badge.style.display = 'none';
+      return;
+    }
+
+    if (badge) {
+      badge.textContent = pending.length;
+      badge.style.display = 'inline-flex';
+    }
+
+    const headerEn = `<tr><th>Email</th><th>User ID</th><th>Signed Up</th><th>Actions</th></tr>`;
+    const headerEs = `<tr><th>Correo</th><th>ID de Usuario</th><th>Registrado</th><th>Acciones</th></tr>`;
+
+    const rows = pending.map(p => {
+      const email = p.email ? _esc(p.email) : `<span style="color:var(--tx-faint);font-style:italic">${lang === 'es' ? 'Sin correo' : 'No email'}</span>`;
+      const shortId = p.clerk_user_id ? _esc(p.clerk_user_id.slice(0, 20)) + '…' : '—';
+      const date = new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return `<tr>
+        <td class="staff-email-cell">${email}</td>
+        <td class="staff-id-cell">${shortId}</td>
+        <td>${date}</td>
+        <td class="staff-actions-cell">
+          <button class="staff-action-btn grant" onclick="grantStaffAccess('${_escAttr(p.clerk_user_id)}', 'staff')">
+            ${lang === 'es' ? 'Staff' : 'Grant Staff'}
+          </button>
+          <button class="staff-action-btn grant" onclick="grantStaffAccess('${_escAttr(p.clerk_user_id)}', 'admin')">
+            ${lang === 'es' ? 'Admin' : 'Grant Admin'}
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    container.innerHTML = `<table class="staff-table"><thead>${lang === 'es' ? headerEs : headerEn}</thead><tbody>${rows}</tbody></table>`;
+  } catch (e) { console.error('Pending staff load error:', e); }
+}
+
+/* ── Current Staff Members (role in ['staff', 'admin'], has clerk_user_id) ── */
+async function loadCurrentStaff() {
+  const container = document.getElementById('current-staff-list');
+  if (!container) return;
+
+  try {
+    const { data: staff, error } = await sb
+      .from('profiles')
+      .select('id, clerk_user_id, email, role, created_at')
+      .in('role', ['staff', 'admin'])
+      .not('clerk_user_id', 'is', null)
+      .order('created_at', { ascending: false });
+
+    if (error) { console.error('Current staff error:', error); return; }
+
+    if (!staff || staff.length === 0) {
+      container.innerHTML = `<div class="empty-state" style="padding:20px" data-en="No staff members yet" data-es="Aún no hay miembros del personal">${lang === 'es' ? 'Aún no hay miembros del personal' : 'No staff members yet'}</div>`;
+      return;
+    }
+
+    const headerEn = `<tr><th>Email</th><th>User ID</th><th>Role</th><th>Added</th><th>Actions</th></tr>`;
+    const headerEs = `<tr><th>Correo</th><th>ID de Usuario</th><th>Rol</th><th>Agregado</th><th>Acciones</th></tr>`;
+
+    const rows = staff.map(s => {
+      const email = s.email ? _esc(s.email) : `<span style="color:var(--tx-faint);font-style:italic">${lang === 'es' ? 'Sin correo' : 'No email'}</span>`;
+      const shortId = s.clerk_user_id ? _esc(s.clerk_user_id.slice(0, 20)) + '…' : '—';
+      const roleBadge = s.role === 'admin'
+        ? `<span class="staff-role-badge role-admin">Admin</span>`
+        : `<span class="staff-role-badge role-staff">Staff</span>`;
+      const date = new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return `<tr>
+        <td class="staff-email-cell">${email}</td>
+        <td class="staff-id-cell">${shortId}</td>
+        <td>${roleBadge}</td>
+        <td>${date}</td>
+        <td>
+          <button class="staff-action-btn revoke" onclick="revokeStaffAccess('${_escAttr(s.clerk_user_id)}')">
+            ${lang === 'es' ? 'Revocar' : 'Remove Access'}
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    container.innerHTML = `<table class="staff-table"><thead>${lang === 'es' ? headerEs : headerEn}</thead><tbody>${rows}</tbody></table>`;
+  } catch (e) { console.error('Current staff load error:', e); }
+}
+
+/* ── Grant Access by Email ── */
+window.grantStaffByEmail = async function() {
+  if (!sb) return;
+  const emailInput = document.getElementById('staff-email-input');
+  const roleSelect = document.getElementById('staff-role-select');
+  const email = emailInput.value.trim().toLowerCase();
+  const newRole = roleSelect.value;
+
+  if (!email) {
+    showToast(lang === 'es' ? 'Ingresa un correo electrónico' : 'Enter an email address', 'error');
+    return;
+  }
+
+  try {
+    // Find profile by email
+    const { data: profiles, error } = await sb
+      .from('profiles')
+      .select('id, clerk_user_id, email, role')
+      .ilike('email', email)
+      .limit(1);
+
+    if (error) throw error;
+
+    if (!profiles || profiles.length === 0) {
+      showToast(
+        lang === 'es'
+          ? 'No se encontró cuenta. Pídeles que inicien sesión en ceciliabakery.com/staff primero.'
+          : 'No account found. Ask them to sign in to ceciliabakery.com/staff first.',
+        'error'
+      );
+      return;
+    }
+
+    const profile = profiles[0];
+    const { error: updateErr } = await sb
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('clerk_user_id', profile.clerk_user_id);
+
+    if (updateErr) throw updateErr;
+
+    emailInput.value = '';
+    showToast(
+      lang === 'es'
+        ? `Acceso de ${newRole} concedido a ${_esc(email)}`
+        : `${newRole.charAt(0).toUpperCase() + newRole.slice(1)} access granted to ${_esc(email)}`,
+      'success'
+    );
+    await loadStaffSection();
+  } catch (e) {
+    console.error('Grant staff error:', e);
+    showToast(lang === 'es' ? 'Error al conceder acceso' : 'Error granting access', 'error');
+  }
+};
+
+/* ── Grant Access by Clerk User ID (from pending list) ── */
+window.grantStaffAccess = async function(clerkUserId, newRole) {
+  if (!sb || !clerkUserId) return;
+  try {
+    const { error } = await sb
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('clerk_user_id', clerkUserId);
+
+    if (error) throw error;
+
+    showToast(
+      lang === 'es'
+        ? `Acceso de ${newRole} concedido`
+        : `${newRole.charAt(0).toUpperCase() + newRole.slice(1)} access granted`,
+      'success'
+    );
+    await loadStaffSection();
+  } catch (e) {
+    console.error('Grant access error:', e);
+    showToast(lang === 'es' ? 'Error al conceder acceso' : 'Error granting access', 'error');
+  }
+};
+
+/* ── Revoke Access (set role back to 'customer') ── */
+window.revokeStaffAccess = async function(clerkUserId) {
+  if (!sb || !clerkUserId) return;
+
+  const confirmed = await Swal.fire({
+    title: lang === 'es' ? '¿Revocar acceso?' : 'Revoke access?',
+    text: lang === 'es' ? 'Este usuario perderá acceso al portal de personal.' : 'This user will lose access to the staff portal.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: lang === 'es' ? 'Sí, revocar' : 'Yes, revoke',
+    cancelButtonText: lang === 'es' ? 'Cancelar' : 'Cancel',
+    confirmButtonColor: '#C8102E',
+  });
+
+  if (!confirmed.isConfirmed) return;
+
+  try {
+    const { error } = await sb
+      .from('profiles')
+      .update({ role: 'customer' })
+      .eq('clerk_user_id', clerkUserId);
+
+    if (error) throw error;
+
+    showToast(
+      lang === 'es' ? 'Acceso revocado' : 'Access revoked',
+      'success'
+    );
+    await loadStaffSection();
+  } catch (e) {
+    console.error('Revoke access error:', e);
+    showToast(lang === 'es' ? 'Error al revocar acceso' : 'Error revoking access', 'error');
+  }
+};
+
+// Wire up grant button
+document.getElementById('staff-grant-btn')?.addEventListener('click', () => grantStaffByEmail());
+document.getElementById('staff-email-input')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') grantStaffByEmail();
+});
 
 /* ── Escape helpers (scoped to avoid conflicts) ── */
 function _esc(s)     { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }

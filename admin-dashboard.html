@@ -121,6 +121,10 @@
         <i data-lucide="package"></i>
         <span data-en="Products" data-es="Productos">Products</span>
       </button>
+      <button class="sidebar-nav-item" data-section="staff">
+        <i data-lucide="users"></i>
+        <span data-en="Staff" data-es="Personal">Staff</span>
+      </button>
     </nav>
   </aside>
 
@@ -164,6 +168,10 @@
     <button class="mobile-nav-item" data-section="products">
       <i data-lucide="package"></i>
       <span data-en="Products" data-es="Productos">Products</span>
+    </button>
+    <button class="mobile-nav-item" data-section="staff">
+      <i data-lucide="users"></i>
+      <span data-en="Staff" data-es="Personal">Staff</span>
     </button>
   </nav>
 
@@ -455,6 +463,48 @@
     <!-- ── PRODUCTS ── -->
     <div id="section-products" class="dash-section" style="display:none"></div>
 
+    <!-- ── STAFF MANAGEMENT ── -->
+    <div id="section-staff" class="dash-section" style="display:none">
+      <h2 class="page-title" data-en="Staff Management" data-es="Gestión de Personal">Staff Management</h2>
+
+      <!-- Grant Staff Access -->
+      <div class="settings-group" style="margin-bottom:24px">
+        <h3 class="settings-section-title" data-en="Grant Staff Access" data-es="Conceder Acceso de Personal">
+          <i data-lucide="user-plus" style="width:18px;height:18px"></i> Grant Staff Access
+        </h3>
+        <p class="invite-desc" data-en="Ask the staff member to go to ceciliabakery.com/staff and sign in with Google or email first. Once they've signed in, their email will appear in the Pending Users list below." data-es="Pide al miembro del personal que vaya a ceciliabakery.com/staff e inicie sesión con Google o email primero. Una vez que inicie sesión, su correo aparecerá en la lista de Usuarios Pendientes abajo.">Ask the staff member to go to ceciliabakery.com/staff and sign in with Google or email first. Once they've signed in, their email will appear in the Pending Users list below.</p>
+        <div class="staff-grant-form">
+          <input type="email" id="staff-email-input" class="login-input" placeholder="staff@email.com" data-en-placeholder="staff@email.com" data-es-placeholder="personal@email.com" style="flex:1;min-width:0">
+          <select id="staff-role-select" class="login-input" style="width:auto;min-width:100px">
+            <option value="staff" data-en="Staff" data-es="Personal">Staff</option>
+            <option value="admin" data-en="Admin" data-es="Admin">Admin</option>
+          </select>
+          <button class="invite-gen-btn" id="staff-grant-btn" style="white-space:nowrap">
+            <i data-lucide="shield-check" style="width:16px;height:16px"></i>
+            <span data-en="Grant Access" data-es="Conceder Acceso">Grant Access</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Pending Users -->
+      <div class="settings-group" style="margin-bottom:24px">
+        <h3 class="settings-section-title" data-en="Pending Users" data-es="Usuarios Pendientes">
+          <i data-lucide="clock" style="width:18px;height:18px"></i> Pending Users
+          <span class="nav-badge" id="pending-staff-badge" style="display:none;margin-left:8px">0</span>
+        </h3>
+        <p class="invite-desc" style="margin-bottom:12px" data-en="People who signed in at ceciliabakery.com/staff in the last 30 days but haven't been approved yet." data-es="Personas que iniciaron sesión en ceciliabakery.com/staff en los últimos 30 días pero aún no han sido aprobadas.">People who signed in at ceciliabakery.com/staff in the last 30 days but haven't been approved yet.</p>
+        <div id="pending-staff-list"></div>
+      </div>
+
+      <!-- Current Staff Members -->
+      <div class="settings-group">
+        <h3 class="settings-section-title" data-en="Current Staff Members" data-es="Miembros Actuales del Personal">
+          <i data-lucide="shield" style="width:18px;height:18px"></i> Current Staff Members
+        </h3>
+        <div id="current-staff-list"></div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -533,6 +583,119 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
+}
+/* Staff Management */
+.staff-grant-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.staff-grant-form .login-input {
+  padding: 10px 14px;
+  border: 1px solid var(--bd-input, rgba(200,16,46,.25));
+  border-radius: 8px;
+  background: var(--bg-input, #fff);
+  color: var(--tx, #18080D);
+  font-family: 'Outfit', sans-serif;
+  font-size: .85rem;
+}
+.staff-grant-form .login-input:focus {
+  outline: none;
+  border-color: var(--red, #C8102E);
+}
+.staff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .85rem;
+}
+.staff-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--tx-muted, #6B5057);
+  border-bottom: 2px solid var(--bd, rgba(200,16,46,.22));
+}
+.staff-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--bd, rgba(200,16,46,.22));
+  vertical-align: middle;
+}
+.staff-table tr:last-child td { border-bottom: none; }
+.staff-table .staff-email-cell {
+  font-weight: 500;
+  color: var(--tx, #18080D);
+}
+.staff-table .staff-id-cell {
+  font-family: monospace;
+  font-size: .78rem;
+  color: var(--tx-muted, #6B5057);
+}
+.staff-role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  font-size: .7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  border-radius: 20px;
+}
+.staff-role-badge.role-staff {
+  background: rgba(0, 45, 98, .1);
+  color: var(--blue, #002D62);
+}
+.staff-role-badge.role-admin {
+  background: rgba(200, 16, 46, .1);
+  color: var(--red, #C8102E);
+}
+.staff-action-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--bd, rgba(200,16,46,.22));
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tx-muted, #6B5057);
+  font-family: 'Outfit', sans-serif;
+  font-size: .78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+}
+.staff-action-btn:hover {
+  border-color: var(--red, #C8102E);
+  color: var(--red, #C8102E);
+}
+.staff-action-btn.grant {
+  border-color: var(--green, #1B7A4A);
+  color: var(--green, #1B7A4A);
+}
+.staff-action-btn.grant:hover {
+  background: rgba(27, 122, 74, .08);
+}
+.staff-action-btn.revoke {
+  border-color: var(--red, #C8102E);
+  color: var(--red, #C8102E);
+}
+.staff-action-btn.revoke:hover {
+  background: rgba(200, 16, 46, .06);
+}
+.staff-actions-cell {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .staff-table th:nth-child(3),
+  .staff-table td:nth-child(3) { display: none; }
+  .staff-grant-form { flex-direction: column; }
+  .staff-grant-form .login-input,
+  .staff-grant-form select,
+  .staff-grant-form button { width: 100%; }
 }
 </style>
 <script>

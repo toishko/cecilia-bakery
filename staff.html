@@ -1235,25 +1235,57 @@
           if (!user) {
             showState('signin');
           } else {
-            // Check role from Clerk's public metadata or unsafe metadata
-            // Clerk stores app_metadata in publicMetadata for frontend access
+            // Upsert profile with email so admin can see it in staff management
+            try {
+              const sb = await getSupabaseClient();
+              if (sb) {
+                const email = user.primaryEmailAddress?.emailAddress || '';
+                // Check existing profile for role
+                const { data: existing } = await sb
+                  .from('profiles')
+                  .select('role')
+                  .eq('clerk_user_id', user.id)
+                  .maybeSingle();
+
+                const existingRole = existing?.role || 'customer';
+
+                await sb.from('profiles').upsert({
+                  clerk_user_id: user.id,
+                  email: email,
+                  role: existingRole
+                }, { onConflict: 'clerk_user_id' });
+
+                // Use profiles.role for access control
+                if (existingRole !== 'admin' && existingRole !== 'staff') {
+                  showState('denied');
+                  return;
+                }
+              }
+            } catch (profileErr) {
+              console.warn('Profile upsert/check failed:', profileErr);
+            }
+
+            // Fallback: check Clerk metadata if profiles check didn't deny
             const role = user.publicMetadata?.role
               || user.unsafeMetadata?.role
               || '';
 
-            if (role !== 'admin' && role !== 'staff') {
-              showState('denied');
-            } else {
-              currentUser = user;
-              showState('dashboard');
-              populateUserInfo(user);
-              // Load data in parallel
-              await Promise.all([
-                loadDriversCache(),
-                loadBoxPresets()
-              ]);
-              await loadOrders();
-            }
+            // If we already returned via 'denied' above, this won't run.
+            // If profiles check succeeded (returned early), this also won't run.
+            // This block only runs if the profiles upsert block succeeded 
+            // and the role WAS admin/staff, OR if the profiles check failed entirely.
+            const stateEl = document.querySelector('.state-panel.active');
+            if (stateEl && stateEl.id === 'state-denied') return; // Already denied
+
+            currentUser = user;
+            showState('dashboard');
+            populateUserInfo(user);
+            // Load data in parallel
+            await Promise.all([
+              loadDriversCache(),
+              loadBoxPresets()
+            ]);
+            await loadOrders();
           }
         } else {
           console.warn('Clerk not available');
