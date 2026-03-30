@@ -227,6 +227,13 @@ CREATE POLICY "Push subs: delete own"
   ON push_subscriptions FOR DELETE
   USING (true);
 
+-- Allow updating subscriptions (needed for upsert)
+DROP POLICY IF EXISTS "Push subs: update own" ON push_subscriptions;
+CREATE POLICY "Push subs: update own"
+  ON push_subscriptions FOR UPDATE
+  USING (true)
+  WITH CHECK (true);
+
 -- NOTE: In an ideal setup, push_subscriptions would be locked down further.
 -- Since drivers don't use Supabase Auth, we can't enforce user_id matching
 -- via auth.uid(). The Edge Function uses the service_role key which bypasses RLS.
