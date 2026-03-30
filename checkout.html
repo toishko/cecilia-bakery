@@ -1161,10 +1161,12 @@
         showState('checkout');
         if (btn) btn.disabled = false;
         if (errorEl) {
-          if (err.message?.includes('fetch') || err.message?.includes('network')) {
+          if (err.message?.includes('fetch') || err.message?.includes('network') || err.message?.includes('Failed to fetch')) {
             errorEl.textContent = 'Connection error. Please check your internet and try again.';
+          } else if (err.message?.includes('Server error')) {
+            errorEl.textContent = 'Server error — ' + err.message + '. Please try again later.';
           } else {
-            errorEl.textContent = 'Something went wrong. Please try again.';
+            errorEl.textContent = 'Something went wrong: ' + (err.message || 'Unknown error');
           }
         }
       }
