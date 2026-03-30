@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Staff Portal — Cecilia Bakery</title>
+  <meta name="description" content="Cecilia Bakery staff portal for the packaging team. View driver orders and calculate box quantities." />
+  <link rel="manifest" href="/manifest-website.json">
+  <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E0507" media="(prefers-color-scheme: dark)">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cecilia">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload"
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+    as="style">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    (function () {
+      const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
+      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
+      window.__SUPABASE_URL = SUPABASE_URL;
+      window.__SUPABASE_KEY = SUPABASE_KEY;
+    })();
+
+    // Authenticated Supabase client using Clerk JWT (singleton — created once, reused)
+    let _cachedSupabaseClient = null;
+    async function getSupabaseClient() {
+      if (_cachedSupabaseClient) return _cachedSupabaseClient;
+      if (!window.supabase) return null;
+      try {
+        const token = await window.Clerk?.session?.getToken({ template: 'supabase' });
+        if (token) {
+          _cachedSupabaseClient = window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY, {
+            global: {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            },
+            auth: {
+              persistSession: false,
+              autoRefreshToken: false,
+              detectSessionInUrl: false
+            }
+          });
+          return _cachedSupabaseClient;
+        }
+      } catch (e) {
+        console.warn('Clerk token fetch failed:', e);
+      }
+      // Fallback: unauthenticated client (also cached)
+      _cachedSupabaseClient = window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false
+        }
+      });
+      return _cachedSupabaseClient;
+    }
+  </script>
+
+  <!-- Clerk -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_cm9idXN0LXdpbGRjYXQtNzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://robust-wildcat-76.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+    type="text/javascript"
+  ></script>
+
+  <style>
+    /* ════════════════════════════════════════
+       DESIGN TOKENS — matches site-wide system
+       ════════════════════════════════════════ */
+    :root {
+      --red: #C8102E;
+      --red-dk: #9B0B22;
+      --red-lt: #E8213F;
+      --blue: #002D62;
+      --blue-lt: #1A4A8A;
+
+      --bg: #FAFAF8;
+      --bg-surface: #EDE0CC;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #FDFCFB;
+      --bg-input: #FFFFFF;
+      --bg-nav: rgba(250, 250, 248, .80);
+      --bg-overlay: rgba(0, 0, 0, .50);
+      --bg-footer: #18080D;
+
+      --tx: #18080D;
+      --tx-muted: #6B5057;
+      --tx-faint: #A08088;
+      --tx-on-footer: rgba(255, 255, 255, .52);
+      --tx-footer-head: rgba(255, 255, 255, .30);
+      --tx-footer-brand: rgba(255, 255, 255, .82);
+
+      --bd: rgba(200, 16, 46, .22);
+      --bd-hover: rgba(200, 16, 46, .55);
+      --bd-input: rgba(200, 16, 46, .25);
+      --bd-footer: rgba(255, 255, 255, .06);
+
+      --shadow-card: 0 4px 22px rgba(200, 16, 46, .09);
+      --shadow-nav: 0 1px 0 rgba(200, 16, 46, .10);
+
+      --lang-border: rgba(200, 16, 46, .20);
+      --lang-text: #6B5057;
+      --r: 3px;
+      --transition: color .25s ease, background .25s ease, border-color .25s ease;
+
+      --green: #1B7A4A;
+      --yellow: #D97706;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0E0507;
+      --bg-surface: #1F0D14;
+      --bg-card: #1E0D12;
+      --bg-card-hover: #26101A;
+      --bg-input: #1E0D12;
+      --bg-nav: rgba(10, 3, 5, .80);
+      --bg-overlay: rgba(0, 0, 0, .70);
+      --bg-footer: #080305;
+
+      --tx: #F2E8E4;
+      --tx-muted: #BFA0A8;
+      --tx-faint: #7A5560;
+
+      --bd: rgba(200, 16, 46, .35);
+      --bd-hover: rgba(200, 16, 46, .65);
+      --bd-input: rgba(200, 16, 46, .40);
+
+      --shadow-card: 0 4px 22px rgba(0, 0, 0, .40);
+      --shadow-nav: 0 1px 0 rgba(200, 16, 46, .12);
+
+      --lang-border: rgba(200, 16, 46, .25);
+      --lang-text: #BFA0A8;
+    }
+
+    /* ── Utilities ── */
+    .hidden { display: none !important; }
+
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--tx);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Background blob ── */
+    .bg-blob {
+      position: fixed; top: -120px; right: -80px; width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(200,16,46,.06) 0%, transparent 70%);
+      border-radius: 50%; pointer-events: none; z-index: -1;
+    }
+
+    /* ════════════════════════════════════════
+       NAV — matches account.html
+       ════════════════════════════════════════ */
+    #main-nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      background: var(--bg-nav);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--bd);
+      box-shadow: var(--shadow-nav);
+      transition: box-shadow .3s;
+    }
+    #main-nav.scrolled { box-shadow: 0 4px 20px rgba(200,16,46,.12); }
+    .nav-brand { display: inline-flex; align-items: center; text-decoration: none; }
+    .nav-logo-img { height: 32px; width: auto; }
+    .nav-right-group { display: flex; align-items: center; gap: 10px; }
+    .nav-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .85rem; color: var(--tx-muted); text-decoration: none;
+      transition: color .2s;
+    }
+    .nav-back:hover { color: var(--red); }
+
+    /* ── Theme Toggle Button ── */
+    .theme-btn {
+      border: none !important;
+      outline: none !important;
+      background: transparent !important;
+      cursor: pointer;
+      color: var(--lang-text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      border-radius: 50%;
+      transition: color .2s, background .2s;
+      flex-shrink: 0;
+    }
+    .theme-btn:hover {
+      background: rgba(200,16,46,0.08) !important;
+      color: var(--red);
+    }
+    .theme-btn:focus {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    /* ════════════════════════════════════════
+       STATE PANELS
+       ════════════════════════════════════════ */
+    .state-panel { display: none; }
+    .state-panel.active { display: block; }
+
+    .staff-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* ── Page header ── */
+    .staff-eyebrow {
+      display: flex; align-items: center; gap: 8px;
+      font-size: .75rem; font-weight: 500; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--red);
+      margin-bottom: 6px;
+    }
+    .staff-eyebrow::before {
+      content: ''; display: block; width: 28px; height: 2px;
+      background: var(--red); border-radius: 1px;
+    }
+    .staff-page-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem; font-weight: 700; line-height: 1.15;
+      color: var(--tx);
+    }
+    .staff-page-title em {
+      font-style: italic; color: var(--red);
+    }
+
+    /* ════════════════════════════════════════
+       STATE 1: SIGN-IN
+       ════════════════════════════════════════ */
+    /* Clerk focus overrides */
+    #state-signin:focus,
+    #state-signin *:focus {
+      outline: none !important;
+    }
+    #state-signin:focus-visible,
+    #state-signin *:focus-visible {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    .clerk-signin-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      padding: 40px 0;
+    }
+    .clerk-signin-heading {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .clerk-signin-heading .staff-eyebrow {
+      justify-content: center;
+    }
+    .clerk-signin-heading .staff-eyebrow::before {
+      display: none;
+    }
+    .clerk-signin-subtitle {
+      font-size: .9rem;
+      color: var(--tx-muted);
+      margin-top: 8px;
+    }
+    .clerk-mount-target {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    /* ════════════════════════════════════════
+       STATE 2: ACCESS DENIED
+       ════════════════════════════════════════ */
+    .access-denied-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      padding: 40px 0;
+      text-align: center;
+    }
+    .access-denied-icon {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: rgba(200, 16, 46, .08);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px;
+    }
+    .access-denied-icon svg {
+      width: 40px; height: 40px;
+      stroke: var(--red);
+      stroke-width: 2.5;
+    }
+    .access-denied-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem; font-weight: 700;
+      color: var(--tx);
+      margin-bottom: 12px;
+    }
+    .access-denied-msg {
+      font-size: .95rem;
+      color: var(--tx-muted);
+      max-width: 360px;
+      line-height: 1.5;
+      margin-bottom: 28px;
+    }
+    .access-denied-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 28px;
+      background: var(--red);
+      color: #fff;
+      border: none; border-radius: var(--r);
+      font-family: 'Outfit', sans-serif;
+      font-size: .9rem; font-weight: 500;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .access-denied-btn:hover { background: var(--red-dk); }
+
+    /* ════════════════════════════════════════
+       STATE 3: STAFF DASHBOARD
+       ════════════════════════════════════════ */
+
+    /* ── Dashboard Header ── */
+    .staff-header {
+      display: flex; align-items: center; gap: 16px;
+      padding: 24px; margin-bottom: 24px;
+      background: var(--bg-card); border: 1px solid var(--bd);
+      border-radius: 16px; box-shadow: var(--shadow-card);
+    }
+    .staff-avatar {
+      width: 52px; height: 52px; border-radius: 50%; background: var(--red);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 1.3rem; flex-shrink: 0;
+      overflow: hidden; border: 3px solid rgba(200,16,46,.25);
+    }
+    .staff-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .staff-user-info { flex: 1; min-width: 0; }
+    .staff-greeting {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.35rem; font-weight: 600; color: var(--tx); line-height: 1.2;
+    }
+    .staff-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px;
+      background: rgba(200, 16, 46, .08);
+      color: var(--red);
+      font-size: .7rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em;
+      border-radius: 20px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .staff-signout-btn {
+      padding: 8px 16px;
+      border: 1px solid var(--bd);
+      border-radius: var(--r);
+      background: transparent;
+      color: var(--tx-muted);
+      font-family: 'Outfit', sans-serif;
+      font-size: .8rem; font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .staff-signout-btn:hover {
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    /* ── Section Titles ── */
+    .section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem; font-weight: 600;
+      color: var(--tx);
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-title .count-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 24px; height: 24px; padding: 0 8px;
+      background: var(--red);
+      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      font-size: .75rem; font-weight: 600;
+      border-radius: 12px;
+    }
+
+    /* ── Action bar ── */
+    .action-bar {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .action-bar select,
+    .action-bar input[type="date"] {
+      padding: 8px 14px;
+      border: 1px solid var(--bd);
+      border-radius: var(--r);
+      background: var(--bg-input);
+      color: var(--tx);
+      font-family: 'Outfit', sans-serif;
+      font-size: .85rem;
+      transition: border-color .2s;
+    }
+    .action-bar select:focus,
+    .action-bar input[type="date"]:focus {
+      outline: none;
+      border-color: var(--red);
+    }
+    .refresh-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px;
+      border: 1px solid var(--bd);
+      border-radius: var(--r);
+      background: transparent;
+      color: var(--tx-muted);
+      font-family: 'Outfit', sans-serif;
+      font-size: .85rem; font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .refresh-btn:hover { border-color: var(--red); color: var(--red); }
+    .refresh-btn svg { width: 16px; height: 16px; }
+
+    /* ── Order Cards ── */
+    .order-list {
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .order-card {
+      background: var(--bg-card);
+      border: 1px solid var(--bd);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: var(--shadow-card);
+      transition: border-color .2s, box-shadow .2s;
+      cursor: pointer;
+    }
+    .order-card:hover {
+      border-color: var(--bd-hover);
+      box-shadow: 0 6px 28px rgba(200,16,46,.12);
+    }
+    .order-card-top {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; margin-bottom: 10px;
+    }
+    .order-driver-name {
+      font-weight: 600; font-size: 1rem; color: var(--tx);
+    }
+    .order-biz-name {
+      font-size: .85rem; color: var(--tx-muted); margin-top: 2px;
+    }
+    .order-status-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 12px;
+      font-size: .72rem; font-weight: 600;
+      border-radius: 20px;
+      text-transform: uppercase; letter-spacing: .04em;
+      white-space: nowrap;
+    }
+    .order-status-badge.pending {
+      background: rgba(217, 119, 6, .1);
+      color: var(--yellow);
+    }
+    .order-status-badge.confirmed {
+      background: rgba(27, 122, 74, .1);
+      color: var(--green);
+    }
+    .order-status-badge.sent {
+      background: rgba(0, 45, 98, .1);
+      color: var(--blue);
+    }
+    .order-items-summary {
+      font-size: .85rem; color: var(--tx-muted);
+      line-height: 1.5;
+    }
+    .order-meta-row {
+      display: flex; align-items: center; gap: 16px;
+      margin-top: 12px;
+      font-size: .8rem; color: var(--tx-faint);
+    }
+    .order-meta-row span {
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .order-meta-row svg {
+      width: 14px; height: 14px;
+    }
+
+    /* ── Empty State ── */
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--tx-muted);
+      font-size: .95rem;
+    }
+    .empty-state svg {
+      width: 48px; height: 48px;
+      stroke: var(--tx-faint);
+      margin-bottom: 16px;
+    }
+
+    /* ── Loading Spinner ── */
+    .loading-spinner {
+      display: flex; align-items: center; justify-content: center;
+      padding: 40px;
+    }
+    .loading-spinner::after {
+      content: '';
+      width: 32px; height: 32px;
+      border: 3px solid var(--bd);
+      border-top-color: var(--red);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ════════════════════════════════════════
+       BOX CALCULATOR MODAL
+       ════════════════════════════════════════ */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: var(--bg-overlay);
+      z-index: 200;
+      align-items: center; justify-content: center;
+      padding: 20px;
+      animation: fadeIn .2s ease;
+    }
+    .modal-overlay.open { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .modal-content {
+      background: var(--bg-card);
+      border: 1px solid var(--bd);
+      border-radius: 18px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+      width: 100%;
+      max-width: 560px;
+      max-height: 85vh;
+      overflow-y: auto;
+      animation: slideUp .25s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--bd);
+    }
+    .modal-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.3rem; font-weight: 600;
+      color: var(--tx);
+    }
+    .modal-close {
+      width: 32px; height: 32px;
+      border: none; border-radius: 50%;
+      background: rgba(200,16,46,.06);
+      color: var(--tx-muted);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .2s, color .2s;
+    }
+    .modal-close:hover { background: rgba(200,16,46,.15); color: var(--red); }
+    .modal-close svg { width: 18px; height: 18px; }
+    .modal-body { padding: 20px 24px 24px; }
+
+    /* ── Box Calculator Items ── */
+    .box-order-info {
+      margin-bottom: 20px;
+      padding: 14px 16px;
+      background: var(--bg-surface);
+      border-radius: 10px;
+    }
+    .box-order-info strong { font-weight: 600; color: var(--tx); }
+    .box-order-info span { font-size: .85rem; color: var(--tx-muted); }
+
+    .box-calc-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--bd);
+    }
+    .box-calc-item:last-child { border-bottom: none; }
+    .box-calc-item-info { flex: 1; min-width: 0; }
+    .box-calc-item-name {
+      font-weight: 500; font-size: .9rem; color: var(--tx);
+    }
+    .box-calc-item-qty {
+      font-size: .8rem; color: var(--tx-muted); margin-top: 2px;
+    }
+    .box-calc-result {
+      text-align: right;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .box-calc-boxes {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px;
+      background: rgba(27, 122, 74, .08);
+      color: var(--green);
+      font-size: .85rem; font-weight: 600;
+      border-radius: 20px;
+    }
+    .box-calc-boxes svg { width: 14px; height: 14px; }
+    .box-calc-preset {
+      font-size: .7rem; color: var(--tx-faint);
+    }
+
+    .box-calc-no-preset {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px;
+      background: rgba(217, 119, 6, .08);
+      color: var(--yellow);
+      font-size: .78rem; font-weight: 500;
+      border-radius: 16px;
+    }
+
+    .box-summary {
+      margin-top: 16px;
+      padding: 16px;
+      background: var(--bg-surface);
+      border-radius: 10px;
+    }
+    .box-summary-title {
+      font-weight: 600; font-size: .85rem; color: var(--tx);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .box-summary-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 0;
+      font-size: .85rem;
+      color: var(--tx-muted);
+    }
+    .box-summary-row .boxes-count {
+      font-weight: 600; color: var(--tx);
+    }
+
+    /* ════════════════════════════════════════
+       RESPONSIVE
+       ════════════════════════════════════════ */
+    @media (max-width: 600px) {
+      .staff-container { padding: 14px; }
+      .staff-header { padding: 16px; gap: 12px; }
+      .staff-greeting { font-size: 1.15rem; }
+      .staff-page-title { font-size: 1.6rem; }
+      .order-card { padding: 16px; }
+      .action-bar { gap: 8px; }
+      .modal-content { max-height: 90vh; border-radius: 14px; }
+      .staff-header { flex-wrap: wrap; }
+      .staff-signout-btn { width: 100%; text-align: center; margin-top: 8px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-blob"></div>
+
+  <!-- ═══ NAV ═══ -->
+  <nav id="main-nav">
+    <a href="/" class="nav-brand">
+      <img
+        src="assets/logo.png"
+        alt="Cecilia Bakery" class="nav-logo-img" />
+    </a>
+    <div class="nav-right-group">
+      <a href="/" class="nav-back">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back to Home
+      </a>
+      <button class="theme-btn" onclick="toggleTheme()" aria-label="Toggle theme">
+        <!-- Moon icon (shown in light mode) -->
+        <svg id="theme-icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+        <!-- Sun icon (shown in dark mode) -->
+        <svg id="theme-icon-sun" class="hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <div class="staff-container">
+
+    <!-- ── STATE 1: SIGN IN ── -->
+    <div id="state-signin" class="state-panel">
+      <div class="clerk-signin-wrapper">
+        <div class="clerk-signin-heading">
+          <div class="staff-eyebrow">Staff Portal</div>
+          <h1 class="staff-page-title">Sign in to <em>Cecilia Bakery</em></h1>
+          <p class="clerk-signin-subtitle">Cecilia Bakery packaging team access</p>
+        </div>
+        <div id="clerk-mount-target" class="clerk-mount-target"></div>
+      </div>
+    </div>
+
+    <!-- ── STATE 2: ACCESS DENIED ── -->
+    <div id="state-denied" class="state-panel">
+      <div class="access-denied-wrapper">
+        <div class="access-denied-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <h2 class="access-denied-title">Access Denied</h2>
+        <p class="access-denied-msg">Your account does not have staff access. Contact your administrator.</p>
+        <button class="access-denied-btn" id="denied-signout-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Sign Out
+        </button>
+      </div>
+    </div>
+
+    <!-- ── STATE 3: STAFF DASHBOARD ── -->
+    <div id="state-dashboard" class="state-panel">
+      <div class="staff-eyebrow">Staff Portal</div>
+      <h1 class="staff-page-title">Packaging <em>Dashboard</em></h1>
+
+      <!-- User Header -->
+      <div class="staff-header" id="staff-header">
+        <div class="staff-avatar" id="staff-avatar">?</div>
+        <div class="staff-user-info">
+          <div class="staff-greeting" id="staff-greeting">Hi!<span class="staff-badge">Staff Portal</span></div>
+        </div>
+        <button class="staff-signout-btn" id="staff-signout-btn">Sign Out</button>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="action-bar">
+        <select id="filter-status">
+          <option value="active">Active Orders</option>
+          <option value="pending">Pending</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="sent">Sent</option>
+          <option value="all">All Orders</option>
+        </select>
+        <input type="date" id="filter-date" />
+        <button class="refresh-btn" id="refresh-orders-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Refresh
+        </button>
+      </div>
+
+      <!-- Orders List -->
+      <div class="section-title">
+        Driver Orders
+        <span class="count-badge" id="orders-count">0</span>
+      </div>
+      <div id="orders-list" class="order-list">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ BOX CALCULATOR MODAL ═══ -->
+  <div class="modal-overlay" id="box-calc-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">📦 Box Calculator</h3>
+        <button class="modal-close" id="box-calc-close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" id="box-calc-body">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SCRIPTS ═══ -->
+  <script>
+    /* ════════════════════════════════════════
+       THEME TOGGLE — copied from account.html
+       ════════════════════════════════════════ */
+    const THEME_KEY = 'cb-theme';
+
+    function applyTheme(t) {
+      document.documentElement.setAttribute('data-theme', t);
+      const moonEl = document.getElementById('theme-icon-moon');
+      const sunEl = document.getElementById('theme-icon-sun');
+      if (t === 'dark') {
+        if (moonEl) moonEl.classList.add('hidden');
+        if (sunEl) sunEl.classList.remove('hidden');
+      } else {
+        if (moonEl) moonEl.classList.remove('hidden');
+        if (sunEl) sunEl.classList.add('hidden');
+      }
+      try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      applyTheme(current === 'light' ? 'dark' : 'light');
+    }
+
+    // Theme initialization IIFE
+    (function () {
+      let saved;
+      try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
+      applyTheme(saved || 'light');
+    })();
+
+    /* ── Escape helper for XSS prevention ── */
+    function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    /* ════════════════════════════════════════
+       SCROLL EFFECT ON NAV
+       ════════════════════════════════════════ */
+    window.addEventListener('scroll', () => {
+      const nav = document.getElementById('main-nav');
+      if (nav) nav.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    /* ════════════════════════════════════════
+       STATE MANAGEMENT
+       ════════════════════════════════════════ */
+    function showState(stateName) {
+      document.querySelectorAll('.state-panel').forEach(p => p.classList.remove('active'));
+
+      if (stateName === 'signin') {
+        const el = document.getElementById('state-signin');
+        if (el) el.classList.add('active');
+        const mount = document.getElementById('clerk-mount-target');
+        if (mount && window.Clerk) {
+          mount.innerHTML = '';
+          window.Clerk.mountSignIn(mount, {
+            afterSignInUrl: '/staff',
+            afterSignUpUrl: '/staff',
+          });
+        }
+        return;
+      }
+
+      const el = document.getElementById('state-' + stateName);
+      if (el) el.classList.add('active');
+    }
+
+    /* ════════════════════════════════════════
+       STAFF DATA & DASHBOARD
+       ════════════════════════════════════════ */
+    let cachedOrders = [];
+    let cachedDrivers = {};
+    let cachedBoxPresets = [];
+    let currentUser = null;
+
+    function populateUserInfo(user) {
+      const firstName = user.firstName || user.username || 'Staff';
+      const avatar = document.getElementById('staff-avatar');
+      const greeting = document.getElementById('staff-greeting');
+
+      if (user.imageUrl) {
+        avatar.innerHTML = `<img src="${_esc(user.imageUrl)}" alt="${_esc(firstName)}" />`;
+      } else {
+        avatar.textContent = firstName.charAt(0).toUpperCase();
+      }
+
+      greeting.innerHTML = `Hi, ${_esc(firstName)}<span class="staff-badge">Staff Portal</span>`;
+    }
+
+    /* ── Load box presets from Supabase ── */
+    async function loadBoxPresets() {
+      try {
+        const sb = await getSupabaseClient();
+        if (!sb) return;
+        const { data, error } = await sb.from('box_presets').select('*');
+        if (!error && data) cachedBoxPresets = data;
+      } catch (e) { console.warn('Box presets load error:', e); }
+    }
+
+    /* ── Load drivers cache for name resolution ── */
+    async function loadDriversCache() {
+      try {
+        const sb = await getSupabaseClient();
+        if (!sb) return;
+        const { data, error } = await sb.from('drivers').select('id, name');
+        if (!error && data) {
+          data.forEach(d => { cachedDrivers[d.id] = d.name; });
+        }
+      } catch (e) { console.warn('Drivers cache error:', e); }
+    }
+
+    function getDriverName(driverId) {
+      return cachedDrivers[driverId] || 'Unknown Driver';
+    }
+
+    /* ── Load driver orders ── */
+    async function loadOrders() {
+      const container = document.getElementById('orders-list');
+      const countBadge = document.getElementById('orders-count');
+
+      container.innerHTML = '<div class="loading-spinner"></div>';
+
+      try {
+        const sb = await getSupabaseClient();
+        if (!sb) {
+          container.innerHTML = '<div class="empty-state">Connection error. Please try again.</div>';
+          return;
+        }
+
+        // Build query based on filters
+        const statusFilter = document.getElementById('filter-status').value;
+        const dateFilter = document.getElementById('filter-date').value;
+
+        let query = sb
+          .from('driver_orders')
+          .select('*, driver_order_items(*)');
+
+        if (statusFilter === 'active') {
+          query = query.in('status', ['pending', 'confirmed', 'sent']);
+        } else if (statusFilter !== 'all') {
+          query = query.eq('status', statusFilter);
+        }
+
+        if (dateFilter) {
+          query = query.eq('pickup_date', dateFilter);
+        }
+
+        query = query.order('created_at', { ascending: false });
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error('Orders load error:', error);
+          container.innerHTML = '<div class="empty-state" style="color:var(--red)">Failed to load orders. Please try again.</div>';
+          return;
+        }
+
+        cachedOrders = data || [];
+        countBadge.textContent = cachedOrders.length;
+
+        if (cachedOrders.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1" y="3" width="15" height="13" rx="2"/>
+                <path d="M16 8h4l3 3v5a2 2 0 0 1-2 2h-1"/>
+                <circle cx="5.5" cy="18.5" r="2.5"/>
+                <circle cx="18.5" cy="18.5" r="2.5"/>
+              </svg>
+              <div>No orders found for the selected filters.</div>
+            </div>`;
+          return;
+        }
+
+        renderOrders(cachedOrders);
+      } catch (e) {
+        console.error('Orders fetch error:', e);
+        container.innerHTML = '<div class="empty-state" style="color:var(--red)">Error loading orders.</div>';
+      }
+    }
+
+    /* ── Render order cards ── */
+    function renderOrders(orders) {
+      const container = document.getElementById('orders-list');
+
+      const html = orders.map(order => {
+        const driverName = _esc(getDriverName(order.driver_id));
+        const bizName = _esc(order.business_name || 'No business name');
+        const status = order.status || 'pending';
+
+        // Build items summary (NO prices/totals/currency)
+        const items = order.driver_order_items || [];
+        let itemsSummary = '';
+        if (items.length > 0) {
+          const summaryParts = items.slice(0, 4).map(it =>
+            `${it.quantity}× ${_esc(it.product_label || it.product_key)}`
+          );
+          if (items.length > 4) summaryParts.push(`+${items.length - 4} more`);
+          itemsSummary = summaryParts.join(', ');
+        } else {
+          itemsSummary = 'No items';
+        }
+
+        // Date / time
+        let dateStr = '';
+        if (order.pickup_date) {
+          const d = new Date(order.pickup_date + 'T00:00:00');
+          dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+        let timeStr = '';
+        if (order.pickup_time) {
+          const [h, m] = order.pickup_time.split(':');
+          const hr = parseInt(h);
+          const period = hr >= 12 ? 'PM' : 'AM';
+          const hr12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
+          timeStr = `${hr12}:${m} ${period}`;
+        }
+
+        const created = new Date(order.created_at);
+        const createdStr = created.toLocaleDateString('en-US', {
+          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+
+        const statusLabels = {
+          pending: 'Pending',
+          confirmed: 'Confirmed',
+          sent: 'Sent',
+          cancelled: 'Cancelled'
+        };
+
+        return `
+          <div class="order-card" onclick="openBoxCalculator('${order.id}')">
+            <div class="order-card-top">
+              <div>
+                <div class="order-driver-name">${driverName}</div>
+                <div class="order-biz-name">${bizName}</div>
+              </div>
+              <span class="order-status-badge ${status}">${statusLabels[status] || status}</span>
+            </div>
+            <div class="order-items-summary">${itemsSummary}</div>
+            <div class="order-meta-row">
+              ${dateStr ? `<span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                ${dateStr}${timeStr ? ' · ' + timeStr : ''}
+              </span>` : ''}
+              <span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                ${createdStr}
+              </span>
+              ${order.notes ? `<span title="${_esc(order.notes)}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                Note
+              </span>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+
+      container.innerHTML = html;
+    }
+
+    /* ════════════════════════════════════════
+       BOX CALCULATOR
+       ════════════════════════════════════════ */
+    function openBoxCalculator(orderId) {
+      const order = cachedOrders.find(o => o.id === orderId);
+      if (!order) return;
+
+      const modal = document.getElementById('box-calc-modal');
+      const body = document.getElementById('box-calc-body');
+      const items = order.driver_order_items || [];
+
+      if (items.length === 0) {
+        body.innerHTML = '<div class="empty-state">No items in this order.</div>';
+        modal.classList.add('open');
+        return;
+      }
+
+      // Header info
+      const driverName = _esc(getDriverName(order.driver_id));
+      const bizName = _esc(order.business_name || 'No business name');
+
+      let html = `
+        <div class="box-order-info">
+          <strong>${driverName}</strong>
+          <span> — ${bizName}</span>
+        </div>`;
+
+      // Aggregate boxes per preset type
+      const boxTotals = {}; // key: "tag|label" → total boxes needed
+
+      html += items.map(item => {
+        const label = _esc(item.product_label || item.product_key);
+        const qty = item.quantity || 0;
+        const productKey = item.product_key || '';
+
+        // Strip suffixes like _nt, _inside, _top etc. to match product_tag
+        const cleanKey = productKey
+          .replace(/_nt$/, '')
+          .replace(/_(inside|top|inside_nt|top_nt)$/, '')
+          .replace(/_/g, '-'); // Convert underscores to hyphens to match tag format
+
+        // Find matching box preset
+        const presets = cachedBoxPresets.filter(p =>
+          cleanKey === p.product_tag ||
+          productKey === p.product_tag ||
+          cleanKey.includes(p.product_tag) ||
+          p.product_tag.includes(cleanKey)
+        );
+
+        if (presets.length > 0) {
+          // Use the first matching preset to calculate boxes
+          const preset = presets[0];
+          const boxesNeeded = Math.ceil(qty / preset.pieces_per_box);
+
+          // Track totals
+          const key = `${preset.product_tag}|${preset.label}`;
+          if (!boxTotals[key]) boxTotals[key] = { label: preset.label, tag: preset.product_tag, pieces: preset.pieces_per_box, boxes: 0 };
+          boxTotals[key].boxes += boxesNeeded;
+
+          return `
+            <div class="box-calc-item">
+              <div class="box-calc-item-info">
+                <div class="box-calc-item-name">${label}</div>
+                <div class="box-calc-item-qty">${qty} pieces</div>
+              </div>
+              <div class="box-calc-result">
+                <span class="box-calc-boxes">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                  ${boxesNeeded} box${boxesNeeded !== 1 ? 'es' : ''}
+                </span>
+                <span class="box-calc-preset">${_esc(preset.label)} (${preset.pieces_per_box}/box)</span>
+              </div>
+            </div>`;
+        }
+
+        return `
+          <div class="box-calc-item">
+            <div class="box-calc-item-info">
+              <div class="box-calc-item-name">${label}</div>
+              <div class="box-calc-item-qty">${qty} pieces</div>
+            </div>
+            <div class="box-calc-result">
+              <span class="box-calc-no-preset">No preset</span>
+            </div>
+          </div>`;
+      }).join('');
+
+      // Summary section
+      const totalKeys = Object.keys(boxTotals);
+      if (totalKeys.length > 0) {
+        const grandTotal = totalKeys.reduce((sum, k) => sum + boxTotals[k].boxes, 0);
+        html += `
+          <div class="box-summary">
+            <div class="box-summary-title">Total Boxes Needed</div>
+            ${totalKeys.map(k => {
+              const bt = boxTotals[k];
+              return `<div class="box-summary-row">
+                <span>${_esc(bt.label)} (${_esc(bt.tag)})</span>
+                <span class="boxes-count">${bt.boxes}</span>
+              </div>`;
+            }).join('')}
+            <div class="box-summary-row" style="border-top:1px solid var(--bd);padding-top:10px;margin-top:6px;">
+              <span style="font-weight:600;color:var(--tx)">Grand Total</span>
+              <span class="boxes-count" style="font-size:1.05rem">${grandTotal}</span>
+            </div>
+          </div>`;
+      }
+
+      body.innerHTML = html;
+      modal.classList.add('open');
+    }
+
+    function closeBoxCalculator() {
+      document.getElementById('box-calc-modal').classList.remove('open');
+    }
+
+    /* ════════════════════════════════════════
+       EVENT LISTENERS
+       ════════════════════════════════════════ */
+    document.getElementById('box-calc-close').addEventListener('click', closeBoxCalculator);
+    document.getElementById('box-calc-modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeBoxCalculator();
+    });
+
+    document.getElementById('refresh-orders-btn').addEventListener('click', loadOrders);
+    document.getElementById('filter-status').addEventListener('change', loadOrders);
+    document.getElementById('filter-date').addEventListener('change', loadOrders);
+
+    // Sign out from denied state
+    document.getElementById('denied-signout-btn')?.addEventListener('click', async () => {
+      if (window.Clerk) {
+        await window.Clerk.signOut();
+        showState('signin');
+      }
+    });
+
+    // Sign out from dashboard
+    document.getElementById('staff-signout-btn')?.addEventListener('click', async () => {
+      if (window.Clerk) {
+        await window.Clerk.signOut();
+        _cachedSupabaseClient = null;
+        cachedOrders = [];
+        showState('signin');
+      }
+    });
+
+    /* ════════════════════════════════════════
+       CLERK INIT
+       ════════════════════════════════════════ */
+    window.addEventListener('load', async () => {
+      try {
+        if (window.Clerk) {
+          await window.Clerk.load();
+
+          const user = window.Clerk.user;
+
+          if (!user) {
+            showState('signin');
+          } else {
+            // Check role from Clerk's public metadata or unsafe metadata
+            // Clerk stores app_metadata in publicMetadata for frontend access
+            const role = user.publicMetadata?.role
+              || user.unsafeMetadata?.role
+              || '';
+
+            if (role !== 'admin' && role !== 'staff') {
+              showState('denied');
+            } else {
+              currentUser = user;
+              showState('dashboard');
+              populateUserInfo(user);
+              // Load data in parallel
+              await Promise.all([
+                loadDriversCache(),
+                loadBoxPresets()
+              ]);
+              await loadOrders();
+            }
+          }
+        } else {
+          console.warn('Clerk not available');
+          showState('signin');
+        }
+      } catch (err) {
+        console.error('Clerk init error:', err);
+        showState('signin');
+      }
+    });
+  </script>
+</body>
+
+</html>

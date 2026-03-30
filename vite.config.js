@@ -31,6 +31,7 @@ export default defineConfig({
         refunds: resolve(__dirname, 'refunds.html'),
         account: resolve(__dirname, 'account.html'),
         productManager: resolve(__dirname, 'product-manager.html'),
+        staff: resolve(__dirname, 'staff.html'),
       },
     },
   },
