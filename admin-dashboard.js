@@ -274,6 +274,7 @@ function enterDashboard() {
   setupRealtime();
   setupOnlineOrdersRealtime();
   updateOnlineOrdersBadge();
+  loadIncomingOrders();
   requestNotifPermission();
   // Push opt-in: only auto-subscribe if permission already granted
   if ('Notification' in window && Notification.permission === 'granted') {
@@ -638,6 +639,7 @@ async function updateOnlineOrdersBadge() {
       .eq('source', 'website')
       .in('delivery_status', ['pending', 'preparing', 'ready']);
 
+    console.log('🔴 ONLINE BADGE: query returned', data?.length, 'orders, error:', error);
     if (!error && data) _cachedOnlineOrders = data;
 
     // Badge counts ALL non-completed active orders
