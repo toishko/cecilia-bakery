@@ -12,6 +12,14 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Clerk -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_cm9idXN0LXdpbGRjYXQtNzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://robust-wildcat-76.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+    type="text/javascript"
+  ></script>
   <link rel="stylesheet" href="/admin-dashboard.css">
   <!-- PWA -->
   <link rel="manifest" href="/manifest-admin.json">
@@ -26,7 +34,7 @@
 <body>
 <div class="bg-blob"></div>
 
-<!-- ═══════════════ SCREEN 1: ADMIN LOGIN ═══════════════ -->
+<!-- ═══════════════ SCREEN 1: ADMIN LOGIN (Clerk) ═══════════════ -->
 <div id="screen-login" class="screen login-screen active">
   <div class="login-card">
     <div class="corner-controls">
@@ -38,46 +46,8 @@
     <img src="assets/logo.png" alt="Cecilia Bakery" class="login-logo">
     <h1 class="login-title" data-en="Admin Portal" data-es="Portal Administrativo">Admin Portal</h1>
     <p class="login-subtitle" data-en="Sign in to manage orders" data-es="Inicia sesión para gestionar pedidos">Sign in to manage orders</p>
-    <div class="login-input-wrap">
-      <input type="email" id="admin-email" class="login-input" placeholder="Email"
-        data-en-placeholder="Email" data-es-placeholder="Correo electrónico" autocomplete="email">
-    </div>
-    <div class="login-input-wrap pw-wrap">
-      <input type="password" id="admin-password" class="login-input" placeholder="Password"
-        data-en-placeholder="Password" data-es-placeholder="Contraseña" autocomplete="current-password">
-      <button type="button" class="pw-eye" data-target="admin-password" aria-label="Toggle password">
-        <i data-lucide="eye-off" style="width:18px;height:18px"></i>
-      </button>
-    </div>
-    <label class="remember-me">
-      <input type="checkbox" id="remember-me-check">
-      <span data-en="Remember me" data-es="Recuérdame">Remember me</span>
-    </label>
-    <button id="login-btn" class="login-btn" data-en="Sign In" data-es="Iniciar Sesión">Sign In</button>
+    <div id="clerk-mount-target" style="width:100%;max-width:420px;margin:0 auto"></div>
     <div id="login-error" class="login-error"></div>
-    <div class="login-divider"><span data-en="or" data-es="o">or</span></div>
-    <button type="button" class="login-toggle-btn" id="toggle-register" data-en="Register with Invite Code" data-es="Registrarse con Código de Invitación">Register with Invite Code</button>
-    <!-- Register form (hidden by default) -->
-    <div id="register-form" style="display:none">
-      <div class="login-input-wrap">
-        <input type="email" id="reg-email" class="login-input" placeholder="Email"
-          data-en-placeholder="Email" data-es-placeholder="Correo electrónico" autocomplete="email">
-      </div>
-      <div class="login-input-wrap pw-wrap">
-        <input type="password" id="reg-password" class="login-input" placeholder="Password"
-          data-en-placeholder="Password" data-es-placeholder="Contraseña" autocomplete="new-password">
-        <button type="button" class="pw-eye" data-target="reg-password" aria-label="Toggle password">
-          <i data-lucide="eye-off" style="width:18px;height:18px"></i>
-        </button>
-      </div>
-      <div class="login-input-wrap">
-        <input type="text" id="reg-invite-code" class="login-input" placeholder="Invite Code"
-          data-en-placeholder="Invite Code" data-es-placeholder="Código de Invitación" autocomplete="off" style="text-transform:uppercase">
-      </div>
-      <button id="register-btn" class="login-btn" data-en="Create Account" data-es="Crear Cuenta">Create Account</button>
-      <div id="register-error" class="login-error"></div>
-      <button type="button" class="login-toggle-btn" id="toggle-login" data-en="← Back to Sign In" data-es="← Volver a Iniciar Sesión">← Back to Sign In</button>
-    </div>
   </div>
 </div>
 

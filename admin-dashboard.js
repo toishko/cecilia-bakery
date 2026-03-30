@@ -208,82 +208,92 @@ window.__adminRefresh = async function () {
 };
 
 /* ═══════════════════════════════════
-   AUTH — LOGIN
+   AUTH — CLERK-BASED LOGIN
    ═══════════════════════════════════ */
-async function handleLogin() {
-  const emailInput = document.getElementById('admin-email');
-  const passInput = document.getElementById('admin-password');
-  const errorEl = document.getElementById('login-error');
-  const btn = document.getElementById('login-btn');
+function showLoginScreen() {
+  showScreen('login');
+  mountClerkSignIn();
+}
 
-  const email = emailInput.value.trim();
-  const password = passInput.value;
+function mountClerkSignIn() {
+  const mount = document.getElementById('clerk-mount-target');
+  if (mount && window.Clerk) {
+    mount.innerHTML = '';
+    window.Clerk.mountSignIn(mount, {
+      afterSignInUrl: '/admin-dashboard',
+      afterSignUpUrl: '/admin-dashboard',
+    });
+  }
+}
 
-  if (!email || !password) {
-    errorEl.textContent = lang === 'es' ? 'Ingresa email y contraseña' : 'Enter email and password';
+async function handleClerkUser(user) {
+  if (!user) {
+    showLoginScreen();
     return;
   }
 
-  btn.disabled = true;
+  const errorEl = document.getElementById('login-error');
   errorEl.textContent = '';
 
   try {
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) {
-      errorEl.textContent = lang === 'es' ? 'Credenciales incorrectas' : 'Invalid credentials';
-      btn.disabled = false;
-      return;
-    }
+    const email = user.primaryEmailAddress?.emailAddress || '';
 
-    currentUser = data.user;
+    // Check existing profile for role
+    const { data: existing } = await sb
+      .from('profiles')
+      .select('role')
+      .eq('clerk_user_id', user.id)
+      .maybeSingle();
 
-    // Save email if Remember Me is checked
-    const remember = document.getElementById('remember-me-check');
-    if (remember && remember.checked) {
-      localStorage.setItem('cecilia_admin_email', email);
+    const existingRole = existing?.role || 'customer';
+
+    // Upsert profile to ensure email is stored
+    if (existing) {
+      await sb.from('profiles')
+        .update({ email: email })
+        .eq('clerk_user_id', user.id);
     } else {
-      localStorage.removeItem('cecilia_admin_email');
+      await sb.from('profiles')
+        .insert({ clerk_user_id: user.id, email: email, role: 'customer' });
     }
 
-    // Check role — app_metadata (secure, server-set) takes priority over user_metadata
-    const role = currentUser.app_metadata?.role || '';
-    if (role !== 'admin' && role !== 'staff') {
-      console.warn('User role not set to admin/staff. Role:', role);
-      const errorEl = document.getElementById('login-error');
-      errorEl.textContent = lang === 'es' ? 'Acceso no autorizado' : 'Unauthorized access';
-      await sb.auth.signOut();
-      currentUser = null;
-      btn.disabled = false;
+    // Role check — admin only
+    if (existingRole !== 'admin') {
+      _log('User role is not admin. Role:', existingRole);
+      errorEl.textContent = lang === 'es' ? 'Acceso denegado. Solo cuentas de administrador.' : 'Access denied. Admin accounts only.';
+      await window.Clerk.signOut();
+      showLoginScreen();
       return;
     }
 
-    enterDashboard();
+    currentUser = user;
+    enterDashboard(user);
   } catch (e) {
+    console.error('Auth check error:', e);
     errorEl.textContent = lang === 'es' ? 'Error de conexión' : 'Connection error';
-    console.error('Login error:', e);
   }
-  btn.disabled = false;
 }
 
 async function checkSession() {
   try {
-    const { data: { session } } = await sb.auth.getSession();
-    if (session && session.user) {
-      const role = session.user.app_metadata?.role || '';
-      if (role !== 'admin' && role !== 'staff') {
-        console.warn('Session user is not admin/staff. Signing out.');
-        await sb.auth.signOut();
-        return false;
-      }
-      currentUser = session.user;
-      enterDashboard();
+    if (!window.Clerk) {
+      _log('Clerk not available yet');
+      return false;
+    }
+    await window.Clerk.load();
+
+    const user = window.Clerk.user;
+    if (user) {
+      await handleClerkUser(user);
       return true;
+    } else {
+      showLoginScreen();
     }
   } catch (e) { console.error('Session check error:', e); }
   return false;
 }
 
-function enterDashboard() {
+function enterDashboard(user) {
   applyLang();
   showScreen('dashboard');
   const savedSection = sessionStorage.getItem('admin_section') || 'overview';
@@ -295,8 +305,9 @@ function enterDashboard() {
   loadIncomingOrders();
   requestNotifPermission();
   // Push opt-in: only auto-subscribe if permission already granted
+  const clerkUserId = user?.id || currentUser?.id || '';
   if ('Notification' in window && Notification.permission === 'granted') {
-    subscribeToPush('admin', currentUser.id);
+    subscribeToPush('admin', clerkUserId);
   } else if ('Notification' in window && Notification.permission === 'default'
              && !localStorage.getItem('cecilia_push_dismissed')) {
     const optIn = document.getElementById('push-opt-in');
@@ -306,26 +317,28 @@ function enterDashboard() {
 
   // Show admin email in settings
   const adminInfo = document.getElementById('admin-info');
-  if (adminInfo && currentUser) {
-    adminInfo.textContent = `${lang === 'es' ? 'Sesión:' : 'Signed in as:'} ${currentUser.email}`;
+  const displayEmail = user?.primaryEmailAddress?.emailAddress || currentUser?.primaryEmailAddress?.emailAddress || '';
+  if (adminInfo && displayEmail) {
+    adminInfo.textContent = `${lang === 'es' ? 'Sesión:' : 'Signed in as:'} ${displayEmail}`;
   }
 }
 
 async function handleLogout() {
   // Clean up push subscription on logout
-  if (currentUser) {
-    await unsubscribeFromPush(sb, 'admin', currentUser.id);
+  const clerkUserId = currentUser?.id || '';
+  if (clerkUserId) {
+    await unsubscribeFromPush(sb, 'admin', clerkUserId);
   }
 
   try {
-    await sb.auth.signOut();
+    if (window.Clerk) await window.Clerk.signOut();
   } catch (e) { console.error(e); }
   currentUser = null;
   if (realtimeChannel) {
     sb.removeChannel(realtimeChannel);
     realtimeChannel = null;
   }
-  showScreen('login');
+  showLoginScreen();
 }
 
 /* ═══════════════════════════════════
@@ -2699,62 +2712,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const notifToggle = document.getElementById('notification-toggle');
   if (notifToggle) notifToggle.checked = notificationsEnabled;
 
-  // ── Login ──
-  document.getElementById('login-btn').addEventListener('click', handleLogin);
-  document.getElementById('admin-email').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('admin-password').focus();
-  });
-  document.getElementById('admin-password').addEventListener('keydown', e => {
-    if (e.key === 'Enter') handleLogin();
-  });
-
-  // ── Login/Register toggle ──
-  document.getElementById('toggle-register').addEventListener('click', () => {
-    document.getElementById('register-form').style.display = 'block';
-    document.getElementById('toggle-register').style.display = 'none';
-    document.querySelector('.login-divider').style.display = 'none';
-    document.getElementById('login-btn').style.display = 'none';
-    document.querySelectorAll('#screen-login .login-input-wrap').forEach((el, i) => {
-      if (i < 2) el.style.display = 'none'; // hide email/password inputs
-    });
-  });
-  document.getElementById('toggle-login').addEventListener('click', () => {
-    document.getElementById('register-form').style.display = 'none';
-    document.getElementById('toggle-register').style.display = '';
-    document.querySelector('.login-divider').style.display = '';
-    document.getElementById('login-btn').style.display = '';
-    document.querySelectorAll('#screen-login .login-input-wrap').forEach(el => {
-      el.style.display = '';
-    });
-  });
-  document.getElementById('register-btn').addEventListener('click', handleRegister);
-
-  // ── Invite code generation ──
-  document.getElementById('generate-invite-btn').addEventListener('click', generateInviteCode);
-
-  // ── Password eye toggle ──
-  document.querySelectorAll('.pw-eye').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const input = document.getElementById(btn.dataset.target);
-      const isHidden = input.type === 'password';
-      input.type = isHidden ? 'text' : 'password';
-      btn.innerHTML = `<i data-lucide="${isHidden ? 'eye' : 'eye-off'}" style="width:18px;height:18px"></i>`;
-      lucide.createIcons();
-    });
-  });
-
-  // ── Remember Me ──
-  const savedEmail = localStorage.getItem('cecilia_admin_email');
-  const rememberCheck = document.getElementById('remember-me-check');
-  if (savedEmail) {
-    document.getElementById('admin-email').value = savedEmail;
-    rememberCheck.checked = true;
-  }
-
+  // ── Login screen controls ──
   document.getElementById('login-lang-btn').addEventListener('click', () => {
     setLang(lang === 'en' ? 'es' : 'en');
   });
   document.getElementById('login-theme-btn').addEventListener('click', toggleTheme);
+
+  // ── Invite code generation ──
+  document.getElementById('generate-invite-btn').addEventListener('click', generateInviteCode);
 
   // ── Sidebar nav ──
   document.querySelectorAll('.sidebar-nav-item').forEach(btn => {
@@ -2865,95 +2830,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       : (lang === 'es' ? 'Desactivado' : 'Disabled');
   });
 
-  // ── Check existing session ──
-  await checkSession();
+  // ── Clerk init: wait for Clerk script to load, then check session ──
+  window.addEventListener('load', async () => {
+    try {
+      await checkSession();
+    } catch (err) {
+      console.error('Clerk init error:', err);
+      showLoginScreen();
+    }
+  });
 });
 
 // ═══════════════════════════════════
 //  ADMIN INVITE CODE SYSTEM
 // ═══════════════════════════════════
 
+// handleRegister — DEPRECATED: Registration now handled through Clerk sign-in UI
+// The old Supabase email/password registration with invite codes has been removed.
+// Admin accounts are now managed via Clerk + profiles table role assignment.
 async function handleRegister() {
-  const email = document.getElementById('reg-email').value.trim();
-  const password = document.getElementById('reg-password').value;
-  const code = document.getElementById('reg-invite-code').value.trim().toUpperCase();
-  const errorEl = document.getElementById('register-error');
-  const btn = document.getElementById('register-btn');
-
-  if (!email || !password || !code) {
-    errorEl.textContent = lang === 'es' ? 'Completa todos los campos' : 'Fill in all fields';
-    return;
-  }
-  if (password.length < 6) {
-    errorEl.textContent = lang === 'es' ? 'La contraseña debe tener al menos 6 caracteres' : 'Password must be at least 6 characters';
-    return;
-  }
-
-  btn.disabled = true;
-  errorEl.textContent = '';
-
-  try {
-    // 1. Validate invite code
-    const { data: invite, error: invErr } = await sb
-      .from('admin_invite_codes')
-      .select('*')
-      .eq('code', code)
-      .eq('is_used', false)
-      .single();
-
-    if (invErr || !invite) {
-      errorEl.textContent = lang === 'es' ? 'Código de invitación no válido' : 'Invalid invite code';
-      btn.disabled = false;
-      return;
-    }
-
-    // Check expiry
-    if (new Date(invite.expires_at) < new Date()) {
-      errorEl.textContent = lang === 'es' ? 'Este código ha expirado' : 'This code has expired';
-      btn.disabled = false;
-      return;
-    }
-
-    // 2. Create user
-    const { data: signUpData, error: signUpErr } = await sb.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { role: 'admin' }
-      }
-    });
-
-    if (signUpErr) {
-      errorEl.textContent = signUpErr.message || (lang === 'es' ? 'Error al registrarse' : 'Registration error');
-      btn.disabled = false;
-      return;
-    }
-
-    // 3. Mark invite code as used
-    await sb.from('admin_invite_codes').update({
-      is_used: true,
-      used_by: email,
-      used_at: new Date().toISOString()
-    }).eq('id', invite.id);
-
-    // 4. Auto sign in
-    const { data: loginData, error: loginErr } = await sb.auth.signInWithPassword({ email, password });
-    if (loginErr) {
-      errorEl.textContent = lang === 'es' ? 'Cuenta creada. Inicia sesión manualmente.' : 'Account created. Please sign in manually.';
-      errorEl.style.color = 'var(--green)';
-      document.getElementById('toggle-login').click();
-      btn.disabled = false;
-      return;
-    }
-
-    currentUser = loginData.user;
-    enterDashboard();
-
-  } catch (e) {
-    errorEl.textContent = lang === 'es' ? 'Error de conexión' : 'Connection error';
-    console.error('Register error:', e);
-  }
-  btn.disabled = false;
+  // No-op: Clerk handles all sign-up/sign-in flows
+  _log('handleRegister called but Clerk handles auth now');
 }
 
 async function generateInviteCode() {
@@ -2972,7 +2869,7 @@ async function generateInviteCode() {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     const { error } = await sb.from('admin_invite_codes').insert({
       code,
-      created_by: currentUser.email,
+      created_by: currentUser.primaryEmailAddress?.emailAddress || '',
       expires_at: expiresAt
     });
 
