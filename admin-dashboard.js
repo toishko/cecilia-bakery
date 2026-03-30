@@ -49,6 +49,76 @@ const PAGE_SIZE = 50;
 let realtimeChannel = null;
 let driversCache = [];
 
+/* ── Seen / Unseen Order Tracking ── */
+const _SEEN_DRIVER_KEY = 'cecilia_seen_driver_orders';
+const _SEEN_ONLINE_KEY = 'cecilia_seen_online_orders';
+
+function _getSeenSet(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch { return new Set(); }
+}
+
+function _saveSeenSet(key, set) {
+  localStorage.setItem(key, JSON.stringify([...set]));
+}
+
+function markDriverOrderSeen(orderId) {
+  const seen = _getSeenSet(_SEEN_DRIVER_KEY);
+  if (seen.has(orderId)) return;
+  seen.add(orderId);
+  _saveSeenSet(_SEEN_DRIVER_KEY, seen);
+  updateIncomingBadge();
+  // Remove unseen animation from card
+  const card = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
+  if (card) card.classList.remove('order-unseen');
+  // Also update needs attention if on overview
+  if (currentSection === 'overview') renderNeedsAttention();
+}
+
+function markOnlineOrderSeen(orderId) {
+  const seen = _getSeenSet(_SEEN_ONLINE_KEY);
+  if (seen.has(orderId)) return;
+  seen.add(orderId);
+  _saveSeenSet(_SEEN_ONLINE_KEY, seen);
+  updateOnlineOrdersBadge();
+  // Remove unseen animation from card
+  const card = document.getElementById('online-order-' + orderId);
+  if (card) card.classList.remove('order-unseen');
+}
+
+function markAllOnlineOrdersSeen() {
+  const seen = _getSeenSet(_SEEN_ONLINE_KEY);
+  let changed = false;
+  _cachedOnlineOrders.forEach(o => {
+    if (!seen.has(o.id)) { seen.add(o.id); changed = true; }
+  });
+  if (changed) {
+    _saveSeenSet(_SEEN_ONLINE_KEY, seen);
+    updateOnlineOrdersBadge();
+    if (currentSection === 'overview') renderNeedsAttention();
+  }
+}
+
+function isDriverOrderSeen(orderId) {
+  if (_getSeenSet(_SEEN_DRIVER_KEY).has(orderId)) return true;
+  // If payment/status was already changed from defaults, admin already interacted
+  const order = incomingOrders.find(o => o.id === orderId);
+  if (order && (order.status !== 'pending' || order.payment_status !== 'not_paid')) return true;
+  return false;
+}
+
+function isOnlineOrderSeen(orderId) {
+  if (_getSeenSet(_SEEN_ONLINE_KEY).has(orderId)) return true;
+  // If order isn't in active cache, it's completed/cancelled = seen
+  const order = _cachedOnlineOrders.find(o => o.id === orderId);
+  if (!order) return true;
+  // If status changed from pending, admin already interacted
+  if (order.delivery_status !== 'pending') return true;
+  return false;
+}
+
 /* ═══════════════════════════════════
    SCREEN MANAGEMENT
    ═══════════════════════════════════ */
@@ -101,7 +171,7 @@ async function showSection(name) {
 
   // Load section data
   if (name === 'overview') loadOverview();
-  if (name === 'online-orders') loadOnlineOrders();
+  if (name === 'online-orders') { loadOnlineOrders(); markAllOnlineOrdersSeen(); }
   if (name === 'incoming') loadIncomingOrders();
   if (name === 'history') loadHistoryOrders(true);
   if (name === 'drivers') {
@@ -569,7 +639,9 @@ async function updateOnlineOrdersBadge() {
       .in('delivery_status', ['pending', 'preparing', 'ready']);
 
     if (!error && data) _cachedOnlineOrders = data;
-    const count = _cachedOnlineOrders.length;
+
+    // Badge counts UNSEEN active orders only
+    const unseenCount = _cachedOnlineOrders.filter(o => !isOnlineOrderSeen(o.id)).length;
 
     const badges = [
       document.getElementById('online-orders-badge'),
@@ -577,8 +649,8 @@ async function updateOnlineOrdersBadge() {
     ];
     badges.forEach(badge => {
       if (!badge) return;
-      if (count > 0) {
-        badge.textContent = count;
+      if (unseenCount > 0) {
+        badge.textContent = unseenCount;
         badge.style.display = 'inline-flex';
       } else {
         badge.style.display = 'none';
@@ -688,7 +760,7 @@ async function loadOnlineOrders() {
         : '';
 
       html += `
-        <div class="online-order-card" id="online-order-${order.id}" data-clerk-user-id="${order.clerk_user_id || ''}" data-customer-name="${_esc(order.customer_name || '')}">
+        <div class="online-order-card${isOnlineOrderSeen(order.id) ? '' : ' order-unseen'}" id="online-order-${order.id}" data-clerk-user-id="${order.clerk_user_id || ''}" data-customer-name="${_esc(order.customer_name || '')}">
           <div class="online-order-header">
             <div class="online-order-customer">
               <span class="online-order-name">${order.customer_name || 'Customer'}</span>
@@ -781,6 +853,8 @@ function setupOnlineOrdersRealtime() {
 
 async function updateOnlineOrderStatus(orderId, newStatus) {
   if (!sb) return;
+  // Mark as seen when admin interacts with status
+  markOnlineOrderSeen(orderId);
 
   try {
     const { error } = await sb
@@ -928,11 +1002,11 @@ function renderNeedsAttention() {
   const container = document.getElementById('needs-attention-list');
   if (!container) return;
 
-  // Combine pending driver orders + pending/preparing online orders
-  const pendingDriver = incomingOrders.filter(o => o.status === 'pending');
-  const pendingOnline = _cachedOnlineOrders.filter(o => o.delivery_status === 'pending' || o.delivery_status === 'preparing' || o.delivery_status === 'ready');
+  // Active driver orders (not completed/cancelled) + active online orders
+  const activeDriver = incomingOrders.filter(o => o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent');
+  const activeOnline = _cachedOnlineOrders.filter(o => o.delivery_status === 'pending' || o.delivery_status === 'preparing' || o.delivery_status === 'ready');
 
-  if (pendingDriver.length === 0 && pendingOnline.length === 0) {
+  if (activeDriver.length === 0 && activeOnline.length === 0) {
     container.innerHTML = `<div class="needs-attention-clear" data-en="All caught up ✓" data-es="Todo al día ✓">${lang === 'es' ? 'Todo al día ✓' : 'All caught up ✓'}</div>`;
     return;
   }
@@ -940,22 +1014,27 @@ function renderNeedsAttention() {
   let html = '';
 
   // ── Online Orders section ──
-  if (pendingOnline.length > 0) {
+  if (activeOnline.length > 0) {
     html += `<div class="needs-attention-group-header">
-      <span>🛒 ${lang === 'es' ? 'Pedidos en Línea' : 'Online Orders'} (${pendingOnline.length})</span>
+      <span>🛒 ${lang === 'es' ? 'Pedidos en Línea' : 'Online Orders'} (${activeOnline.length})</span>
       <button class="needs-attention-view-all-btn" onclick="showSection('online-orders')"
         data-en="View All" data-es="Ver Todos">${lang === 'es' ? 'Ver Todos' : 'View All'}</button>
     </div>`;
-    pendingOnline.forEach(order => {
+    activeOnline.forEach(order => {
       const name = order.customer_name || (lang === 'es' ? 'Cliente web' : 'Online Customer');
       const amount = formatCurrency(parseFloat(order.total_amount || 0));
-      const statusLabel = order.delivery_status === 'preparing'
-        ? (lang === 'es' ? 'Preparando' : 'Preparing')
-        : (lang === 'es' ? 'Pendiente' : 'Pending');
+      const statusLabels = {
+        pending:   lang === 'es' ? 'Pendiente'  : 'Pending',
+        preparing: lang === 'es' ? 'Preparando' : 'Preparing',
+        ready:     lang === 'es' ? 'Listo'      : 'Ready'
+      };
+      const statusLabel = statusLabels[order.delivery_status] || order.delivery_status;
+      const unseenClass = isOnlineOrderSeen(order.id) ? '' : ' order-unseen';
       html += `
-        <div class="needs-attention-item">
+        <div class="needs-attention-item${unseenClass}">
           <div class="needs-attention-info">
             <span class="needs-attention-name">${name}</span>
+            ${!isOnlineOrderSeen(order.id) ? `<span class="needs-attention-status na-status-new">${lang === 'es' ? 'Nuevo' : 'New'}</span>` : ''}
             <span class="needs-attention-status na-status-${order.delivery_status}">${statusLabel}</span>
           </div>
           <span class="needs-attention-amount">${amount}</span>
@@ -964,19 +1043,35 @@ function renderNeedsAttention() {
   }
 
   // ── Driver Orders section ──
-  if (pendingDriver.length > 0) {
+  if (activeDriver.length > 0) {
     html += `<div class="needs-attention-group-header">
-      <span>🚚 ${lang === 'es' ? 'Pedidos de Conductores' : 'Driver Orders'} (${pendingDriver.length})</span>
+      <span>🚚 ${lang === 'es' ? 'Pedidos de Conductores' : 'Driver Orders'} (${activeDriver.length})</span>
       <button class="needs-attention-view-all-btn" onclick="showSection('incoming')"
         data-en="View All" data-es="Ver Todos">${lang === 'es' ? 'Ver Todos' : 'View All'}</button>
     </div>`;
-    pendingDriver.forEach(order => {
+    activeDriver.forEach(order => {
       const name = order.business_name || getDriverName(order.driver_id);
       const amount = formatCurrency(parseFloat(order.total_amount || 0));
+      const statusLabels = {
+        pending:   lang === 'es' ? 'Pendiente'  : 'Pending',
+        confirmed: lang === 'es' ? 'Confirmado' : 'Confirmed',
+        sent:      lang === 'es' ? 'Enviado'    : 'Sent'
+      };
+      const statusLabel = statusLabels[order.status] || order.status;
+      const payLabels = {
+        not_paid: lang === 'es' ? 'No Pagado' : 'Not Paid',
+        partial:  lang === 'es' ? 'Parcial'   : 'Partial',
+        paid:     lang === 'es' ? 'Pagado'    : 'Paid'
+      };
+      const payLabel = payLabels[order.payment_status] || '';
+      const unseenClass = isDriverOrderSeen(order.id) ? '' : ' order-unseen';
       html += `
-        <div class="needs-attention-item">
+        <div class="needs-attention-item${unseenClass}">
           <div class="needs-attention-info">
             <span class="needs-attention-name">${name}</span>
+            ${!isDriverOrderSeen(order.id) ? `<span class="needs-attention-status na-status-new">${lang === 'es' ? 'Nuevo' : 'New'}</span>` : ''}
+            <span class="needs-attention-status na-status-${order.status}">${statusLabel}</span>
+            ${payLabel ? `<span class="needs-attention-status na-pay-${order.payment_status}">${payLabel}</span>` : ''}
           </div>
           <span class="needs-attention-amount">${amount}</span>
         </div>`;
@@ -1022,12 +1117,15 @@ function renderIncomingOrders() {
 }
 
 function updateIncomingBadge() {
-  const pendingCount = incomingOrders.filter(o => o.status === 'pending').length;
+  // Badge counts UNSEEN active driver orders only
+  const unseenCount = incomingOrders.filter(o =>
+    (o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent') && !isDriverOrderSeen(o.id)
+  ).length;
   const badges = [document.getElementById('incoming-badge'), document.getElementById('incoming-badge-mobile')];
   badges.forEach(badge => {
     if (badge) {
-      badge.style.display = pendingCount > 0 ? 'inline' : 'none';
-      badge.textContent = pendingCount;
+      badge.style.display = unseenCount > 0 ? 'inline' : 'none';
+      badge.textContent = unseenCount;
     }
   });
 }
@@ -1139,8 +1237,9 @@ function renderOrderCards(orders, containerId, showLive = false) {
       statusBadge = `<span class="badge badge-sent">${lang === 'es' ? 'Enviado' : 'Sent'}</span>`;
     }
 
+    const unseenClass = isDriverOrderSeen(order.id) ? '' : ' order-unseen';
     html += `
-      <div class="order-card" data-order-id="${order.id}" onclick="openOrderDetail('${order.id}')">
+      <div class="order-card${unseenClass}" data-order-id="${order.id}" onclick="openOrderDetail('${order.id}')">
         <div class="order-card-top">
           <div class="order-card-info">
             <div class="order-card-driver">${driverName}</div>
@@ -1227,6 +1326,8 @@ window.openOrderDetail = async function(orderId) {
     detailOrder = order;
     detailItems = items || [];
     detailTotalsVisible = true;
+    // Mark order as seen when admin opens detail
+    markDriverOrderSeen(orderId);
     renderOrderDetail();
     document.getElementById('detail-overlay').classList.add('open');
     // Lock body scroll (iOS-safe)
