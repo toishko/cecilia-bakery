@@ -575,7 +575,7 @@ async function updateOnlineOrdersBadge() {
       .from('orders')
       .select('id, customer_name, customer_phone, total_amount, delivery_status, created_at')
       .eq('source', 'website')
-      .in('delivery_status', ['pending', 'preparing']);
+      .in('delivery_status', ['pending', 'preparing', 'ready']);
 
     if (!error && data) _cachedOnlineOrders = data;
     const count = _cachedOnlineOrders.length;
@@ -881,18 +881,35 @@ async function loadOverview() {
   const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
   try {
-    // Today's orders
-    const { data: todayOrders, error: e1 } = await sb
+    // Today's driver orders
+    const { data: todayDriverOrders, error: e1 } = await sb
       .from('driver_orders')
       .select('id, total_amount, payment_status, payment_amount, driver_id, business_name, submitted_at, status, order_number')
       .gte('submitted_at', startOfDay.toISOString())
       .lte('submitted_at', endOfDay.toISOString());
 
-    if (!e1 && todayOrders) {
-      document.getElementById('stat-today-orders').textContent = todayOrders.length;
-      const revenue = todayOrders.reduce((sum, o) => sum + parseFloat(o.payment_amount || 0), 0);
-      document.getElementById('stat-today-revenue').textContent = formatCurrency(revenue);
-    }
+    // Today's online orders (website checkout)
+    const { data: todayOnlineOrders, error: e1b } = await sb
+      .from('orders')
+      .select('id, total_amount, delivery_status, created_at')
+      .eq('source', 'website')
+      .gte('created_at', startOfDay.toISOString())
+      .lte('created_at', endOfDay.toISOString());
+
+    const driverCount = (!e1 && todayDriverOrders) ? todayDriverOrders.length : 0;
+    const onlineCount = (!e1b && todayOnlineOrders) ? todayOnlineOrders.length : 0;
+    document.getElementById('stat-today-orders').textContent = driverCount + onlineCount;
+
+    // Revenue: driver payment_amount + completed online order totals
+    const driverRevenue = (!e1 && todayDriverOrders)
+      ? todayDriverOrders.reduce((sum, o) => sum + parseFloat(o.payment_amount || 0), 0)
+      : 0;
+    const onlineRevenue = (!e1b && todayOnlineOrders)
+      ? todayOnlineOrders
+          .filter(o => o.delivery_status === 'completed')
+          .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0)
+      : 0;
+    document.getElementById('stat-today-revenue').textContent = formatCurrency(driverRevenue + onlineRevenue);
 
     // Outstanding unpaid (all time)
     const { data: unpaidOrders, error: e2 } = await sb
@@ -922,7 +939,7 @@ function renderNeedsAttention() {
 
   // Combine pending driver orders + pending/preparing online orders
   const pendingDriver = incomingOrders.filter(o => o.status === 'pending');
-  const pendingOnline = _cachedOnlineOrders.filter(o => o.delivery_status === 'pending' || o.delivery_status === 'preparing');
+  const pendingOnline = _cachedOnlineOrders.filter(o => o.delivery_status === 'pending' || o.delivery_status === 'preparing' || o.delivery_status === 'ready');
 
   if (pendingDriver.length === 0 && pendingOnline.length === 0) {
     container.innerHTML = `<div class="needs-attention-clear" data-en="All caught up ✓" data-es="Todo al día ✓">${lang === 'es' ? 'Todo al día ✓' : 'All caught up ✓'}</div>`;
