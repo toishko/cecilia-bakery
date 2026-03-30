@@ -220,8 +220,8 @@ function mountClerkSignIn() {
   if (mount && window.Clerk) {
     mount.innerHTML = '';
     window.Clerk.mountSignIn(mount, {
-      afterSignInUrl: '/admin-dashboard',
-      afterSignUpUrl: '/admin-dashboard',
+      afterSignInUrl: '/admin-dashboard.html',
+      afterSignUpUrl: '/admin-dashboard.html',
     });
   }
 }
