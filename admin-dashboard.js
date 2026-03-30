@@ -1,6 +1,10 @@
 /* ═══════════════════════════════════
    SUPABASE INIT
    ═══════════════════════════════════ */
+// M1: Production-safe logger — silences debug logs on production
+const __DEV__ = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+const _log = __DEV__ ? console.log.bind(console) : () => {};
+
 const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
 import { subscribeToPush as _subscribeToPush, unsubscribeFromPush } from './push-utils.js';
@@ -18,7 +22,7 @@ async function triggerPushNotification(type, table, record, old_record) {
       body: JSON.stringify({ type, table, record, old_record })
     });
     const result = await res.json();
-    console.log('Push notification result:', result);
+    _log('Push notification result:', result);
   } catch (e) {
     console.warn('Push notification trigger failed:', e);
   }
@@ -29,7 +33,7 @@ try {
   const supabaseLib = window.supabase;
   if (supabaseLib && supabaseLib.createClient) {
     sb = supabaseLib.createClient(SUPABASE_URL, SUPABASE_KEY);
-    console.log('Admin: Supabase client initialized');
+    _log('Admin: Supabase client initialized');
   } else {
     console.error('Supabase JS not loaded');
   }
@@ -239,8 +243,8 @@ async function handleLogin() {
       localStorage.removeItem('cecilia_admin_email');
     }
 
-    // Check role — user_metadata or app_metadata
-    const role = currentUser.user_metadata?.role || currentUser.app_metadata?.role || '';
+    // Check role — app_metadata (secure, server-set) takes priority over user_metadata
+    const role = currentUser.app_metadata?.role || '';
     if (role !== 'admin' && role !== 'staff') {
       console.warn('User role not set to admin/staff. Role:', role);
       const errorEl = document.getElementById('login-error');
@@ -263,7 +267,7 @@ async function checkSession() {
   try {
     const { data: { session } } = await sb.auth.getSession();
     if (session && session.user) {
-      const role = session.user.user_metadata?.role || session.user.app_metadata?.role || '';
+      const role = session.user.app_metadata?.role || '';
       if (role !== 'admin' && role !== 'staff') {
         console.warn('Session user is not admin/staff. Signing out.');
         await sb.auth.signOut();
@@ -432,7 +436,7 @@ function setupRealtime() {
       schema: 'public',
       table: 'driver_orders'
     }, (payload) => {
-      console.log('Realtime INSERT:', payload);
+      _log('Realtime INSERT:', payload);
       handleNewOrder(payload.new);
     })
     .on('postgres_changes', {
@@ -440,11 +444,11 @@ function setupRealtime() {
       schema: 'public',
       table: 'driver_orders'
     }, (payload) => {
-      console.log('Realtime UPDATE:', payload);
+      _log('Realtime UPDATE:', payload);
       handleOrderUpdate(payload.new);
     })
     .subscribe((status) => {
-      console.log('Realtime subscription status:', status);
+      _log('Realtime subscription status:', status);
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         console.warn('Realtime disconnected, reconnecting in 3s...');
         setTimeout(() => setupRealtime(), 3000);
@@ -465,7 +469,7 @@ function startRealtimeGuard() {
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && currentUser) {
-      console.log('Tab visible — reconnecting realtime + refreshing orders');
+      _log('Tab visible — reconnecting realtime + refreshing orders');
       // Reconnect WebSocket (mobile often kills it in background)
       setupRealtime();
       // Immediately fetch latest orders
@@ -526,7 +530,7 @@ async function silentRefreshOrders() {
 
     // Notify about new orders that the WebSocket missed
     newOrders.forEach(order => {
-      console.log('Polling caught missed order:', order.id);
+      _log('Polling caught missed order:', order.id);
       if (notificationsEnabled) playNotification();
       showToast(lang === 'es' ? '🚚 Nuevo pedido de conductor' : '🚚 New driver order received', 'info');
     });
@@ -600,7 +604,7 @@ function playNotification() {
 function requestNotifPermission() {
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission().then(perm => {
-      console.log('Notification permission:', perm);
+      _log('Notification permission:', perm);
     });
   }
 }
@@ -693,29 +697,29 @@ function generateTimeOptions(selectedValue) {
 }
 
 async function loadOnlineOrders() {
-  console.log('📦 loadOnlineOrders() called');
-  console.log('📦 sb client:', sb ? 'exists' : 'NULL');
+  _log('📦 loadOnlineOrders() called');
+  _log('📦 sb client:', sb ? 'exists' : 'NULL');
 
   if (!sb) { console.warn('📦 Aborting: sb is null'); return; }
 
   const container = document.getElementById('section-online-orders');
-  console.log('📦 container:', container ? 'found' : 'NOT FOUND');
+  _log('📦 container:', container ? 'found' : 'NOT FOUND');
   if (!container) { console.warn('📦 Aborting: container not found'); return; }
 
   // Show loading
   container.innerHTML = '<div class="empty-state">Loading online orders...</div>';
 
   try {
-    console.log('📦 Querying orders table with source=website...');
+    _log('📦 Querying orders table with source=website...');
     const { data, error } = await sb
       .from('orders')
       .select('*')
       .eq('source', 'website')
       .order('created_at', { ascending: false });
 
-    console.log('📦 Query result — error:', error, '| data:', data);
-    console.log('📦 Row count:', data ? data.length : 0);
-    if (data && data.length > 0) console.log('📦 First row:', JSON.stringify(data[0]).slice(0, 300));
+    _log('📦 Query result — error:', error, '| data:', data);
+    _log('📦 Row count:', data ? data.length : 0);
+    if (data && data.length > 0) _log('📦 First row:', JSON.stringify(data[0]).slice(0, 300));
 
     if (error) throw error;
 
@@ -723,7 +727,7 @@ async function loadOnlineOrders() {
     updateOnlineOrdersBadge();
 
     if (!data || data.length === 0) {
-      console.log('📦 No data — showing empty state');
+      _log('📦 No data — showing empty state');
       container.innerHTML = `
         <div class="section-header">
           <h2 class="page-title" data-en="Online Orders" data-es="Pedidos en Línea">${lang === 'es' ? 'Pedidos en Línea' : 'Online Orders'}</h2>
@@ -845,7 +849,7 @@ function setupOnlineOrdersRealtime() {
       table: 'orders',
       filter: 'source=eq.website'
     }, (payload) => {
-      console.log('New online order:', payload);
+      _log('New online order:', payload);
       updateOnlineOrdersBadge();
       if (currentSection === 'online-orders') loadOnlineOrders();
       showToast(lang === 'es' ? '🛒 ¡Nuevo pedido en línea!' : '🛒 New online order received!', 'info');
@@ -857,7 +861,7 @@ function setupOnlineOrdersRealtime() {
       table: 'orders',
       filter: 'source=eq.website'
     }, (payload) => {
-      console.log('Online order updated:', payload);
+      _log('Online order updated:', payload);
       updateOnlineOrdersBadge();
       if (currentSection === 'online-orders') loadOnlineOrders();
     })
@@ -1185,7 +1189,9 @@ async function loadHistoryOrders(reset = false) {
       const num = parseInt(searchTerm.replace('#', ''));
       if (!isNaN(num)) query = query.eq('order_number', num);
     } else {
-      query = query.ilike('business_name', `%${searchTerm}%`);
+      // L5: Escape SQL wildcard characters to prevent pattern abuse
+      const safeTerm = searchTerm.replace(/%/g, '\\%').replace(/_/g, '\\_');
+      query = query.ilike('business_name', `%${safeTerm}%`);
     }
   }
 
@@ -2678,7 +2684,7 @@ function formatTimeValue(timeStr) {
    INIT — ALL EVENT LISTENERS
    ═══════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('Admin Dashboard: DOMContentLoaded');
+  _log('Admin Dashboard: DOMContentLoaded');
   applyTheme();
   applyLang();
   lucide.createIcons();
@@ -4489,7 +4495,7 @@ async function _pmSeed() {
   lucide.createIcons();
 
   if (error) { showToast(`Seed failed: ${error.message}`, 'error'); return; }
-  console.log('Seeded:', toInsert.map(p => `${p.name_en} (${p.tag_en})`).join(', '));
+  _log('Seeded:', toInsert.map(p => `${p.name_en} (${p.tag_en})`).join(', '));
   showToast(`Done! ${toInsert.length} added, ${skipped} skipped`, 'success');
   await _pmFetch();
 }

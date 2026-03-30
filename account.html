@@ -853,6 +853,9 @@
       applyTheme(saved || 'light');
     })();
 
+    /* ── Escape helper for XSS prevention ── */
+    function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
     /* ════════════════════════════════════════
        SCROLL EFFECT ON NAV
        ════════════════════════════════════════ */
@@ -1035,8 +1038,8 @@
 
         let itemsHtml = '';
         items.forEach(item => {
-          const name = item.name || item.nameEn || 'Item';
-          const qty = item.qty || 1;
+          const name = _esc(item.name || item.nameEn || 'Item');
+          const qty = parseInt(item.qty) || 1;
           const price = parseFloat(item.price || 0);
           itemsHtml += `
             <div class="order-item-line">
@@ -1052,12 +1055,12 @@
           <div class="order-card">
             <div class="order-card-top">
               <div>
-                <div class="order-card-id"><span>Order </span>#${orderId}</div>
-                <div class="order-card-date">${date}</div>
+                <div class="order-card-id"><span>Order </span>#${_esc(orderId)}</div>
+                <div class="order-card-date">${_esc(date)}</div>
               </div>
-              <div class="order-status-badge ${statusClass}">
+              <div class="order-status-badge ${_esc(statusClass)}">
                 <span class="order-status-dot"></span>
-                ${statusLabel}
+                ${_esc(statusLabel)}
               </div>
             </div>
             <div class="order-card-items">
@@ -1154,7 +1157,7 @@
       const avatarEl = document.getElementById('account-avatar');
       if (avatarEl) {
         if (user.imageUrl) {
-          avatarEl.innerHTML = `<img src="${user.imageUrl}" alt="avatar" />`;
+          avatarEl.innerHTML = `<img src="${_esc(user.imageUrl)}" alt="avatar" />`;
         } else {
           const initials = (user.firstName || '').charAt(0).toUpperCase() || '?';
           avatarEl.textContent = initials;

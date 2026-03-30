@@ -842,6 +842,9 @@
 
     /* ── Escape helper for XSS prevention ── */
     function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    /* ── M1: Production-safe logger ── */
+    const __DEV__ = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    const _log = __DEV__ ? console.log.bind(console) : () => {};
 
 
     const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
@@ -1031,7 +1034,7 @@
 
         cloverTokenizer = cloverInstance;
 
-        console.log('Clover iframe elements mounted');
+        _log('Clover iframe elements mounted');
       } catch (err) {
         console.error('Clover init error:', err);
       }

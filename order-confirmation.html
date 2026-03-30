@@ -636,6 +636,12 @@
       applyTheme(saved || 'light');
     })();
 
+    /* ── Escape helper for XSS prevention ── */
+    function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    /* ── M1: Production-safe logger ── */
+    const __DEV__ = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    const _log = __DEV__ ? console.log.bind(console) : () => {};
+
     /* ════════════════════════════════════════
        SCROLL EFFECT ON NAV
        ════════════════════════════════════════ */
@@ -741,7 +747,7 @@
           auth: subJson.keys.auth
         }, { onConflict: 'user_type,user_id,endpoint' });
 
-        console.log('✅ Customer push subscription saved for', clerkUserId);
+        _log('✅ Customer push subscription saved for', clerkUserId);
       } catch (e) {
         console.warn('Customer push subscription failed:', e.message || e);
       }
@@ -777,9 +783,9 @@
       } else {
         container.innerHTML = items.map(item => `
           <div class="summary-item">
-            <span class="summary-item-name">${item.name || item.nameEn || 'Item'}</span>
-            <span class="summary-item-qty">×${item.qty || 1}</span>
-            <span class="summary-item-price">$${(parseFloat(item.price || 0) * (item.qty || 1)).toFixed(2)}</span>
+            <span class="summary-item-name">${_esc(item.name || item.nameEn || 'Item')}</span>
+            <span class="summary-item-qty">×${parseInt(item.qty) || 1}</span>
+            <span class="summary-item-price">$${(parseFloat(item.price || 0) * (parseInt(item.qty) || 1)).toFixed(2)}</span>
           </div>
         `).join('');
       }
@@ -885,12 +891,12 @@
           table: 'orders',
           filter: 'id=eq.' + orderId
         }, (payload) => {
-          console.log('Order updated in realtime:', payload.new);
+          _log('Order updated in realtime:', payload.new);
           updateTracker(payload.new.delivery_status);
           updatePickupTime(payload.new.estimated_pickup_at);
         })
         .subscribe((status) => {
-          console.log('Realtime subscription status:', status);
+          _log('Realtime subscription status:', status);
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             console.warn('Realtime disconnected, reconnecting in 3s...');
             setTimeout(() => subscribeToUpdates(orderId), 3000);
@@ -901,7 +907,7 @@
     /* ── Reconnect on visibility change (tab switch, phone unlock) ── */
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && _currentOrderId && sb) {
-        console.log('Tab visible — reconnecting realtime');
+        _log('Tab visible — reconnecting realtime');
         subscribeToUpdates(_currentOrderId);
         // Also re-fetch the latest order state in case updates were missed
         (async () => {

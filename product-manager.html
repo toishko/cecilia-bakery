@@ -1118,6 +1118,13 @@ async function checkAuth() {
       window.location.href = '/admin-dashboard.html';
       return;
     }
+    // Security: enforce admin/staff role
+    const role = session.user.app_metadata?.role || '';
+    if (role !== 'admin' && role !== 'staff') {
+      await sb.auth.signOut();
+      window.location.href = '/admin-dashboard.html';
+      return;
+    }
     currentUser = session.user;
     document.getElementById('nav-email').textContent = currentUser.email;
     await loadProducts();

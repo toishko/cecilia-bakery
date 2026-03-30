@@ -1,6 +1,10 @@
 /* ═══════════════════════════════════
    SUPABASE INIT
    ═══════════════════════════════════ */
+// M1: Production-safe logger — silences debug logs on production
+const __DEV__ = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+const _log = __DEV__ ? console.log.bind(console) : () => {};
+
 const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
 import { subscribeToPush as _subscribeToPush, unsubscribeFromPush } from './push-utils.js';
@@ -18,7 +22,7 @@ async function triggerPushNotification(type, table, record, old_record) {
       body: JSON.stringify({ type, table, record, old_record })
     });
     const result = await res.json();
-    console.log('Push notification result:', result);
+    _log('Push notification result:', result);
   } catch (e) {
     console.warn('Push notification trigger failed:', e);
   }
@@ -29,7 +33,7 @@ try {
   const supabaseLib = window.supabase;
   if (supabaseLib && supabaseLib.createClient) {
     sb = supabaseLib.createClient(SUPABASE_URL, SUPABASE_KEY);
-    console.log('Supabase client initialized');
+    _log('Supabase client initialized');
   } else {
     console.error('Supabase JS not loaded');
   }
@@ -317,7 +321,7 @@ function changeSize(delta) {
    INIT — ALL EVENT LISTENERS
    ═══════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOMContentLoaded fired');
+  _log('DOMContentLoaded fired');
   applyTheme();
   applyLang();
   lucide.createIcons();
@@ -901,7 +905,7 @@ async function loadDriverProducts() {
     });
 
     PRODUCTS = grouped;
-    console.log('Driver: loaded', data.length, 'products from Supabase');
+    _log('Driver: loaded', data.length, 'products from Supabase');
   } catch (err) {
     console.warn('Driver: product load failed, using hardcoded fallback:', err);
   }
@@ -1949,7 +1953,7 @@ function setupDriverRealtime() {
       table: 'driver_orders',
       filter: 'driver_id=eq.' + currentDriver.id
     }, (payload) => {
-      console.log('Driver realtime event:', payload);
+      _log('Driver realtime event:', payload);
       // Refresh data
       loadDriverBalance();
       loadRecentOrders();
@@ -1976,7 +1980,7 @@ function setupDriverRealtime() {
       }
     })
     .subscribe((status) => {
-      console.log('Driver realtime status:', status);
+      _log('Driver realtime status:', status);
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         console.warn('Driver realtime disconnected, reconnecting in 3s...');
         setTimeout(() => setupDriverRealtime(), 3000);
@@ -2008,7 +2012,7 @@ function playChime() {
 function requestNotifPermission() {
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission().then(perm => {
-      console.log('Notification permission:', perm);
+      _log('Notification permission:', perm);
     });
   }
 }

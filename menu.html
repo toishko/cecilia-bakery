@@ -4091,6 +4091,8 @@
 
   <script>
     /* ══ STATE ══ */
+    const __DEV__ = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    const _log = __DEV__ ? console.log.bind(console) : () => {};
     let lang = 'en';
     let theme = 'light';
     let chatHistory = [];
@@ -5709,7 +5711,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         groups[p.tag_en].products.push(p);
       });
       const result = order.map(k => groups[k]);
-      console.log('Groups:', result.map(g => ({ tag: g.tag_en, icon: g.icon_name })));
+      _log('Groups:', result.map(g => ({ tag: g.tag_en, icon: g.icon_name })));
       return result;
     }
 
@@ -6010,7 +6012,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
           .order('sort_order', { ascending: true });
         if (error) { console.warn('Supabase products error:', error); return; }
         if (!data || data.length === 0) { console.warn('Supabase products: empty result, using hardcoded fallback'); return; }
-        console.log('Supabase products loaded:', data.length, data);
+        _log('Supabase products loaded:', data.length, data);
         generateMenuSchema(data);
 
         // Store raw data for the render engine
@@ -6306,7 +6308,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
             handleProductChange(payload);
           })
           .subscribe((status) => {
-            console.log('Realtime status:', status);
+            _log('Realtime status:', status);
           });
       } catch (err) {
         // Silent fallback — customers never see this

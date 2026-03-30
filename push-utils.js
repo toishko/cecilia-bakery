@@ -1,5 +1,9 @@
 // push-utils.js — shared push subscription utilities
 // Used by both admin-dashboard.js and driver-order.js
+// M1: Production-safe logger — silences debug logs on production
+const __DEV__ = typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+const _log = __DEV__ ? console.log.bind(console) : () => {};
+
 
 const VAPID_PUBLIC_KEY = 'BPK9nQfqIXaf-kc5HHJ5G6trkWxjAX9MzeYwLTUfcnk4jWVYVO6gpzXS-d0tNgGTmHp0ntzYe3xRKT0Ud3t5a3Q';
 
@@ -15,7 +19,7 @@ const VAPID_PUBLIC_KEY = 'BPK9nQfqIXaf-kc5HHJ5G6trkWxjAX9MzeYwLTUfcnk4jWVYVO6gpz
  */
 export async function subscribeToPush(sb, userType, userId, lang, showToast) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    console.log('Push not supported in this browser');
+    _log('Push not supported in this browser');
     return;
   }
   if (!sb) return;
@@ -27,12 +31,12 @@ export async function subscribeToPush(sb, userType, userId, lang, showToast) {
       new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout (15s)')), 15000))
     ]);
 
-    console.log('Service Worker ready, checking push subscription...');
+    _log('Service Worker ready, checking push subscription...');
 
     // Request notification permission first
     if (Notification.permission === 'default') {
       const perm = await Notification.requestPermission();
-      console.log('Notification permission:', perm);
+      _log('Notification permission:', perm);
       if (perm !== 'granted') {
         console.warn('Notification permission denied');
         return;
@@ -80,23 +84,23 @@ export async function subscribeToPush(sb, userType, userId, lang, showToast) {
           userVisibleOnly: true,
           applicationServerKey
         });
-        console.log('Push subscription created');
+        _log('Push subscription created');
       } catch (subErr) {
         // If subscribe fails (e.g., stale registration), try unsubscribe + retry once
         console.warn('Subscribe failed, attempting cleanup + retry:', subErr.message);
         const oldSub = await reg.pushManager.getSubscription();
         if (oldSub) {
           await oldSub.unsubscribe();
-          console.log('Unsubscribed stale registration');
+          _log('Unsubscribed stale registration');
         }
         sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey
         });
-        console.log('Push subscription created (retry succeeded)');
+        _log('Push subscription created (retry succeeded)');
       }
     } else {
-      console.log('Existing push subscription found (VAPID key verified)');
+      _log('Existing push subscription found (VAPID key verified)');
     }
 
     // Save subscription to Supabase
@@ -113,7 +117,7 @@ export async function subscribeToPush(sb, userType, userId, lang, showToast) {
       console.error('Push sub save error:', error);
       if (showToast) showToast(lang === 'es' ? 'Error guardando notificaciones push' : 'Error saving push notification subscription', 'error');
     } else {
-      console.log('✅ Push subscription saved for', userType, userId);
+      _log('✅ Push subscription saved for', userType, userId);
     }
   } catch (e) {
     console.error('Push subscription failed:', e.message || e);
@@ -140,7 +144,7 @@ export async function unsubscribeFromPush(sb, userType, userId) {
         .eq('user_id', userId)
         .eq('endpoint', sub.endpoint);
       await sub.unsubscribe();
-      console.log('Push subscription cleaned up for', userType, userId);
+      _log('Push subscription cleaned up for', userType, userId);
     }
   } catch (e) {
     console.warn('Push unsubscribe error:', e);

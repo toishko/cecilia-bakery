@@ -1,10 +1,59 @@
 // Vercel Serverless Function — proxies order to n8n webhook
 // This avoids CORS issues since the request comes from the server, not the browser.
 
+// ── In-memory rate limiter (H1) ──
+// Note: Vercel serverless functions are stateless across invocations,
+// so this map resets per cold start. For stronger protection, use
+// @upstash/ratelimit with Vercel KV. This still mitigates hot-path abuse.
+const rateMap = new Map();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 5; // max 5 requests per IP per window
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  const entry = rateMap.get(ip);
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    rateMap.set(ip, { windowStart: now, count: 1 });
+    return false;
+  }
+  entry.count++;
+  if (entry.count > RATE_LIMIT_MAX) return true;
+  return false;
+}
+
+// ── Allowed origins (M6) ──
+const ALLOWED_ORIGINS = [
+  'ceciliabakery.com',
+  'www.ceciliabakery.com',
+  'localhost',
+  '127.0.0.1',
+  '.vercel.app', // preview deployments
+];
+
+function isOriginAllowed(origin) {
+  if (!origin) return false;
+  return ALLOWED_ORIGINS.some(allowed => origin.includes(allowed));
+}
+
 export default async function handler(req, res) {
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, message: 'Method not allowed' });
+  }
+
+  // ── Origin / Referer check (M6 — CSRF protection) ──
+  const origin = req.headers['origin'] || req.headers['referer'] || '';
+  if (!isOriginAllowed(origin)) {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+
+  // ── Rate limiting (H1) ──
+  const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+    || req.headers['x-real-ip']
+    || req.socket?.remoteAddress
+    || 'unknown';
+  if (isRateLimited(clientIp)) {
+    return res.status(429).json({ success: false, message: 'Too many requests. Please wait a moment and try again.' });
   }
 
   // Require N8N_WEBHOOK_URL to be set as an environment variable
@@ -61,9 +110,10 @@ export default async function handler(req, res) {
   }
 
   // Recalculate total from items to prevent client-side price manipulation
+  // M5: Tightened tolerance from $0.02 to $0.01
   const calculatedTotal = items.reduce((sum, item) => sum + (item.price * item.qty), 0);
   const roundedCalc = Math.round(calculatedTotal * 100) / 100;
-  if (Math.abs(roundedCalc - total_amount) > 0.02) {
+  if (Math.abs(roundedCalc - total_amount) > 0.01) {
     console.warn(`Price mismatch: client=${total_amount}, calculated=${roundedCalc}`);
     return res.status(400).json({ success: false, message: 'Order total does not match item prices.' });
   }
