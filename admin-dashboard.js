@@ -239,22 +239,39 @@ async function handleClerkUser(user) {
     const email = user.primaryEmailAddress?.emailAddress || '';
 
     // Check existing profile for role
-    const { data: existing } = await sb
-      .from('profiles')
-      .select('role')
-      .eq('clerk_user_id', user.id)
-      .maybeSingle();
+    let existingRole = null;
+    try {
+      const { data: existing } = await sb
+        .from('profiles')
+        .select('role')
+        .eq('clerk_user_id', user.id)
+        .maybeSingle();
 
-    const existingRole = existing?.role || 'customer';
-
-    // Upsert profile to ensure email is stored
-    if (existing) {
-      await sb.from('profiles')
-        .update({ email: email })
-        .eq('clerk_user_id', user.id);
-    } else {
-      await sb.from('profiles')
-        .insert({ clerk_user_id: user.id, email: email, role: 'customer' });
+      if (existing) {
+        existingRole = existing.role;
+        // Update email if profile exists
+        await sb.from('profiles')
+          .update({ email: email })
+          .eq('clerk_user_id', user.id);
+      } else {
+        // No profile yet — insert new row with generated UUID
+        const { error: insertErr } = await sb.from('profiles')
+          .insert({ id: crypto.randomUUID(), clerk_user_id: user.id, email: email, role: 'customer' });
+        if (insertErr) {
+          _log('Profile insert error (may already exist):', insertErr.message);
+          // Profile might exist but RLS blocked the SELECT — try reading again
+          const { data: retry } = await sb
+            .from('profiles')
+            .select('role')
+            .eq('clerk_user_id', user.id)
+            .maybeSingle();
+          if (retry) existingRole = retry.role;
+        } else {
+          existingRole = 'customer';
+        }
+      }
+    } catch (profileErr) {
+      _log('Profile check/upsert error:', profileErr);
     }
 
     // Role check — admin only
