@@ -639,11 +639,11 @@ async function updateOnlineOrdersBadge() {
       .eq('source', 'website')
       .in('delivery_status', ['pending', 'preparing', 'ready']);
 
-    console.log('🔴 ONLINE BADGE: query returned', data?.length, 'orders, error:', error);
     if (!error && data) _cachedOnlineOrders = data;
 
     // Badge counts ALL non-completed active orders
     const activeCount = _cachedOnlineOrders.length;
+    console.log('BADGE DEBUG online:', activeCount, '| badge el:', document.getElementById('online-orders-badge'), '| data:', _cachedOnlineOrders.map(o => o.id + ':' + o.delivery_status));
 
     const badges = [
       document.getElementById('online-orders-badge'),
@@ -1123,6 +1123,7 @@ function updateIncomingBadge() {
   const activeCount = incomingOrders.filter(o =>
     o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent'
   ).length;
+  console.log('BADGE DEBUG driver:', activeCount, '| badge el:', document.getElementById('incoming-badge'), '| orders:', incomingOrders.map(o => o.id + ':' + o.status));
   const badges = [document.getElementById('incoming-badge'), document.getElementById('incoming-badge-mobile')];
   badges.forEach(badge => {
     if (badge) {
