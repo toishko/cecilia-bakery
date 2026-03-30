@@ -11,7 +11,8 @@ SECURITY DEFINER
 STABLE
 AS $$
   SELECT COALESCE(
-    (auth.jwt() -> 'user_metadata' ->> 'role') IN ('admin', 'staff'),
+    (auth.jwt() -> 'user_metadata' ->> 'role') IN ('admin', 'staff')
+    OR (auth.jwt() -> 'app_metadata' ->> 'role') IN ('admin', 'staff'),
     false
   );
 $$;
