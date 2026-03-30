@@ -703,13 +703,13 @@
 
   <!-- ═══ NAV ═══ -->
   <nav id="main-nav">
-    <a href="/index.html" class="nav-brand">
+    <a href="/" class="nav-brand">
       <img
         src="assets/logo.png"
         alt="Cecilia Bakery" class="nav-logo-img" />
     </a>
     <div class="nav-right-group">
-      <a href="/index.html" class="nav-back">
+      <a href="/" class="nav-back">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
         Back to Home
       </a>
@@ -879,8 +879,8 @@
         if (mount && window.Clerk) {
           mount.innerHTML = ''; // Clear any previous mount
           window.Clerk.mountSignIn(mount, {
-            afterSignInUrl: '/account.html',
-            afterSignUpUrl: '/account.html',
+            afterSignInUrl: '/account',
+            afterSignUpUrl: '/account',
           });
         }
         return;
@@ -1005,7 +1005,7 @@
             </div>
             <div class="empty-orders-title">No orders yet</div>
             <p class="empty-orders-sub">Browse our menu and place your first order!</p>
-            <a href="/menu.html" class="empty-orders-btn">
+            <a href="/menu" class="empty-orders-btn">
               <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
               Browse Menu
             </a>
@@ -1068,7 +1068,7 @@
             </div>
             <div class="order-card-bottom">
               <div class="order-card-total"><span>Total</span>$${total.toFixed(2)}</div>
-              <a href="/order-confirmation.html?id=${order.id}" class="order-track-btn">
+              <a href="/order-confirmation?id=${order.id}" class="order-track-btn">
                 <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
                 Track Order
               </a>
@@ -1115,7 +1115,7 @@
       showReorderToast();
 
       setTimeout(() => {
-        window.location.href = '/menu.html';
+        window.location.href = '/menu';
       }, 1200);
     }
 

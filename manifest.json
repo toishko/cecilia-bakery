@@ -2,7 +2,7 @@
   "name": "Cecilia Bakery",
   "short_name": "Cecilia",
   "description": "Cecilia Bakery — Driver & Admin Portal",
-  "start_url": "/driver-order.html",
+  "start_url": "/driver-order",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

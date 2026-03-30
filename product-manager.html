@@ -1115,14 +1115,14 @@ async function checkAuth() {
   try {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) {
-      window.location.href = '/admin-dashboard.html';
+      window.location.href = '/admin-dashboard';
       return;
     }
     // Security: enforce admin/staff role
     const role = session.user.app_metadata?.role || '';
     if (role !== 'admin' && role !== 'staff') {
       await sb.auth.signOut();
-      window.location.href = '/admin-dashboard.html';
+      window.location.href = '/admin-dashboard';
       return;
     }
     currentUser = session.user;
@@ -1130,7 +1130,7 @@ async function checkAuth() {
     await loadProducts();
   } catch (e) {
     console.error('Auth error', e);
-    window.location.href = '/admin-dashboard.html';
+    window.location.href = '/admin-dashboard';
   }
 }
 
@@ -1699,7 +1699,7 @@ async function seedFromCode() {
    ═══════════════════════════════════ */
 async function handleLogout() {
   await sb.auth.signOut();
-  window.location.href = '/admin-dashboard.html';
+  window.location.href = '/admin-dashboard';
 }
 
 /* ═══════════════════════════════════

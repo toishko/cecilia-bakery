@@ -618,7 +618,7 @@ async function showBrowserNotification(title, body, section, orderId) {
     icon: '/assets/logo.png',
     badge: '/assets/logo.png',
     tag: 'cecilia-order-' + (orderId || Date.now()),
-    data: { url: '/admin-dashboard.html', section }
+    data: { url: '/admin-dashboard', section }
   };
 
   try {

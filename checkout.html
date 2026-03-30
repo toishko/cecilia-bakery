@@ -599,11 +599,11 @@
 
   <!-- ═══ NAV ═══ -->
   <nav id="main-nav">
-    <a href="/index.html" class="nav-brand">
+    <a href="/" class="nav-brand">
       <img src="assets/logo.png" alt="Cecilia Bakery" class="nav-logo-img" />
     </a>
     <div class="nav-right-group">
-      <a href="/menu.html" class="nav-back">
+      <a href="/menu" class="nav-back">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
         Back to Menu
       </a>
@@ -639,7 +639,7 @@
         </div>
         <div class="empty-cart-title">Your Cart is Empty</div>
         <p class="empty-cart-sub">Looks like you haven't added anything yet. Head to the menu to start your order.</p>
-        <a href="/menu.html" class="empty-cart-btn">
+        <a href="/menu" class="empty-cart-btn">
           <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           Back to Menu
         </a>
@@ -792,9 +792,9 @@
 
             <p class="legal-note">
               By placing your order you agree to our
-              <a href="/terms.html">Terms & Conditions</a>,
-              <a href="/privacy.html">Privacy Policy</a>,
-              and <a href="/refunds.html">Refund Policy</a>.
+              <a href="/terms">Terms & Conditions</a>,
+              <a href="/privacy">Privacy Policy</a>,
+              and <a href="/refunds">Refund Policy</a>.
             </p>
 
 
@@ -1152,7 +1152,7 @@
 
           // Redirect to confirmation (fallback to menu with success param)
           const orderId = result.order_id || '';
-          window.location.href = `/order-confirmation.html?id=${orderId}`;
+          window.location.href = `/order-confirmation?id=${orderId}`;
 
         } else {
           showState('checkout');
@@ -1251,8 +1251,8 @@
     document.getElementById('google-signin')?.addEventListener('click', () => {
       if (window.Clerk) {
         window.Clerk.openSignIn({
-          afterSignInUrl: '/checkout.html',
-          afterSignUpUrl: '/checkout.html',
+          afterSignInUrl: '/checkout',
+          afterSignUpUrl: '/checkout',
         });
       }
     });
@@ -1261,8 +1261,8 @@
     document.getElementById('email-signin')?.addEventListener('click', () => {
       if (window.Clerk) {
         window.Clerk.openSignIn({
-          afterSignInUrl: '/checkout.html',
-          afterSignUpUrl: '/checkout.html',
+          afterSignInUrl: '/checkout',
+          afterSignUpUrl: '/checkout',
         });
       }
     });

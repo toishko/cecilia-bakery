@@ -2,7 +2,7 @@
   "name": "Cecilia Admin",
   "short_name": "Admin",
   "description": "Cecilia Bakery — Admin Dashboard",
-  "start_url": "/admin-dashboard.html",
+  "start_url": "/admin-dashboard",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

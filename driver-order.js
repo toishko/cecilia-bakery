@@ -2026,7 +2026,7 @@ async function showBrowserNotification(title, body, section) {
     icon: '/assets/logo.png',
     badge: '/assets/logo.png',
     tag: 'cecilia-driver-' + Date.now(),
-    data: { url: '/driver-order.html', section }
+    data: { url: '/driver-order', section }
   };
 
   try {
