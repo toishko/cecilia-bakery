@@ -1249,11 +1249,16 @@
 
                 const existingRole = existing?.role || 'customer';
 
-                await sb.from('profiles').upsert({
-                  clerk_user_id: user.id,
-                  email: email,
-                  role: existingRole
-                }, { onConflict: 'clerk_user_id' });
+                if (existing) {
+                  // Profile exists — just update email
+                  await sb.from('profiles')
+                    .update({ email: email })
+                    .eq('clerk_user_id', user.id);
+                } else {
+                  // No profile yet — insert new row
+                  await sb.from('profiles')
+                    .insert({ clerk_user_id: user.id, email: email, role: 'customer' });
+                }
 
                 // Use profiles.role for access control
                 if (existingRole !== 'admin' && existingRole !== 'staff') {
