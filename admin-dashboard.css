@@ -68,12 +68,12 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
    ═══════════════════════════════════ */
 .login-screen{align-items:center;justify-content:center;padding:24px}
 .login-card{background:var(--bg-card);border:1px solid var(--bd);border-radius:16px;
-  padding:48px 32px;width:100%;max-width:380px;text-align:center;
+  padding:48px 32px;width:100%;max-width:460px;text-align:center;
   box-shadow:var(--shadow-card);backdrop-filter:blur(12px);position:relative}
 .login-logo{height:80px;width:auto;margin:0 auto 8px;display:block;object-fit:contain}
 [data-theme="dark"] .login-logo{filter:brightness(0) invert(1) sepia(1) saturate(2) hue-rotate(310deg)}
 .login-title{font-size:1.8rem;margin-bottom:4px;color:var(--tx)}
-.login-subtitle{font-size:.9rem;color:var(--tx-muted);margin-bottom:32px}
+.login-subtitle{font-size:.9rem;color:var(--tx-muted);margin-bottom:24px}
 .login-input-wrap{position:relative;margin-bottom:16px}
 .login-input{width:100%;padding:14px 16px;border:1px solid var(--bd-input);border-radius:10px;
   background:var(--bg-input);color:var(--tx);font-size:1rem;font-family:inherit;
@@ -100,6 +100,32 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   padding:4px 10px;font-size:.75rem;color:var(--tx-muted);cursor:pointer;
   font-family:inherit;transition:var(--transition)}
 .corner-btn:hover{border-color:var(--bd-hover);color:var(--tx)}
+
+/* ── Clerk component overrides ── */
+#clerk-mount-target .cl-rootBox{width:100%}
+#clerk-mount-target .cl-card{background:transparent!important;border:none!important;
+  box-shadow:none!important;padding:0!important;margin:0!important}
+#clerk-mount-target .cl-headerTitle,
+#clerk-mount-target .cl-headerSubtitle{display:none!important}
+#clerk-mount-target .cl-footer{display:none!important}
+#clerk-mount-target .cl-internal-b3fm6y{display:none!important}
+/* Clerk "Secured by Clerk" branding badge */
+.cl-internal-b3fm6y,
+[data-localization-key="footerPageLink__help"],
+.cl-footerAction{display:none!important}
+/* Fix focus-visible conflicts with Clerk internals */
+.cl-rootBox :focus-visible,
+.cl-card :focus-visible,
+[class^="cl-"] :focus-visible,
+[class*=" cl-"] :focus-visible{outline:revert;box-shadow:none}
+/* Dark mode: Clerk card text */
+[data-theme="dark"] #clerk-mount-target .cl-card{color:#F2E8E4}
+[data-theme="dark"] #clerk-mount-target .cl-socialButtonsBlockButton{
+  background:var(--bg-surface)!important;border-color:var(--bd)!important;color:var(--tx)!important}
+[data-theme="dark"] #clerk-mount-target .cl-formFieldInput{
+  background:var(--bg-input)!important;border-color:var(--bd-input)!important;color:var(--tx)!important}
+[data-theme="dark"] #clerk-mount-target .cl-formButtonPrimary{
+  background:var(--red)!important}
 
 /* ═══════════════════════════════════
    DASHBOARD LAYOUT
