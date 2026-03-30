@@ -1227,13 +1227,8 @@ async function submitAllOrders() {
       const orderTotal = orderItems.reduce((sum, it) => sum + it.quantity * it.price_at_order, 0);
       await sb.from('driver_orders').update({ total_amount: orderTotal }).eq('id', orderData.id);
 
-      // Trigger push notification to admins (fire-and-forget)
-      triggerPushNotification('INSERT', 'driver_orders', {
-        id: orderData.id,
-        driver_id: currentDriver.id,
-        business_name: o.business || 'Driver',
-        status: 'pending'
-      }, null);
+      // Push notification handled by admin dashboard realtime subscription
+      // (no manual trigger needed — prevents double notification)
     }
 
     // Success
@@ -1946,8 +1941,8 @@ function setupDriverRealtime() {
         if (notificationsEnabled) {
           playChime();
           const msg = lang === 'es'
-            ? `Pedido #${shortOrderId(payload.new.id)} confirmado`
-            : `Order #${shortOrderId(payload.new.id)} confirmed`;
+            ? 'Tu pedido ha sido confirmado'
+            : 'Your order has been confirmed';
           showToast(msg, 'success');
           showBrowserNotification(
             lang === 'es' ? 'Pedido Confirmado' : 'Order Confirmed',

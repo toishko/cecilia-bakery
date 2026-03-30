@@ -445,12 +445,7 @@ async function silentRefreshOrders() {
     newOrders.forEach(order => {
       console.log('Polling caught missed order:', order.id);
       if (notificationsEnabled) playNotification();
-
-      const driverName = getDriverName(order.driver_id);
-      const items = order.items ? Object.values(order.items).reduce((s, v) => s + (parseInt(v) || 0), 0) : 0;
-      const msgEn = `New order from ${driverName}` + (items ? ` (${items} items)` : '');
-      const msgEs = `Nuevo pedido de ${driverName}` + (items ? ` (${items} artículos)` : '');
-      showToast(lang === 'es' ? msgEs : msgEn, 'info');
+      showToast(lang === 'es' ? '🚚 Nuevo pedido de conductor' : '🚚 New driver order received', 'info');
     });
 
     // Re-render current view
@@ -474,11 +469,7 @@ function handleNewOrder(order) {
   if (notificationsEnabled) playNotification();
 
   // Show toast
-  const driverName = getDriverName(order.driver_id);
-  const items = order.items ? Object.values(order.items).reduce((s, v) => s + (parseInt(v) || 0), 0) : 0;
-  const msgEn = `New order from ${driverName}` + (items ? ` (${items} items)` : '');
-  const msgEs = `Nuevo pedido de ${driverName}` + (items ? ` (${items} artículos)` : '');
-  showToast(lang === 'es' ? msgEs : msgEn, 'info');
+  showToast(lang === 'es' ? '🚚 Nuevo pedido de conductor' : '🚚 New driver order received', 'info');
 
   // NOTE: Browser push notification is handled by the Edge Function (triggerPushNotification)
   // No need to also call showBrowserNotification here — that causes duplicates
@@ -1594,12 +1585,8 @@ window.confirmAndSend = async function() {
 
     showToast(lang === 'es' ? 'Pedido confirmado y enviado' : 'Order confirmed and sent', 'success');
 
-    // Trigger push notification to driver (fire-and-forget)
-    triggerPushNotification('UPDATE', 'driver_orders', {
-      id: detailOrder.id,
-      driver_id: detailOrder.driver_id,
-      status: 'sent'
-    }, { status: 'pending' });
+    // Driver notification handled by driver's own realtime subscription
+    // (no manual trigger needed — prevents double notification)
 
     closeDetailModal();
 
@@ -1622,13 +1609,8 @@ window.savePaymentOnly = async function() {
 
     showToast(lang === 'es' ? 'Pago actualizado' : 'Payment updated', 'success');
 
-    // Trigger push notification to driver (fire-and-forget)
-    triggerPushNotification('UPDATE', 'driver_orders', {
-      id: detailOrder.id,
-      driver_id: detailOrder.driver_id,
-      payment_status: detailOrder.payment_status,
-      payment_amount: detailOrder.payment_amount
-    }, { payment_status: 'not_paid' });
+    // Driver notification handled by driver's own realtime subscription
+    // (no manual trigger needed — prevents double notification)
 
     if (currentSection === 'history') loadHistoryOrders(true);
     if (currentSection === 'overview') loadOverview();

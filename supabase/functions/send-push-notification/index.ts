@@ -91,11 +91,10 @@ serve(async (req) => {
     // ═══════════════════════════════════
     if (table === 'driver_orders') {
       if (type === 'INSERT' && record) {
-        const driverName = record.business_name || 'Driver'
         targets.push({
           user_type: 'admin',
           title: '🚚 New Driver Order',
-          body: `${driverName} placed a new order`,
+          body: 'A new driver order has been placed',
           url: '/admin-dashboard.html'
         })
       }
@@ -106,19 +105,22 @@ serve(async (req) => {
             user_type: 'driver',
             user_id: record.driver_id,
             title: '✅ Order Confirmed',
-            body: `Order #${record.id?.slice(0, 8)} has been confirmed`,
+            body: 'Your order has been confirmed by the bakery',
             url: '/driver-order.html'
           })
         }
 
         if (record.payment_status && record.payment_status !== old_record?.payment_status) {
-          const statusLabel = record.payment_status === 'paid' ? 'Paid' :
-                             record.payment_status === 'partial' ? 'Partially Paid' : 'Updated'
+          const bodyText = record.payment_status === 'paid'
+            ? 'Your payment has been marked as paid'
+            : record.payment_status === 'partial'
+            ? 'A partial payment has been recorded'
+            : 'Your payment status has been updated'
           targets.push({
             user_type: 'driver',
             user_id: record.driver_id,
             title: '💰 Payment Update',
-            body: `Order #${record.id?.slice(0, 8)}: ${statusLabel}`,
+            body: bodyText,
             url: '/driver-order.html'
           })
         }
@@ -127,8 +129,8 @@ serve(async (req) => {
           targets.push({
             user_type: 'driver',
             user_id: record.driver_id,
-            title: '📝 Order Modified',
-            body: `Order #${record.id?.slice(0, 8)} was updated by admin`,
+            title: '📝 Order Updated',
+            body: 'Your order was modified by the bakery',
             url: '/driver-order.html'
           })
         }
@@ -140,13 +142,10 @@ serve(async (req) => {
     // ═══════════════════════════════════
     if (table === 'orders') {
       if (type === 'INSERT' && record) {
-        // Notify ALL admins about new online order
-        const customerName = record.customer_name || 'Customer'
-        const total = record.total_amount ? `$${parseFloat(record.total_amount).toFixed(2)}` : ''
         targets.push({
           user_type: 'admin',
           title: '🛒 New Online Order',
-          body: `${customerName}${total ? ' — ' + total : ''}`,
+          body: 'A new online order has been placed',
           url: '/admin-dashboard.html'
         })
       }
@@ -158,24 +157,23 @@ serve(async (req) => {
         // Only notify customer if delivery_status actually changed
         if (newStatus && newStatus !== oldStatus) {
           const clerkUserId = record.clerk_user_id
-          const shortId = record.id?.slice(-8).toUpperCase() || '???'
 
           const statusMessages: Record<string, { title: string; body: string }> = {
             'preparing': {
               title: '👨‍🍳 Order Being Prepared',
-              body: `Order #${shortId} is now being prepared!`
+              body: 'Your order is now being prepared!'
             },
             'ready': {
               title: '✅ Ready for Pickup!',
-              body: `Order #${shortId} is ready! Come pick it up.`
+              body: 'Your order is ready! Come pick it up.'
             },
             'completed': {
               title: '🎉 Order Complete',
-              body: `Order #${shortId} has been completed. Thank you!`
+              body: 'Your order has been completed. Thank you!'
             },
             'cancelled': {
               title: '❌ Order Cancelled',
-              body: `Order #${shortId} has been cancelled. Please contact us for details.`
+              body: 'Your order has been cancelled. Please contact us for details.'
             }
           }
 
@@ -190,15 +188,8 @@ serve(async (req) => {
             })
           }
 
-          // Also notify admins about status changes (so other admin devices get notified)
-          if (msg) {
-            targets.push({
-              user_type: 'admin',
-              title: `📋 Order #${shortId}`,
-              body: `Status changed to: ${newStatus}`,
-              url: '/admin-dashboard.html'
-            })
-          }
+          // Admin is not notified about status changes they make themselves
+          // Only the customer is notified above
         }
       }
     }
