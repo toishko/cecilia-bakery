@@ -840,7 +840,7 @@
       applyTheme(saved || 'light');
     })();
 
-    const N8N_WEBHOOK_URL = 'https://toisko.com/webhook/3c47e3d7-1bbf-45b1-a02f-5e2e2a3f9756';
+
     const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
 
@@ -1118,8 +1118,8 @@
           timestamp: new Date().toISOString(),
         };
 
-        // Step 3 — Send to n8n webhook
-        const response = await fetch(N8N_WEBHOOK_URL, {
+        // Step 3 — Send to server (Vercel proxy → n8n)
+        const response = await fetch('/api/place-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderPayload),
