@@ -1734,6 +1734,127 @@
     }
 
     /* ════════════════════════════════════════
+   CUSTOM CAKE CONTACT MODAL
+   ════════════════════════════════════════ */
+    .custom-cake-contact-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-overlay);
+      z-index: 1001;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    .custom-cake-contact-overlay.open { display: flex; }
+    .custom-cake-contact-card {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-card);
+      border: 1px solid var(--bd);
+      border-radius: 20px;
+      padding: 40px 28px 32px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+      animation: ccModalIn .3s ease;
+    }
+    @keyframes ccModalIn {
+      from { opacity: 0; transform: scale(.92) translateY(16px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .custom-cake-contact-close {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 28px;
+      color: var(--fg);
+      cursor: pointer;
+      line-height: 1;
+      opacity: .6;
+      transition: opacity .2s;
+    }
+    .custom-cake-contact-close:hover { opacity: 1; }
+    .custom-cake-contact-icon {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 16px;
+      background: var(--red);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .custom-cake-contact-icon .icon {
+      width: 28px;
+      height: 28px;
+      stroke: #fff;
+      color: #fff;
+    }
+    .custom-cake-contact-title {
+      font-family: var(--ff-display);
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin: 0 0 8px;
+      color: var(--fg);
+    }
+    .custom-cake-contact-desc {
+      font-size: .92rem;
+      color: var(--fg-muted);
+      margin: 0 0 24px;
+      line-height: 1.5;
+    }
+    .custom-cake-contact-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .custom-cake-contact-btn {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 20px;
+      border-radius: 14px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: transform .15s, box-shadow .15s;
+      cursor: pointer;
+    }
+    .custom-cake-contact-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,.15);
+    }
+    .custom-cake-contact-btn .icon {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .custom-cake-contact-btn-call {
+      background: var(--red);
+      color: #fff;
+    }
+    .custom-cake-contact-btn-call .icon { stroke: #fff; }
+    .custom-cake-contact-btn-whatsapp {
+      background: #25D366;
+      color: #fff;
+    }
+    .custom-cake-contact-btn-label {
+      display: block;
+      font-size: .95rem;
+      text-align: left;
+    }
+    .custom-cake-contact-btn-number {
+      display: block;
+      font-size: .82rem;
+      opacity: .85;
+      text-align: left;
+    }
+
+    /* ════════════════════════════════════════
    CHAT OVERLAY
    ════════════════════════════════════════ */
     .chat-overlay {
@@ -3796,7 +3917,7 @@
 
     <div class="hero-actions">
       <a href="/menu" class="btn btn-red" data-en="See the Menu" data-es="Ver el Menú">See the Menu</a>
-      <button class="btn btn-ghost" onclick="openChat()" data-en="Custom Cake Order"
+      <button class="btn btn-ghost" onclick="openCustomCakeContact()" data-en="Custom Cake Order"
         data-es="Ordenar un Bizcocho">Custom Cake Order</button>
     </div>
 
@@ -4012,7 +4133,7 @@
     </div>
 
     <!-- Custom order strip -->
-    <div class="custom-order-strip reveal" onclick="openChat()">
+    <div class="custom-order-strip reveal" onclick="openCustomCakeContact()">
       <div class="custom-order-strip-left">
         <div class="strip-label" data-en="Something special?" data-es="¿Algo especial?">Something special?</div>
         <div class="strip-title" data-en="Order a Custom Cake" data-es="Pide un Bizcocho Personalizado">Order a Custom
@@ -4022,7 +4143,7 @@
         data-es="Cuéntanos la ocasión, el sabor y el tamaño — nosotros nos encargamos del resto.">
         Tell us the occasion, flavor, and size — we'll take care of the rest.
       </p>
-      <span class="cat-arrow" style="flex-shrink:0" data-en="Chat with us →" data-es="Chatea con nosotros →">Chat with
+      <span class="cat-arrow" style="flex-shrink:0" data-en="Contact us →" data-es="Contáctenos →">Contact
         us →</span>
     </div>
 
@@ -4106,8 +4227,8 @@
         Place a custom order, chat with us directly, or call — we're here for you.
       </p>
       <div class="exp-actions">
-        <button class="btn btn-white" onclick="openChat()" data-en="<i data-lucide='message-circle' class='icon'></i> Chat & Order Now"
-          data-es="<i data-lucide='message-circle' class='icon'></i> Chatea y Ordena"><i data-lucide='message-circle' class='icon'></i> Chat & Order Now</button>
+        <button class="btn btn-white" onclick="openCustomCakeContact()" data-en="<i data-lucide='cake' class='icon'></i> Custom Cake Order"
+          data-es="<i data-lucide='cake' class='icon'></i> Ordenar Bizcocho"><i data-lucide='cake' class='icon'></i> Custom Cake Order</button>
         <a href="tel:+12018697633" class="btn btn-outline-white"><i data-lucide='phone' class='icon'></i> (201) 869-7633</a>
       </div>
     </div>
@@ -4182,6 +4303,37 @@
       </div>
     </div>
   </footer>
+
+  <!-- CUSTOM CAKE CONTACT MODAL -->
+  <div class="custom-cake-contact-overlay" id="custom-cake-contact-modal" onclick="closeCustomCakeContactOutside(event)">
+    <div class="custom-cake-contact-card">
+      <button class="custom-cake-contact-close" onclick="closeCustomCakeContact()" aria-label="Close">&times;</button>
+      <div class="custom-cake-contact-icon">
+        <i data-lucide="cake" class="icon"></i>
+      </div>
+      <h3 class="custom-cake-contact-title" data-en="Custom Cake Order" data-es="Pedido de Bizcocho Personalizado">Custom Cake Order</h3>
+      <p class="custom-cake-contact-desc" data-en="Tell us the occasion, flavor, size, and any special message — we'll handle the rest."
+        data-es="Cuéntanos la ocasión, el sabor, el tamaño y cualquier mensaje especial — nosotros nos encargamos del resto.">
+        Tell us the occasion, flavor, size, and any special message — we'll handle the rest.
+      </p>
+      <div class="custom-cake-contact-actions">
+        <a href="tel:+12018697633" class="custom-cake-contact-btn custom-cake-contact-btn-call" onclick="closeCustomCakeContact()">
+          <i data-lucide="phone" class="icon"></i>
+          <div>
+            <span class="custom-cake-contact-btn-label" data-en="Call Us" data-es="Llámanos">Call Us</span>
+            <span class="custom-cake-contact-btn-number">(201) 869-7633</span>
+          </div>
+        </a>
+        <a href="https://wa.me/12018697633?text=Hi%21%20I%27d%20like%20to%20order%20a%20custom%20cake." target="_blank" rel="noopener" class="custom-cake-contact-btn custom-cake-contact-btn-whatsapp" onclick="closeCustomCakeContact()">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.611.611l4.458-1.496A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.352 0-4.556-.681-6.426-1.854l-.446-.296-3.107 1.042 1.042-3.107-.296-.446A9.935 9.935 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+          <div>
+            <span class="custom-cake-contact-btn-label" data-en="WhatsApp Us" data-es="Escríbenos por WhatsApp">WhatsApp Us</span>
+            <span class="custom-cake-contact-btn-number">(201) 869-7633</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
 
   <!-- FAB -->
   <button class="chat-fab" onclick="openChat()" aria-label="Chat with us" title="Chat & Order">
@@ -4431,6 +4583,17 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       document.body.style.overflow = 'hidden';
       const badge = document.querySelector('.fab-badge');
       if (badge) badge.remove();
+    }
+    function openCustomCakeContact() {
+      document.getElementById('custom-cake-contact-modal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeCustomCakeContact() {
+      document.getElementById('custom-cake-contact-modal').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    function closeCustomCakeContactOutside(e) {
+      if (e.target === document.getElementById('custom-cake-contact-modal')) closeCustomCakeContact();
     }
     function closeChat() {
       document.getElementById('chat-overlay').classList.remove('open');
