@@ -237,49 +237,103 @@ async function handleClerkUser(user) {
 
   try {
     const email = user.primaryEmailAddress?.emailAddress || '';
-    console.log('[AUTH DEBUG] Clerk user ID:', user.id, 'Email:', email);
+    console.log('[AUTH] Clerk user ID:', user.id, 'Email:', email);
 
-    // Check existing profile for role
+    // ── Strategy 1: Look up profile by clerk_user_id ──
     let existingRole = null;
+    let profileFound = false;
+
     try {
-      const { data: existing, error: selectErr } = await sb
+      const resp1 = await sb
         .from('profiles')
-        .select('role')
+        .select('role, email, clerk_user_id')
         .eq('clerk_user_id', user.id)
         .maybeSingle();
 
-      console.log('[AUTH DEBUG] SELECT result:', JSON.stringify(existing), 'Error:', selectErr);
+      console.log('[AUTH] Lookup by clerk_user_id:', JSON.stringify(resp1.data), 'Error:', JSON.stringify(resp1.error));
 
-      if (existing) {
-        existingRole = existing.role;
-        // Update email if profile exists
-        await sb.from('profiles')
-          .update({ email: email })
-          .eq('clerk_user_id', user.id);
-      } else {
-        // No profile yet — insert new row with generated UUID
+      if (resp1.data) {
+        existingRole = resp1.data.role;
+        profileFound = true;
+        // Silently update email if needed
+        if (resp1.data.email !== email) {
+          sb.from('profiles').update({ email }).eq('clerk_user_id', user.id).then(() => {});
+        }
+      }
+    } catch (e1) {
+      console.warn('[AUTH] Lookup 1 exception:', e1);
+    }
+
+    // ── Strategy 2: Fallback — look up by email ──
+    if (!profileFound && email) {
+      try {
+        const resp2 = await sb
+          .from('profiles')
+          .select('role, clerk_user_id, id')
+          .ilike('email', email)
+          .maybeSingle();
+
+        console.log('[AUTH] Lookup by email:', JSON.stringify(resp2.data), 'Error:', JSON.stringify(resp2.error));
+
+        if (resp2.data) {
+          existingRole = resp2.data.role;
+          profileFound = true;
+          // Link the Clerk user ID to this profile if not already linked
+          if (!resp2.data.clerk_user_id || resp2.data.clerk_user_id !== user.id) {
+            console.log('[AUTH] Linking clerk_user_id to existing profile');
+            sb.from('profiles').update({ clerk_user_id: user.id }).eq('id', resp2.data.id).then(() => {});
+          }
+        }
+      } catch (e2) {
+        console.warn('[AUTH] Lookup 2 exception:', e2);
+      }
+    }
+
+    // ── Strategy 3: Last resort — fetch ALL profiles and check ──
+    if (!profileFound) {
+      try {
+        const resp3 = await sb
+          .from('profiles')
+          .select('id, role, clerk_user_id, email')
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        console.log('[AUTH] All profiles dump:', JSON.stringify(resp3.data), 'Error:', JSON.stringify(resp3.error));
+
+        if (resp3.data) {
+          // Try to find matching row
+          const match = resp3.data.find(p =>
+            p.clerk_user_id === user.id ||
+            (p.email && p.email.toLowerCase() === email.toLowerCase())
+          );
+          if (match) {
+            existingRole = match.role;
+            profileFound = true;
+            console.log('[AUTH] Found match via dump:', JSON.stringify(match));
+          }
+        }
+      } catch (e3) {
+        console.warn('[AUTH] Strategy 3 exception:', e3);
+      }
+    }
+
+    // ── Create profile if none exists ──
+    if (!profileFound) {
+      console.log('[AUTH] No profile found — creating new one');
+      try {
         const { error: insertErr } = await sb.from('profiles')
           .insert({ id: crypto.randomUUID(), clerk_user_id: user.id, email: email, role: 'customer' });
-        console.log('[AUTH DEBUG] INSERT error:', insertErr);
         if (insertErr) {
-          _log('Profile insert error (may already exist):', insertErr.message);
-          // Profile might exist but RLS blocked the SELECT — try reading again
-          const { data: retry } = await sb
-            .from('profiles')
-            .select('role')
-            .eq('clerk_user_id', user.id)
-            .maybeSingle();
-          console.log('[AUTH DEBUG] Retry SELECT result:', JSON.stringify(retry));
-          if (retry) existingRole = retry.role;
+          console.error('[AUTH] Insert error:', JSON.stringify(insertErr));
         } else {
           existingRole = 'customer';
         }
+      } catch (ie) {
+        console.error('[AUTH] Insert exception:', ie);
       }
-    } catch (profileErr) {
-      console.error('[AUTH DEBUG] Profile check/upsert exception:', profileErr);
     }
 
-    console.log('[AUTH DEBUG] Final existingRole:', existingRole);
+    console.log('[AUTH] Final role:', existingRole, '| Profile found:', profileFound);
 
     // Role check — admin only
     if (existingRole !== 'admin') {
