@@ -1289,23 +1289,20 @@
         return;
       }
 
-      const boxes = Math.ceil(qty / boxSize);
-      const capacity = boxes * boxSize;
-      const extra = capacity - qty;
-      const exact = extra === 0;
+      const boxes = Math.floor(qty / boxSize);
+      const leftover = qty - (boxes * boxSize);
+      const exact = leftover === 0;
 
       if (exact) {
         resultEl.className = 'box-calc-result exact';
         resultEl.innerHTML = `<span class="arrow">→</span>
           <span class="result-tag">${boxes} box${boxes !== 1 ? 'es' : ''}</span>
-          <span class="result-tag">${capacity} capacity</span>
           <span class="result-tag">Exact fit! ✓</span>`;
       } else {
         resultEl.className = 'box-calc-result has-extra';
         resultEl.innerHTML = `<span class="arrow">→</span>
           <span class="result-tag">${boxes} box${boxes !== 1 ? 'es' : ''}</span>
-          <span class="result-tag">${capacity} capacity</span>
-          <span class="result-tag">${extra} extra piece${extra !== 1 ? 's' : ''}</span>`;
+          <span class="result-tag">${leftover} leftover</span>`;
       }
     }
 
@@ -1325,23 +1322,20 @@
         return;
       }
 
-      const boxes = Math.ceil(pieces / boxSize);
-      const capacity = boxes * boxSize;
-      const extra = capacity - pieces;
-      const exact = extra === 0;
+      const boxes = Math.floor(pieces / boxSize);
+      const leftover = pieces - (boxes * boxSize);
+      const exact = leftover === 0;
 
       if (exact) {
         resultEl.className = 'quick-calc-result exact';
         resultEl.innerHTML = `
-          <span class="qc-tag">📦 ${boxes} box${boxes !== 1 ? 'es' : ''} needed</span>
-          <span class="qc-tag">${capacity} capacity</span>
+          <span class="qc-tag">📦 ${boxes} box${boxes !== 1 ? 'es' : ''}</span>
           <span class="qc-tag">Exact fit! ✓</span>`;
       } else {
         resultEl.className = 'quick-calc-result has-extra';
         resultEl.innerHTML = `
-          <span class="qc-tag">📦 ${boxes} box${boxes !== 1 ? 'es' : ''} needed</span>
-          <span class="qc-tag">${capacity} capacity</span>
-          <span class="qc-tag">${extra} extra piece${extra !== 1 ? 's' : ''}</span>`;
+          <span class="qc-tag">📦 ${boxes} box${boxes !== 1 ? 'es' : ''}</span>
+          <span class="qc-tag">${leftover} leftover</span>`;
       }
     }
 
