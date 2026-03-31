@@ -4888,6 +4888,9 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       <img src="${url}" alt="" />
     </div>
   `).join('');
+
+      // Hide thumbnail strip when there's only one image (avoids redundant duplicate)
+      thumbsEl.style.display = atcImages.length > 1 ? 'flex' : 'none';
     }
 
     function selectGalleryImg(idx) {

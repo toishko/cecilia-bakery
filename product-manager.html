@@ -1459,7 +1459,7 @@ async function uploadFiles(files) {
     const file = files[i];
 
     // Validate
-    if (file.size > 5 * 1024 * 1024) { showToast(`${file.name} exceeds 5MB limit`, 'error'); continue; }
+    if (file.size > 10 * 1024 * 1024) { showToast(`${file.name} exceeds 10MB limit`, 'error'); continue; }
     if (!['image/jpeg','image/png','image/webp'].includes(file.type)) { showToast(`${file.name} is not a supported type`, 'error'); continue; }
 
     const ext = file.name.split('.').pop();

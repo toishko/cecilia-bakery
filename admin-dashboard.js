@@ -3567,7 +3567,7 @@ async function _pmUploadFiles(files) {
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    if (file.size > 5 * 1024 * 1024) { showToast(`${file.name} exceeds 5 MB`, 'error'); continue; }
+    if (file.size > 10 * 1024 * 1024) { showToast(`${file.name} exceeds 10 MB`, 'error'); continue; }
     const path = `${productId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
     if (bar) bar.style.width = Math.round(((i + 0.5) / files.length) * 100) + '%';
 
