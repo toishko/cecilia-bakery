@@ -1198,7 +1198,7 @@ function renderNeedsAttention() {
       const payLabel = payLabels[order.payment_status] || '';
       const unseenClass = isDriverOrderSeen(order.id) ? '' : ' order-unseen';
       html += `
-        <div class="needs-attention-item${unseenClass}" onclick="openOrderDetail('${order.id}')" style="cursor:pointer">
+        <div class="needs-attention-item${unseenClass}" onclick="showSection('incoming');setTimeout(()=>openOrderDetail('${order.id}'),300)" style="cursor:pointer">
           <div class="needs-attention-info">
             <span class="needs-attention-name">${name}</span>
             ${!isDriverOrderSeen(order.id) ? `<span class="needs-attention-status na-status-new">${lang === 'es' ? 'Nuevo' : 'New'}</span>` : ''}
