@@ -355,18 +355,27 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 
 /* Line items table */
 .line-items-table{width:100%;border-collapse:collapse;font-size:.85rem;margin-bottom:16px;
-  display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
-.line-items-table thead,.line-items-table tbody,.line-items-table tr{display:table;
-  width:100%;table-layout:auto}
+  table-layout:fixed}
 .line-items-table th{text-align:left;padding:8px 4px;font-size:.72rem;text-transform:uppercase;
   letter-spacing:.3px;color:var(--tx-faint);border-bottom:1px solid var(--bd);font-weight:500;
   white-space:nowrap}
 .line-items-table td{padding:10px 4px;border-bottom:1px solid rgba(200,16,46,.06);color:var(--tx);
   overflow-wrap:break-word}
 .line-items-table .adj-note{font-size:.72rem;color:var(--red);font-weight:500;display:block;margin-top:2px}
-.line-items-table .col-qty{text-align:center;min-width:45px;white-space:nowrap}
-.line-items-table .col-price{text-align:right;min-width:55px;white-space:nowrap}
-.line-items-table .col-total{text-align:right;min-width:55px;font-weight:600;white-space:nowrap}
+/* Fixed column widths via nth-child */
+.line-items-table th:nth-child(1),
+.line-items-table td:nth-child(1){width:auto;text-align:left;word-break:break-word}
+.line-items-table th:nth-child(2),
+.line-items-table td:nth-child(2){width:50px;text-align:center}
+.line-items-table th:nth-child(3),
+.line-items-table td:nth-child(3){width:65px;text-align:center}
+.line-items-table th:nth-child(4),
+.line-items-table td:nth-child(4){width:60px;text-align:right}
+.line-items-table th:nth-child(5),
+.line-items-table td:nth-child(5){width:70px;text-align:right}
+.line-items-table .col-qty{text-align:center;white-space:nowrap}
+.line-items-table .col-price{text-align:right;white-space:nowrap}
+.line-items-table .col-total{text-align:right;font-weight:600;white-space:nowrap}
 .cat-header-row td{background:var(--bg-surface);font-size:.72rem;font-weight:700;
   text-transform:uppercase;letter-spacing:.5px;color:var(--red);padding:6px 6px !important;
   border-bottom:1px solid var(--bd);border-left:3px solid var(--red)}
@@ -382,6 +391,20 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   text-align:center;font-size:.85rem;font-family:inherit;background:var(--bg-input);
   color:var(--tx);transition:border-color .2s}
 .qty-adjust-input:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 2px rgba(200,16,46,.1)}
+
+/* Small-screen column compression */
+@media (max-width:374px){
+  .line-items-table{font-size:.78rem}
+  .line-items-table th:nth-child(2),
+  .line-items-table td:nth-child(2){width:40px}
+  .line-items-table th:nth-child(3),
+  .line-items-table td:nth-child(3){width:55px}
+  .line-items-table th:nth-child(4),
+  .line-items-table td:nth-child(4){width:50px}
+  .line-items-table th:nth-child(5),
+  .line-items-table td:nth-child(5){width:60px}
+  .qty-adjust-input{min-width:40px;max-width:55px}
+}
 
 /* Payment status — segmented pill */
 .payment-btns{display:flex;gap:0;margin:12px 0;border:1px solid var(--bd);border-radius:10px;overflow:hidden}
