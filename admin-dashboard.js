@@ -237,15 +237,18 @@ async function handleClerkUser(user) {
 
   try {
     const email = user.primaryEmailAddress?.emailAddress || '';
+    console.log('[AUTH DEBUG] Clerk user ID:', user.id, 'Email:', email);
 
     // Check existing profile for role
     let existingRole = null;
     try {
-      const { data: existing } = await sb
+      const { data: existing, error: selectErr } = await sb
         .from('profiles')
         .select('role')
         .eq('clerk_user_id', user.id)
         .maybeSingle();
+
+      console.log('[AUTH DEBUG] SELECT result:', JSON.stringify(existing), 'Error:', selectErr);
 
       if (existing) {
         existingRole = existing.role;
@@ -257,6 +260,7 @@ async function handleClerkUser(user) {
         // No profile yet — insert new row with generated UUID
         const { error: insertErr } = await sb.from('profiles')
           .insert({ id: crypto.randomUUID(), clerk_user_id: user.id, email: email, role: 'customer' });
+        console.log('[AUTH DEBUG] INSERT error:', insertErr);
         if (insertErr) {
           _log('Profile insert error (may already exist):', insertErr.message);
           // Profile might exist but RLS blocked the SELECT — try reading again
@@ -265,14 +269,17 @@ async function handleClerkUser(user) {
             .select('role')
             .eq('clerk_user_id', user.id)
             .maybeSingle();
+          console.log('[AUTH DEBUG] Retry SELECT result:', JSON.stringify(retry));
           if (retry) existingRole = retry.role;
         } else {
           existingRole = 'customer';
         }
       }
     } catch (profileErr) {
-      _log('Profile check/upsert error:', profileErr);
+      console.error('[AUTH DEBUG] Profile check/upsert exception:', profileErr);
     }
+
+    console.log('[AUTH DEBUG] Final existingRole:', existingRole);
 
     // Role check — admin only
     if (existingRole !== 'admin') {
