@@ -4450,7 +4450,7 @@ async function loadPendingStaff() {
       </tr>`;
     }).join('');
 
-    container.innerHTML = `<table class="staff-table"><thead>${lang === 'es' ? headerEs : headerEn}</thead><tbody>${rows}</tbody></table>`;
+    container.innerHTML = `<div class="staff-table-wrap"><table class="staff-table"><thead>${lang === 'es' ? headerEs : headerEn}</thead><tbody>${rows}</tbody></table></div>`;
   } catch (e) { console.error('Pending staff load error:', e); }
 }
 
@@ -4497,7 +4497,7 @@ async function loadCurrentStaff() {
       </tr>`;
     }).join('');
 
-    container.innerHTML = `<table class="staff-table"><thead>${lang === 'es' ? headerEs : headerEn}</thead><tbody>${rows}</tbody></table>`;
+    container.innerHTML = `<div class="staff-table-wrap"><table class="staff-table"><thead>${lang === 'es' ? headerEs : headerEn}</thead><tbody>${rows}</tbody></table></div>`;
   } catch (e) { console.error('Current staff load error:', e); }
 }
 

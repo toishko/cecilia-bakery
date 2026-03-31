@@ -645,13 +645,23 @@
   gap: 6px;
   flex-wrap: wrap;
 }
+/* Scrollable wrapper for staff tables on mobile (same pattern as .driver-table-wrap) */
+.staff-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 @media (max-width: 600px) {
-  .staff-table th:nth-child(3),
-  .staff-table td:nth-child(3) { display: none; }
+  /* Hide User ID column (2nd) on mobile — not useful on small screens */
+  .staff-table th:nth-child(2),
+  .staff-table td:nth-child(2) { display: none; }
   .staff-grant-form { flex-direction: column; }
   .staff-grant-form .login-input,
   .staff-grant-form select,
   .staff-grant-form button { width: 100%; }
+  /* Compact padding for mobile table cells */
+  .staff-table th { padding: 8px 8px; font-size: .7rem; }
+  .staff-table td { padding: 10px 8px; font-size: .8rem; }
+  .staff-action-btn { padding: 5px 10px; font-size: .72rem; }
 }
 </style>
 <script>
