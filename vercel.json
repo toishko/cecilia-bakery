@@ -1,15 +1,48 @@
 {
   "rewrites": [
-    { "source": "/menu", "destination": "/menu.html" },
-    { "source": "/checkout", "destination": "/checkout.html" },
-    { "source": "/account", "destination": "/account.html" },
-    { "source": "/order-confirmation", "destination": "/order-confirmation.html" },
-    { "source": "/driver-order", "destination": "/driver-order.html" },
-    { "source": "/product-manager", "destination": "/product-manager.html" },
-    { "source": "/admin-dashboard", "destination": "/admin-dashboard.html" },
-    { "source": "/terms", "destination": "/terms.html" },
-    { "source": "/privacy", "destination": "/privacy.html" },
-    { "source": "/refunds", "destination": "/refunds.html" },
-    { "source": "/staff", "destination": "/staff.html" }
+    {
+      "source": "/menu",
+      "destination": "/menu.html"
+    },
+    {
+      "source": "/checkout",
+      "destination": "/checkout.html"
+    },
+    {
+      "source": "/account",
+      "destination": "/account.html"
+    },
+    {
+      "source": "/order-confirmation",
+      "destination": "/order-confirmation.html"
+    },
+    {
+      "source": "/driver-order",
+      "destination": "/driver-order.html"
+    },
+    {
+      "source": "/product-manager",
+      "destination": "/product-manager.html"
+    },
+    {
+      "source": "/admin-dashboard",
+      "destination": "/admin-dashboard.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/refunds",
+      "destination": "/refunds.html"
+    },
+    {
+      "source": "/staff",
+      "destination": "/staff.html"
+    }
   ]
 }
