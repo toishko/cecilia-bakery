@@ -497,6 +497,21 @@
       font-size: .85rem; color: var(--tx-muted);
       line-height: 1.5;
     }
+    .order-items-cat {
+      display: block;
+      font-size: .7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .5px;
+      color: var(--red);
+      margin-top: 6px;
+      padding: 3px 0;
+      border-bottom: 1px solid var(--bd);
+    }
+    .order-items-cat:first-child { margin-top: 0; }
+    .order-items-line {
+      display: block;
+      padding: 1px 0 1px 8px;
+      color: var(--tx-muted);
+    }
     .order-meta-row {
       display: flex; align-items: center; gap: 16px;
       margin-top: 12px;
@@ -572,6 +587,15 @@
     }
     .box-calc-body.open { display: block; }
 
+    .box-calc-cat-header {
+      font-size: .72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .5px;
+      color: var(--red);
+      padding: 10px 0 4px;
+      border-bottom: 1px solid var(--bd);
+      margin-top: 8px;
+    }
+    .box-calc-cat-header:first-child { margin-top: 0; }
     .box-calc-item {
       padding: 14px 0;
       border-bottom: 1px solid var(--bd);
@@ -1007,6 +1031,37 @@
       return cachedDrivers[driverId] || 'Unknown Driver';
     }
 
+    /* ── Product → Category Map (for grouping items) ── */
+    const PRODUCT_CAT = {};
+    (function() {
+      const cats = {
+        redondo:  { label:'Round',   keys:['pina','guava','dulce'] },
+        plain:    { label:'Plain',   keys:['plain','raisin','pudin'] },
+        tresleche:{ label:'Tres Leche', keys:['tl','tl_hershey','cuatro_leche','tl_straw','tl_pina'] },
+        piezas:   { label:'Pieces',  keys:['pz_rv','pz_carrot','pz_cheese','pz_pudin','pz_pina','pz_guava','pz_chocoflan','pz_flan'] },
+        frostin:  { label:'Frosted Pieces', keys:['fr_guava','fr_pina','fr_dulce','fr_choco'] },
+        hb_big:   { label:'Happy Birthday — BIG', keys:['hb_b_pina','hb_b_guava','hb_b_dulce','hb_b_choco','hb_b_straw'] },
+        hb_small: { label:'Happy Birthday — SMALL', keys:['hb_s_pina','hb_s_guava','hb_s_dulce','hb_s_choco','hb_s_straw'] },
+        cuadrao:  { label:'Square',  keys:['cdr_pudin','cdr_pound','cdr_raisin','cdr_maiz'] },
+        basos:    { label:'Cups',    keys:['bas_tl','bas_cl','bas_hershey'] },
+        familiar: { label:'Family Size', keys:['fam_tl','fam_cl'] },
+      };
+      const redondoCols = ['inside','inside_nt','top','top_nt'];
+      Object.values(cats).forEach(c => {
+        c.keys.forEach(k => {
+          PRODUCT_CAT[k] = c.label;
+          PRODUCT_CAT[k + '_nt'] = c.label;
+          if (c.label === 'Round') {
+            redondoCols.forEach(col => { PRODUCT_CAT[k + '_' + col] = c.label; });
+          }
+        });
+      });
+    })();
+
+    function getCategory(productKey) {
+      return PRODUCT_CAT[productKey] || '';
+    }
+
     /* ── Load driver orders ── */
     async function loadOrders() {
       const container = document.getElementById('orders-list');
@@ -1082,15 +1137,24 @@
         const bizName = _esc(order.business_name || 'No business name');
         const status = order.status || 'pending';
 
-        // Build items summary (NO prices/totals/currency)
+        // Build items summary grouped by category (NO prices/totals/currency)
         const items = order.driver_order_items || [];
         let itemsSummary = '';
         if (items.length > 0) {
-          const summaryParts = items.slice(0, 4).map(it =>
-            `${it.quantity}× ${_esc(it.product_label || it.product_key)}`
-          );
-          if (items.length > 4) summaryParts.push(`+${items.length - 4} more`);
-          itemsSummary = summaryParts.join(', ');
+          // Group items by category
+          const grouped = {};
+          const catOrder = [];
+          items.forEach(it => {
+            const cat = getCategory(it.product_key) || 'Other';
+            if (!grouped[cat]) { grouped[cat] = []; catOrder.push(cat); }
+            grouped[cat].push(it);
+          });
+          itemsSummary = catOrder.map(cat => {
+            const lines = grouped[cat].map(it =>
+              `<span class="order-items-line">${it.quantity}× ${_esc(it.product_label || it.product_key)}</span>`
+            ).join('');
+            return `<span class="order-items-cat">${_esc(cat)}</span>${lines}`;
+          }).join('');
         } else {
           itemsSummary = 'No items';
         }
@@ -1122,27 +1186,39 @@
           cancelled: 'Cancelled'
         };
 
-        // Build inline box calculator items
+        // Build inline box calculator items (grouped by category)
         let boxCalcItems = '';
         if (items.length > 0) {
-          boxCalcItems = items.map((item, ii) => {
-            const label = _esc(item.product_label || item.product_key);
-            const qty = item.quantity || 0;
-            const uid = `bc-${oi}-${ii}`;
-            return `
-              <div class="box-calc-item">
-                <div class="box-calc-item-header">
-                  <span class="box-calc-item-name">${label}</span>
-                  <span class="box-calc-item-qty">${qty} pieces</span>
-                </div>
-                <div class="box-calc-input-row">
-                  <span class="box-calc-input-label">Pieces per box:</span>
-                  <input class="box-calc-input" type="number" min="1" id="${uid}" data-qty="${qty}" placeholder="—" oninput="calcBox(this)" />
-                </div>
-                <div class="box-calc-result empty" id="${uid}-result">
-                  <span class="arrow">→</span> enter box size above
-                </div>
-              </div>`;
+          const bcGrouped = {};
+          const bcCatOrder = [];
+          items.forEach(item => {
+            const cat = getCategory(item.product_key) || 'Other';
+            if (!bcGrouped[cat]) { bcGrouped[cat] = []; bcCatOrder.push(cat); }
+            bcGrouped[cat].push(item);
+          });
+          let globalIdx = 0;
+          boxCalcItems = bcCatOrder.map(cat => {
+            let catHtml = `<div class="box-calc-cat-header">${_esc(cat)}</div>`;
+            catHtml += bcGrouped[cat].map(item => {
+              const label = _esc(item.product_label || item.product_key);
+              const qty = item.quantity || 0;
+              const uid = `bc-${oi}-${globalIdx++}`;
+              return `
+                <div class="box-calc-item">
+                  <div class="box-calc-item-header">
+                    <span class="box-calc-item-name">${label}</span>
+                    <span class="box-calc-item-qty">${qty} pieces</span>
+                  </div>
+                  <div class="box-calc-input-row">
+                    <span class="box-calc-input-label">Pieces per box:</span>
+                    <input class="box-calc-input" type="number" min="1" id="${uid}" data-qty="${qty}" placeholder="—" oninput="calcBox(this)" />
+                  </div>
+                  <div class="box-calc-result empty" id="${uid}-result">
+                    <span class="arrow">→</span> enter box size above
+                  </div>
+                </div>`;
+            }).join('');
+            return catHtml;
           }).join('');
         }
 
