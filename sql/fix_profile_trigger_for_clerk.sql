@@ -1,35 +1,32 @@
 -- ═══════════════════════════════════════════════════════════════
---  FIX: Remove old Supabase Auth triggers that block Clerk
+--  FIX: Remove old Supabase Auth constraints that block Clerk
 --  profile creation.
 --
---  PROBLEM: The guard_profile_role() trigger fires on INSERT/UPDATE
---  to profiles and either blocks or strips fields. The handle_new_user()
---  function creates "hollow" profiles (with only id, role) from
---  Supabase Auth events — which never fire for Clerk users.
+--  PROBLEM: The profiles_id_fkey foreign key constraint requires
+--  every profile's id to exist in auth.users. Since Clerk users
+--  do NOT exist in Supabase Auth, ALL profile inserts fail with:
+--    ERROR 23503: violates foreign key constraint "profiles_id_fkey"
 --
---  SOLUTION: Drop these triggers. Clerk-based auth handles profile
---  creation in JS (admin-dashboard.js, staff.html).
+--  SOLUTION: Drop the constraint. Clerk handles auth, not Supabase.
 -- ═══════════════════════════════════════════════════════════════
 
--- Step 1: Drop the guard_profile_role trigger (blocks INSERT/UPDATE on profiles)
-DROP TRIGGER IF EXISTS enforce_profile_role ON profiles;
+-- Drop the foreign key constraint
+ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey;
 
--- Step 2: The handle_new_user trigger runs on auth.users
--- It creates hollow profiles with NULL clerk_user_id/email.
--- We need to drop the trigger from auth.users.
+-- Also drop triggers (in case they weren't dropped already)
+DROP TRIGGER IF EXISTS enforce_profile_role ON profiles;
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 
--- Step 3: Clean up orphaned profiles (NULL clerk_user_id, NULL email)
--- These were created by the old trigger and are useless for Clerk auth.
+-- Clean up orphaned profiles
 DELETE FROM profiles
 WHERE clerk_user_id IS NULL
   AND email IS NULL
   AND role = 'customer';
 
--- Step 4: Verify
+-- Reload PostgREST schema cache
+NOTIFY pgrst, 'reload schema';
+
+-- Verify
 SELECT id, clerk_user_id, email, role, created_at
 FROM profiles
 ORDER BY created_at DESC;
-
--- Reload PostgREST schema cache
-NOTIFY pgrst, 'reload schema';

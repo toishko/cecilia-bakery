@@ -4531,7 +4531,7 @@ window.grantStaffByEmail = async function() {
   }
 
   try {
-    // Find profile by email to get their clerk_user_id
+    // Find profile by email
     const { data: profiles, error } = await sb
       .from('profiles')
       .select('id, clerk_user_id, email, role')
@@ -4541,26 +4541,47 @@ window.grantStaffByEmail = async function() {
     if (error) throw error;
 
     if (!profiles || profiles.length === 0) {
+      // No profile exists — create one with the desired role right now
+      // The user can link their Clerk ID when they sign in later
+      const { data: newProfile, error: insertErr } = await sb
+        .from('profiles')
+        .insert({ email: email, role: newRole })
+        .select()
+        .single();
+
+      if (insertErr) {
+        // Retry without .select().single()
+        const { error: retryErr } = await sb
+          .from('profiles')
+          .insert({ email: email, role: newRole });
+        if (retryErr) throw retryErr;
+      }
+
+      emailInput.value = '';
       showToast(
         lang === 'es'
-          ? 'No se encontró cuenta. Pídeles que inicien sesión en ceciliabakery.com/staff primero.'
-          : 'No account found. Ask them to sign in to ceciliabakery.com/staff first.',
-        'error'
+          ? `Cuenta creada con acceso de ${newRole} para ${_esc(email)}`
+          : `Account created with ${newRole} access for ${_esc(email)}`,
+        'success'
       );
+      await loadStaffSection();
       return;
     }
 
     const profile = profiles[0];
-    if (!profile.clerk_user_id) {
-      showToast(
-        lang === 'es' ? 'Este usuario no tiene ID de Clerk vinculado.' : 'This user has no linked Clerk ID.',
-        'error'
-      );
-      return;
-    }
 
-    // Use server-side API to update role
-    await updateStaffRole(profile.clerk_user_id, newRole);
+    // Profile exists — update role directly via Supabase
+    if (profile.clerk_user_id) {
+      // Has Clerk ID — use the API
+      await updateStaffRole(profile.clerk_user_id, newRole);
+    } else {
+      // No Clerk ID yet — update role directly in DB
+      const { error: updateErr } = await sb
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', profile.id);
+      if (updateErr) throw updateErr;
+    }
 
     emailInput.value = '';
     showToast(
