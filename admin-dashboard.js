@@ -1575,6 +1575,32 @@ function renderOrderDetail() {
 
   html += '</tbody></table>';
 
+  // Add Item button (only when editable)
+  if (isEditable) {
+    // Build product options grouped by category, excluding items already in order
+    const existingKeys = new Set(detailItems.map(it => it.product_key));
+    let optionsHtml = `<option value="" disabled selected>${lang === 'es' ? '— Seleccionar producto —' : '— Select product —'}</option>`;
+    ADMIN_PRODUCTS.forEach(sec => {
+      const available = sec.items.filter(p => !existingKeys.has(p.key));
+      if (available.length > 0) {
+        const sectionLabel = lang === 'es' ? sec.sectionEs : sec.section;
+        optionsHtml += `<optgroup label="${_esc(sectionLabel)}">`;
+        available.forEach(p => {
+          const pLabel = lang === 'es' ? p.es : p.en;
+          optionsHtml += `<option value="${_esc(p.key)}" data-label="${_esc(pLabel)}">${_esc(pLabel)}</option>`;
+        });
+        optionsHtml += '</optgroup>';
+      }
+    });
+    html += `<div class="add-item-row">
+      <select id="add-item-select" class="add-item-select">${optionsHtml}</select>
+      <button class="add-item-btn" onclick="addItemToOrder()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        ${lang === 'es' ? 'Agregar' : 'Add'}
+      </button>
+    </div>`;
+  }
+
   if (detailTotalsVisible) {
     html += `<div class="grand-total-row"><span>${lang === 'es' ? 'Total General' : 'Grand Total'}</span><span>${formatCurrency(grandTotal)}</span></div>`;
   }
@@ -1724,6 +1750,45 @@ window.handleQtyAdjust = async function(input) {
   renderOrderDetail();
 };
 
+window.addItemToOrder = async function() {
+  const select = document.getElementById('add-item-select');
+  if (!select || !select.value) return;
+
+  const productKey = select.value;
+  const selectedOption = select.options[select.selectedIndex];
+  const productLabel = selectedOption.dataset.label || productKey;
+
+  // Look up driver price for this product
+  let price = 0;
+  if (detailOrder && detailOrder.driver_id) {
+    try {
+      const { data } = await sb.from('driver_prices')
+        .select('price')
+        .eq('driver_id', detailOrder.driver_id)
+        .eq('product_key', productKey)
+        .maybeSingle();
+      if (data) price = parseFloat(data.price) || 0;
+    } catch (e) { console.warn('Price lookup failed:', e); }
+  }
+
+  // Add to detailItems (no id = new item, will be inserted on save)
+  detailItems.push({
+    id: null,
+    order_id: detailOrder.id,
+    product_key: productKey,
+    product_label: productLabel,
+    quantity: 0,
+    adjusted_quantity: 1,
+    adjustment_note: `(${lang === 'es' ? 'añadido por admin' : 'added by admin'})`,
+    adjusted_at: new Date().toISOString(),
+    price_at_order: price,
+    _isNew: true
+  });
+
+  renderOrderDetail();
+  showToast(`${productLabel} ${lang === 'es' ? 'agregado' : 'added'}`, 'success');
+};
+
 window.setPaymentStatus = function(status) {
   if (!detailOrder) return;
   detailOrder.payment_status = status;
@@ -1760,14 +1825,34 @@ window.saveOrderChanges = async function() {
   if (!detailOrder) return;
 
   try {
-    // Save item adjustments
+    // Save item adjustments (existing items)
     for (const item of detailItems) {
+      if (item._isNew) continue; // new items handled below
       if (item.adjusted_quantity !== null && item.adjusted_quantity !== undefined) {
         await sb.from('driver_order_items').update({
           adjusted_quantity: item.adjusted_quantity,
           adjustment_note: item.adjustment_note,
           adjusted_at: item.adjusted_at || new Date().toISOString()
         }).eq('id', item.id);
+      }
+    }
+
+    // Insert new items added by admin
+    const newItems = detailItems.filter(it => it._isNew);
+    for (const item of newItems) {
+      const { data, error } = await sb.from('driver_order_items').insert({
+        order_id: detailOrder.id,
+        product_key: item.product_key,
+        product_label: item.product_label,
+        quantity: 0,
+        adjusted_quantity: item.adjusted_quantity,
+        adjustment_note: item.adjustment_note,
+        adjusted_at: item.adjusted_at,
+        price_at_order: item.price_at_order
+      }).select().single();
+      if (!error && data) {
+        item.id = data.id;
+        item._isNew = false;
       }
     }
 

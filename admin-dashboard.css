@@ -392,6 +392,19 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   color:var(--tx);transition:border-color .2s}
 .qty-adjust-input:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 2px rgba(200,16,46,.1)}
 
+/* Add item picker */
+.add-item-row{display:flex;gap:8px;align-items:center;margin:8px 0 12px;padding:8px 0;
+  border-top:1px dashed var(--bd)}
+.add-item-select{flex:1;padding:8px 10px;border:1px solid var(--bd-input);border-radius:8px;
+  background:var(--bg-input);color:var(--tx);font-size:.82rem;font-family:inherit;
+  min-width:0;cursor:pointer}
+.add-item-select:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 2px rgba(200,16,46,.08)}
+.add-item-btn{display:inline-flex;align-items:center;gap:4px;padding:8px 14px;border:none;
+  border-radius:8px;background:var(--red);color:#fff;font-size:.82rem;font-weight:600;
+  font-family:inherit;cursor:pointer;transition:background .2s;white-space:nowrap;flex-shrink:0}
+.add-item-btn:hover{background:var(--red-dk)}
+.add-item-btn svg{width:14px;height:14px;flex-shrink:0}
+
 /* Small-screen column compression */
 @media (max-width:374px){
   .line-items-table{font-size:.78rem}
