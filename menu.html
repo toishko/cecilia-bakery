@@ -5424,10 +5424,12 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
 
       updateATCBtn();
       document.getElementById('atc-overlay').classList.add('open');
+      document.body.style.overflow = 'hidden';
     }
 
     function closeATC() {
       document.getElementById('atc-overlay').classList.remove('open');
+      document.body.style.overflow = '';
     }
 
     function selectSize(btn, size, displayLabel) {
