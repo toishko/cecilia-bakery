@@ -345,9 +345,15 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .summary-section{margin-bottom:16px}
 .summary-section-title{font-size:.85rem;font-weight:600;color:var(--tx-muted);margin-bottom:6px;
   text-transform:uppercase;letter-spacing:.5px;font-size:.75rem}
-.summary-item{display:flex;justify-content:space-between;padding:4px 0;font-size:.9rem;gap:8px}
-.summary-item-name{color:var(--tx);min-width:0;overflow-wrap:break-word}
-.summary-item-qty{font-weight:600;color:var(--tx);flex-shrink:0}
+.summary-item{display:flex;justify-content:space-between;padding:5px 0;font-size:.9rem;gap:8px;
+  align-items:baseline}
+.summary-item-name{color:var(--tx);min-width:0;overflow-wrap:break-word;flex:1}
+.summary-item-price-col{display:flex;align-items:baseline;gap:6px;flex-shrink:0;text-align:right}
+.summary-item-qty{font-weight:600;color:var(--tx);min-width:30px;text-align:center}
+.summary-item-unit{font-size:.78rem;color:var(--tx-muted);min-width:46px;text-align:right}
+.summary-item-line{font-weight:600;color:var(--tx);min-width:54px;text-align:right;font-size:.88rem}
+.summary-total{display:flex;justify-content:space-between;padding:10px 0 4px;
+  margin-top:6px;border-top:2px solid var(--bd);font-weight:700;font-size:1rem;color:var(--tx)}
 .summary-item .no-ticket-tag{font-size:9px;color:var(--red);background:rgba(200,16,46,.08);
   padding:1px 5px;border-radius:4px;margin-left:4px;white-space:nowrap}
 .summary-meta{background:var(--bg-surface);border-radius:8px;padding:10px 12px;margin-bottom:12px;
@@ -565,8 +571,11 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   padding:8px 0;border-bottom:1px solid var(--bd);gap:8px}
 .order-detail-item:last-child{border-bottom:none}
 .order-detail-item-name{font-weight:500;color:var(--tx);font-size:.9rem;min-width:0;
-  overflow-wrap:break-word}
-.order-detail-item-qty{font-weight:600;color:var(--tx);font-size:.88rem}
+  overflow-wrap:break-word;flex:1}
+.order-detail-item-prices{display:flex;align-items:baseline;gap:6px;flex-shrink:0;text-align:right}
+.order-detail-item-qty{font-weight:600;color:var(--tx);font-size:.88rem;min-width:30px;text-align:center}
+.order-detail-item-unit{font-size:.78rem;color:var(--tx-muted);min-width:46px;text-align:right}
+.order-detail-item-line{font-weight:600;color:var(--tx);min-width:54px;text-align:right;font-size:.88rem}
 .order-detail-item-adj{font-size:.72rem;color:var(--tx-faint);margin-left:4px}
 .order-detail-cat-header{background:var(--bg-surface);font-size:.72rem;font-weight:700;
   text-transform:uppercase;letter-spacing:.5px;color:var(--red);padding:6px 10px;

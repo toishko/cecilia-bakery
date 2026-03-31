@@ -46,6 +46,7 @@ let currentDriver = null;
 let lang = localStorage.getItem('cecilia_lang') || 'en';
 let failedAttempts = parseInt(localStorage.getItem('cecilia_code_attempts') || '0');
 let lockoutUntil = parseInt(localStorage.getItem('cecilia_lockout_until') || '0');
+let driverPriceMap = {}; // product_key → price, loaded on login
 
 // Session timeout: 24 hours
 const DRIVER_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -221,6 +222,8 @@ function enterDashboard() {
   // menu products in the Supabase `products` table. Do NOT load from DB here.
   // The driver catalog includes items like Redondo, Happy Birthday BIG/SMALL,
   // Frosted Pieces, Family Size, etc. that don't exist in the menu products table.
+  // Load driver prices for summary display
+  loadDriverPriceMap();
 }
 
 async function handleLogout() {
@@ -913,6 +916,20 @@ async function loadDriverProducts() {
   }
 }
 
+// ── Load driver prices into global map (for summary display) ──
+async function loadDriverPriceMap() {
+  if (!sb || !currentDriver) return;
+  try {
+    const { data } = await sb
+      .from('driver_prices')
+      .select('product_key, price')
+      .eq('driver_id', currentDriver.id);
+    driverPriceMap = {};
+    if (data) data.forEach(p => driverPriceMap[p.product_key] = parseFloat(p.price));
+    _log('Driver prices loaded:', Object.keys(driverPriceMap).length, 'keys');
+  } catch (e) { console.warn('Price map load failed:', e); }
+}
+
 
 function qtyControl(key) {
   return `<div class="qty-wrap"><button class="qty-btn" data-dir="-">−</button><input type="number" class="qty-input" data-key="${key}" value="0" min="0"><button class="qty-btn" data-dir="+">+</button></div>`;
@@ -1018,6 +1035,8 @@ function renderSummaryOrder(idx) {
   }
 
   // Items by section
+  let grandTotal = 0;
+  let hasAnyPrice = false;
   Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
     const items = [];
     sec.items.forEach(item => {
@@ -1030,25 +1049,47 @@ function renderSummaryOrder(idx) {
             const colEs = col.replace('_nt', '').replace('inside', 'Adentro').replace('top', 'Arriba');
             const colLabel = lang === 'es' ? colEs : colEn;
             const isNT = col.includes('nt');
-            items.push({ name: `${L(item)} (${colLabel})`, qty: v, nt: isNT });
+            const price = driverPriceMap[k];
+            items.push({ name: `${L(item)} (${colLabel})`, qty: v, nt: isNT, key: k, price });
           }
         });
       } else {
         const v = o.qty[item.key] || 0;
         const vnt = o.qty[item.key + '_nt'] || 0;
-        if (v > 0) items.push({ name: L(item), qty: v, nt: false });
-        if (vnt > 0) items.push({ name: L(item), qty: vnt, nt: true });
+        if (v > 0) items.push({ name: L(item), qty: v, nt: false, key: item.key, price: driverPriceMap[item.key] });
+        if (vnt > 0) items.push({ name: L(item), qty: vnt, nt: true, key: item.key + '_nt', price: driverPriceMap[item.key + '_nt'] });
       }
     });
 
     if (items.length > 0) {
       html += `<div class="summary-section"><div class="summary-section-title">${L(sec)}</div>`;
       items.forEach(it => {
-        html += `<div class="summary-item"><span class="summary-item-name">${it.name}${it.nt ? `<span class="no-ticket-tag">${lang === 'es' ? 'Sin Ticket' : 'No Ticket'}</span>` : ''}</span><span class="summary-item-qty">×${it.qty}</span></div>`;
+        const hasPrice = it.price != null && it.price > 0;
+        if (hasPrice) hasAnyPrice = true;
+        const priceStr = hasPrice ? `$${it.price.toFixed(2)}` : '—';
+        const lineTotal = hasPrice ? it.qty * it.price : 0;
+        const lineTotalStr = hasPrice ? `$${lineTotal.toFixed(2)}` : '';
+        grandTotal += lineTotal;
+        html += `<div class="summary-item">
+          <span class="summary-item-name">${it.name}${it.nt ? `<span class="no-ticket-tag">${lang === 'es' ? 'Sin Ticket' : 'No Ticket'}</span>` : ''}</span>
+          <span class="summary-item-price-col">
+            <span class="summary-item-qty">×${it.qty}</span>
+            <span class="summary-item-unit">${priceStr}</span>
+            <span class="summary-item-line">${lineTotalStr}</span>
+          </span>
+        </div>`;
       });
       html += '</div>';
     }
   });
+
+  // Grand total row
+  if (hasAnyPrice) {
+    html += `<div class="summary-total">
+      <span>Total</span>
+      <span>$${grandTotal.toFixed(2)}</span>
+    </div>`;
+  }
 
   if (!html) html = `<div class="empty-state">${lang === 'es' ? 'Sin artículos' : 'No items'}</div>`;
 
@@ -1694,13 +1735,13 @@ function renderOrderInDetail(idx) {
 
   // Items
   const items = order.driver_order_items || [];
-  const showPrices = (order.status === 'sent');
   if (items.length === 0) {
     document.getElementById('order-detail-items').innerHTML =
       `<div class="empty-state">${lang === 'es' ? 'Sin artículos' : 'No items'}</div>`;
   } else {
     let itemsHtml = '';
     let grandTotal = 0;
+    let hasAnyPrice = false;
 
     const keyCat = {};
     Object.values(PRODUCTS).forEach(sec => {
@@ -1720,6 +1761,8 @@ function renderOrderInDetail(idx) {
       const adminQty = item.admin_qty;
       const effectiveQty = adminQty ?? origQty;
       const price = parseFloat(item.price_at_order || 0);
+      const hasPrice = price > 0;
+      if (hasPrice) hasAnyPrice = true;
       const lineTotal = effectiveQty * price;
       grandTotal += lineTotal;
       let qtyDisplay = `×${effectiveQty}`;
@@ -1741,14 +1784,21 @@ function renderOrderInDetail(idx) {
       let cleanLabel = label.replace(/\s*\(No Ticket\)/i, '').replace(/_nt\b/g, '');
       const isNT = (item.product_key && item.product_key.endsWith('_nt')) || label.includes('(No Ticket)');
 
+      const priceStr = hasPrice ? `$${price.toFixed(2)}` : '—';
+      const lineTotalStr = hasPrice ? `$${lineTotal.toFixed(2)}` : '';
+
       itemsHtml += `
         <div class="order-detail-item">
           <span class="order-detail-item-name">${_esc(cleanLabel)}${isNT ? `<span class="no-ticket-tag">✕ ${lang === 'es' ? 'Sin Ticket' : 'No Ticket'}</span>` : ''}${adjHtml}</span>
-          <span class="order-detail-item-qty">${qtyDisplay}${showPrices ? ` · $${lineTotal.toFixed(2)}` : ''}</span>
+          <span class="order-detail-item-prices">
+            <span class="order-detail-item-qty">${qtyDisplay}</span>
+            <span class="order-detail-item-unit">${priceStr}</span>
+            <span class="order-detail-item-line">${lineTotalStr}</span>
+          </span>
         </div>`;
     });
 
-    if (showPrices) {
+    if (hasAnyPrice) {
       itemsHtml += `
         <div class="order-detail-total">
           <span>Total</span>
