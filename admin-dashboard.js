@@ -186,7 +186,7 @@ async function showSection(name) {
       showDriversListView(); loadDriverList();
     }
   }
-  if (name === 'settings') loadActiveInvites();
+
   if (name === 'products') loadProductManager();
   if (name === 'staff') loadStaffSection();
 }
@@ -2796,9 +2796,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('login-theme-btn').addEventListener('click', toggleTheme);
 
-  // ── Invite code generation ──
-  document.getElementById('generate-invite-btn').addEventListener('click', generateInviteCode);
-
   // ── Sidebar nav ──
   document.querySelectorAll('.sidebar-nav-item').forEach(btn => {
     btn.addEventListener('click', () => showSection(btn.dataset.section));
@@ -2920,114 +2917,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ═══════════════════════════════════
-//  ADMIN INVITE CODE SYSTEM
+//  STAFF ROLE API HELPER
 // ═══════════════════════════════════
+// All role changes go through /api/update-staff-role which uses the
+// Supabase service role key to bypass the guard_profile_role trigger.
 
-// handleRegister — DEPRECATED: Registration now handled through Clerk sign-in UI
-// The old Supabase email/password registration with invite codes has been removed.
-// Admin accounts are now managed via Clerk + profiles table role assignment.
-async function handleRegister() {
-  // No-op: Clerk handles all sign-up/sign-in flows
-  _log('handleRegister called but Clerk handles auth now');
-}
+async function updateStaffRole(targetClerkUserId, newRole) {
+  if (!currentUser) throw new Error('Not authenticated');
 
-async function generateInviteCode() {
-  if (!sb || !currentUser) return;
+  const resp = await fetch('/api/update-staff-role', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      clerk_user_id: targetClerkUserId,
+      role: newRole,
+      admin_clerk_user_id: currentUser.id,
+    }),
+  });
 
-  const btn = document.getElementById('generate-invite-btn');
-  btn.disabled = true;
-
-  try {
-    // Generate random 8-char code
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no confusing chars (I/O/0/1)
-    let code = '';
-    for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
-
-    // Insert into DB (expires in 24h)
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-    const { error } = await sb.from('admin_invite_codes').insert({
-      code,
-      created_by: currentUser.primaryEmailAddress?.emailAddress || '',
-      expires_at: expiresAt
-    });
-
-    if (error) {
-      console.error('Invite code error:', error);
-      btn.disabled = false;
-      return;
-    }
-
-    // Display the code
-    const display = document.getElementById('invite-code-display');
-    display.style.display = 'block';
-    display.innerHTML = `
-      <div class="invite-code-card">
-        <div style="font-size:.78rem;color:var(--tx-muted)">${lang === 'es' ? 'Código de invitación' : 'Invite Code'}</div>
-        <div class="invite-code-value">
-          <span class="code-masked" data-code="${code}">${'•'.repeat(code.length)}</span>
-          <button class="code-eye-btn" onclick="const s=this.previousElementSibling;const c=s.dataset.code;s.textContent=s.textContent.includes('•')?c:'•'.repeat(c.length)" aria-label="Toggle code visibility"><i data-lucide="eye" style="width:14px;height:14px"></i></button>
-        </div>
-        <button class="invite-code-copy" onclick="navigator.clipboard.writeText('${code}').then(()=>this.textContent='✓ ${lang === 'es' ? 'Copiado' : 'Copied'}')">
-          <i data-lucide="copy" style="width:12px;height:12px"></i> ${lang === 'es' ? 'Copiar' : 'Copy'}
-        </button>
-        <div class="invite-code-expires">${lang === 'es' ? 'Expira en 24 horas' : 'Expires in 24 hours'}</div>
-      </div>`;
-    lucide.createIcons();
-
-    // Reload active invites
-    loadActiveInvites();
-
-  } catch (e) {
-    console.error('Generate invite error:', e);
+  const data = await resp.json();
+  if (!resp.ok || !data.success) {
+    throw new Error(data.message || 'Failed to update role');
   }
-  btn.disabled = false;
-}
-
-async function loadActiveInvites() {
-  if (!sb || !currentUser) return;
-
-  const container = document.getElementById('active-invites');
-  try {
-    const { data, error } = await sb
-      .from('admin_invite_codes')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    if (error || !data || data.length === 0) {
-      container.innerHTML = '';
-      return;
-    }
-
-    const now = new Date();
-    container.innerHTML = data.map(inv => {
-      let statusClass, statusLabel;
-      if (inv.is_used) {
-        statusClass = 'used';
-        statusLabel = lang === 'es' ? 'Usado' : 'Used';
-      } else if (new Date(inv.expires_at) < now) {
-        statusClass = 'expired';
-        statusLabel = lang === 'es' ? 'Expirado' : 'Expired';
-      } else {
-        statusClass = 'active';
-        statusLabel = lang === 'es' ? 'Activo' : 'Active';
-      }
-
-      const usedInfo = inv.used_by ? ` · ${inv.used_by}` : '';
-      const masked = '•'.repeat(inv.code.length);
-      return `
-        <div class="invite-item">
-          <span class="invite-item-code">
-            <span class="code-masked" data-code="${inv.code}">${masked}</span>
-            <button class="code-eye-btn" onclick="const s=this.previousElementSibling;const c=s.dataset.code;s.textContent=s.textContent.includes('•')?c:'•'.repeat(c.length)" aria-label="Toggle"><i data-lucide="eye" style="width:14px;height:14px"></i></button>
-          </span>
-          <span>${usedInfo}</span>
-          <span class="invite-item-status ${statusClass}">${statusLabel}</span>
-        </div>`;
-    }).join('');
-    lucide.createIcons();
-
-  } catch (e) { console.error('Load invites error:', e); }
+  return data;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -4603,7 +4515,7 @@ window.grantStaffByEmail = async function() {
   }
 
   try {
-    // Find profile by email
+    // Find profile by email to get their clerk_user_id
     const { data: profiles, error } = await sb
       .from('profiles')
       .select('id, clerk_user_id, email, role')
@@ -4623,12 +4535,16 @@ window.grantStaffByEmail = async function() {
     }
 
     const profile = profiles[0];
-    const { error: updateErr } = await sb
-      .from('profiles')
-      .update({ role: newRole })
-      .eq('clerk_user_id', profile.clerk_user_id);
+    if (!profile.clerk_user_id) {
+      showToast(
+        lang === 'es' ? 'Este usuario no tiene ID de Clerk vinculado.' : 'This user has no linked Clerk ID.',
+        'error'
+      );
+      return;
+    }
 
-    if (updateErr) throw updateErr;
+    // Use server-side API to update role
+    await updateStaffRole(profile.clerk_user_id, newRole);
 
     emailInput.value = '';
     showToast(
@@ -4640,20 +4556,15 @@ window.grantStaffByEmail = async function() {
     await loadStaffSection();
   } catch (e) {
     console.error('Grant staff error:', e);
-    showToast(lang === 'es' ? 'Error al conceder acceso' : 'Error granting access', 'error');
+    showToast(e.message || (lang === 'es' ? 'Error al conceder acceso' : 'Error granting access'), 'error');
   }
 };
 
 /* ── Grant Access by Clerk User ID (from pending list) ── */
 window.grantStaffAccess = async function(clerkUserId, newRole) {
-  if (!sb || !clerkUserId) return;
+  if (!clerkUserId) return;
   try {
-    const { error } = await sb
-      .from('profiles')
-      .update({ role: newRole })
-      .eq('clerk_user_id', clerkUserId);
-
-    if (error) throw error;
+    await updateStaffRole(clerkUserId, newRole);
 
     showToast(
       lang === 'es'
@@ -4664,13 +4575,13 @@ window.grantStaffAccess = async function(clerkUserId, newRole) {
     await loadStaffSection();
   } catch (e) {
     console.error('Grant access error:', e);
-    showToast(lang === 'es' ? 'Error al conceder acceso' : 'Error granting access', 'error');
+    showToast(e.message || (lang === 'es' ? 'Error al conceder acceso' : 'Error granting access'), 'error');
   }
 };
 
 /* ── Revoke Access (set role back to 'customer') ── */
 window.revokeStaffAccess = async function(clerkUserId) {
-  if (!sb || !clerkUserId) return;
+  if (!clerkUserId) return;
 
   const confirmed = await Swal.fire({
     title: lang === 'es' ? '¿Revocar acceso?' : 'Revoke access?',
@@ -4685,12 +4596,7 @@ window.revokeStaffAccess = async function(clerkUserId) {
   if (!confirmed.isConfirmed) return;
 
   try {
-    const { error } = await sb
-      .from('profiles')
-      .update({ role: 'customer' })
-      .eq('clerk_user_id', clerkUserId);
-
-    if (error) throw error;
+    await updateStaffRole(clerkUserId, 'customer');
 
     showToast(
       lang === 'es' ? 'Acceso revocado' : 'Access revoked',
@@ -4699,7 +4605,7 @@ window.revokeStaffAccess = async function(clerkUserId) {
     await loadStaffSection();
   } catch (e) {
     console.error('Revoke access error:', e);
-    showToast(lang === 'es' ? 'Error al revocar acceso' : 'Error revoking access', 'error');
+    showToast(e.message || (lang === 'es' ? 'Error al revocar acceso' : 'Error revoking access'), 'error');
   }
 };
 
