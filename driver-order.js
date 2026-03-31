@@ -217,8 +217,10 @@ function enterDashboard() {
   }
   // Phase 9: sync language from Supabase
   syncLangFromSupabase();
-  // Load live product catalog from Supabase (falls back to hardcoded silently)
-  loadDriverProducts();
+  // NOTE: Driver products are hardcoded and separate from the customer-facing
+  // menu products in the Supabase `products` table. Do NOT load from DB here.
+  // The driver catalog includes items like Redondo, Happy Birthday BIG/SMALL,
+  // Frosted Pieces, Family Size, etc. that don't exist in the menu products table.
 }
 
 async function handleLogout() {
