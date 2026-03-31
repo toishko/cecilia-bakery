@@ -538,127 +538,205 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ════════════════════════════════════════
-       BOX CALCULATOR MODAL
+       INLINE BOX CALCULATOR (per order card)
        ════════════════════════════════════════ */
-    .modal-overlay {
-      display: none;
-      position: fixed; inset: 0;
-      background: var(--bg-overlay);
-      z-index: 200;
-      align-items: center; justify-content: center;
-      padding: 20px;
-      animation: fadeIn .2s ease;
+    .box-calc-section {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--bd);
     }
-    .modal-overlay.open { display: flex; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-    .modal-content {
-      background: var(--bg-card);
-      border: 1px solid var(--bd);
-      border-radius: 18px;
-      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    .box-calc-toggle {
+      display: flex; align-items: center; gap: 8px;
       width: 100%;
-      max-width: 560px;
-      max-height: 85vh;
-      overflow-y: auto;
-      animation: slideUp .25s ease;
-    }
-    @keyframes slideUp {
-      from { transform: translateY(30px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-    .modal-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 20px 24px 16px;
-      border-bottom: 1px solid var(--bd);
-    }
-    .modal-title {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.3rem; font-weight: 600;
-      color: var(--tx);
-    }
-    .modal-close {
-      width: 32px; height: 32px;
-      border: none; border-radius: 50%;
-      background: rgba(200,16,46,.06);
-      color: var(--tx-muted);
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background .2s, color .2s;
-    }
-    .modal-close:hover { background: rgba(200,16,46,.15); color: var(--red); }
-    .modal-close svg { width: 18px; height: 18px; }
-    .modal-body { padding: 20px 24px 24px; }
-
-    /* ── Box Calculator Items ── */
-    .box-order-info {
-      margin-bottom: 20px;
-      padding: 14px 16px;
-      background: var(--bg-surface);
+      padding: 10px 14px;
+      border: 1px solid var(--bd);
       border-radius: 10px;
+      background: var(--bg-surface);
+      color: var(--tx);
+      font-family: 'Outfit', sans-serif;
+      font-size: .85rem; font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
     }
-    .box-order-info strong { font-weight: 600; color: var(--tx); }
-    .box-order-info span { font-size: .85rem; color: var(--tx-muted); }
+    .box-calc-toggle:hover { border-color: var(--bd-hover); }
+    .box-calc-toggle svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .box-calc-toggle .chevron {
+      margin-left: auto;
+      transition: transform .25s ease;
+    }
+    .box-calc-toggle.open .chevron { transform: rotate(180deg); }
+
+    .box-calc-body {
+      display: none;
+      margin-top: 12px;
+    }
+    .box-calc-body.open { display: block; }
 
     .box-calc-item {
-      display: flex; align-items: center; justify-content: space-between;
       padding: 14px 0;
       border-bottom: 1px solid var(--bd);
     }
     .box-calc-item:last-child { border-bottom: none; }
-    .box-calc-item-info { flex: 1; min-width: 0; }
+
+    .box-calc-item-header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 8px;
+    }
     .box-calc-item-name {
-      font-weight: 500; font-size: .9rem; color: var(--tx);
+      font-weight: 600; font-size: .95rem; color: var(--tx);
     }
     .box-calc-item-qty {
-      font-size: .8rem; color: var(--tx-muted); margin-top: 2px;
-    }
-    .box-calc-result {
-      text-align: right;
-      display: flex; flex-direction: column; gap: 2px;
-    }
-    .box-calc-boxes {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 4px 12px;
-      background: rgba(27, 122, 74, .08);
-      color: var(--green);
-      font-size: .85rem; font-weight: 600;
-      border-radius: 20px;
-    }
-    .box-calc-boxes svg { width: 14px; height: 14px; }
-    .box-calc-preset {
-      font-size: .7rem; color: var(--tx-faint);
+      font-size: .85rem; font-weight: 500; color: var(--tx-muted);
+      white-space: nowrap;
     }
 
-    .box-calc-no-preset {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 4px 10px;
-      background: rgba(217, 119, 6, .08);
-      color: var(--yellow);
-      font-size: .78rem; font-weight: 500;
-      border-radius: 16px;
+    .box-calc-input-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 8px;
     }
-
-    .box-summary {
-      margin-top: 16px;
-      padding: 16px;
-      background: var(--bg-surface);
+    .box-calc-input-label {
+      font-size: .82rem; color: var(--tx-muted); white-space: nowrap;
+    }
+    .box-calc-input {
+      width: 100%; max-width: 120px;
+      padding: 12px 14px;
+      border: 1px solid var(--bd-input);
       border-radius: 10px;
+      background: var(--bg-input);
+      color: var(--tx);
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem; font-weight: 600;
+      text-align: center;
+      transition: border-color .2s;
+      -moz-appearance: textfield;
+      appearance: textfield;
     }
-    .box-summary-title {
-      font-weight: 600; font-size: .85rem; color: var(--tx);
-      margin-bottom: 10px;
+    .box-calc-input::-webkit-outer-spin-button,
+    .box-calc-input::-webkit-inner-spin-button {
+      -webkit-appearance: none; appearance: none; margin: 0;
+    }
+    .box-calc-input:focus {
+      outline: none;
+      border-color: var(--red);
+    }
+
+    .box-calc-result {
+      display: flex; align-items: center; gap: 6px;
+      font-size: .88rem; font-weight: 500;
+      padding: 6px 0;
+      min-height: 28px;
+    }
+    .box-calc-result .arrow { color: var(--tx-faint); font-size: 1rem; }
+    .box-calc-result.exact {
+      color: var(--green);
+    }
+    .box-calc-result.has-extra {
+      color: var(--yellow);
+    }
+    .box-calc-result.empty {
+      color: var(--tx-faint);
+      font-style: italic;
+      font-weight: 400;
+    }
+    .box-calc-result .result-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 10px;
+      border-radius: 16px;
+      font-size: .82rem; font-weight: 600;
+    }
+    .box-calc-result.exact .result-tag {
+      background: rgba(27, 122, 74, .1);
+    }
+    .box-calc-result.has-extra .result-tag {
+      background: rgba(217, 119, 6, .1);
+    }
+
+    /* ── Quick Calculator Card ── */
+    .quick-calc-card {
+      margin-top: 32px;
+      background: var(--bg-card);
+      border: 1px solid var(--bd);
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: var(--shadow-card);
+    }
+    .quick-calc-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.3rem; font-weight: 600;
+      color: var(--tx);
+      margin-bottom: 4px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .quick-calc-subtitle {
+      font-size: .82rem; color: var(--tx-muted);
+      margin-bottom: 18px;
+    }
+    .quick-calc-fields {
+      display: flex; gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .quick-calc-field {
+      flex: 1; min-width: 130px;
+    }
+    .quick-calc-field label {
+      display: block;
+      font-size: .78rem; font-weight: 500;
+      color: var(--tx-muted);
       text-transform: uppercase;
       letter-spacing: .06em;
+      margin-bottom: 6px;
     }
-    .box-summary-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 6px 0;
-      font-size: .85rem;
-      color: var(--tx-muted);
+    .quick-calc-field input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid var(--bd-input);
+      border-radius: 10px;
+      background: var(--bg-input);
+      color: var(--tx);
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem; font-weight: 600;
+      text-align: center;
+      transition: border-color .2s;
+      -moz-appearance: textfield;
+      appearance: textfield;
     }
-    .box-summary-row .boxes-count {
-      font-weight: 600; color: var(--tx);
+    .quick-calc-field input::-webkit-outer-spin-button,
+    .quick-calc-field input::-webkit-inner-spin-button {
+      -webkit-appearance: none; appearance: none; margin: 0;
+    }
+    .quick-calc-field input:focus {
+      outline: none;
+      border-color: var(--red);
+    }
+    .quick-calc-result {
+      padding: 14px 16px;
+      border-radius: 10px;
+      background: var(--bg-surface);
+      font-size: .95rem;
+      font-weight: 500;
+      min-height: 50px;
+      display: flex; align-items: center; gap: 8px;
+      flex-wrap: wrap;
+    }
+    .quick-calc-result.empty {
+      color: var(--tx-faint);
+      font-style: italic;
+      font-weight: 400;
+    }
+    .quick-calc-result.exact { color: var(--green); }
+    .quick-calc-result.has-extra { color: var(--yellow); }
+    .quick-calc-result .qc-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 12px;
+      border-radius: 16px;
+      font-size: .82rem; font-weight: 600;
+    }
+    .quick-calc-result.exact .qc-tag {
+      background: rgba(27, 122, 74, .1);
+    }
+    .quick-calc-result.has-extra .qc-tag {
+      background: rgba(217, 119, 6, .1);
     }
 
     /* ════════════════════════════════════════
@@ -671,9 +749,11 @@
       .staff-page-title { font-size: 1.6rem; }
       .order-card { padding: 16px; }
       .action-bar { gap: 8px; }
-      .modal-content { max-height: 90vh; border-radius: 14px; }
       .staff-header { flex-wrap: wrap; }
       .staff-signout-btn { width: 100%; text-align: center; margin-top: 8px; }
+      .box-calc-input { max-width: 100px; padding: 10px 12px; font-size: 1rem; }
+      .quick-calc-card { padding: 18px; }
+      .quick-calc-field input { padding: 12px 14px; font-size: 1.05rem; }
     }
   </style>
 </head>
@@ -794,26 +874,31 @@
       <div id="orders-list" class="order-list">
         <div class="loading-spinner"></div>
       </div>
+
+      <!-- Quick Calculator -->
+      <div class="quick-calc-card" id="quick-calc-card" style="display:none;">
+        <div class="quick-calc-title">
+          📦 Quick Calculator
+        </div>
+        <div class="quick-calc-subtitle">One-off box math — enter values to see results instantly</div>
+        <div class="quick-calc-fields">
+          <div class="quick-calc-field">
+            <label for="qc-pieces">Total Pieces</label>
+            <input type="number" id="qc-pieces" min="1" placeholder="e.g. 5000" />
+          </div>
+          <div class="quick-calc-field">
+            <label for="qc-box-size">Pieces per Box</label>
+            <input type="number" id="qc-box-size" min="1" placeholder="e.g. 42" />
+          </div>
+        </div>
+        <div class="quick-calc-result empty" id="qc-result">
+          Enter values above to calculate
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- ═══ BOX CALCULATOR MODAL ═══ -->
-  <div class="modal-overlay" id="box-calc-modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title">📦 Box Calculator</h3>
-        <button class="modal-close" id="box-calc-close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body" id="box-calc-body">
-        <!-- Populated dynamically -->
-      </div>
-    </div>
-  </div>
+
 
   <!-- ═══ SCRIPTS ═══ -->
   <script>
@@ -888,7 +973,6 @@
        ════════════════════════════════════════ */
     let cachedOrders = [];
     let cachedDrivers = {};
-    let cachedBoxPresets = [];
     let currentUser = null;
 
     function populateUserInfo(user) {
@@ -905,15 +989,7 @@
       greeting.innerHTML = `Hi, ${_esc(firstName)}<span class="staff-badge">Staff Portal</span>`;
     }
 
-    /* ── Load box presets from Supabase ── */
-    async function loadBoxPresets() {
-      try {
-        const sb = await getSupabaseClient();
-        if (!sb) return;
-        const { data, error } = await sb.from('box_presets').select('*');
-        if (!error && data) cachedBoxPresets = data;
-      } catch (e) { console.warn('Box presets load error:', e); }
-    }
+
 
     /* ── Load drivers cache for name resolution ── */
     async function loadDriversCache() {
@@ -997,11 +1073,11 @@
       }
     }
 
-    /* ── Render order cards ── */
+    /* ── Render order cards with inline box calculator ── */
     function renderOrders(orders) {
       const container = document.getElementById('orders-list');
 
-      const html = orders.map(order => {
+      const html = orders.map((order, oi) => {
         const driverName = _esc(getDriverName(order.driver_id));
         const bizName = _esc(order.business_name || 'No business name');
         const status = order.status || 'pending';
@@ -1046,8 +1122,32 @@
           cancelled: 'Cancelled'
         };
 
+        // Build inline box calculator items
+        let boxCalcItems = '';
+        if (items.length > 0) {
+          boxCalcItems = items.map((item, ii) => {
+            const label = _esc(item.product_label || item.product_key);
+            const qty = item.quantity || 0;
+            const uid = `bc-${oi}-${ii}`;
+            return `
+              <div class="box-calc-item">
+                <div class="box-calc-item-header">
+                  <span class="box-calc-item-name">${label}</span>
+                  <span class="box-calc-item-qty">${qty} pieces</span>
+                </div>
+                <div class="box-calc-input-row">
+                  <span class="box-calc-input-label">Pieces per box:</span>
+                  <input class="box-calc-input" type="number" min="1" id="${uid}" data-qty="${qty}" placeholder="—" oninput="calcBox(this)" />
+                </div>
+                <div class="box-calc-result empty" id="${uid}-result">
+                  <span class="arrow">→</span> enter box size above
+                </div>
+              </div>`;
+          }).join('');
+        }
+
         return `
-          <div class="order-card" onclick="openBoxCalculator('${order.id}')">
+          <div class="order-card">
             <div class="order-card-top">
               <div>
                 <div class="order-driver-name">${driverName}</div>
@@ -1070,139 +1170,113 @@
                 Note
               </span>` : ''}
             </div>
+            ${items.length > 0 ? `
+            <div class="box-calc-section">
+              <button class="box-calc-toggle" onclick="toggleBoxCalc(this, event)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                Box Calculator
+                <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="box-calc-body">
+                ${boxCalcItems}
+              </div>
+            </div>` : ''}
           </div>`;
       }).join('');
 
       container.innerHTML = html;
+
+      // Show quick calculator now that dashboard is visible
+      const qcCard = document.getElementById('quick-calc-card');
+      if (qcCard) qcCard.style.display = '';
     }
 
     /* ════════════════════════════════════════
-       BOX CALCULATOR
+       INLINE BOX CALCULATOR LOGIC
        ════════════════════════════════════════ */
-    function openBoxCalculator(orderId) {
-      const order = cachedOrders.find(o => o.id === orderId);
-      if (!order) return;
+    function toggleBoxCalc(btn, e) {
+      e.stopPropagation();
+      btn.classList.toggle('open');
+      const body = btn.nextElementSibling;
+      body.classList.toggle('open');
+    }
 
-      const modal = document.getElementById('box-calc-modal');
-      const body = document.getElementById('box-calc-body');
-      const items = order.driver_order_items || [];
+    function calcBox(input) {
+      const qty = parseInt(input.dataset.qty) || 0;
+      const boxSize = parseInt(input.value);
+      const resultEl = document.getElementById(input.id + '-result');
+      if (!resultEl) return;
 
-      if (items.length === 0) {
-        body.innerHTML = '<div class="empty-state">No items in this order.</div>';
-        modal.classList.add('open');
+      if (!boxSize || boxSize < 1) {
+        resultEl.className = 'box-calc-result empty';
+        resultEl.innerHTML = '<span class="arrow">→</span> enter box size above';
         return;
       }
 
-      // Header info
-      const driverName = _esc(getDriverName(order.driver_id));
-      const bizName = _esc(order.business_name || 'No business name');
+      const boxes = Math.ceil(qty / boxSize);
+      const capacity = boxes * boxSize;
+      const extra = capacity - qty;
+      const exact = extra === 0;
 
-      let html = `
-        <div class="box-order-info">
-          <strong>${driverName}</strong>
-          <span> — ${bizName}</span>
-        </div>`;
-
-      // Aggregate boxes per preset type
-      const boxTotals = {}; // key: "tag|label" → total boxes needed
-
-      html += items.map(item => {
-        const label = _esc(item.product_label || item.product_key);
-        const qty = item.quantity || 0;
-        const productKey = item.product_key || '';
-
-        // Strip suffixes like _nt, _inside, _top etc. to match product_tag
-        const cleanKey = productKey
-          .replace(/_nt$/, '')
-          .replace(/_(inside|top|inside_nt|top_nt)$/, '')
-          .replace(/_/g, '-'); // Convert underscores to hyphens to match tag format
-
-        // Find matching box preset
-        const presets = cachedBoxPresets.filter(p =>
-          cleanKey === p.product_tag ||
-          productKey === p.product_tag ||
-          cleanKey.includes(p.product_tag) ||
-          p.product_tag.includes(cleanKey)
-        );
-
-        if (presets.length > 0) {
-          // Use the first matching preset to calculate boxes
-          const preset = presets[0];
-          const boxesNeeded = Math.ceil(qty / preset.pieces_per_box);
-
-          // Track totals
-          const key = `${preset.product_tag}|${preset.label}`;
-          if (!boxTotals[key]) boxTotals[key] = { label: preset.label, tag: preset.product_tag, pieces: preset.pieces_per_box, boxes: 0 };
-          boxTotals[key].boxes += boxesNeeded;
-
-          return `
-            <div class="box-calc-item">
-              <div class="box-calc-item-info">
-                <div class="box-calc-item-name">${label}</div>
-                <div class="box-calc-item-qty">${qty} pieces</div>
-              </div>
-              <div class="box-calc-result">
-                <span class="box-calc-boxes">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-                  ${boxesNeeded} box${boxesNeeded !== 1 ? 'es' : ''}
-                </span>
-                <span class="box-calc-preset">${_esc(preset.label)} (${preset.pieces_per_box}/box)</span>
-              </div>
-            </div>`;
-        }
-
-        return `
-          <div class="box-calc-item">
-            <div class="box-calc-item-info">
-              <div class="box-calc-item-name">${label}</div>
-              <div class="box-calc-item-qty">${qty} pieces</div>
-            </div>
-            <div class="box-calc-result">
-              <span class="box-calc-no-preset">No preset</span>
-            </div>
-          </div>`;
-      }).join('');
-
-      // Summary section
-      const totalKeys = Object.keys(boxTotals);
-      if (totalKeys.length > 0) {
-        const grandTotal = totalKeys.reduce((sum, k) => sum + boxTotals[k].boxes, 0);
-        html += `
-          <div class="box-summary">
-            <div class="box-summary-title">Total Boxes Needed</div>
-            ${totalKeys.map(k => {
-              const bt = boxTotals[k];
-              return `<div class="box-summary-row">
-                <span>${_esc(bt.label)} (${_esc(bt.tag)})</span>
-                <span class="boxes-count">${bt.boxes}</span>
-              </div>`;
-            }).join('')}
-            <div class="box-summary-row" style="border-top:1px solid var(--bd);padding-top:10px;margin-top:6px;">
-              <span style="font-weight:600;color:var(--tx)">Grand Total</span>
-              <span class="boxes-count" style="font-size:1.05rem">${grandTotal}</span>
-            </div>
-          </div>`;
+      if (exact) {
+        resultEl.className = 'box-calc-result exact';
+        resultEl.innerHTML = `<span class="arrow">→</span>
+          <span class="result-tag">${boxes} box${boxes !== 1 ? 'es' : ''}</span>
+          <span class="result-tag">${capacity} capacity</span>
+          <span class="result-tag">Exact fit! ✓</span>`;
+      } else {
+        resultEl.className = 'box-calc-result has-extra';
+        resultEl.innerHTML = `<span class="arrow">→</span>
+          <span class="result-tag">${boxes} box${boxes !== 1 ? 'es' : ''}</span>
+          <span class="result-tag">${capacity} capacity</span>
+          <span class="result-tag">${extra} extra piece${extra !== 1 ? 's' : ''}</span>`;
       }
-
-      body.innerHTML = html;
-      modal.classList.add('open');
     }
 
-    function closeBoxCalculator() {
-      document.getElementById('box-calc-modal').classList.remove('open');
+    /* ── Quick Calculator ── */
+    function calcQuick() {
+      const piecesInput = document.getElementById('qc-pieces');
+      const boxInput = document.getElementById('qc-box-size');
+      const resultEl = document.getElementById('qc-result');
+      if (!piecesInput || !boxInput || !resultEl) return;
+
+      const pieces = parseInt(piecesInput.value);
+      const boxSize = parseInt(boxInput.value);
+
+      if (!pieces || pieces < 1 || !boxSize || boxSize < 1) {
+        resultEl.className = 'quick-calc-result empty';
+        resultEl.innerHTML = 'Enter values above to calculate';
+        return;
+      }
+
+      const boxes = Math.ceil(pieces / boxSize);
+      const capacity = boxes * boxSize;
+      const extra = capacity - pieces;
+      const exact = extra === 0;
+
+      if (exact) {
+        resultEl.className = 'quick-calc-result exact';
+        resultEl.innerHTML = `
+          <span class="qc-tag">📦 ${boxes} box${boxes !== 1 ? 'es' : ''} needed</span>
+          <span class="qc-tag">${capacity} capacity</span>
+          <span class="qc-tag">Exact fit! ✓</span>`;
+      } else {
+        resultEl.className = 'quick-calc-result has-extra';
+        resultEl.innerHTML = `
+          <span class="qc-tag">📦 ${boxes} box${boxes !== 1 ? 'es' : ''} needed</span>
+          <span class="qc-tag">${capacity} capacity</span>
+          <span class="qc-tag">${extra} extra piece${extra !== 1 ? 's' : ''}</span>`;
+      }
     }
 
     /* ════════════════════════════════════════
        EVENT LISTENERS
        ════════════════════════════════════════ */
-    document.getElementById('box-calc-close').addEventListener('click', closeBoxCalculator);
-    document.getElementById('box-calc-modal').addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) closeBoxCalculator();
-    });
-
     document.getElementById('refresh-orders-btn').addEventListener('click', loadOrders);
     document.getElementById('filter-status').addEventListener('change', loadOrders);
     document.getElementById('filter-date').addEventListener('change', loadOrders);
+    document.getElementById('qc-pieces').addEventListener('input', calcQuick);
+    document.getElementById('qc-box-size').addEventListener('input', calcQuick);
 
     // Sign out from denied state
     document.getElementById('denied-signout-btn')?.addEventListener('click', async () => {
@@ -1285,11 +1359,8 @@
             currentUser = user;
             showState('dashboard');
             populateUserInfo(user);
-            // Load data in parallel
-            await Promise.all([
-              loadDriversCache(),
-              loadBoxPresets()
-            ]);
+            // Load data
+            await loadDriversCache();
             await loadOrders();
           }
         } else {
