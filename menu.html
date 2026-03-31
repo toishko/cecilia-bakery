@@ -5045,6 +5045,16 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       mainImg.src = atcImages[atcActiveImg];
       mainImg.alt = atcProduct ? atcProduct.name : '';
 
+      // Apply per-product zoom & position (same framing as menu cards)
+      const _zoomData = (window.__PRODUCT_ZOOM_OVERRIDE || {})[atcProduct?.name];
+      if (_zoomData) {
+        mainImg.style.transform = 'scale(' + (_zoomData.zoom || 1) + ')';
+        mainImg.style.objectPosition = _zoomData.position || '50% 50%';
+      } else {
+        mainImg.style.transform = '';
+        mainImg.style.objectPosition = '';
+      }
+
       // Thumbnails
       thumbsEl.innerHTML = atcImages.map((url, i) => `
     <div class="atc-thumb ${i === atcActiveImg ? 'active' : ''}" onclick="selectGalleryImg(${i})">
@@ -6183,10 +6193,15 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
 
         // Also rebuild PHOTOS override for ATC modal / gallery
         window.__PRODUCT_PHOTOS_OVERRIDE = {};
+        window.__PRODUCT_ZOOM_OVERRIDE = {};
         data.forEach(p => {
           if (p.images && p.images.length > 0) {
             window.__PRODUCT_PHOTOS_OVERRIDE[p.name_en] = p.images;
           }
+          window.__PRODUCT_ZOOM_OVERRIDE[p.name_en] = {
+            zoom: p.image_zoom || 1,
+            position: p.image_position || '50% 50%'
+          };
         });
       } catch (err) {
         console.warn('Supabase product load failed, using hardcoded fallback:', err);
