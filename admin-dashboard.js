@@ -257,7 +257,7 @@ async function handleClerkUser(user) {
         profileFound = true;
         // Silently update email if needed
         if (resp1.data.email !== email) {
-          sb.from('profiles').update({ email }).eq('clerk_user_id', user.id).then(() => {});
+          await sb.from('profiles').update({ email }).eq('clerk_user_id', user.id);
         }
       }
     } catch (e1) {
@@ -281,7 +281,7 @@ async function handleClerkUser(user) {
           // Link the Clerk user ID to this profile if not already linked
           if (!resp2.data.clerk_user_id || resp2.data.clerk_user_id !== user.id) {
             console.log('[AUTH] Linking clerk_user_id to existing profile');
-            sb.from('profiles').update({ clerk_user_id: user.id }).eq('id', resp2.data.id).then(() => {});
+            await sb.from('profiles').update({ clerk_user_id: user.id }).eq('id', resp2.data.id);
           }
         }
       } catch (e2) {
@@ -319,14 +319,28 @@ async function handleClerkUser(user) {
 
     // ── Create profile if none exists ──
     if (!profileFound) {
-      console.log('[AUTH] No profile found — creating new one');
+      console.log('[AUTH] No profile found — creating new one with clerk_user_id:', user.id, 'email:', email);
       try {
-        const { error: insertErr } = await sb.from('profiles')
-          .insert({ id: crypto.randomUUID(), clerk_user_id: user.id, email: email, role: 'customer' });
+        const { data: inserted, error: insertErr } = await sb.from('profiles')
+          .insert({ clerk_user_id: user.id, email: email, role: 'customer' })
+          .select()
+          .single();
         if (insertErr) {
           console.error('[AUTH] Insert error:', JSON.stringify(insertErr));
+          // Retry without .select().single() in case it's a PostgREST issue
+          const { error: retryErr } = await sb.from('profiles')
+            .insert({ clerk_user_id: user.id, email: email, role: 'customer' });
+          if (retryErr) {
+            console.error('[AUTH] Retry insert error:', JSON.stringify(retryErr));
+          } else {
+            console.log('[AUTH] Retry insert succeeded');
+            existingRole = 'customer';
+            profileFound = true;
+          }
         } else {
+          console.log('[AUTH] Profile created successfully:', JSON.stringify(inserted));
           existingRole = 'customer';
+          profileFound = true;
         }
       } catch (ie) {
         console.error('[AUTH] Insert exception:', ie);
@@ -338,7 +352,9 @@ async function handleClerkUser(user) {
     // Role check — admin only
     if (existingRole !== 'admin') {
       _log('User role is not admin. Role:', existingRole);
-      errorEl.textContent = lang === 'es' ? 'Acceso denegado. Solo cuentas de administrador.' : 'Access denied. Admin accounts only.';
+      errorEl.innerHTML = lang === 'es'
+        ? 'Acceso denegado. Solo cuentas de administrador.<br><small style="color:var(--tx-muted)">Tu cuenta fue registrada. Un administrador puede darte acceso.</small>'
+        : 'Access denied. Admin accounts only.<br><small style="color:var(--tx-muted)">Your account has been registered. An admin can grant you access from the Staff tab.</small>';
       await window.Clerk.signOut();
       showLoginScreen();
       return;
