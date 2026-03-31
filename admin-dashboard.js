@@ -3082,6 +3082,8 @@ const PM_SEED_DATA = [
 let _pmProducts  = [];
 let _pmEditId    = null;
 let _pmImages    = [];
+let _pmZoom = 1.0;
+let _pmPosition = '50% 50%';
 let _pmPriceMode = 'single';
 let _pmPendingChanges = {};  // { productId: { field: value, ... } }
 
@@ -3272,6 +3274,43 @@ textarea.pm-input{resize:vertical;min-height:68px}
 .pm-icon-lbl{font-size:9px;color:var(--tx-faint);text-align:center;line-height:1.2;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:block}
 @media(max-width:400px){.pm-icon-grid{grid-template-columns:repeat(4,1fr)}}
+.pm-preview-section{margin:16px 0 20px}
+.pm-preview-label{font-size:.72rem;text-transform:uppercase;color:var(--tx-faint);letter-spacing:.5px;margin-bottom:10px;font-weight:600}
+.pm-preview-cards{display:flex;gap:16px;flex-wrap:wrap}
+.pm-preview-card{border-radius:10px;overflow:hidden;border:1.5px solid var(--bd);background:var(--bg-card);flex-shrink:0}
+.pm-preview-card-desktop{width:280px}
+.pm-preview-card-mobile{width:150px}
+.pm-preview-card-label{font-size:.65rem;text-transform:uppercase;color:var(--tx-faint);padding:6px 10px 4px;letter-spacing:.5px}
+.pm-preview-img-wrap{position:relative;overflow:hidden;cursor:grab}
+.pm-preview-img-wrap:active{cursor:grabbing}
+.pm-preview-img-wrap.desktop{aspect-ratio:3/4}
+.pm-preview-img-wrap.mobile{aspect-ratio:4/5}
+.pm-preview-img-wrap img{width:100%;height:100%;object-fit:cover;display:block;transform-origin:center center;pointer-events:none;transition:transform .15s ease,object-position .15s ease}
+.pm-zoom-control{display:flex;align-items:center;gap:10px;margin-top:14px;padding:0 2px}
+.pm-zoom-label{font-size:.72rem;text-transform:uppercase;color:var(--tx-faint);font-weight:600;white-space:nowrap}
+.pm-zoom-slider{flex:1;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--bd);outline:none}
+.pm-zoom-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--red);cursor:pointer;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.pm-zoom-value{font-size:.78rem;color:var(--tx);font-weight:600;min-width:36px;text-align:right}
+.pm-framing-hint{font-size:.7rem;color:var(--tx-faint);margin-top:8px;font-style:italic}
+.pm-menu-preview{margin:16px 0;padding:12px;background:var(--bg-surface);border-radius:12px;border:1px solid var(--bd)}
+.pm-menu-preview-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;color:var(--tx-faint);margin-bottom:8px;font-weight:600}
+.pm-preview-tabs{display:flex;gap:6px;margin-bottom:10px}
+.pm-preview-tab{padding:4px 10px;border-radius:6px;border:1px solid var(--bd);background:none;font-size:.72rem;cursor:pointer;color:var(--tx-muted)}
+.pm-preview-tab.active{background:var(--red);color:#fff;border-color:var(--red)}
+.pm-preview-card{border-radius:10px;overflow:hidden;border:1px solid var(--bd);background:var(--bg-card);max-width:300px}
+.pm-preview-card-imgwrap{position:relative;overflow:hidden;width:100%}
+.pm-preview-card-imgwrap.ratio-desktop{aspect-ratio:3/2}
+.pm-preview-card-imgwrap.ratio-mobile{aspect-ratio:4/3}
+.pm-preview-card-imgwrap img{width:100%;height:100%;object-fit:cover;display:block;transform-origin:center center}
+.pm-preview-card-text{padding:10px 12px}
+.pm-preview-card-name{font-weight:600;font-size:.9rem}
+.pm-preview-card-price{color:var(--red);font-size:.85rem;margin-top:2px}
+.pm-zoom-control{margin-top:12px}
+.pm-zoom-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;color:var(--tx-faint);margin-bottom:6px;font-weight:600;display:flex;justify-content:space-between}
+.pm-zoom-slider{width:100%;cursor:pointer;accent-color:var(--red)}
+.pm-drag-hint{font-size:.7rem;color:var(--tx-faint);margin-top:6px;text-align:center}
+.pm-preview-card-imgwrap.dragging{cursor:grabbing}
+.pm-preview-card-imgwrap:not(.dragging){cursor:grab}
   `;
   document.head.appendChild(s);
 }
@@ -3436,6 +3475,33 @@ function _pmModalHTML() {
           <input class="pm-input" id="pm-url-input" type="url" placeholder="https://…" inputmode="url">
           <button class="btn-seed-prod" style="height:44px;padding:0 14px;flex-shrink:0" onclick="window._pmAddUrl()">Add</button>
         </div>
+        <!-- Live Menu Preview -->
+        <div class="pm-menu-preview" id="pm-menu-preview" style="display:none">
+          <div class="pm-menu-preview-label">Menu Preview — what customers will see</div>
+          <div class="pm-preview-tabs">
+            <button class="pm-preview-tab active" onclick="window._pmPreviewTab('desktop')">Desktop</button>
+            <button class="pm-preview-tab" onclick="window._pmPreviewTab('mobile')">Mobile</button>
+          </div>
+          <div class="pm-preview-card">
+            <div class="pm-preview-card-imgwrap ratio-desktop" id="pm-preview-imgwrap">
+              <img id="pm-preview-menu-img" src="" alt="preview">
+            </div>
+            <div class="pm-preview-card-text">
+              <div class="pm-preview-card-name" id="pm-preview-name">Product Name</div>
+              <div class="pm-preview-card-price" id="pm-preview-price">$0.00</div>
+            </div>
+          </div>
+          <div class="pm-zoom-control">
+            <div class="pm-zoom-label">
+              <span>Zoom</span>
+              <span id="pm-zoom-val">1.0×</span>
+            </div>
+            <input type="range" class="pm-zoom-slider" id="pm-zoom-slider"
+              min="0.5" max="2" step="0.05" value="1"
+              oninput="window._pmZoomChange(this.value)">
+          </div>
+          <div class="pm-drag-hint">Drag the image to reposition</div>
+        </div>
       </div>
     </div>
     <div class="pm-modal-footer">
@@ -3540,9 +3606,91 @@ function _pmRenderImages() {
       <img src="${_esc(url)}" alt="">
       <button class="pm-img-rm" onclick="window._pmRemoveImg(${i})">✕</button>
     </div>`).join('');
+  _pmRenderMenuPreview();
 }
 
 function _pmRemoveImg(i) { _pmImages.splice(i, 1); _pmRenderImages(); }
+
+function _pmRenderMenuPreview() {
+  const wrap = document.getElementById('pm-menu-preview');
+  const img = document.getElementById('pm-preview-menu-img');
+  const imgWrap = document.getElementById('pm-preview-imgwrap');
+  if (!wrap || !img) return;
+  const firstImg = _pmImages.length > 0 ? _pmImages[0] : null;
+  if (!firstImg) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  img.src = firstImg;
+  img.style.transform = 'scale(' + _pmZoom + ')';
+  img.style.objectPosition = _pmPosition;
+  const nameEl = document.getElementById('pm-preview-name');
+  const priceEl = document.getElementById('pm-preview-price');
+  if (nameEl) nameEl.textContent = document.getElementById('pm-f-en')?.value || 'Product Name';
+  if (priceEl) priceEl.textContent = '$' + (document.getElementById('pm-f-price')?.value || '0.00');
+  const slider = document.getElementById('pm-zoom-slider');
+  const zoomVal = document.getElementById('pm-zoom-val');
+  if (slider) slider.value = _pmZoom;
+  if (zoomVal) zoomVal.textContent = _pmZoom.toFixed(2) + '×';
+  _pmInitDrag(imgWrap, img);
+}
+
+window._pmPreviewTab = function(tab) {
+  const imgWrap = document.getElementById('pm-preview-imgwrap');
+  if (!imgWrap) return;
+  imgWrap.classList.remove('ratio-desktop', 'ratio-mobile');
+  imgWrap.classList.add('ratio-' + tab);
+  document.querySelectorAll('.pm-preview-tab').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+};
+
+window._pmZoomChange = function(val) {
+  _pmZoom = parseFloat(val);
+  const img = document.getElementById('pm-preview-menu-img');
+  const zoomVal = document.getElementById('pm-zoom-val');
+  if (img) img.style.transform = 'scale(' + _pmZoom + ')';
+  if (zoomVal) zoomVal.textContent = _pmZoom.toFixed(2) + '×';
+};
+
+function _pmInitDrag(wrap, img) {
+  if (!wrap || wrap._dragInit) return;
+  wrap._dragInit = true;
+  let dragging = false, startX, startY, startPosX, startPosY;
+  function parsePosPercent(pos) {
+    const parts = (pos || '50% 50%').split(/\s+/);
+    return [parseFloat(parts[0]) || 50, parseFloat(parts[1]) || 50];
+  }
+  function onStart(e) {
+    e.preventDefault();
+    dragging = true;
+    wrap.classList.add('dragging');
+    const touch = e.touches ? e.touches[0] : e;
+    startX = touch.clientX; startY = touch.clientY;
+    const parsed = parsePosPercent(_pmPosition);
+    startPosX = parsed[0]; startPosY = parsed[1];
+  }
+  function onMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    const touch = e.touches ? e.touches[0] : e;
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
+    const rect = wrap.getBoundingClientRect();
+    const pctX = Math.max(0, Math.min(100, startPosX - (dx / rect.width) * 100));
+    const pctY = Math.max(0, Math.min(100, startPosY - (dy / rect.height) * 100));
+    _pmPosition = pctX.toFixed(1) + '% ' + pctY.toFixed(1) + '%';
+    img.style.objectPosition = _pmPosition;
+  }
+  function onEnd() {
+    dragging = false;
+    wrap.classList.remove('dragging');
+  }
+  wrap.addEventListener('mousedown', onStart);
+  wrap.addEventListener('mousemove', onMove);
+  wrap.addEventListener('mouseup', onEnd);
+  wrap.addEventListener('mouseleave', onEnd);
+  wrap.addEventListener('touchstart', onStart, {passive:false});
+  wrap.addEventListener('touchmove', onMove, {passive:false});
+  wrap.addEventListener('touchend', onEnd);
+}
 
 function _pmAddUrl() {
   const el = document.getElementById('pm-url-input');
@@ -3587,6 +3735,8 @@ async function _pmUploadFiles(files) {
 function _pmOpenModal(product) {
   _pmEditId    = product ? product.id : null;
   _pmImages    = product ? [...(product.images || [])] : [];
+  _pmZoom = product ? (product.image_zoom || 1.0) : 1.0;
+  _pmPosition = product ? (product.image_position || '50% 50%') : '50% 50%';
   _pmPriceMode = (product && product.prices && Object.keys(product.prices).length) ? 'sized' : 'single';
 
   document.getElementById('pm-modal-title').innerHTML = product ? 'Edit <em>Product</em>' : 'Add <em>Product</em>';
@@ -3612,6 +3762,7 @@ function _pmOpenModal(product) {
   _pmSetPriceMode(_pmPriceMode);
   _pmSwitchTab('info');
   _pmRenderImages();
+  _pmRenderMenuPreview();
   if (typeof window._pmResetPreview === 'function') window._pmResetPreview();
   document.getElementById('pm-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -3663,7 +3814,7 @@ async function _pmSave() {
     description_en: document.getElementById('pm-f-desc-en').value.trim() || null,
     description_es: document.getElementById('pm-f-desc-es').value.trim() || null,
     icon_name: (document.querySelector('#pm-icon-grid .pm-icon-opt.selected')?.dataset.icon) || 'package',
-    price, prices, images: _pmImages,
+    price, prices, images: _pmImages, image_zoom: _pmZoom, image_position: _pmPosition,
     updated_at: new Date().toISOString(),
   };
 
