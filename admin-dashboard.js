@@ -1182,7 +1182,7 @@ function renderNeedsAttention() {
         data-en="View All" data-es="Ver Todos">${lang === 'es' ? 'Ver Todos' : 'View All'}</button>
     </div>`;
     activeDriver.forEach(order => {
-      const name = _esc(order.business_name || getDriverName(order.driver_id));
+      const name = _esc(getDriverName(order.driver_id));
       const amount = formatCurrency(parseFloat(order.total_amount || 0));
       const statusLabels = {
         pending:   lang === 'es' ? 'Pendiente'  : 'Pending',
