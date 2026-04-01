@@ -3349,6 +3349,7 @@ textarea.pm-input{resize:vertical;min-height:68px}
 .ws-tab-count{font-size:.7rem;background:rgba(200,16,46,.12);color:var(--red);padding:1px 7px;border-radius:10px;margin-left:4px}
 .ws-tab.active .ws-tab-count{background:rgba(255,255,255,.25);color:#fff}
 .ws-card{background:var(--bg-card);border:1px solid var(--bd);border-radius:12px;padding:20px;margin-bottom:12px}
+.ws-card-collapsed:hover{border-color:var(--red);box-shadow:0 2px 12px rgba(200,16,46,.08)}
 .ws-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:12px}
 .ws-card-biz{font-size:1.05rem;font-weight:700;color:var(--tx)}
 .ws-card-status{font-size:.7rem;font-weight:700;text-transform:uppercase;padding:3px 10px;border-radius:6px;letter-spacing:.5px}
@@ -5024,40 +5025,74 @@ function _wsRenderAccounts() {
   panel.innerHTML = approved.map(a => _wsCardHTML(a, true)).join('');
 }
 
-function _wsCardHTML(a, showApproved) {
-  const statusClass = a.status;
-  const date = new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  let actions = '';
+function _wsCardHTML(a) {
+  var date = new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  var statusClass = a.status;
+  return '<div class="ws-card ws-card-collapsed" onclick="window._wsOpenDetail(\'' + a.id + '\')" style="cursor:pointer;transition:border-color .2s">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center">' +
+      '<div>' +
+        '<div class="ws-card-biz">' + a.business_name + '</div>' +
+        '<div style="font-size:.78rem;color:var(--tx-faint)">' + (a.business_type || '—') + ' · ' + date + '</div>' +
+      '</div>' +
+      '<span class="ws-card-status ' + statusClass + '">' + a.status + '</span>' +
+    '</div>' +
+  '</div>';
+}
+
+window._wsOpenDetail = function(id) {
+  var a = _wsAccounts.find(function(x) { return x.id === id; });
+  if (!a) return;
+  var date = new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  var allPriced = _wsProducts.every(function(p) { return _wsPrices[p.id]; });
+  var actions = '';
   if (a.status === 'pending') {
-    const allPriced = _wsProducts.every(p => _wsPrices[p.id] && _wsPrices[p.id].wholesale_price);
-    const approveDisabled = allPriced ? '' : 'disabled title="Set all wholesale prices first"';
-    actions = `<div class="ws-card-actions">
-      <button class="ws-btn ws-btn-approve" onclick="window._wsApprove('${a.id}')" ${approveDisabled}>Approve</button>
-      <button class="ws-btn ws-btn-reject" onclick="window._wsReject('${a.id}')">Reject</button>
-    </div>`;
+    var approveDisabled = allPriced ? '' : 'disabled title="Set all wholesale prices first"';
+    actions = '<div class="ws-card-actions">' +
+      '<button class="ws-btn ws-btn-approve" onclick="window._wsApprove(\'' + a.id + '\')" ' + approveDisabled + '>Approve</button>' +
+      '<button class="ws-btn ws-btn-reject" onclick="window._wsReject(\'' + a.id + '\')">Reject</button>' +
+    '</div>';
     if (!allPriced) {
       actions += '<div style="font-size:.75rem;color:var(--red);margin-top:8px">⚠ Set all wholesale prices before approving</div>';
     }
+  } else if (a.status === 'approved') {
+    actions = '<div style="margin-top:16px"><span class="ws-card-status approved">APPROVED</span>' +
+      (a.approved_at ? '<span style="font-size:.78rem;color:var(--tx-faint);margin-left:8px">on ' + new Date(a.approved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + '</span>' : '') +
+    '</div>';
+  } else if (a.status === 'rejected') {
+    actions = '<div class="ws-card-actions" style="margin-top:16px">' +
+      '<button class="ws-btn ws-btn-approve" onclick="window._wsApprove(\'' + a.id + '\')">Reconsider & Approve</button>' +
+    '</div>';
   }
-  return `<div class="ws-card">
-    <div class="ws-card-header">
-      <div>
-        <div class="ws-card-biz">${a.business_name}</div>
-        <div style="font-size:.78rem;color:var(--tx-faint)">${date}</div>
-      </div>
-      <span class="ws-card-status ${statusClass}">${a.status}</span>
-    </div>
-    <div class="ws-card-detail">
-      <strong>Contact:</strong> ${a.contact_name}<br>
-      <strong>Email:</strong> ${a.email}<br>
-      <strong>Phone:</strong> ${a.phone}<br>
-      <strong>Address:</strong> ${a.address}${a.city ? ', ' + a.city : ''}${a.state ? ', ' + a.state : ''} ${a.zip || ''}<br>
-      <strong>Type:</strong> ${a.business_type || '—'}<br>
-      ${a.notes ? '<strong>Notes:</strong> ' + a.notes : ''}
-    </div>
-    ${actions}
-  </div>`;
-}
+
+  var overlay = document.getElementById('ws-detail-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'ws-detail-overlay';
+    document.body.appendChild(overlay);
+  }
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = '<div style="background:var(--bg-card);border-radius:16px;padding:28px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:85vh;overflow-y:auto">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">' +
+      '<div>' +
+        '<h3 style="font-size:1.2rem;font-weight:700;color:var(--tx);margin:0">' + a.business_name + '</h3>' +
+        '<div style="font-size:.78rem;color:var(--tx-faint);margin-top:2px">Applied ' + date + '</div>' +
+      '</div>' +
+      '<button onclick="document.getElementById(\'ws-detail-overlay\').remove()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--tx-muted);padding:4px">✕</button>' +
+    '</div>' +
+    '<div class="ws-card-detail">' +
+      '<strong>Contact:</strong> ' + a.contact_name + '<br>' +
+      '<strong>Email:</strong> <a href="mailto:' + a.email + '" style="color:var(--red)">' + a.email + '</a><br>' +
+      '<strong>Phone:</strong> <a href="tel:' + a.phone + '" style="color:var(--red)">' + a.phone + '</a><br>' +
+      '<strong>Address:</strong> ' + a.address + (a.city ? ', ' + a.city : '') + (a.state ? ', ' + a.state : '') + ' ' + (a.zip || '') + '<br>' +
+      '<strong>Business Type:</strong> ' + (a.business_type || '—') + '<br>' +
+      (a.notes ? '<strong>Notes:</strong> ' + a.notes + '<br>' : '') +
+    '</div>' +
+    actions +
+  '</div>';
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) overlay.remove();
+  });
+};
 
 function _wsRenderPricing() {
   const panel = document.getElementById('ws-panel-pricing');
