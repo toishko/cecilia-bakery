@@ -4984,6 +4984,8 @@ document.getElementById('staff-email-input')?.addEventListener('keydown', (e) =>
 let _wsAccounts = [];
 let _wsProducts = [];
 let _wsPrices = {};
+let _wsSelectedAccountId = null;
+let _wsAllPricesData = [];
 
 async function loadWholesaleSection() {
   _pmInjectStyles();
@@ -4995,10 +4997,12 @@ async function loadWholesaleSection() {
   const { data: prods } = await sb.from('b2b_products').select('*').order('sort_order', { ascending: true });
   _wsProducts = prods || [];
 
-  // Load wholesale prices
+  // Load ALL wholesale prices (for all accounts)
   const { data: prices } = await sb.from('wholesale_prices').select('*');
-  _wsPrices = {};
-  (prices || []).forEach(function(p) { _wsPrices[p.b2b_product_id || p.product_id] = { wholesale_price: p.wholesale_price, min_qty: p.min_qty }; });
+  _wsAllPricesData = prices || [];
+
+  // Build price map for selected account
+  _wsBuildPriceMap();
 
   // Update badge
   const pendingCount = _wsAccounts.filter(a => a.status === 'pending').length;
@@ -5012,6 +5016,16 @@ async function loadWholesaleSection() {
 
   _wsRenderApplications();
   _wsRenderAccounts();
+}
+
+function _wsBuildPriceMap(accountId) {
+  if (accountId !== undefined) _wsSelectedAccountId = accountId;
+  _wsPrices = {};
+  _wsAllPricesData.forEach(function(p) {
+    if (_wsSelectedAccountId && p.account_id !== _wsSelectedAccountId) return;
+    var pid = p.b2b_product_id || p.product_id;
+    _wsPrices[pid] = { wholesale_price: p.wholesale_price, min_qty: p.min_qty };
+  });
 }
 
 window._wsShowTab = function(tab) {
@@ -5070,7 +5084,9 @@ window._wsOpenDetail = function(id) {
   var a = _wsAccounts.find(function(x) { return x.id === id; });
   if (!a) return;
   var date = new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  var allPriced = _wsProducts.length > 0 && _wsProducts.every(function(p) { return _wsPrices[p.id]; });
+  var accountPrices = {};
+  _wsAllPricesData.forEach(function(pr) { if (pr.account_id === a.id) accountPrices[pr.b2b_product_id || pr.product_id] = pr; });
+  var allPriced = _wsProducts.length > 0 && _wsProducts.every(function(p) { return accountPrices[p.id]; });
   var actions = '';
   if (a.status === 'pending') {
     var approveDisabled = allPriced ? '' : 'disabled title="Set all wholesale prices first"';
@@ -5135,22 +5151,56 @@ function _wsRenderPricing() {
     return;
   }
 
+  var approved = _wsAccounts.filter(function(a) { return a.status === 'approved'; });
+
+  // Account selector
+  var html = '<div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center">';
+  html += '<div><label style="font-size:.75rem;font-weight:600;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Pricing for Account</label>';
+  html += '<select id="ws-account-select" style="padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.9rem;min-width:200px">';
+  if (!approved.length) {
+    html += '<option value="">No approved accounts</option>';
+  } else {
+    approved.forEach(function(a) {
+      var sel = _wsSelectedAccountId === a.id ? ' selected' : '';
+      html += '<option value="' + a.id + '"' + sel + '>' + a.business_name + '</option>';
+    });
+  }
+  html += '</select></div>';
+
+  // Copy prices from
+  html += '<div><label style="font-size:.75rem;font-weight:600;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Copy prices from</label>';
+  html += '<select id="ws-copy-from" style="padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.9rem;min-width:160px">';
+  html += '<option value="">— Select —</option>';
+  approved.forEach(function(a) {
+    if (a.id !== _wsSelectedAccountId) html += '<option value="' + a.id + '">' + a.business_name + '</option>';
+  });
+  html += '</select></div></div>';
+
+  if (!approved.length) {
+    html += '<div class="ws-empty">Approve a wholesale account first to set their prices</div>';
+    panel.innerHTML = html;
+    return;
+  }
+
+  // Auto-select first account if none selected
+  if (!_wsSelectedAccountId && approved.length) {
+    _wsSelectedAccountId = approved[0].id;
+    _wsBuildPriceMap(_wsSelectedAccountId);
+  }
+
   var grouped = {};
   var groupOrder = [];
   _wsProducts.forEach(function(p) {
     var cat = p.tag_en || 'Other';
-    if (!grouped[cat]) {
-      grouped[cat] = [];
-      groupOrder.push(cat);
-    }
+    if (!grouped[cat]) { grouped[cat] = []; groupOrder.push(cat); }
     grouped[cat].push(p);
   });
 
   var pricedCount = _wsProducts.filter(function(p) { return _wsPrices[p.id]; }).length;
   var totalCount = _wsProducts.length;
 
-  var html = '<div class="ws-card">';
-  html += '<p style="font-size:.85rem;color:var(--tx-muted);margin-bottom:4px">Set wholesale prices and minimum order quantities for each product. All prices must be set before you can approve wholesale accounts.</p>';
+  html += '<div class="ws-card">';
+  html += '<p style="font-size:.85rem;color:var(--tx-muted);margin-bottom:4px">Set wholesale prices and minimum order quantities for each product.</p>';
   html += '<p style="font-size:.82rem;font-weight:600;color:' + (pricedCount === totalCount ? '#0a7a0a' : 'var(--red)') + ';margin-bottom:16px">' + pricedCount + ' of ' + totalCount + ' products priced</p>';
 
   groupOrder.forEach(function(cat) {
@@ -5162,8 +5212,9 @@ function _wsRenderPricing() {
       var existing = _wsPrices[p.id] || {};
       var wp = existing.wholesale_price || '';
       var mq = existing.min_qty || '';
-      var retailPrice = p.price || (p.prices ? Object.values(p.prices)[0] : null) || '—';
-      html += '<div class="ws-pg-name">' + p.name_en + '<br><span style="font-size:.72rem;color:var(--tx-faint)">Retail: $' + retailPrice + '</span></div>';
+      var displayName = p.name_en;
+      if (p.variant) displayName += ' — ' + (p.variant === 'inside' ? 'Inside' : p.variant === 'top' ? 'Top' : p.variant);
+      html += '<div class="ws-pg-name">' + displayName + '</div>';
       html += '<input type="number" step="0.01" min="0" placeholder="$0.00" value="' + wp + '" data-product-id="' + p.id + '" data-field="wholesale_price">';
       html += '<input type="number" step="1" min="1" placeholder="Min" value="' + mq + '" data-product-id="' + p.id + '" data-field="min_qty">';
     });
@@ -5176,6 +5227,33 @@ function _wsRenderPricing() {
   html += '<span style="font-size:.78rem;color:var(--tx-faint)" id="ws-pricing-status"></span>';
   html += '</div></div>';
   panel.innerHTML = html;
+
+  // Wire account selector
+  document.getElementById('ws-account-select').addEventListener('change', function() {
+    _wsBuildPriceMap(this.value);
+    _wsRenderPricing();
+  });
+
+  // Wire copy-from
+  document.getElementById('ws-copy-from').addEventListener('change', function() {
+    if (!this.value) return;
+    var sourceId = this.value;
+    var sourcePrices = {};
+    _wsAllPricesData.forEach(function(p) {
+      if (p.account_id === sourceId) {
+        var pid = p.b2b_product_id || p.product_id;
+        sourcePrices[pid] = p;
+      }
+    });
+    document.querySelectorAll('.ws-pricing-grid input').forEach(function(inp) {
+      var pid = inp.dataset.productId;
+      var field = inp.dataset.field;
+      var src = sourcePrices[pid];
+      if (src && src[field] !== undefined && src[field] !== null) inp.value = src[field];
+    });
+    showToast('Prices copied — click Save to apply', 'info');
+    this.value = '';
+  });
 }
 
 window._wsSavePricing = async function() {
@@ -5187,17 +5265,19 @@ window._wsSavePricing = async function() {
   inputs.forEach(inp => {
     const pid = inp.dataset.productId;
     const field = inp.dataset.field;
-    if (!updates[pid]) updates[pid] = { b2b_product_id: pid };
+    if (!updates[pid]) updates[pid] = { b2b_product_id: pid, account_id: _wsSelectedAccountId };
     if (field === 'wholesale_price') updates[pid].wholesale_price = parseFloat(inp.value) || 0;
     if (field === 'min_qty') updates[pid].min_qty = parseInt(inp.value) || 1;
   });
+
+  if (!_wsSelectedAccountId) { showToast('Select an account first', 'error'); if (statusEl) statusEl.textContent = ''; return; }
 
   let errors = 0;
   for (const pid of Object.keys(updates)) {
     const row = updates[pid];
     if (!row.wholesale_price || row.wholesale_price <= 0) continue;
     row.updated_at = new Date().toISOString();
-    const { error } = await sb.from('wholesale_prices').upsert(row, { onConflict: 'b2b_product_id' });
+    const { error } = await sb.from('wholesale_prices').upsert(row, { onConflict: 'b2b_product_id,account_id' });
     if (error) errors++;
   }
 
@@ -5213,7 +5293,9 @@ window._wsSavePricing = async function() {
 window._wsApprove = async function(id) {
   const account = _wsAccounts.find(a => a.id === id);
   const name = account ? account.business_name : 'this account';
-  var allPriced = _wsProducts.length > 0 && _wsProducts.every(function(p) { return _wsPrices[p.id]; });
+  var accountPrices = {};
+  _wsAllPricesData.forEach(function(pr) { if (pr.account_id === id) accountPrices[pr.b2b_product_id || pr.product_id] = pr; });
+  var allPriced = _wsProducts.length > 0 && _wsProducts.every(function(p) { return accountPrices[p.id]; });
   if (!allPriced) {
     showToast('Set all wholesale prices before approving', 'error');
     return;
@@ -5346,10 +5428,12 @@ function _b2bRenderList() {
       var soldOutClass = p.sold_out ? 'opacity:.5;' : '';
       html += '<div class="ws-card" style="padding:12px 16px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:12px;' + soldOutClass + '">';
       html += '<div style="flex:1;min-width:0">';
-      html += '<div style="font-weight:600;font-size:.9rem;color:var(--tx)">' + p.name_en;
+      var displayName = p.name_en;
+      if (p.variant) displayName += ' — ' + (p.variant === 'inside' ? 'Inside' : p.variant === 'top' ? 'Top' : p.variant);
+      html += '<div style="font-weight:600;font-size:.9rem;color:var(--tx)">' + displayName;
       if (p.name_es && p.name_es !== p.name_en) html += ' <span style="font-size:.78rem;color:var(--tx-faint)">/ ' + p.name_es + '</span>';
       html += '</div>';
-      if (p.type === 'redondo') html += '<span style="font-size:.68rem;background:rgba(200,16,46,.08);color:var(--red);padding:1px 6px;border-radius:4px">Round</span> ';
+      if (p.variant) html += '<span style="font-size:.68rem;background:rgba(0,45,98,.08);color:var(--blue,#002D62);padding:1px 6px;border-radius:4px">' + (p.variant === 'inside' ? 'Inside' : 'Top') + '</span> ';
       if (p.sold_out) html += '<span style="font-size:.68rem;background:rgba(200,16,46,.08);color:var(--red);padding:1px 6px;border-radius:4px">Sold Out</span>';
       html += '</div>';
       html += '<div style="display:flex;gap:6px;flex-shrink:0">';
