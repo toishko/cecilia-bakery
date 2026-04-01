@@ -5416,7 +5416,8 @@ window._wsOpenAccountPricing = function(accountId, businessName) {
       var existing = _wsGetPrice(accountId, p.id) || {};
       var wp = existing.wholesale_price || '';
       var mq = existing.min_qty || '';
-      html += '<div class="ws-pg-name">' + p.name_en + '</div>';
+      var pName = p.name_en + (p.type ? ' (' + p.type + ')' : '');
+      html += '<div class="ws-pg-name">' + pName + '</div>';
       html += '<input type="number" step="0.01" min="0" placeholder="$0.00" value="' + wp + '" data-product-id="' + p.id + '" data-field="wholesale_price" data-cat="' + cat + '">';
       html += '<input type="number" step="1" min="1" placeholder="Min" value="' + mq + '" data-product-id="' + p.id + '" data-field="min_qty" data-cat="' + cat + '">';
     });

@@ -881,9 +881,11 @@
           var qty = cartItem ? cartItem.qty : 0;
           var soldOut = p.sold_out;
 
-          html += '<div class="wp-product-row" data-product-id="' + p.id + '" data-name="' + (p.name_en || '').toLowerCase() + '" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg-card);border-radius:10px;border:1px solid var(--bd);margin-bottom:6px' + (soldOut ? ';opacity:.45' : '') + '">';
+          html += '<div class="wp-product-row" data-product-id="' + p.id + '" data-name="' + (p.name_en || '').toLowerCase() + ' ' + (p.type || '').toLowerCase() + '" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg-card);border-radius:10px;border:1px solid var(--bd);margin-bottom:6px' + (soldOut ? ';opacity:.45' : '') + '">';
           html += '<div style="flex:1;min-width:0">';
-          html += '<div style="font-weight:600;font-size:.92rem;color:var(--tx)">' + _esc(p.name_en) + '</div>';
+          var displayName = _esc(p.name_en);
+          if (p.type) displayName += ' <span style="font-size:.78rem;color:var(--tx-faint);font-weight:400">(' + _esc(p.type) + ')</span>';
+          html += '<div style="font-weight:600;font-size:.92rem;color:var(--tx)">' + displayName + '</div>';
           html += '<div style="font-size:.78rem;color:var(--tx-faint)">$' + parseFloat(wp).toFixed(2) + ' ea · Min ' + mq + '</div>';
           html += '</div>';
 
