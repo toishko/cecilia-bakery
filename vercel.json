@@ -47,6 +47,10 @@
     {
       "source": "/wholesale",
       "destination": "/wholesale.html"
+    },
+    {
+      "source": "/wholesale-portal",
+      "destination": "/wholesale-portal.html"
     }
   ]
 }

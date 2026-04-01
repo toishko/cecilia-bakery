@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Wholesale Portal — Cecilia Bakery</title>
+  <meta name="description" content="Cecilia Bakery wholesale partner portal. Place bulk orders, view pricing, and manage your wholesale account." />
+  <link rel="manifest" href="/manifest-website.json">
+  <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E0507" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cecilia">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload"
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+    as="style">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Clerk -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_cm9idXN0LXdpbGRjYXQtNzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://robust-wildcat-76.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+    type="text/javascript"
+  ></script>
+
+  <style>
+    /* ════════════════════════════════════════
+       DESIGN TOKENS
+       ════════════════════════════════════════ */
+    :root {
+      --red: #C8102E;
+      --red-dk: #9B0B22;
+      --red-lt: #E8213F;
+      --blue: #002D62;
+      --blue-lt: #1A4A8A;
+      --green: #1B7A4A;
+      --yellow: #D97706;
+
+      --bg: #FAFAF8;
+      --bg-surface: #EDE0CC;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #FDFCFB;
+      --bg-input: #FFFFFF;
+      --bg-nav: rgba(250, 250, 248, .80);
+      --bg-overlay: rgba(0, 0, 0, .50);
+
+      --tx: #18080D;
+      --tx-muted: #6B5057;
+      --tx-faint: #A08088;
+
+      --bd: rgba(200, 16, 46, .22);
+      --bd-hover: rgba(200, 16, 46, .55);
+      --bd-input: rgba(200, 16, 46, .25);
+
+      --shadow-card: 0 4px 22px rgba(200, 16, 46, .09);
+      --shadow-nav: 0 1px 0 rgba(200, 16, 46, .10);
+
+      --lang-text: #6B5057;
+      --r: 3px;
+      --transition: color .25s ease, background .25s ease, border-color .25s ease;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0E0507;
+      --bg-surface: #1F0D14;
+      --bg-card: #1E0D12;
+      --bg-card-hover: #26101A;
+      --bg-input: #1E0D12;
+      --bg-nav: rgba(10, 3, 5, .80);
+      --bg-overlay: rgba(0, 0, 0, .70);
+
+      --tx: #F2E8E4;
+      --tx-muted: #BFA0A8;
+      --tx-faint: #7A5560;
+
+      --bd: rgba(200, 16, 46, .35);
+      --bd-hover: rgba(200, 16, 46, .65);
+      --bd-input: rgba(200, 16, 46, .40);
+
+      --shadow-card: 0 4px 22px rgba(0, 0, 0, .40);
+      --shadow-nav: 0 1px 0 rgba(200, 16, 46, .12);
+
+      --lang-text: #BFA0A8;
+    }
+
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--tx);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    .hidden { display: none !important; }
+
+    /* ── Background blob ── */
+    .bg-blob {
+      position: fixed; top: -120px; right: -80px; width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(200,16,46,.06) 0%, transparent 70%);
+      border-radius: 50%; pointer-events: none; z-index: -1;
+    }
+
+    /* ════════════════════════════════════════
+       TOP NAV
+       ════════════════════════════════════════ */
+    .wp-topnav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      background: var(--bg-nav);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--bd);
+      box-shadow: var(--shadow-nav);
+      transition: box-shadow .3s;
+    }
+    .wp-topnav.scrolled { box-shadow: 0 4px 20px rgba(200,16,46,.12); }
+    .wp-topnav-brand { display: inline-flex; align-items: center; text-decoration: none; }
+    .wp-topnav-logo { height: 32px; width: auto; }
+    .wp-topnav-right { display: flex; align-items: center; gap: 10px; }
+    .wp-nav-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .85rem; color: var(--tx-muted); text-decoration: none;
+      transition: color .2s;
+    }
+    .wp-nav-back:hover { color: var(--red); }
+
+    /* ── Theme Toggle ── */
+    .theme-btn {
+      border: none !important; outline: none !important;
+      background: transparent !important; cursor: pointer;
+      color: var(--lang-text);
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 6px; border-radius: 50%;
+      transition: color .2s, background .2s;
+      flex-shrink: 0;
+    }
+    .theme-btn:hover { background: rgba(200,16,46,0.08) !important; color: var(--red); }
+    .theme-btn:focus { outline: none !important; box-shadow: none !important; }
+
+    /* ════════════════════════════════════════
+       STATES
+       ════════════════════════════════════════ */
+    .state-panel { display: none; }
+    .state-panel.active { display: block; }
+
+    .wp-container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* ── Shared text styles ── */
+    .wp-eyebrow {
+      display: flex; align-items: center; gap: 8px;
+      font-size: .75rem; font-weight: 500; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--red);
+      margin-bottom: 6px;
+    }
+    .wp-eyebrow::before {
+      content: ''; display: block; width: 28px; height: 2px;
+      background: var(--red); border-radius: 1px;
+    }
+    .wp-page-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem; font-weight: 700; line-height: 1.15;
+      color: var(--tx);
+    }
+    .wp-page-title em { font-style: italic; color: var(--red); }
+
+    /* ════════════════════════════════════════
+       STATE 1: SIGN-IN
+       ════════════════════════════════════════ */
+    #state-signin:focus, #state-signin *:focus { outline: none !important; }
+    #state-signin:focus-visible, #state-signin *:focus-visible { outline: none !important; box-shadow: none !important; }
+
+    .clerk-signin-wrapper {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 60vh; padding: 40px 0;
+    }
+    .clerk-signin-heading {
+      text-align: center; margin-bottom: 32px;
+    }
+    .clerk-signin-heading .wp-eyebrow {
+      justify-content: center;
+    }
+    .clerk-signin-heading .wp-eyebrow::before { display: none; }
+    .clerk-signin-subtitle {
+      font-size: .9rem; color: var(--tx-muted); margin-top: 8px;
+    }
+    .clerk-mount-target {
+      width: 100%; max-width: 420px;
+    }
+
+    /* ════════════════════════════════════════
+       STATE 2: PENDING
+       ════════════════════════════════════════ */
+    .status-wrapper {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 60vh; padding: 40px 20px; text-align: center;
+    }
+    .status-icon {
+      width: 80px; height: 80px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px;
+    }
+    .status-icon svg {
+      width: 40px; height: 40px; stroke-width: 2.5;
+    }
+    .status-icon.pending-icon {
+      background: rgba(217, 119, 6, .1);
+    }
+    .status-icon.pending-icon svg { stroke: var(--yellow); }
+    .status-icon.denied-icon {
+      background: rgba(200, 16, 46, .08);
+    }
+    .status-icon.denied-icon svg { stroke: var(--red); }
+    .status-icon.notfound-icon {
+      background: rgba(0, 45, 98, .1);
+    }
+    .status-icon.notfound-icon svg { stroke: var(--blue); }
+
+    .status-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem; font-weight: 700;
+      color: var(--tx); margin-bottom: 12px;
+    }
+    .status-msg {
+      font-size: .95rem; color: var(--tx-muted);
+      max-width: 400px; line-height: 1.6; margin-bottom: 8px;
+    }
+    .status-contact {
+      font-size: .88rem; color: var(--tx-muted);
+      margin-bottom: 24px;
+    }
+    .status-contact a {
+      color: var(--red); text-decoration: none; font-weight: 500;
+    }
+    .status-contact a:hover { text-decoration: underline; }
+    .status-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 28px;
+      background: var(--red); color: #fff;
+      border: none; border-radius: var(--r);
+      font-family: 'Outfit', sans-serif;
+      font-size: .9rem; font-weight: 500;
+      cursor: pointer; transition: background .2s;
+      text-decoration: none;
+    }
+    .status-btn:hover { background: var(--red-dk); }
+    .status-btn-outline {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 28px;
+      background: transparent; color: var(--tx-muted);
+      border: 1px solid var(--bd); border-radius: var(--r);
+      font-family: 'Outfit', sans-serif;
+      font-size: .9rem; font-weight: 500;
+      cursor: pointer; transition: var(--transition);
+      text-decoration: none;
+    }
+    .status-btn-outline:hover { border-color: var(--red); color: var(--red); }
+    .status-actions {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      align-items: center; justify-content: center;
+      margin-top: 16px;
+    }
+
+    /* ════════════════════════════════════════
+       STATE 5: PORTAL
+       ════════════════════════════════════════ */
+    /* ── Portal Header Bar ── */
+    .portal-header {
+      display: flex; align-items: center; gap: 16px;
+      padding: 20px 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--bd);
+      border-radius: 16px;
+      box-shadow: var(--shadow-card);
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .portal-logo {
+      height: 42px; width: auto; flex-shrink: 0;
+    }
+    .portal-info { flex: 1; min-width: 0; }
+    .portal-biz-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.3rem; font-weight: 600;
+      color: var(--tx); line-height: 1.2;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .portal-label {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px;
+      background: rgba(200, 16, 46, .08);
+      color: var(--red);
+      font-size: .7rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em;
+      border-radius: 20px;
+      margin-top: 2px;
+    }
+    .portal-header-right {
+      display: flex; align-items: center; gap: 12px;
+      flex-shrink: 0;
+    }
+
+    /* Cart button */
+    .cart-btn {
+      position: relative;
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 42px; height: 42px;
+      border: 1px solid var(--bd); border-radius: 12px;
+      background: var(--bg-surface);
+      color: var(--tx); cursor: pointer;
+      transition: var(--transition);
+    }
+    .cart-btn:hover { border-color: var(--bd-hover); color: var(--red); }
+    .cart-btn svg { width: 20px; height: 20px; }
+    .cart-badge {
+      position: absolute; top: -6px; right: -6px;
+      min-width: 20px; height: 20px; padding: 0 6px;
+      background: var(--red); color: #fff;
+      font-size: .7rem; font-weight: 700;
+      border-radius: 10px;
+      display: none; /* shown via JS */
+      align-items: center; justify-content: center;
+    }
+
+    /* User avatar */
+    .portal-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--red);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 1rem;
+      flex-shrink: 0; overflow: hidden;
+      border: 2px solid rgba(200,16,46,.25);
+    }
+    .portal-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .portal-signout-btn {
+      padding: 8px 16px;
+      border: 1px solid var(--bd); border-radius: var(--r);
+      background: transparent; color: var(--tx-muted);
+      font-family: 'Outfit', sans-serif;
+      font-size: .8rem; font-weight: 500;
+      cursor: pointer; transition: var(--transition);
+    }
+    .portal-signout-btn:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── Portal Nav Tabs ── */
+    .portal-tabs {
+      display: flex; gap: 4px;
+      background: var(--bg-card);
+      border: 1px solid var(--bd);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-card);
+    }
+    .portal-tab {
+      flex: 1;
+      padding: 12px 16px;
+      border: none; border-radius: 8px;
+      background: transparent; color: var(--tx-muted);
+      font-family: 'Outfit', sans-serif;
+      font-size: .88rem; font-weight: 500;
+      cursor: pointer; transition: all .2s;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .portal-tab:hover { color: var(--tx); background: rgba(200,16,46,.04); }
+    .portal-tab.active {
+      background: var(--red); color: #fff;
+      box-shadow: 0 2px 8px rgba(200,16,46,.25);
+    }
+    .portal-tab svg { width: 18px; height: 18px; }
+    .portal-tab .tab-badge {
+      display: none;
+      min-width: 18px; height: 18px; padding: 0 5px;
+      background: rgba(255,255,255,.3);
+      color: #fff; font-size: .68rem; font-weight: 700;
+      border-radius: 9px;
+      align-items: center; justify-content: center;
+    }
+
+    /* ── Empty panel placeholder ── */
+    .wp-panel-empty {
+      text-align: center; padding: 60px 20px;
+      color: var(--tx-faint); font-size: .95rem;
+    }
+    .wp-panel-empty svg {
+      width: 48px; height: 48px;
+      stroke: var(--tx-faint); margin-bottom: 16px; display: block; margin: 0 auto 16px;
+    }
+
+    /* ── Loading Spinner ── */
+    .loading-spinner {
+      display: flex; align-items: center; justify-content: center;
+      padding: 40px;
+    }
+    .loading-spinner::after {
+      content: '';
+      width: 32px; height: 32px;
+      border: 3px solid var(--bd);
+      border-top-color: var(--red);
+      border-radius: 50%;
+      animation: wp-spin .8s linear infinite;
+    }
+    @keyframes wp-spin { to { transform: rotate(360deg); } }
+
+    /* ════════════════════════════════════════
+       RESPONSIVE
+       ════════════════════════════════════════ */
+    @media (max-width: 600px) {
+      .wp-container { padding: 14px; }
+      .portal-header { padding: 16px; gap: 12px; }
+      .portal-biz-name { font-size: 1.1rem; }
+      .portal-header-right { width: 100%; justify-content: flex-end; }
+      .portal-tabs { gap: 2px; padding: 3px; }
+      .portal-tab { padding: 10px 8px; font-size: .82rem; gap: 4px; }
+      .portal-tab svg { width: 16px; height: 16px; }
+      .wp-page-title { font-size: 1.6rem; }
+      .portal-signout-btn { padding: 6px 12px; font-size: .75rem; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-blob"></div>
+
+  <!-- ═══ TOP NAV ═══ -->
+  <nav class="wp-topnav" id="wp-topnav">
+    <a href="/" class="wp-topnav-brand">
+      <img src="assets/logo.png" alt="Cecilia Bakery" class="wp-topnav-logo" />
+    </a>
+    <div class="wp-topnav-right">
+      <a href="/" class="wp-nav-back">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        <span data-en="Back to Home" data-es="Volver al Inicio">Back to Home</span>
+      </a>
+      <button class="theme-btn" onclick="toggleTheme()" aria-label="Toggle theme">
+        <svg id="theme-icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+        <svg id="theme-icon-sun" class="hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <div class="wp-container">
+
+    <!-- ── STATE 1: SIGN IN ── -->
+    <div id="state-signin" class="state-panel">
+      <div class="clerk-signin-wrapper">
+        <div class="clerk-signin-heading">
+          <div class="wp-eyebrow" data-en="Wholesale Partner Portal" data-es="Portal de Mayoreo">Wholesale Partner Portal</div>
+          <h1 class="wp-page-title" data-en="Sign in to access your <em>account</em>" data-es="Inicia sesión para acceder a tu <em>cuenta</em>">Sign in to access your <em>account</em></h1>
+          <p class="clerk-signin-subtitle" data-en="Sign in to access your wholesale account" data-es="Inicia sesión para acceder a tu cuenta de mayoreo">Sign in to access your wholesale account</p>
+        </div>
+        <div id="clerk-mount-target" class="clerk-mount-target"></div>
+      </div>
+    </div>
+
+    <!-- ── STATE 2: PENDING ── -->
+    <div id="state-pending" class="state-panel">
+      <div class="status-wrapper">
+        <div class="status-icon pending-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+        <h2 class="status-title" data-en="Application Under Review" data-es="Solicitud en Revisión">Application Under Review</h2>
+        <p class="status-msg" data-en="Your application is under review. We'll contact you shortly to discuss next steps." data-es="Tu solicitud está en revisión. Nos pondremos en contacto contigo pronto para discutir los próximos pasos.">Your application is under review. We'll contact you shortly to discuss next steps.</p>
+        <div class="status-actions">
+          <a href="/" class="status-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            <span data-en="Back to Home" data-es="Volver al Inicio">Back to Home</span>
+          </a>
+          <button class="status-btn-outline" id="pending-signout-btn">
+            <span data-en="Sign Out" data-es="Cerrar Sesión">Sign Out</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STATE 3: DENIED ── -->
+    <div id="state-denied" class="state-panel">
+      <div class="status-wrapper">
+        <div class="status-icon denied-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <h2 class="status-title" data-en="Application Not Approved" data-es="Solicitud No Aprobada">Application Not Approved</h2>
+        <p class="status-msg" data-en="Your wholesale application has not been approved. Please contact us for more information." data-es="Tu solicitud de mayoreo no ha sido aprobada. Por favor contáctanos para más información.">Your wholesale application has not been approved. Please contact us for more information.</p>
+        <p class="status-contact" data-en="Call us at <a href='tel:+17866850745'>(786) 685-0745</a>" data-es="Llámanos al <a href='tel:+17866850745'>(786) 685-0745</a>">Call us at <a href="tel:+17866850745">(786) 685-0745</a></p>
+        <div class="status-actions">
+          <a href="/" class="status-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            <span data-en="Back to Home" data-es="Volver al Inicio">Back to Home</span>
+          </a>
+          <button class="status-btn-outline" id="denied-signout-btn">
+            <span data-en="Sign Out" data-es="Cerrar Sesión">Sign Out</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STATE 4: NOT FOUND ── -->
+    <div id="state-not-found" class="state-panel">
+      <div class="status-wrapper">
+        <div class="status-icon notfound-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            <line x1="8" y1="11" x2="14" y2="11"/>
+          </svg>
+        </div>
+        <h2 class="status-title" data-en="No Account Found" data-es="Cuenta No Encontrada">No Account Found</h2>
+        <p class="status-msg" data-en="No wholesale account found for this email. Would you like to apply?" data-es="No se encontró una cuenta de mayoreo para este correo. ¿Te gustaría aplicar?">No wholesale account found for this email. Would you like to apply?</p>
+        <div class="status-actions">
+          <a href="/wholesale" class="status-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <span data-en="Apply for Wholesale" data-es="Aplicar para Mayoreo">Apply for Wholesale</span>
+          </a>
+          <button class="status-btn-outline" id="notfound-signout-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span data-en="Sign Out" data-es="Cerrar Sesión">Sign Out</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STATE 5: PORTAL ── -->
+    <div id="state-portal" class="state-panel">
+
+      <!-- Portal Header -->
+      <div class="portal-header" id="portal-header">
+        <img src="assets/logo.png" alt="Cecilia Bakery" class="portal-logo" />
+        <div class="portal-info">
+          <div class="portal-biz-name" id="portal-biz-name">—</div>
+          <span class="portal-label" data-en="Wholesale Portal" data-es="Portal Mayoreo">Wholesale Portal</span>
+        </div>
+        <div class="portal-header-right">
+          <button class="cart-btn" id="cart-btn" aria-label="Cart" onclick="wpOpenCart()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+            <span class="cart-badge" id="cart-badge">0</span>
+          </button>
+          <div class="portal-avatar" id="portal-avatar">?</div>
+          <button class="portal-signout-btn" id="portal-signout-btn" data-en="Sign Out" data-es="Cerrar Sesión">Sign Out</button>
+        </div>
+      </div>
+
+      <!-- Portal Tabs -->
+      <div class="portal-tabs" id="portal-tabs">
+        <button class="portal-tab active" data-tab="products" id="tab-products">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+          <span data-en="Products" data-es="Productos">Products</span>
+        </button>
+        <button class="portal-tab" data-tab="orders" id="tab-orders">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+          </svg>
+          <span data-en="Orders" data-es="Pedidos">Orders</span>
+          <span class="tab-badge" id="orders-tab-badge">0</span>
+        </button>
+        <button class="portal-tab" data-tab="account" id="tab-account">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          <span data-en="My Account" data-es="Mi Cuenta">My Account</span>
+        </button>
+      </div>
+
+      <!-- Tab Panels -->
+      <div id="wp-panel-products">
+        <div class="wp-panel-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+          <span data-en="Loading products…" data-es="Cargando productos…">Loading products…</span>
+        </div>
+      </div>
+      <div id="wp-panel-orders" style="display:none">
+        <div class="wp-panel-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          <span data-en="Your orders will appear here" data-es="Tus pedidos aparecerán aquí">Your orders will appear here</span>
+        </div>
+      </div>
+      <div id="wp-panel-account" style="display:none">
+        <div class="wp-panel-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          <span data-en="Account details will appear here" data-es="Los detalles de la cuenta aparecerán aquí">Account details will appear here</span>
+        </div>
+      </div>
+
+    </div><!-- /state-portal -->
+  </div><!-- /wp-container -->
+
+
+  <!-- ═══ SCRIPTS ═══ -->
+  <script>
+    /* ════════════════════════════════════════
+       SUPABASE INIT
+       ════════════════════════════════════════ */
+    const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
+
+    let sb = null;
+    try {
+      if (window.supabase && window.supabase.createClient) {
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      } else {
+        console.error('Supabase JS not loaded');
+      }
+    } catch (e) { console.error('Supabase init failed:', e); }
+
+    /* ════════════════════════════════════════
+       GLOBAL STATE
+       ════════════════════════════════════════ */
+    let wpAccount = null;
+    let wpProducts = [];
+    let wpPrices = {};
+    let wpOrders = [];
+    let wpCart = [];
+    let wpLang = localStorage.getItem('cecilia_wp_lang') || 'en';
+
+    /* ════════════════════════════════════════
+       ESCAPE HELPER
+       ════════════════════════════════════════ */
+    function _esc(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    /* ════════════════════════════════════════
+       THEME
+       ════════════════════════════════════════ */
+    const THEME_KEY = 'cb-theme';
+
+    function applyTheme(t) {
+      document.documentElement.setAttribute('data-theme', t);
+      const moonEl = document.getElementById('theme-icon-moon');
+      const sunEl = document.getElementById('theme-icon-sun');
+      if (t === 'dark') {
+        if (moonEl) moonEl.classList.add('hidden');
+        if (sunEl) sunEl.classList.remove('hidden');
+      } else {
+        if (moonEl) moonEl.classList.remove('hidden');
+        if (sunEl) sunEl.classList.add('hidden');
+      }
+      try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      applyTheme(current === 'light' ? 'dark' : 'light');
+    }
+
+    // Init theme
+    (function () {
+      let saved;
+      try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
+      applyTheme(saved || 'light');
+    })();
+
+    /* ════════════════════════════════════════
+       I18N
+       ════════════════════════════════════════ */
+    function applyLang() {
+      document.querySelectorAll('[data-en]').forEach(el => {
+        const text = el.getAttribute('data-' + wpLang);
+        if (text) {
+          if (text.includes('<')) {
+            el.innerHTML = text;
+          } else {
+            el.textContent = text;
+          }
+        }
+      });
+    }
+
+    /* ════════════════════════════════════════
+       SCROLL EFFECT ON NAV
+       ════════════════════════════════════════ */
+    window.addEventListener('scroll', () => {
+      const nav = document.getElementById('wp-topnav');
+      if (nav) nav.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    /* ════════════════════════════════════════
+       STATE MANAGEMENT
+       ════════════════════════════════════════ */
+    function showState(stateName) {
+      document.querySelectorAll('.state-panel').forEach(p => p.classList.remove('active'));
+
+      if (stateName === 'signin') {
+        const el = document.getElementById('state-signin');
+        if (el) el.classList.add('active');
+        const mount = document.getElementById('clerk-mount-target');
+        if (mount && window.Clerk) {
+          mount.innerHTML = '';
+          window.Clerk.mountSignIn(mount, {
+            afterSignInUrl: '/wholesale-portal',
+            afterSignUpUrl: '/wholesale-portal',
+          });
+        }
+        return;
+      }
+
+      const el = document.getElementById('state-' + stateName);
+      if (el) el.classList.add('active');
+    }
+
+    /* ════════════════════════════════════════
+       TAB NAVIGATION
+       ════════════════════════════════════════ */
+    function showTab(tabName) {
+      // Update tab buttons
+      document.querySelectorAll('.portal-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+      });
+      // Update panels
+      ['products', 'orders', 'account'].forEach(t => {
+        const panel = document.getElementById('wp-panel-' + t);
+        if (panel) panel.style.display = t === tabName ? '' : 'none';
+      });
+    }
+
+    document.getElementById('portal-tabs')?.addEventListener('click', (e) => {
+      const tab = e.target.closest('.portal-tab');
+      if (!tab) return;
+      showTab(tab.dataset.tab);
+    });
+
+    /* ════════════════════════════════════════
+       CART BADGE
+       ════════════════════════════════════════ */
+    function updateCartBadge() {
+      const badge = document.getElementById('cart-badge');
+      const count = wpCart.reduce((sum, item) => sum + (item.qty || 0), 0);
+      if (badge) {
+        badge.textContent = count;
+        badge.style.display = count > 0 ? 'flex' : 'none';
+      }
+    }
+
+    /* ════════════════════════════════════════
+       PORTAL SETUP
+       ════════════════════════════════════════ */
+    function populatePortalHeader(user) {
+      // Business name
+      const bizName = document.getElementById('portal-biz-name');
+      if (bizName && wpAccount) {
+        bizName.textContent = wpAccount.business_name || 'Wholesale Partner';
+      }
+
+      // Avatar
+      const avatar = document.getElementById('portal-avatar');
+      if (avatar && user) {
+        const firstName = user.firstName || user.username || '';
+        if (user.imageUrl) {
+          avatar.innerHTML = `<img src="${_esc(user.imageUrl)}" alt="${_esc(firstName)}" />`;
+        } else {
+          avatar.textContent = firstName ? firstName.charAt(0).toUpperCase() : '?';
+        }
+      }
+
+      updateCartBadge();
+    }
+
+    /* ════════════════════════════════════════
+       DATA LOADING
+       ════════════════════════════════════════ */
+    async function loadPortal() {
+      if (!sb || !wpAccount) return;
+
+      try {
+        // 1. Load b2b products
+        const { data: products } = await sb
+          .from('b2b_products')
+          .select('*')
+          .order('sort_order', { ascending: true });
+        wpProducts = products || [];
+
+        // 2. Load wholesale prices for this account
+        const { data: prices } = await sb
+          .from('wholesale_prices')
+          .select('*')
+          .eq('account_id', wpAccount.id);
+
+        wpPrices = {};
+        if (prices) {
+          prices.forEach(p => {
+            wpPrices[p.product_id] = p;
+          });
+        }
+
+        // 3. Load wholesale orders for this account
+        const { data: orders } = await sb
+          .from('wholesale_orders')
+          .select('*')
+          .eq('account_id', wpAccount.id)
+          .order('created_at', { ascending: false });
+        wpOrders = orders || [];
+
+        // 4. Render products
+        renderProducts();
+
+      } catch (e) {
+        console.error('loadPortal error:', e);
+      }
+    }
+
+    function renderProducts() {
+      var panel = document.getElementById('wp-panel-products');
+      if (!wpProducts.length) {
+        panel.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx-muted)">No products available</div>';
+        return;
+      }
+
+      var grouped = {};
+      var groupOrder = [];
+      wpProducts.forEach(function(p) {
+        var cat = p.tag_en || 'Other';
+        if (!grouped[cat]) { grouped[cat] = []; groupOrder.push(cat); }
+        grouped[cat].push(p);
+      });
+
+      var html = '<div style="max-width:800px;margin:0 auto">';
+      html += '<div style="margin-bottom:20px;position:sticky;top:0;background:var(--bg);padding:12px 0;z-index:10">';
+      html += '<input type="text" id="wp-search" placeholder="Search products..." oninput="wpFilterProducts()" style="width:100%;padding:10px 16px;border-radius:10px;border:1px solid var(--bd);font-size:.9rem;font-family:Outfit,sans-serif;background:var(--bg-input);color:var(--tx)">';
+      html += '</div>';
+
+      groupOrder.forEach(function(cat) {
+        html += '<div class="wp-category" data-cat="' + cat + '">';
+        html += '<div style="font-size:.78rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;padding:8px 0;border-bottom:2px solid rgba(200,16,46,.15);margin-bottom:8px">' + cat + '</div>';
+        grouped[cat].forEach(function(p) {
+          var price = wpPrices[p.id];
+          if (!price) return;
+          var wp = price.wholesale_price;
+          var mq = price.min_qty || 1;
+          var cartItem = wpCart.find(function(c) { return c.id === p.id; });
+          var qty = cartItem ? cartItem.qty : 0;
+          var soldOut = p.sold_out;
+
+          html += '<div class="wp-product-row" data-product-id="' + p.id + '" data-name="' + (p.name_en || '').toLowerCase() + '" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg-card);border-radius:10px;border:1px solid var(--bd);margin-bottom:6px' + (soldOut ? ';opacity:.45' : '') + '">';
+          html += '<div style="flex:1;min-width:0">';
+          html += '<div style="font-weight:600;font-size:.92rem;color:var(--tx)">' + _esc(p.name_en) + '</div>';
+          html += '<div style="font-size:.78rem;color:var(--tx-faint)">$' + parseFloat(wp).toFixed(2) + ' ea · Min ' + mq + '</div>';
+          html += '</div>';
+
+          if (soldOut) {
+            html += '<span style="font-size:.75rem;color:var(--red);font-weight:600">Sold Out</span>';
+          } else {
+            html += '<div style="display:flex;align-items:center;gap:6px">';
+            html += '<button onclick="wpAdjustCart(\'' + p.id + '\',-1,' + mq + ')" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--bd);background:none;font-size:1.1rem;cursor:pointer;color:var(--tx)">−</button>';
+            html += '<input type="number" id="wp-qty-' + p.id + '" value="' + qty + '" min="0" style="width:50px;text-align:center;padding:4px;border-radius:6px;border:1px solid var(--bd);font-size:.9rem;font-family:Outfit,sans-serif;background:var(--bg-input);color:var(--tx)" onchange="wpSetCart(\'' + p.id + '\',this.value,' + mq + ')">';
+            html += '<button onclick="wpAdjustCart(\'' + p.id + '\',1,' + mq + ')" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--bd);background:none;font-size:1.1rem;cursor:pointer;color:var(--tx)">+</button>';
+            html += '</div>';
+          }
+          html += '</div>';
+        });
+        html += '</div>';
+      });
+
+      html += '</div>';
+      panel.innerHTML = html;
+    }
+
+    function wpAdjustCart(productId, delta, minQty) {
+      var input = document.getElementById('wp-qty-' + productId);
+      var current = parseInt(input.value) || 0;
+      var newVal = current + delta;
+      if (newVal < 0) newVal = 0;
+      if (newVal > 0 && newVal < minQty) newVal = delta > 0 ? minQty : 0;
+      input.value = newVal;
+      wpSetCart(productId, newVal, minQty);
+    }
+
+    function wpSetCart(productId, qty, minQty) {
+      qty = parseInt(qty) || 0;
+      if (qty > 0 && qty < minQty) qty = minQty;
+      var idx = wpCart.findIndex(function(c) { return c.id === productId; });
+      var product = wpProducts.find(function(p) { return p.id === productId; });
+      var price = wpPrices[productId];
+      if (qty > 0) {
+        var item = { id: productId, name: product.name_en, qty: qty, price: parseFloat(price.wholesale_price), total: qty * parseFloat(price.wholesale_price) };
+        if (idx >= 0) { wpCart[idx] = item; } else { wpCart.push(item); }
+      } else {
+        if (idx >= 0) wpCart.splice(idx, 1);
+      }
+      var input = document.getElementById('wp-qty-' + productId);
+      if (input) input.value = qty;
+      wpUpdateCartBadge();
+    }
+
+    function wpUpdateCartBadge() {
+      var badge = document.getElementById('cart-badge');
+      var count = wpCart.reduce(function(sum, c) { return sum + c.qty; }, 0);
+      if (badge) {
+        badge.textContent = count;
+        badge.style.display = count > 0 ? 'flex' : 'none';
+      }
+    }
+
+    function wpFilterProducts() {
+      var q = document.getElementById('wp-search').value.toLowerCase().trim();
+      document.querySelectorAll('.wp-product-row').forEach(function(row) {
+        var name = row.dataset.name || '';
+        row.style.display = !q || name.indexOf(q) >= 0 ? 'flex' : 'none';
+      });
+      document.querySelectorAll('.wp-category').forEach(function(cat) {
+        var visible = cat.querySelectorAll('.wp-product-row[style*="display: flex"], .wp-product-row:not([style*="display: none"])');
+        cat.style.display = visible.length > 0 ? 'block' : 'none';
+      });
+    }
+
+    /* ════════════════════════════════════════
+       CART SIDEBAR
+       ════════════════════════════════════════ */
+    function wpOpenCart() {
+      document.getElementById('wp-cart-overlay').style.display = 'block';
+      document.getElementById('wp-cart-sidebar').style.display = 'flex';
+      wpRenderCart();
+    }
+
+    function wpCloseCart() {
+      document.getElementById('wp-cart-overlay').style.display = 'none';
+      document.getElementById('wp-cart-sidebar').style.display = 'none';
+    }
+
+    function wpRenderCart() {
+      var itemsEl = document.getElementById('wp-cart-items');
+      var footerEl = document.getElementById('wp-cart-footer');
+
+      if (!wpCart.length) {
+        itemsEl.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx-muted)">Your cart is empty</div>';
+        footerEl.innerHTML = '';
+        return;
+      }
+
+      var html = '';
+      wpCart.forEach(function(item, i) {
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--bd)">';
+        html += '<div style="flex:1"><div style="font-weight:600;font-size:.9rem">' + _esc(item.name) + '</div>';
+        html += '<div style="font-size:.78rem;color:var(--tx-faint)">' + item.qty + ' × $' + item.price.toFixed(2) + '</div></div>';
+        html += '<div style="display:flex;align-items:center;gap:8px">';
+        html += '<span style="font-weight:700;font-size:.9rem">$' + item.total.toFixed(2) + '</span>';
+        html += '<button onclick="wpRemoveFromCart(' + i + ')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:1rem">✕</button>';
+        html += '</div></div>';
+      });
+      itemsEl.innerHTML = html;
+
+      var subtotal = wpCart.reduce(function(sum, c) { return sum + c.total; }, 0);
+      footerEl.innerHTML = '<div style="display:flex;justify-content:space-between;font-weight:700;font-size:1.05rem;margin-bottom:16px">' +
+        '<span>Subtotal</span><span>$' + subtotal.toFixed(2) + '</span></div>' +
+        '<div style="margin-bottom:12px">' +
+          '<label style="font-size:.75rem;font-weight:600;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Requested Delivery Date *</label>' +
+          '<input type="date" id="wp-delivery-date" min="' + wpMinDate() + '" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.9rem;font-family:Outfit,sans-serif;background:var(--bg-input);color:var(--tx)">' +
+        '</div>' +
+        '<div style="margin-bottom:12px">' +
+          '<label style="font-size:.75rem;font-weight:600;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Preferred Time</label>' +
+          '<select id="wp-delivery-time" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.9rem;font-family:Outfit,sans-serif;background:var(--bg-input);color:var(--tx)">' +
+            '<option value="morning">Morning (6AM - 10AM)</option>' +
+            '<option value="midday">Midday (10AM - 2PM)</option>' +
+            '<option value="afternoon">Afternoon (2PM - 6PM)</option>' +
+            '<option value="flexible">Flexible</option>' +
+          '</select>' +
+        '</div>' +
+        '<div style="margin-bottom:16px">' +
+          '<label style="font-size:.75rem;font-weight:600;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Order Notes (optional)</label>' +
+          '<textarea id="wp-order-notes" rows="2" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.85rem;resize:vertical;font-family:Outfit,sans-serif;background:var(--bg-input);color:var(--tx)" placeholder="Special instructions..."></textarea>' +
+        '</div>' +
+        '<button onclick="wpPlaceOrder()" style="width:100%;padding:14px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif">Place Order — $' + subtotal.toFixed(2) + '</button>';
+    }
+
+    function wpRemoveFromCart(index) {
+      wpCart.splice(index, 1);
+      wpRenderCart();
+      wpUpdateCartBadge();
+      renderProducts();
+    }
+
+    function wpMinDate() {
+      var d = new Date();
+      d.setDate(d.getDate() + 1);
+      return d.toISOString().split('T')[0];
+    }
+
+    async function wpPlaceOrder() {
+      var date = document.getElementById('wp-delivery-date').value;
+      if (!date) { alert('Please select a delivery date'); return; }
+      var time = document.getElementById('wp-delivery-time').value;
+      var notes = document.getElementById('wp-order-notes').value.trim();
+      var subtotal = wpCart.reduce(function(sum, c) { return sum + c.total; }, 0);
+
+      var payload = {
+        account_id: wpAccount.id,
+        items: wpCart.map(function(c) { return { product_id: c.id, name: c.name, qty: c.qty, price: c.price, total: c.total }; }),
+        subtotal: subtotal,
+        requested_date: date,
+        requested_time: time,
+        notes: notes || null,
+        status: 'pending'
+      };
+
+      var { error } = await sb.from('wholesale_orders').insert(payload);
+      if (error) { alert('Order failed: ' + error.message); return; }
+
+      wpCart = [];
+      wpUpdateCartBadge();
+      wpCloseCart();
+      renderProducts();
+
+      // Show success message
+      var panel = document.getElementById('wp-panel-products');
+      var successHtml = '<div style="text-align:center;padding:60px 20px">' +
+        '<div style="font-size:2.5rem;margin-bottom:16px">✓</div>' +
+        '<h2 style="font-size:1.3rem;font-weight:700;color:var(--tx);margin:0 0 8px">Order Placed!</h2>' +
+        '<p style="font-size:.9rem;color:var(--tx-muted);margin:0 0 8px">Subtotal: $' + subtotal.toFixed(2) + '</p>' +
+        '<p style="font-size:.9rem;color:var(--tx-muted);margin:0 0 24px">Requested delivery: ' + date + ' (' + time + ')</p>' +
+        '<p style="font-size:.85rem;color:var(--tx-faint)">We\'ll confirm your order and delivery details shortly.</p>' +
+        '<button onclick="renderProducts()" style="margin-top:20px;padding:10px 24px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:.9rem;cursor:pointer;font-family:Outfit,sans-serif">Continue Shopping</button>' +
+        ' <button onclick="wpShowTab(\'orders\');wpLoadOrders()" style="margin-top:20px;padding:10px 24px;background:none;border:1px solid var(--bd);color:var(--tx);border-radius:8px;font-size:.9rem;cursor:pointer;font-family:Outfit,sans-serif">View Orders</button>' +
+      '</div>';
+      panel.innerHTML = successHtml;
+
+      // Reload orders in background
+      wpLoadOrders();
+    }
+
+    /* ════════════════════════════════════════
+       TAB SWITCHING
+       ════════════════════════════════════════ */
+    function wpShowTab(tab) {
+      document.querySelectorAll('.portal-tab').forEach(function(b) { b.classList.toggle('active', b.dataset.tab === tab); });
+      document.querySelectorAll('[id^="wp-panel-"]').forEach(function(p) { p.style.display = 'none'; });
+      var panel = document.getElementById('wp-panel-' + tab);
+      if (panel) panel.style.display = 'block';
+      if (tab === 'products') renderProducts();
+      if (tab === 'orders') wpLoadOrders();
+      if (tab === 'account') wpRenderAccount();
+    }
+
+    /* ════════════════════════════════════════
+       ORDER HISTORY
+       ════════════════════════════════════════ */
+    async function wpLoadOrders() {
+      var { data } = await sb.from('wholesale_orders').select('*').eq('account_id', wpAccount.id).order('placed_at', { ascending: false });
+      wpOrders = data || [];
+      wpRenderOrders();
+    }
+
+    function wpRenderOrders() {
+      var panel = document.getElementById('wp-panel-orders');
+      if (!wpOrders.length) {
+        panel.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx-muted)">No orders yet</div>';
+        return;
+      }
+
+      var html = '<div style="max-width:800px;margin:0 auto">';
+      wpOrders.forEach(function(o) {
+        var date = new Date(o.placed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        var items = o.items || [];
+        var statusColors = { pending: 'color:#c77800;background:rgba(255,165,0,.12)', confirmed: 'color:#0a7a0a;background:rgba(0,160,0,.12)', delivering: 'color:#1a4a8a;background:rgba(0,45,98,.12)', delivered: 'color:#0a7a0a;background:rgba(0,160,0,.12)', cancelled: 'color:var(--red);background:rgba(200,16,46,.1)' };
+        var statusStyle = statusColors[o.status] || '';
+
+        html += '<div style="background:var(--bg-card);border:1px solid var(--bd);border-radius:12px;padding:20px;margin-bottom:12px">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">';
+        html += '<div><div style="font-weight:700;font-size:.95rem">Order — ' + date + '</div>';
+        if (o.requested_date) {
+          html += '<div style="font-size:.78rem;color:var(--tx-faint)">Delivery: ' + o.requested_date + (o.requested_time ? ' (' + o.requested_time + ')' : '') + '</div>';
+        }
+        if (o.confirmed_date && o.status !== 'pending') {
+          html += '<div style="font-size:.78rem;color:#0a7a0a">Confirmed: ' + o.confirmed_date + (o.confirmed_time ? ' (' + o.confirmed_time + ')' : '') + '</div>';
+        }
+        html += '</div>';
+        html += '<span style="font-size:.7rem;font-weight:700;text-transform:uppercase;padding:3px 10px;border-radius:6px;letter-spacing:.5px;' + statusStyle + '">' + _esc(o.status) + '</span>';
+        html += '</div>';
+
+        html += '<div style="margin-bottom:12px">';
+        items.forEach(function(item) {
+          html += '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:.85rem">';
+          html += '<span>' + _esc(item.name) + ' × ' + item.qty + '</span>';
+          html += '<span style="font-weight:600">$' + parseFloat(item.total).toFixed(2) + '</span>';
+          html += '</div>';
+        });
+        html += '</div>';
+
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid var(--bd)">';
+        html += '<span style="font-weight:700;font-size:.95rem">$' + parseFloat(o.subtotal).toFixed(2) + '</span>';
+        html += '<button onclick="wpReorder(\'' + o.id + '\')" style="padding:6px 16px;background:none;border:1px solid var(--bd);border-radius:8px;font-size:.82rem;cursor:pointer;color:var(--tx);font-weight:600;font-family:Outfit,sans-serif">Reorder</button>';
+        html += '</div>';
+
+        if (o.notes) {
+          html += '<div style="margin-top:8px;font-size:.78rem;color:var(--tx-faint)">Notes: ' + _esc(o.notes) + '</div>';
+        }
+        html += '</div>';
+      });
+      html += '</div>';
+      panel.innerHTML = html;
+    }
+
+    function wpReorder(orderId) {
+      var order = wpOrders.find(function(o) { return o.id === orderId; });
+      if (!order) return;
+      wpCart = [];
+      (order.items || []).forEach(function(item) {
+        var product = wpProducts.find(function(p) { return p.id === item.product_id; });
+        var price = wpPrices[item.product_id];
+        if (product && price && !product.sold_out) {
+          wpCart.push({
+            id: item.product_id,
+            name: item.name,
+            qty: item.qty,
+            price: parseFloat(price.wholesale_price),
+            total: item.qty * parseFloat(price.wholesale_price)
+          });
+        }
+      });
+      wpUpdateCartBadge();
+      renderProducts();
+      wpOpenCart();
+    }
+
+    /* ════════════════════════════════════════
+       ACCOUNT TAB
+       ════════════════════════════════════════ */
+    function wpRenderAccount() {
+      var panel = document.getElementById('wp-panel-account');
+      if (!wpAccount) return;
+      var a = wpAccount;
+      var totalOrders = wpOrders.length;
+      var totalSpent = wpOrders.reduce(function(sum, o) { return sum + (parseFloat(o.subtotal) || 0); }, 0);
+
+      var html = '<div style="max-width:600px;margin:0 auto">';
+      html += '<div style="background:var(--bg-card);border:1px solid var(--bd);border-radius:12px;padding:24px;margin-bottom:16px">';
+      html += '<h3 style="font-size:1.1rem;font-weight:700;margin:0 0 16px;font-family:Outfit,sans-serif">Account Details</h3>';
+      html += '<div style="font-size:.88rem;color:var(--tx-muted);line-height:1.8">';
+      html += '<strong>Business:</strong> ' + _esc(a.business_name) + '<br>';
+      html += '<strong>Contact:</strong> ' + _esc(a.contact_name) + '<br>';
+      html += '<strong>Email:</strong> ' + _esc(a.email) + '<br>';
+      html += '<strong>Phone:</strong> ' + _esc(a.phone) + '<br>';
+      html += '<strong>Address:</strong> ' + _esc(a.address) + (a.city ? ', ' + _esc(a.city) : '') + (a.state ? ', ' + _esc(a.state) : '') + ' ' + _esc(a.zip || '') + '<br>';
+      html += '</div></div>';
+
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">';
+      html += '<div style="background:var(--bg-card);border:1px solid var(--bd);border-radius:12px;padding:20px;text-align:center">';
+      html += '<div style="font-size:1.5rem;font-weight:700;color:var(--tx)">' + totalOrders + '</div>';
+      html += '<div style="font-size:.78rem;color:var(--tx-faint)">Total Orders</div></div>';
+      html += '<div style="background:var(--bg-card);border:1px solid var(--bd);border-radius:12px;padding:20px;text-align:center">';
+      html += '<div style="font-size:1.5rem;font-weight:700;color:var(--tx)">$' + totalSpent.toFixed(2) + '</div>';
+      html += '<div style="font-size:.78rem;color:var(--tx-faint)">Total Spent</div></div>';
+      html += '</div>';
+
+      html += '<button onclick="window.Clerk.signOut().then(function(){location.href=\'/wholesale-portal\'})" style="width:100%;padding:12px;background:none;border:1px solid var(--bd);border-radius:10px;font-size:.9rem;cursor:pointer;color:var(--tx-muted);font-family:Outfit,sans-serif">Sign Out</button>';
+      html += '</div>';
+      panel.innerHTML = html;
+    }
+
+    /* ════════════════════════════════════════
+       SIGN OUT
+       ════════════════════════════════════════ */
+    async function handleSignOut() {
+      try {
+        if (window.Clerk) await window.Clerk.signOut();
+      } catch (e) { console.error('Sign out error:', e); }
+      window.location.href = '/wholesale-portal';
+    }
+
+    // Bind all sign-out buttons
+    document.getElementById('pending-signout-btn')?.addEventListener('click', handleSignOut);
+    document.getElementById('denied-signout-btn')?.addEventListener('click', handleSignOut);
+    document.getElementById('notfound-signout-btn')?.addEventListener('click', handleSignOut);
+    document.getElementById('portal-signout-btn')?.addEventListener('click', handleSignOut);
+
+    /* ════════════════════════════════════════
+       CLERK INIT — AUTH FLOW
+       ════════════════════════════════════════ */
+    window.addEventListener('load', async () => {
+      try {
+        if (!window.Clerk) {
+          console.warn('Clerk not available');
+          showState('signin');
+          return;
+        }
+
+        await window.Clerk.load();
+
+        const user = window.Clerk.user;
+
+        // 1. No user → sign in
+        if (!user) {
+          showState('signin');
+          return;
+        }
+
+        // 2. Get email
+        const email = user.primaryEmailAddress?.emailAddress || '';
+        if (!email) {
+          console.warn('No email found for user');
+          showState('not-found');
+          return;
+        }
+
+        // 3. Query wholesale_accounts
+        if (!sb) {
+          console.error('Supabase not initialized');
+          showState('signin');
+          return;
+        }
+
+        const { data: account, error } = await sb
+          .from('wholesale_accounts')
+          .select('*')
+          .ilike('email', email)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Wholesale account lookup error:', error);
+        }
+
+        // 4. Route based on status
+        if (!account) {
+          showState('not-found');
+          return;
+        }
+
+        if (account.status === 'pending') {
+          showState('pending');
+          return;
+        }
+
+        if (account.status === 'rejected') {
+          showState('denied');
+          return;
+        }
+
+        if (account.status === 'approved') {
+          wpAccount = account;
+          showState('portal');
+          populatePortalHeader(user);
+          applyLang();
+          await loadPortal();
+          return;
+        }
+
+        // Unknown status — treat as pending
+        showState('pending');
+
+      } catch (err) {
+        console.error('Clerk init error:', err);
+        showState('signin');
+      }
+    });
+  </script>
+
+<!-- Cart Sidebar -->
+<div id="wp-cart-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999" onclick="wpCloseCart()"></div>
+<div id="wp-cart-sidebar" style="display:none;position:fixed;top:0;right:0;width:380px;max-width:90vw;height:100vh;background:var(--bg-card);box-shadow:-4px 0 24px rgba(0,0,0,.15);z-index:1000;flex-direction:column">
+  <div style="padding:20px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">
+    <h3 style="margin:0;font-size:1.1rem;font-weight:700;font-family:Outfit,sans-serif;color:var(--tx)">Your Order</h3>
+    <button onclick="wpCloseCart()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--tx-muted)">✕</button>
+  </div>
+  <div id="wp-cart-items" style="flex:1;overflow-y:auto;padding:16px"></div>
+  <div id="wp-cart-footer" style="padding:16px;border-top:1px solid var(--bd)"></div>
+</div>
+</body>
+
+</html>
