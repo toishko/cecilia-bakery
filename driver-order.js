@@ -881,7 +881,7 @@ async function loadDriverProducts() {
   if (!sb) return;
   try {
     const { data, error } = await sb
-      .from('products')
+      .from('b2b_products')
       .select('*')
       .order('sort_order', { ascending: true });
 
@@ -890,9 +890,11 @@ async function loadDriverProducts() {
       return;
     }
 
+    const available = data.filter(p => !p.sold_out);
+
     // Group rows by tag_en — each tag becomes a section
     const grouped = {};
-    data.forEach(p => {
+    available.forEach(p => {
       const secKey = p.tag_en.toLowerCase().replace(/\s+/g, '_');
       if (!grouped[secKey]) {
         grouped[secKey] = {
