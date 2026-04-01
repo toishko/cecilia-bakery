@@ -5018,14 +5018,22 @@ async function loadWholesaleSection() {
   _wsRenderAccounts();
 }
 
-function _wsBuildPriceMap(accountId) {
-  if (accountId !== undefined) _wsSelectedAccountId = accountId;
+function _wsBuildPriceMap() {
   _wsPrices = {};
-  _wsAllPricesData.forEach(function(p) {
-    if (_wsSelectedAccountId && p.account_id !== _wsSelectedAccountId) return;
-    var pid = p.b2b_product_id || p.product_id;
-    _wsPrices[pid] = { wholesale_price: p.wholesale_price, min_qty: p.min_qty };
+  (_wsAllPricesData || []).forEach(function(p) {
+    var key = (p.account_id || 'global') + ':' + (p.b2b_product_id || p.product_id);
+    _wsPrices[key] = p;
   });
+}
+
+function _wsGetPrice(accountId, productId) {
+  return _wsPrices[accountId + ':' + productId] || _wsPrices['global:' + productId] || null;
+}
+function _wsAccountPricedCount(accountId) {
+  return _wsProducts.filter(function(p) { return _wsGetPrice(accountId, p.id); }).length;
+}
+function _wsAccountAllPriced(accountId) {
+  return _wsProducts.length > 0 && _wsProducts.every(function(p) { return _wsGetPrice(accountId, p.id); });
 }
 
 window._wsShowTab = function(tab) {
@@ -5084,33 +5092,41 @@ window._wsOpenDetail = function(id) {
   var a = _wsAccounts.find(function(x) { return x.id === id; });
   if (!a) return;
   var date = new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  var accountPrices = {};
-  _wsAllPricesData.forEach(function(pr) { if (pr.account_id === a.id) accountPrices[pr.b2b_product_id || pr.product_id] = pr; });
-  var allPriced = _wsProducts.length > 0 && _wsProducts.every(function(p) { return accountPrices[p.id]; });
+  var allPriced = _wsAccountAllPriced(a.id);
   var actions = '';
   if (a.status === 'pending') {
-    var approveStyle = allPriced ? '' : 'opacity:.5';
-    actions = '<div class="ws-card-actions">' +
-      '<button class="ws-btn ws-btn-approve" style="' + approveStyle + '" onclick="window._wsApprove(\'' + a.id + '\')">Approve</button>' +
-      '<button class="ws-btn ws-btn-reject" onclick="window._wsReject(\'' + a.id + '\')">Reject</button>' +
-    '</div>';
-    if (!allPriced) {
-      actions += '<div style="font-size:.75rem;color:var(--red);margin-top:8px">⚠ Set wholesale prices for this account first</div>';
-    }
-  } else if (a.status === 'approved') {
-    actions = '<div style="margin-top:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">' +
-      '<div><span class="ws-card-status approved">APPROVED</span>' +
-      (a.approved_at ? '<span style="font-size:.78rem;color:var(--tx-faint);margin-left:8px">on ' + new Date(a.approved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + '</span>' : '') +
+    var pricedCount = _wsAccountPricedCount(a.id);
+    var totalCount = _wsProducts.length;
+    var approveDisabled = allPriced ? '' : 'disabled title="Set all wholesale prices first"';
+    actions = '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--bd)">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+        '<span style="font-size:.82rem;font-weight:600;color:' + (allPriced ? '#0a7a0a' : 'var(--red)') + '">' + pricedCount + ' of ' + totalCount + ' products priced</span>' +
+        '<button class="ws-btn ws-btn-pricing" onclick="window._wsOpenAccountPricing(\'' + a.id + '\',\'' + a.business_name.replace(/'/g, "\\'") + '\')">Set Prices</button>' +
       '</div>' +
+      '<div class="ws-card-actions">' +
+        '<button class="ws-btn ws-btn-approve" onclick="window._wsApprove(\'' + a.id + '\')" ' + approveDisabled + '>Approve</button>' +
+        '<button class="ws-btn ws-btn-reject" onclick="window._wsReject(\'' + a.id + '\')">Reject</button>' +
+      '</div>';
+    if (!allPriced) {
+      actions += '<div style="font-size:.75rem;color:var(--red);margin-top:8px">\u26a0 Set all prices for this account before approving</div>';
+    }
+    actions += '</div>';
+  } else if (a.status === 'approved') {
+    actions = '<div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">' +
+      '<span class="ws-card-status approved">APPROVED</span>' +
+      (a.approved_at ? '<span style="font-size:.78rem;color:var(--tx-faint)">on ' + new Date(a.approved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + '</span>' : '') +
+    '</div>' +
+    '<div class="ws-card-actions" style="margin-top:12px">' +
+      '<button class="ws-btn ws-btn-pricing" onclick="window._wsOpenAccountPricing(\'' + a.id + '\',\'' + a.business_name.replace(/'/g, "\\'") + '\')">Edit Prices</button>' +
       '<button class="ws-btn ws-btn-reject" onclick="window._wsRevoke(\'' + a.id + '\')">Revoke Access</button>' +
     '</div>';
   } else if (a.status === 'rejected') {
     var reApproveStyle = allPriced ? '' : 'opacity:.5';
     actions = '<div class="ws-card-actions" style="margin-top:16px">' +
-      '<button class="ws-btn ws-btn-approve" style="' + reApproveStyle + '" onclick="window._wsApprove(\'' + a.id + '\')">' + 'Reconsider & Approve</button>' +
+      '<button class="ws-btn ws-btn-approve" style="' + reApproveStyle + '" onclick="window._wsApprove(\'' + a.id + '\')">Reconsider & Approve</button>' +
     '</div>';
     if (!allPriced) {
-      actions += '<div style="font-size:.75rem;color:var(--red);margin-top:8px">⚠ Set wholesale prices for this account first</div>';
+      actions += '<div style="font-size:.75rem;color:var(--red);margin-top:8px">\u26a0 Set wholesale prices for this account first</div>';
     }
   }
 
@@ -5146,114 +5162,43 @@ window._wsOpenDetail = function(id) {
 
 function _wsRenderPricing() {
   var panel = document.getElementById('ws-panel-pricing');
-  if (!_wsProducts.length) {
-    panel.innerHTML = '<div class="ws-empty">No products found</div>';
+  if (!_wsAccounts.length) {
+    panel.innerHTML = '<div class="ws-empty">No wholesale accounts yet. Pricing is set per account — click an application to set prices.</div>';
     return;
   }
+  var html = '<div class="ws-card"><p style="font-size:.85rem;color:var(--tx-muted);margin-bottom:16px">Pricing is set individually per account. Click an application or approved account to view or edit their prices.</p>';
 
   var approved = _wsAccounts.filter(function(a) { return a.status === 'approved'; });
+  var pending = _wsAccounts.filter(function(a) { return a.status === 'pending'; });
 
-  // Account selector
-  var html = '<div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center">';
-  html += '<div><label style="font-size:.75rem;font-weight:600;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Pricing for Account</label>';
-  html += '<select id="ws-account-select" style="padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.9rem;min-width:200px">';
-  if (!approved.length) {
-    html += '<option value="">No approved accounts</option>';
-  } else {
+  if (approved.length) {
+    html += '<h4 style="font-size:.82rem;color:var(--tx);margin:16px 0 8px">Approved Accounts</h4>';
     approved.forEach(function(a) {
-      var sel = _wsSelectedAccountId === a.id ? ' selected' : '';
-      html += '<option value="' + a.id + '"' + sel + '>' + a.business_name + '</option>';
+      var count = _wsAccountPricedCount(a.id);
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)">' +
+        '<span style="font-size:.88rem;font-weight:600">' + a.business_name + '</span>' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+          '<span style="font-size:.78rem;color:var(--tx-faint)">' + count + '/' + _wsProducts.length + ' priced</span>' +
+          '<button class="ws-btn ws-btn-pricing" style="padding:4px 10px;font-size:.75rem" onclick="window._wsOpenAccountPricing(\'' + a.id + '\',\'' + a.business_name.replace(/'/g, "\\'") + '\')">Edit</button>' +
+        '</div></div>';
     });
   }
-  html += '</select></div>';
 
-  // Copy prices from
-  html += '<div><label style="font-size:.75rem;font-weight:600;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Copy prices from</label>';
-  html += '<select id="ws-copy-from" style="padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.9rem;min-width:160px">';
-  html += '<option value="">— Select —</option>';
-  approved.forEach(function(a) {
-    if (a.id !== _wsSelectedAccountId) html += '<option value="' + a.id + '">' + a.business_name + '</option>';
-  });
-  html += '</select></div></div>';
-
-  if (!approved.length) {
-    html += '<div class="ws-empty">Approve a wholesale account first to set their prices</div>';
-    panel.innerHTML = html;
-    return;
-  }
-
-  // Auto-select first account if none selected
-  if (!_wsSelectedAccountId && approved.length) {
-    _wsSelectedAccountId = approved[0].id;
-    _wsBuildPriceMap(_wsSelectedAccountId);
-  }
-
-  var grouped = {};
-  var groupOrder = [];
-  _wsProducts.forEach(function(p) {
-    var cat = p.tag_en || 'Other';
-    if (!grouped[cat]) { grouped[cat] = []; groupOrder.push(cat); }
-    grouped[cat].push(p);
-  });
-
-  var pricedCount = _wsProducts.filter(function(p) { return _wsPrices[p.id]; }).length;
-  var totalCount = _wsProducts.length;
-
-  html += '<div class="ws-card">';
-  html += '<p style="font-size:.85rem;color:var(--tx-muted);margin-bottom:4px">Set wholesale prices and minimum order quantities for each product.</p>';
-  html += '<p style="font-size:.82rem;font-weight:600;color:' + (pricedCount === totalCount ? '#0a7a0a' : 'var(--red)') + ';margin-bottom:16px">' + pricedCount + ' of ' + totalCount + ' products priced</p>';
-
-  groupOrder.forEach(function(cat) {
-    html += '<div style="font-size:.75rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-top:20px;padding:6px 0;border-bottom:2px solid rgba(200,16,46,.15)">' + cat + '</div>';
-    html += '<div class="ws-pricing-grid" style="margin-top:8px">';
-    html += '<div class="ws-pg-header">Product</div><div class="ws-pg-header">Wholesale $</div><div class="ws-pg-header">Min Qty</div>';
-
-    grouped[cat].forEach(function(p) {
-      var existing = _wsPrices[p.id] || {};
-      var wp = existing.wholesale_price || '';
-      var mq = existing.min_qty || '';
-      var displayName = p.name_en;
-      if (p.variant) displayName += ' — ' + (p.variant === 'inside' ? 'Inside' : p.variant === 'top' ? 'Top' : p.variant);
-      html += '<div class="ws-pg-name">' + displayName + '</div>';
-      html += '<input type="number" step="0.01" min="0" placeholder="$0.00" value="' + wp + '" data-product-id="' + p.id + '" data-field="wholesale_price">';
-      html += '<input type="number" step="1" min="1" placeholder="Min" value="' + mq + '" data-product-id="' + p.id + '" data-field="min_qty">';
+  if (pending.length) {
+    html += '<h4 style="font-size:.82rem;color:var(--tx-faint);margin:16px 0 8px">Pending — Needs Pricing</h4>';
+    pending.forEach(function(a) {
+      var count = _wsAccountPricedCount(a.id);
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)">' +
+        '<span style="font-size:.88rem;font-weight:500">' + a.business_name + '</span>' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+          '<span style="font-size:.78rem;color:var(--red)">' + count + '/' + _wsProducts.length + ' priced</span>' +
+          '<button class="ws-btn ws-btn-pricing" style="padding:4px 10px;font-size:.75rem" onclick="window._wsOpenAccountPricing(\'' + a.id + '\',\'' + a.business_name.replace(/'/g, "\\'") + '\')">Set Prices</button>' +
+        '</div></div>';
     });
+  }
 
-    html += '</div>';
-  });
-
-  html += '<div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">';
-  html += '<button class="ws-btn ws-btn-approve" onclick="window._wsSavePricing()">Save All Prices</button>';
-  html += '<span style="font-size:.78rem;color:var(--tx-faint)" id="ws-pricing-status"></span>';
-  html += '</div></div>';
+  html += '</div>';
   panel.innerHTML = html;
-
-  // Wire account selector
-  document.getElementById('ws-account-select').addEventListener('change', function() {
-    _wsBuildPriceMap(this.value);
-    _wsRenderPricing();
-  });
-
-  // Wire copy-from
-  document.getElementById('ws-copy-from').addEventListener('change', function() {
-    if (!this.value) return;
-    var sourceId = this.value;
-    var sourcePrices = {};
-    _wsAllPricesData.forEach(function(p) {
-      if (p.account_id === sourceId) {
-        var pid = p.b2b_product_id || p.product_id;
-        sourcePrices[pid] = p;
-      }
-    });
-    document.querySelectorAll('.ws-pricing-grid input').forEach(function(inp) {
-      var pid = inp.dataset.productId;
-      var field = inp.dataset.field;
-      var src = sourcePrices[pid];
-      if (src && src[field] !== undefined && src[field] !== null) inp.value = src[field];
-    });
-    showToast('Prices copied — click Save to apply', 'info');
-    this.value = '';
-  });
 }
 
 window._wsSavePricing = async function() {
@@ -5387,6 +5332,89 @@ function _wsConfirm(title, message, confirmText, confirmClass, onConfirm) {
     if (e.target === overlay) overlay.remove();
   });
 }
+
+window._wsOpenAccountPricing = function(accountId, businessName) {
+  var overlay = document.getElementById('ws-pricing-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'ws-pricing-overlay';
+    document.body.appendChild(overlay);
+  }
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+
+  var grouped = {};
+  var groupOrder = [];
+  _wsProducts.forEach(function(p) {
+    var cat = p.tag_en || 'Other';
+    if (!grouped[cat]) { grouped[cat] = []; groupOrder.push(cat); }
+    grouped[cat].push(p);
+  });
+
+  var pricedCount = _wsAccountPricedCount(accountId);
+  var totalCount = _wsProducts.length;
+
+  var html = '<div style="background:var(--bg-card);border-radius:16px;padding:28px;max-width:580px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:85vh;overflow-y:auto">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">';
+  html += '<div><h3 style="font-size:1.1rem;font-weight:700;color:var(--tx);margin:0">Pricing for ' + businessName + '</h3>';
+  html += '<p style="font-size:.82rem;color:' + (pricedCount === totalCount ? '#0a7a0a' : 'var(--red)') + ';margin:4px 0 0;font-weight:600">' + pricedCount + ' of ' + totalCount + ' products priced</p></div>';
+  html += '<button onclick="document.getElementById(\'ws-pricing-overlay\').remove()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--tx-muted)">✕</button>';
+  html += '</div>';
+
+  groupOrder.forEach(function(cat) {
+    html += '<div style="font-size:.72rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-top:16px;padding:6px 0;border-bottom:2px solid rgba(200,16,46,.15)">' + cat + '</div>';
+    html += '<div class="ws-pricing-grid" style="margin-top:6px">';
+    html += '<div class="ws-pg-header">Product</div><div class="ws-pg-header">Price</div><div class="ws-pg-header">Min Qty</div>';
+    grouped[cat].forEach(function(p) {
+      var existing = _wsGetPrice(accountId, p.id) || {};
+      var wp = existing.wholesale_price || '';
+      var mq = existing.min_qty || '';
+      html += '<div class="ws-pg-name">' + p.name_en + '</div>';
+      html += '<input type="number" step="0.01" min="0" placeholder="$0.00" value="' + wp + '" data-product-id="' + p.id + '" data-field="wholesale_price">';
+      html += '<input type="number" step="1" min="1" placeholder="Min" value="' + mq + '" data-product-id="' + p.id + '" data-field="min_qty">';
+    });
+    html += '</div>';
+  });
+
+  html += '<div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">';
+  html += '<button class="ws-btn ws-btn-approve" onclick="window._wsSaveAccountPricing(\'' + accountId + '\')">Save Prices</button>';
+  html += '<span style="font-size:.78rem;color:var(--tx-faint)" id="ws-acct-pricing-status"></span>';
+  html += '</div></div>';
+
+  overlay.innerHTML = html;
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+};
+
+window._wsSaveAccountPricing = async function(accountId) {
+  var statusEl = document.getElementById('ws-acct-pricing-status');
+  if (statusEl) statusEl.textContent = 'Saving...';
+
+  var inputs = document.querySelectorAll('#ws-pricing-overlay .ws-pricing-grid input');
+  var updates = {};
+  inputs.forEach(function(inp) {
+    var pid = inp.dataset.productId;
+    var field = inp.dataset.field;
+    if (!updates[pid]) updates[pid] = { account_id: accountId, b2b_product_id: pid };
+    if (field === 'wholesale_price') updates[pid].wholesale_price = parseFloat(inp.value) || 0;
+    if (field === 'min_qty') updates[pid].min_qty = parseInt(inp.value) || 1;
+  });
+
+  var errors = 0;
+  for (var pid of Object.keys(updates)) {
+    var row = updates[pid];
+    if (!row.wholesale_price || row.wholesale_price <= 0) continue;
+    row.updated_at = new Date().toISOString();
+    var { error } = await sb.from('wholesale_prices').upsert(row, { onConflict: 'account_id,b2b_product_id' });
+    if (error) { console.error('Price save error:', error); errors++; }
+  }
+
+  if (errors) {
+    showToast(errors + ' prices failed to save', 'error');
+  } else {
+    showToast('Prices saved for ' + (document.querySelector('#ws-pricing-overlay h3')?.textContent?.replace('Pricing for ', '') || 'account'), 'success');
+  }
+  if (statusEl) statusEl.textContent = '';
+  await loadWholesaleSection();
+};
 
 /* ── Escape helpers (scoped to avoid conflicts) ── */
 function _esc(s)     { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
