@@ -827,9 +827,10 @@
         wpPrices = {};
         if (prices) {
           prices.forEach(p => {
-            wpPrices[p.product_id] = p;
+            wpPrices[p.b2b_product_id || p.product_id] = p;
           });
         }
+
 
         // 3. Load wholesale orders for this account
         const { data: orders } = await sb
@@ -871,6 +872,7 @@
         html += '<div class="wp-category" data-cat="' + cat + '">';
         html += '<div style="font-size:.78rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;padding:8px 0;border-bottom:2px solid rgba(200,16,46,.15);margin-bottom:8px">' + cat + '</div>';
         grouped[cat].forEach(function(p) {
+
           var price = wpPrices[p.id];
           if (!price) return;
           var wp = price.wholesale_price;
