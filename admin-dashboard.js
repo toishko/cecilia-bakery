@@ -5062,9 +5062,13 @@ window._wsOpenDetail = function(id) {
       '<button class="ws-btn ws-btn-reject" onclick="window._wsRevoke(\'' + a.id + '\')">Revoke Access</button>' +
     '</div>';
   } else if (a.status === 'rejected') {
+    var reApproveDisabled = allPriced ? '' : 'disabled title="Set all wholesale prices first"';
     actions = '<div class="ws-card-actions" style="margin-top:16px">' +
-      '<button class="ws-btn ws-btn-approve" onclick="window._wsApprove(\'' + a.id + '\')">Reconsider & Approve</button>' +
+      '<button class="ws-btn ws-btn-approve" onclick="window._wsApprove(\'' + a.id + '\')" ' + reApproveDisabled + '>Reconsider & Approve</button>' +
     '</div>';
+    if (!allPriced) {
+      actions += '<div style="font-size:.75rem;color:var(--red);margin-top:8px">Set all wholesale prices before approving</div>';
+    }
   }
 
   var overlay = document.getElementById('ws-detail-overlay');
@@ -5182,6 +5186,11 @@ window._wsSavePricing = async function() {
 window._wsApprove = async function(id) {
   const account = _wsAccounts.find(a => a.id === id);
   const name = account ? account.business_name : 'this account';
+  var allPriced = _wsProducts.length > 0 && _wsProducts.every(function(p) { return _wsPrices[p.id]; });
+  if (!allPriced) {
+    showToast('Set all wholesale prices before approving', 'error');
+    return;
+  }
   _wsConfirm(
     'Approve Account',
     'Are you sure you want to approve <strong>' + name + '</strong>? They will gain access to the wholesale ordering portal.',
