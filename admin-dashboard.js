@@ -5381,9 +5381,100 @@ window._b2bDeleteProduct = function(id) {
 };
 
 window._b2bAddProduct = function() {
-  showToast('B2B product editor coming soon', 'info');
+  _b2bOpenModal(null);
 };
 
 window._b2bEditProduct = function(id) {
-  showToast('B2B product editor coming soon', 'info');
+  var p = _b2bProducts.find(function(x) { return x.id === id; });
+  if (p) _b2bOpenModal(p);
 };
+
+function _b2bOpenModal(product) {
+  var isEdit = !!product;
+  var overlay = document.getElementById('b2b-modal-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'b2b-modal-overlay';
+    document.body.appendChild(overlay);
+  }
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px';
+
+  var cats = [];
+  _b2bProducts.forEach(function(p) { if (cats.indexOf(p.tag_en) === -1 && p.tag_en) cats.push(p.tag_en); });
+  var catOptions = cats.map(function(c) { return '<option value="' + c + '"' + (product && product.tag_en === c ? ' selected' : '') + '>' + c + '</option>'; }).join('');
+
+  overlay.innerHTML = '<div style="background:var(--bg-card);border-radius:16px;padding:28px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:85vh;overflow-y:auto">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">' +
+      '<h3 style="font-size:1.1rem;font-weight:700;color:var(--tx);margin:0">' + (isEdit ? 'Edit Product' : 'Add B2B Product') + '</h3>' +
+      '<button onclick="document.getElementById(\'b2b-modal-overlay\').remove()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--tx-muted)">✕</button>' +
+    '</div>' +
+    '<div style="display:flex;flex-direction:column;gap:12px">' +
+      '<div><label style="font-size:.75rem;font-weight:600;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Name (English) *</label>' +
+        '<input id="b2b-f-en" type="text" value="' + (product ? product.name_en : '') + '" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.9rem" placeholder="e.g. Tres Leche"></div>' +
+      '<div><label style="font-size:.75rem;font-weight:600;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Name (Spanish)</label>' +
+        '<input id="b2b-f-es" type="text" value="' + (product ? (product.name_es || '') : '') + '" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.9rem" placeholder="e.g. Tres Leche"></div>' +
+      '<div><label style="font-size:.75rem;font-weight:600;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Category *</label>' +
+        '<select id="b2b-f-cat" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.9rem">' +
+          '<option value="">Select category...</option>' + catOptions +
+          '<option value="__new">+ New Category</option>' +
+        '</select></div>' +
+      '<div id="b2b-new-cat-wrap" style="display:none"><label style="font-size:.75rem;font-weight:600;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">New Category (EN / ES)</label>' +
+        '<div style="display:flex;gap:8px"><input id="b2b-f-cat-en" type="text" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.9rem" placeholder="English">' +
+        '<input id="b2b-f-cat-es" type="text" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.9rem" placeholder="Spanish"></div></div>' +
+      '<div><label style="font-size:.75rem;font-weight:600;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Type</label>' +
+        '<select id="b2b-f-type" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.9rem">' +
+          '<option value="standard"' + (product && product.type === 'standard' ? ' selected' : '') + '>Standard</option>' +
+          '<option value="redondo"' + (product && product.type === 'redondo' ? ' selected' : '') + '>Round (Inside/Top)</option>' +
+        '</select></div>' +
+      '<div style="display:flex;gap:12px;margin-top:8px">' +
+        '<button class="ws-btn ws-btn-reject" style="flex:1" onclick="document.getElementById(\'b2b-modal-overlay\').remove()">Cancel</button>' +
+        '<button class="ws-btn ws-btn-approve" style="flex:1" id="b2b-save-btn">' + (isEdit ? 'Update' : 'Add Product') + '</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+
+  document.getElementById('b2b-f-cat').addEventListener('change', function() {
+    document.getElementById('b2b-new-cat-wrap').style.display = this.value === '__new' ? 'block' : 'none';
+  });
+
+  document.getElementById('b2b-save-btn').addEventListener('click', async function() {
+    var nameEn = document.getElementById('b2b-f-en').value.trim();
+    var nameEs = document.getElementById('b2b-f-es').value.trim();
+    var catSelect = document.getElementById('b2b-f-cat').value;
+    var type = document.getElementById('b2b-f-type').value;
+
+    var tagEn, tagEs;
+    if (catSelect === '__new') {
+      tagEn = document.getElementById('b2b-f-cat-en').value.trim();
+      tagEs = document.getElementById('b2b-f-cat-es').value.trim() || tagEn;
+    } else {
+      tagEn = catSelect;
+      var existing = _b2bProducts.find(function(p) { return p.tag_en === catSelect; });
+      tagEs = existing ? (existing.tag_es || tagEn) : tagEn;
+    }
+
+    if (!nameEn || !tagEn) { showToast('Name and category are required', 'error'); return; }
+
+    var payload = {
+      name_en: nameEn, name_es: nameEs || nameEn,
+      tag_en: tagEn, tag_es: tagEs,
+      type: type,
+      updated_at: new Date().toISOString()
+    };
+
+    var error;
+    if (isEdit) {
+      ({ error } = await sb.from('b2b_products').update(payload).eq('id', product.id));
+    } else {
+      payload.sort_order = 999;
+      ({ error } = await sb.from('b2b_products').insert(payload));
+    }
+
+    if (error) { showToast('Error: ' + error.message, 'error'); return; }
+    showToast(isEdit ? 'Product updated' : 'Product added', 'success');
+    document.getElementById('b2b-modal-overlay').remove();
+    await _b2bLoadProducts();
+  });
+
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+}
