@@ -4879,7 +4879,8 @@
     let atcImages = [];
     let atcActiveImg = 0;
 
-    function fetchProductImages(productName) {
+    function fetchProductImages(productName, productId) {
+      const lookupKey = productId || productName;
       const loader = document.getElementById('atc-img-loading');
       const mainImg = document.getElementById('atc-img-main');
       const thumbsEl = document.getElementById('atc-gallery-thumbs');
@@ -4921,9 +4922,8 @@
         'Hershey (Cup)': ['https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?w=700&fit=crop', 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=700&fit=crop', 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=700&fit=crop'],
       };
 
-      // Check Supabase-loaded images first, fall back to hardcoded Unsplash URLs
       const _override = window.__PRODUCT_PHOTOS_OVERRIDE || {};
-      const urls = _override[productName] || PRODUCT_PHOTOS[productName] || PRODUCT_PHOTOS['Tres Leches'];
+      const urls = _override[lookupKey] || _override[productName] || PRODUCT_PHOTOS[productName] || PRODUCT_PHOTOS['Tres Leches'];
       atcImages = urls;
       atcActiveImg = 0;
       renderGallery();
@@ -4942,7 +4942,8 @@
       mainImg.alt = atcProduct ? atcProduct.name : '';
 
       // Apply per-product zoom & position (same framing as menu cards)
-      const _zoomData = (window.__PRODUCT_ZOOM_OVERRIDE || {})[atcProduct?.name];
+      const _pid = atcProduct?.productId || atcProduct?.name;
+      const _zoomData = (window.__PRODUCT_ZOOM_OVERRIDE || {})[_pid] || (window.__PRODUCT_ZOOM_OVERRIDE || {})[atcProduct?.name];
       if (_zoomData) {
         mainImg.style.transform = 'scale(' + (_zoomData.zoom || 1) + ')';
         mainImg.style.objectPosition = _zoomData.position || '50% 50%';
@@ -5272,8 +5273,8 @@
     let atcSize = null;
     let atcQty = 1;
 
-    function openATC(name, tag) {
-      atcProduct = { name, tag };
+    function openATC(name, tag, productId) {
+      atcProduct = { name, tag, productId: productId || name };
       atcSize = null;
       atcSizeDisplay = null;
       atcQty = 1;
@@ -5296,8 +5297,8 @@
       if (allLabels[1]) allLabels[1].textContent = t.qtyLabel;
       document.getElementById('atc-add-btn').textContent = t.addToCart;
 
-      // Fetch images
-      fetchProductImages(name);
+      // Fetch images using product ID for unique lookup
+      fetchProductImages(name, productId || name);
 
       // Sizes
       const sizeField = document.getElementById('atc-size-field');
@@ -5914,6 +5915,7 @@
       const div = document.createElement('div');
       div.className = `product-card reveal${isFeatured ? ' featured' : ''}`;
       div.dataset.productKey = nameEn;
+      const _pid = p.id || nameEn;
 
       div.innerHTML = `
         <div class="pc-image-wrap">
@@ -5921,7 +5923,7 @@
                style="transform:scale(${p.image_zoom||1});object-position:${p.image_position||'50% 50%'}"
                onerror="this.src='https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=700&fit=crop'">
           <button class="pc-order atc-trigger pc-atc-image"
-            onclick="openATC('${nameEn.replace(/'/g,"\\\\'")}')"
+            onclick="openATC('${nameEn.replace(/'/g,"\\\\\'")}','','${_pid}')"
             ${btnDisabled} ${soldOutAttr}><span class="atc-desktop">+</span></button>
         </div>
         <div class="pc-text-group">
@@ -5941,7 +5943,7 @@
             <div class="pc-footer-action-row">
               <span class="pc-price">${priceHTML}</span>
               <button class="pc-order atc-trigger pc-atc-footer"
-                onclick="openATC('${nameEn.replace(/'/g,"\\'")}')"
+                onclick="openATC('${nameEn.replace(/'/g,"\\\'")}','','${_pid}')"
                 data-en="${isSoldOut ? 'Sold Out'  : 'Add to Cart'}"
                 data-es="${isSoldOut ? 'Agotado'   : 'Agregar'}"
                 ${btnDisabled} ${soldOutAttr}>${btnText}</button>
@@ -6092,14 +6094,17 @@
         // Also rebuild PHOTOS override for ATC modal / gallery
         window.__PRODUCT_PHOTOS_OVERRIDE = {};
         window.__PRODUCT_ZOOM_OVERRIDE = {};
+        window.__PRODUCT_BY_ID = {};
         data.forEach(p => {
+          const key = p.id || p.name_en;
           if (p.images && p.images.length > 0) {
-            window.__PRODUCT_PHOTOS_OVERRIDE[p.name_en] = p.images;
+            window.__PRODUCT_PHOTOS_OVERRIDE[key] = p.images;
           }
-          window.__PRODUCT_ZOOM_OVERRIDE[p.name_en] = {
+          window.__PRODUCT_ZOOM_OVERRIDE[key] = {
             zoom: p.image_zoom || 1,
             position: p.image_position || '50% 50%'
           };
+          window.__PRODUCT_BY_ID[key] = p;
         });
       } catch (err) {
         console.warn('Supabase product load failed, using hardcoded fallback:', err);
