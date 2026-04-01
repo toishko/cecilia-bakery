@@ -3452,15 +3452,6 @@ window._pmSwitchSection = function(tab) {
   if (tab === 'b2b') _b2bLoadProducts();
 };
 
-/* placeholder until B2B logic is implemented */
-async function _b2bLoadProducts() {
-  const list = document.getElementById('b2b-product-list');
-  if (!list) return;
-  list.innerHTML = '<div class="ws-empty">B2B product catalog coming soon</div>';
-}
-window._b2bAddProduct = function() {
-  showToast('B2B product editor coming soon', 'info');
-};
 
 /* ── Modal structure ── */
 function _pmModalHTML() {
@@ -5318,3 +5309,81 @@ function _wsConfirm(title, message, confirmText, confirmClass, onConfirm) {
 /* ── Escape helpers (scoped to avoid conflicts) ── */
 function _esc(s)     { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function _escAttr(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ═══════════════════════════════════
+   B2B PRODUCT CATALOG
+   ═══════════════════════════════════ */
+let _b2bProducts = [];
+
+async function _b2bLoadProducts() {
+  var { data, error } = await sb.from('b2b_products').select('*').order('sort_order', { ascending: true });
+  if (error) { showToast('Failed to load B2B products', 'error'); return; }
+  _b2bProducts = data || [];
+  _b2bRenderList();
+}
+
+function _b2bRenderList() {
+  var list = document.getElementById('b2b-product-list');
+  if (!list) return;
+  if (!_b2bProducts.length) {
+    list.innerHTML = '<div class="ws-empty">No B2B products yet</div>';
+    return;
+  }
+
+  var grouped = {};
+  var groupOrder = [];
+  _b2bProducts.forEach(function(p) {
+    var cat = p.tag_en || 'Other';
+    if (!grouped[cat]) { grouped[cat] = []; groupOrder.push(cat); }
+    grouped[cat].push(p);
+  });
+
+  var html = '';
+  groupOrder.forEach(function(cat) {
+    html += '<div style="margin-bottom:20px">';
+    html += '<div style="font-size:.75rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;padding:8px 0;border-bottom:2px solid rgba(200,16,46,.15);margin-bottom:8px">' + cat + '</div>';
+    grouped[cat].forEach(function(p) {
+      var soldOutClass = p.sold_out ? 'opacity:.5;' : '';
+      html += '<div class="ws-card" style="padding:12px 16px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:12px;' + soldOutClass + '">';
+      html += '<div style="flex:1;min-width:0">';
+      html += '<div style="font-weight:600;font-size:.9rem;color:var(--tx)">' + p.name_en;
+      if (p.name_es && p.name_es !== p.name_en) html += ' <span style="font-size:.78rem;color:var(--tx-faint)">/ ' + p.name_es + '</span>';
+      html += '</div>';
+      if (p.type === 'redondo') html += '<span style="font-size:.68rem;background:rgba(200,16,46,.08);color:var(--red);padding:1px 6px;border-radius:4px">Round</span> ';
+      if (p.sold_out) html += '<span style="font-size:.68rem;background:rgba(200,16,46,.08);color:var(--red);padding:1px 6px;border-radius:4px">Sold Out</span>';
+      html += '</div>';
+      html += '<div style="display:flex;gap:6px;flex-shrink:0">';
+      html += '<button class="ws-btn ws-btn-pricing" style="padding:4px 10px;font-size:.75rem" onclick="window._b2bToggleSoldOut(\'' + p.id + '\',' + !p.sold_out + ')">' + (p.sold_out ? 'Restock' : 'Sold Out') + '</button>';
+      html += '<button class="ws-btn ws-btn-pricing" style="padding:4px 10px;font-size:.75rem" onclick="window._b2bEditProduct(\'' + p.id + '\')">' + 'Edit</button>';
+      html += '<button class="ws-btn ws-btn-reject" style="padding:4px 10px;font-size:.75rem" onclick="window._b2bDeleteProduct(\'' + p.id + '\')">' + '✕</button>';
+      html += '</div></div>';
+    });
+    html += '</div>';
+  });
+  list.innerHTML = html;
+}
+
+window._b2bToggleSoldOut = async function(id, soldOut) {
+  var { error } = await sb.from('b2b_products').update({ sold_out: soldOut, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  showToast(soldOut ? 'Marked sold out' : 'Restocked', 'success');
+  await _b2bLoadProducts();
+};
+
+window._b2bDeleteProduct = function(id) {
+  var p = _b2bProducts.find(function(x) { return x.id === id; });
+  _wsConfirm('Delete Product', 'Remove <strong>' + (p ? p.name_en : 'this product') + '</strong> from the B2B catalog? This cannot be undone.', 'Delete', 'ws-btn-reject', async function() {
+    var { error } = await sb.from('b2b_products').delete().eq('id', id);
+    if (error) { showToast('Error: ' + error.message, 'error'); return; }
+    showToast('Product deleted', 'success');
+    await _b2bLoadProducts();
+  });
+};
+
+window._b2bAddProduct = function() {
+  showToast('B2B product editor coming soon', 'info');
+};
+
+window._b2bEditProduct = function(id) {
+  showToast('B2B product editor coming soon', 'info');
+};
