@@ -5055,8 +5055,11 @@ window._wsOpenDetail = function(id) {
       actions += '<div style="font-size:.75rem;color:var(--red);margin-top:8px">⚠ Set all wholesale prices before approving</div>';
     }
   } else if (a.status === 'approved') {
-    actions = '<div style="margin-top:16px"><span class="ws-card-status approved">APPROVED</span>' +
+    actions = '<div style="margin-top:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">' +
+      '<div><span class="ws-card-status approved">APPROVED</span>' +
       (a.approved_at ? '<span style="font-size:.78rem;color:var(--tx-faint);margin-left:8px">on ' + new Date(a.approved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + '</span>' : '') +
+      '</div>' +
+      '<button class="ws-btn ws-btn-reject" onclick="window._wsRevoke(\'' + a.id + '\')">Revoke Access</button>' +
     '</div>';
   } else if (a.status === 'rejected') {
     actions = '<div class="ws-card-actions" style="margin-top:16px">' +
@@ -5212,6 +5215,29 @@ window._wsReject = async function(id) {
       }).eq('id', id);
       if (error) { showToast('Error: ' + error.message, 'error'); return; }
       showToast('Application rejected', 'success');
+      await loadWholesaleSection();
+    }
+  );
+};
+
+window._wsRevoke = async function(id) {
+  const account = _wsAccounts.find(a => a.id === id);
+  const name = account ? account.business_name : 'this account';
+  _wsConfirm(
+    'Revoke Access',
+    'Are you sure you want to revoke wholesale access for <strong>' + name + '</strong>? They will no longer be able to place wholesale orders.',
+    'Revoke',
+    'ws-btn-reject',
+    async function() {
+      const { error } = await sb.from('wholesale_accounts').update({
+        status: 'rejected',
+        approved_at: null,
+        updated_at: new Date().toISOString()
+      }).eq('id', id);
+      if (error) { showToast('Error: ' + error.message, 'error'); return; }
+      var detailOverlay = document.getElementById('ws-detail-overlay');
+      if (detailOverlay) detailOverlay.remove();
+      showToast(name + ' access revoked', 'success');
       await loadWholesaleSection();
     }
   );
