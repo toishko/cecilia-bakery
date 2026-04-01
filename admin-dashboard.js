@@ -189,6 +189,7 @@ async function showSection(name) {
 
   if (name === 'products') loadProductManager();
   if (name === 'staff') loadStaffSection();
+  if (name === 'wholesale') loadWholesaleSection();
 }
 
 /* Exposed for pull-to-refresh.js — reloads the current active section */
@@ -202,6 +203,7 @@ window.__adminRefresh = async function () {
     products:  loadProductManager,
     settings:  () => {},
     staff:     loadStaffSection,
+    wholesale: loadWholesaleSection,
   };
   const fn = fnMap[currentSection];
   if (fn) await fn();
@@ -3311,6 +3313,35 @@ textarea.pm-input{resize:vertical;min-height:68px}
 .pm-drag-hint{font-size:.7rem;color:var(--tx-faint);margin-top:6px;text-align:center}
 .pm-preview-card-imgwrap.dragging{cursor:grabbing}
 .pm-preview-card-imgwrap:not(.dragging){cursor:grab}
+.ws-tab{padding:8px 16px;border-radius:8px;border:1px solid var(--bd);background:none;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--tx-muted);transition:all .2s}
+.ws-tab.active{background:var(--red);color:#fff;border-color:var(--red)}
+.ws-tab-count{font-size:.7rem;background:rgba(200,16,46,.12);color:var(--red);padding:1px 7px;border-radius:10px;margin-left:4px}
+.ws-tab.active .ws-tab-count{background:rgba(255,255,255,.25);color:#fff}
+.ws-card{background:var(--bg-card);border:1px solid var(--bd);border-radius:12px;padding:20px;margin-bottom:12px}
+.ws-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:12px}
+.ws-card-biz{font-size:1.05rem;font-weight:700;color:var(--tx)}
+.ws-card-status{font-size:.7rem;font-weight:700;text-transform:uppercase;padding:3px 10px;border-radius:6px;letter-spacing:.5px}
+.ws-card-status.pending{background:rgba(255,165,0,.12);color:#c77800}
+.ws-card-status.approved{background:rgba(0,160,0,.12);color:#0a7a0a}
+.ws-card-status.rejected{background:rgba(200,16,46,.1);color:var(--red)}
+.ws-card-detail{font-size:.85rem;color:var(--tx-muted);line-height:1.7}
+.ws-card-detail strong{color:var(--tx);font-weight:600}
+.ws-card-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.ws-btn{padding:8px 18px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;transition:all .2s}
+.ws-btn-approve{background:var(--red);color:#fff}
+.ws-btn-approve:hover{background:var(--red-dk)}
+.ws-btn-reject{background:none;border:1px solid var(--bd);color:var(--tx-muted)}
+.ws-btn-reject:hover{border-color:var(--red);color:var(--red)}
+.ws-btn-pricing{background:none;border:1px solid var(--bd);color:var(--tx)}
+.ws-btn-pricing:hover{border-color:var(--red);color:var(--red)}
+.ws-pricing-grid{display:grid;grid-template-columns:1fr auto auto;gap:8px 12px;align-items:center;margin:16px 0}
+.ws-pricing-grid .ws-pg-header{font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--tx-faint);letter-spacing:.5px}
+.ws-pricing-grid input{padding:6px 10px;border-radius:6px;border:1px solid var(--bd);font-size:.85rem;text-align:center;width:80px}
+.ws-pricing-grid input:focus{border-color:var(--red);outline:none}
+.ws-pricing-grid .ws-pg-name{font-size:.88rem;font-weight:500;color:var(--tx)}
+.ws-empty{text-align:center;padding:40px 20px;color:var(--tx-muted);font-size:.9rem}
+.ws-approved-badge{display:inline-block;font-size:.65rem;font-weight:700;background:rgba(0,160,0,.12);color:#0a7a0a;padding:2px 8px;border-radius:4px;margin-left:8px}
+@media(max-width:600px){.ws-pricing-grid{grid-template-columns:1fr;gap:12px}.ws-pricing-grid input{width:100%}}
   `;
   document.head.appendChild(s);
 }
@@ -4887,6 +4918,202 @@ document.getElementById('staff-grant-btn')?.addEventListener('click', () => gran
 document.getElementById('staff-email-input')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') grantStaffByEmail();
 });
+
+/* ═══════════════════════════════════
+   WHOLESALE MANAGEMENT
+   ═══════════════════════════════════ */
+let _wsAccounts = [];
+let _wsProducts = [];
+let _wsPrices = {};
+
+async function loadWholesaleSection() {
+  _pmInjectStyles();
+  const { data, error } = await sb.from('wholesale_accounts').select('*').order('created_at', { ascending: false });
+  if (error) { console.error('Wholesale load error:', error); return; }
+  _wsAccounts = data || [];
+
+  // Load products for pricing
+  const { data: prods } = await sb.from('products').select('id, name, name_en, category, price').order('category').order('name');
+  _wsProducts = prods || [];
+
+  // Load wholesale prices
+  const { data: prices } = await sb.from('wholesale_prices').select('*');
+  _wsPrices = {};
+  (prices || []).forEach(p => { _wsPrices[p.product_id] = { wholesale_price: p.wholesale_price, min_qty: p.min_qty }; });
+
+  // Update badge
+  const pendingCount = _wsAccounts.filter(a => a.status === 'pending').length;
+  ['wholesale-badge', 'wholesale-badge-m'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (pendingCount > 0) { el.textContent = pendingCount; el.style.display = 'inline-flex'; }
+    else { el.style.display = 'none'; }
+  });
+  document.getElementById('ws-pending-count').textContent = pendingCount || '';
+
+  _wsRenderApplications();
+  _wsRenderAccounts();
+}
+
+window._wsShowTab = function(tab) {
+  document.querySelectorAll('.ws-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  ['applications', 'accounts', 'pricing'].forEach(t => {
+    const el = document.getElementById('ws-panel-' + t);
+    if (el) el.style.display = t === tab ? 'block' : 'none';
+  });
+  if (tab === 'pricing') _wsRenderPricing();
+};
+
+function _wsRenderApplications() {
+  const panel = document.getElementById('ws-panel-applications');
+  const pending = _wsAccounts.filter(a => a.status === 'pending');
+  const rejected = _wsAccounts.filter(a => a.status === 'rejected');
+  if (!pending.length && !rejected.length) {
+    panel.innerHTML = '<div class="ws-empty">No pending applications</div>';
+    return;
+  }
+  let html = '';
+  if (pending.length) {
+    html += pending.map(a => _wsCardHTML(a)).join('');
+  }
+  if (rejected.length) {
+    html += '<h3 style="font-size:.82rem;color:var(--tx-faint);margin:24px 0 12px;text-transform:uppercase;letter-spacing:.5px">Rejected</h3>';
+    html += rejected.map(a => _wsCardHTML(a)).join('');
+  }
+  panel.innerHTML = html;
+}
+
+function _wsRenderAccounts() {
+  const panel = document.getElementById('ws-panel-accounts');
+  const approved = _wsAccounts.filter(a => a.status === 'approved');
+  if (!approved.length) {
+    panel.innerHTML = '<div class="ws-empty">No approved accounts yet</div>';
+    return;
+  }
+  panel.innerHTML = approved.map(a => _wsCardHTML(a, true)).join('');
+}
+
+function _wsCardHTML(a, showApproved) {
+  const statusClass = a.status;
+  const date = new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  let actions = '';
+  if (a.status === 'pending') {
+    const allPriced = _wsProducts.every(p => _wsPrices[p.id] && _wsPrices[p.id].wholesale_price);
+    const approveDisabled = allPriced ? '' : 'disabled title="Set all wholesale prices first"';
+    actions = `<div class="ws-card-actions">
+      <button class="ws-btn ws-btn-approve" onclick="window._wsApprove('${a.id}')" ${approveDisabled}>Approve</button>
+      <button class="ws-btn ws-btn-reject" onclick="window._wsReject('${a.id}')">Reject</button>
+    </div>`;
+    if (!allPriced) {
+      actions += '<div style="font-size:.75rem;color:var(--red);margin-top:8px">⚠ Set all wholesale prices before approving</div>';
+    }
+  }
+  return `<div class="ws-card">
+    <div class="ws-card-header">
+      <div>
+        <div class="ws-card-biz">${a.business_name}</div>
+        <div style="font-size:.78rem;color:var(--tx-faint)">${date}</div>
+      </div>
+      <span class="ws-card-status ${statusClass}">${a.status}</span>
+    </div>
+    <div class="ws-card-detail">
+      <strong>Contact:</strong> ${a.contact_name}<br>
+      <strong>Email:</strong> ${a.email}<br>
+      <strong>Phone:</strong> ${a.phone}<br>
+      <strong>Address:</strong> ${a.address}${a.city ? ', ' + a.city : ''}${a.state ? ', ' + a.state : ''} ${a.zip || ''}<br>
+      <strong>Type:</strong> ${a.business_type || '—'}<br>
+      ${a.notes ? '<strong>Notes:</strong> ' + a.notes : ''}
+    </div>
+    ${actions}
+  </div>`;
+}
+
+function _wsRenderPricing() {
+  const panel = document.getElementById('ws-panel-pricing');
+  if (!_wsProducts.length) {
+    panel.innerHTML = '<div class="ws-empty">No products found</div>';
+    return;
+  }
+  let html = '<div class="ws-card"><p style="font-size:.85rem;color:var(--tx-muted);margin-bottom:16px">Set wholesale prices and minimum order quantities for each product. All prices must be set before you can approve wholesale accounts.</p>';
+  html += '<div class="ws-pricing-grid">';
+  html += '<div class="ws-pg-header">Product</div><div class="ws-pg-header">Wholesale Price</div><div class="ws-pg-header">Min Qty</div>';
+
+  let currentCat = '';
+  _wsProducts.forEach(p => {
+    if (p.category && p.category !== currentCat) {
+      currentCat = p.category;
+      html += '<div style="grid-column:1/-1;font-size:.72rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-top:12px;padding:4px 0;border-bottom:1px solid var(--bd)">' + currentCat + '</div>';
+    }
+    const existing = _wsPrices[p.id] || {};
+    const wp = existing.wholesale_price || '';
+    const mq = existing.min_qty || '';
+    html += '<div class="ws-pg-name">' + (p.name_en || p.name) + '<br><span style="font-size:.72rem;color:var(--tx-faint)">Retail: $' + (p.price || '—') + '</span></div>';
+    html += '<input type="number" step="0.01" min="0" placeholder="$0.00" value="' + wp + '" data-product-id="' + p.id + '" data-field="wholesale_price">';
+    html += '<input type="number" step="1" min="1" placeholder="Min" value="' + mq + '" data-product-id="' + p.id + '" data-field="min_qty">';
+  });
+
+  html += '</div>';
+  html += '<div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">';
+  html += '<button class="ws-btn ws-btn-approve" onclick="window._wsSavePricing()">Save All Prices</button>';
+  html += '<span style="font-size:.78rem;color:var(--tx-faint);align-self:center" id="ws-pricing-status"></span>';
+  html += '</div></div>';
+  panel.innerHTML = html;
+}
+
+window._wsSavePricing = async function() {
+  const statusEl = document.getElementById('ws-pricing-status');
+  if (statusEl) statusEl.textContent = 'Saving...';
+
+  const inputs = document.querySelectorAll('.ws-pricing-grid input');
+  const updates = {};
+  inputs.forEach(inp => {
+    const pid = inp.dataset.productId;
+    const field = inp.dataset.field;
+    if (!updates[pid]) updates[pid] = { product_id: pid };
+    if (field === 'wholesale_price') updates[pid].wholesale_price = parseFloat(inp.value) || 0;
+    if (field === 'min_qty') updates[pid].min_qty = parseInt(inp.value) || 1;
+  });
+
+  let errors = 0;
+  for (const pid of Object.keys(updates)) {
+    const row = updates[pid];
+    if (!row.wholesale_price || row.wholesale_price <= 0) continue;
+    row.updated_at = new Date().toISOString();
+    const { error } = await sb.from('wholesale_prices').upsert(row, { onConflict: 'product_id' });
+    if (error) errors++;
+  }
+
+  if (errors) {
+    showToast(errors + ' prices failed to save', 'error');
+  } else {
+    showToast('Wholesale prices saved', 'success');
+  }
+  if (statusEl) statusEl.textContent = '';
+  await loadWholesaleSection();
+};
+
+window._wsApprove = async function(id) {
+  if (!confirm('Approve this wholesale account?')) return;
+  const { error } = await sb.from('wholesale_accounts').update({
+    status: 'approved',
+    approved_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }).eq('id', id);
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  showToast('Account approved', 'success');
+  await loadWholesaleSection();
+};
+
+window._wsReject = async function(id) {
+  if (!confirm('Reject this wholesale application?')) return;
+  const { error } = await sb.from('wholesale_accounts').update({
+    status: 'rejected',
+    updated_at: new Date().toISOString()
+  }).eq('id', id);
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  showToast('Application rejected', 'success');
+  await loadWholesaleSection();
+};
 
 /* ── Escape helpers (scoped to avoid conflicts) ── */
 function _esc(s)     { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }

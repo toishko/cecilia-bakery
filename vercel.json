@@ -43,6 +43,10 @@
     {
       "source": "/staff",
       "destination": "/staff.html"
+    },
+    {
+      "source": "/wholesale",
+      "destination": "/wholesale.html"
     }
   ]
 }

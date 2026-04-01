@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Wholesale Partner Registration — Cecilia Bakery</title>
+  <meta name="description" content="Apply to become a wholesale partner with Cecilia Bakery. We supply supermarkets, restaurants, grocery stores, and more with fresh Dominican cakes." />
+  <link rel="manifest" href="/manifest-website.json">
+  <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E0507" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cecilia">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload"
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+    as="style">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    /* ════════════════════════════════════════
+       DESIGN TOKENS
+       ════════════════════════════════════════ */
+    :root {
+      --red: #C8102E;
+      --red-dk: #9B0B22;
+      --red-lt: #E8213F;
+      --blue: #002D62;
+      --green: #1B7A4A;
+      --yellow: #D97706;
+
+      --bg: #FAFAF8;
+      --bg-surface: #EDE0CC;
+      --bg-card: #FFFFFF;
+      --bg-input: #FFFFFF;
+      --bg-nav: rgba(250, 250, 248, .80);
+
+      --tx: #18080D;
+      --tx-muted: #6B5057;
+      --tx-faint: #A08088;
+
+      --bd: rgba(200, 16, 46, .22);
+      --bd-hover: rgba(200, 16, 46, .55);
+      --bd-input: rgba(200, 16, 46, .25);
+
+      --shadow-card: 0 4px 22px rgba(200, 16, 46, .09);
+      --shadow-nav: 0 1px 0 rgba(200, 16, 46, .10);
+
+      --lang-border: rgba(200, 16, 46, .20);
+      --lang-text: #6B5057;
+      --r: 3px;
+      --transition: color .25s ease, background .25s ease, border-color .25s ease;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0E0507;
+      --bg-surface: #1F0D14;
+      --bg-card: #1E0D12;
+      --bg-input: #1E0D12;
+      --bg-nav: rgba(10, 3, 5, .80);
+
+      --tx: #F2E8E4;
+      --tx-muted: #BFA0A8;
+      --tx-faint: #7A5560;
+
+      --bd: rgba(200, 16, 46, .35);
+      --bd-hover: rgba(200, 16, 46, .65);
+      --bd-input: rgba(200, 16, 46, .40);
+
+      --shadow-card: 0 4px 22px rgba(0, 0, 0, .40);
+      --shadow-nav: 0 1px 0 rgba(200, 16, 46, .12);
+
+      --lang-border: rgba(200, 16, 46, .25);
+      --lang-text: #BFA0A8;
+    }
+
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--tx);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Background blob ── */
+    .bg-blob {
+      position: fixed; top: -120px; right: -80px; width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(200,16,46,.06) 0%, transparent 70%);
+      border-radius: 50%; pointer-events: none; z-index: -1;
+    }
+
+    /* ════════════════════════════════════════
+       NAV
+       ════════════════════════════════════════ */
+    #main-nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      background: var(--bg-nav);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--bd);
+      box-shadow: var(--shadow-nav);
+    }
+    .nav-brand { display: inline-flex; align-items: center; text-decoration: none; }
+    .nav-logo-img { height: 32px; width: auto; }
+    .nav-right-group { display: flex; align-items: center; gap: 10px; }
+    .nav-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .85rem; color: var(--tx-muted); text-decoration: none;
+      transition: color .2s;
+    }
+    .nav-back:hover { color: var(--red); }
+
+    /* ── Theme & Lang Buttons ── */
+    .theme-btn, .lang-btn {
+      border: none; outline: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--lang-text);
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 6px;
+      border-radius: 50%;
+      transition: color .2s, background .2s;
+      flex-shrink: 0;
+    }
+    .theme-btn:hover, .lang-btn:hover {
+      background: rgba(200,16,46,0.08);
+      color: var(--red);
+    }
+    .lang-btn {
+      font-family: 'Outfit', sans-serif;
+      font-size: .75rem; font-weight: 700;
+      letter-spacing: .06em;
+      border: 1px solid var(--lang-border);
+      border-radius: 4px;
+      padding: 4px 8px;
+    }
+
+    /* ════════════════════════════════════════
+       PAGE CONTENT
+       ════════════════════════════════════════ */
+    .page-container {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 40px 20px 60px;
+    }
+
+    /* ── Hero ── */
+    .hero-section { text-align: center; margin-bottom: 40px; }
+    .hero-eyebrow {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      font-size: .75rem; font-weight: 500; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--red);
+      margin-bottom: 10px;
+    }
+    .hero-eyebrow::before, .hero-eyebrow::after {
+      content: ''; display: block; width: 28px; height: 2px;
+      background: var(--red); border-radius: 1px;
+    }
+    .hero-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.4rem; font-weight: 700; line-height: 1.15;
+      color: var(--tx); margin-bottom: 14px;
+    }
+    .hero-title em { font-style: italic; color: var(--red); }
+    .hero-subtitle {
+      font-size: .95rem; color: var(--tx-muted);
+      line-height: 1.6; max-width: 520px; margin: 0 auto;
+    }
+
+    /* ── Form Card ── */
+    .form-card {
+      background: var(--bg-card);
+      border: 1px solid var(--bd);
+      border-radius: 16px;
+      padding: 32px 28px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .form-row.full { grid-template-columns: 1fr; }
+
+    .form-field { display: flex; flex-direction: column; }
+    .form-field label {
+      font-size: .78rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em;
+      color: var(--tx-muted);
+      margin-bottom: 6px;
+    }
+    .form-field label .req { color: var(--red); margin-left: 2px; }
+
+    .form-field input,
+    .form-field select,
+    .form-field textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--bd-input);
+      border-radius: 10px;
+      background: var(--bg-input);
+      color: var(--tx);
+      font-family: 'Outfit', sans-serif;
+      font-size: .9rem;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .form-field input:focus,
+    .form-field select:focus,
+    .form-field textarea:focus {
+      outline: none;
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px rgba(200, 16, 46, .10);
+    }
+    .form-field input.error,
+    .form-field select.error,
+    .form-field textarea.error {
+      border-color: var(--red);
+    }
+    .form-field textarea {
+      min-height: 90px; resize: vertical;
+    }
+    .form-field select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B5057' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+
+    .field-error {
+      font-size: .78rem; color: var(--red);
+      margin-top: 4px; min-height: 18px;
+    }
+
+    /* ── Submit Button ── */
+    .submit-btn {
+      display: block; width: 100%;
+      padding: 14px 24px;
+      margin-top: 24px;
+      background: var(--red);
+      color: #fff;
+      border: none; border-radius: 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem; font-weight: 600;
+      letter-spacing: .04em;
+      cursor: pointer;
+      transition: background .2s, transform .15s;
+    }
+    .submit-btn:hover { background: var(--red-dk); }
+    .submit-btn:active { transform: scale(.98); }
+    .submit-btn:disabled {
+      opacity: .6; cursor: not-allowed;
+    }
+
+    /* ── Global Form Error ── */
+    .form-alert {
+      padding: 14px 18px;
+      border-radius: 10px;
+      font-size: .9rem;
+      line-height: 1.5;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .form-alert.error {
+      background: rgba(200, 16, 46, .08);
+      border: 1px solid rgba(200, 16, 46, .25);
+      color: var(--red);
+    }
+    .form-alert.info {
+      background: rgba(0, 45, 98, .06);
+      border: 1px solid rgba(0, 45, 98, .18);
+      color: var(--blue);
+    }
+    .form-alert a {
+      color: var(--red); font-weight: 600; text-decoration: underline;
+    }
+
+    /* ── Confirmation Panel ── */
+    .confirmation-panel {
+      text-align: center;
+      padding: 60px 20px;
+      display: none;
+    }
+    .confirmation-icon {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: rgba(27, 122, 74, .10);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 24px;
+    }
+    .confirmation-icon svg {
+      width: 40px; height: 40px;
+      stroke: var(--green); stroke-width: 2.5;
+    }
+    .confirmation-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem; font-weight: 700;
+      color: var(--tx); margin-bottom: 12px;
+    }
+    .confirmation-msg {
+      font-size: .95rem; color: var(--tx-muted);
+      line-height: 1.6; max-width: 460px; margin: 0 auto 28px;
+    }
+    .back-home-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 28px;
+      background: var(--red); color: #fff;
+      border: none; border-radius: 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: .9rem; font-weight: 500;
+      cursor: pointer; text-decoration: none;
+      transition: background .2s;
+    }
+    .back-home-btn:hover { background: var(--red-dk); }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .page-container { padding: 24px 14px 40px; }
+      .hero-title { font-size: 1.8rem; }
+      .form-card { padding: 24px 18px; }
+      .form-row { grid-template-columns: 1fr; gap: 0; }
+      .form-field { margin-bottom: 12px; }
+      .confirmation-title { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-blob"></div>
+
+  <!-- ═══ NAV ═══ -->
+  <nav id="main-nav">
+    <a href="/" class="nav-brand">
+      <img src="assets/logo.png" alt="Cecilia Bakery" class="nav-logo-img" />
+    </a>
+    <div class="nav-right-group">
+      <a href="/" class="nav-back" data-en="Back to Home" data-es="Volver al Inicio">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        <span data-en="Back to Home" data-es="Volver al Inicio">Back to Home</span>
+      </a>
+      <button class="lang-btn" id="lang-toggle-btn" onclick="toggleLang()">EN</button>
+      <button class="theme-btn" onclick="toggleTheme()" aria-label="Toggle theme">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <div class="page-container">
+
+    <!-- ── Hero ── -->
+    <div class="hero-section">
+      <div class="hero-eyebrow" data-en="Wholesale Program" data-es="Programa Mayorista">Wholesale Program</div>
+      <h1 class="hero-title" data-en="Partner with <em>Cecilia Bakery</em>" data-es="Asóciate con <em>Cecilia Bakery</em>">Partner with <em>Cecilia Bakery</em></h1>
+      <p class="hero-subtitle" data-en="Join our wholesale program and bring authentic Dominican flavors to your customers. Fill out the application below and our team will be in touch." data-es="Únete a nuestro programa mayorista y lleva sabores dominicanos auténticos a tus clientes. Completa la solicitud a continuación y nuestro equipo se pondrá en contacto.">Join our wholesale program and bring authentic Dominican flavors to your customers. Fill out the application below and our team will be in touch.</p>
+    </div>
+
+    <!-- ── Registration Form ── -->
+    <div id="form-section">
+      <div class="form-card">
+        <div class="form-alert" id="form-alert"></div>
+
+        <form id="wholesale-form" novalidate>
+          <!-- Business Name + Contact Name -->
+          <div class="form-row">
+            <div class="form-field">
+              <label data-en="Business Name" data-es="Nombre del Negocio">Business Name<span class="req">*</span></label>
+              <input type="text" id="f-business-name" required data-en-placeholder="Your business name" data-es-placeholder="Nombre de su negocio" placeholder="Your business name">
+              <div class="field-error" id="err-business-name"></div>
+            </div>
+            <div class="form-field">
+              <label data-en="Contact Name" data-es="Nombre de Contacto">Contact Name<span class="req">*</span></label>
+              <input type="text" id="f-contact-name" required data-en-placeholder="Your full name" data-es-placeholder="Su nombre completo" placeholder="Your full name">
+              <div class="field-error" id="err-contact-name"></div>
+            </div>
+          </div>
+
+          <!-- Email + Phone -->
+          <div class="form-row">
+            <div class="form-field">
+              <label data-en="Email" data-es="Correo Electrónico">Email<span class="req">*</span></label>
+              <input type="email" id="f-email" required data-en-placeholder="email@business.com" data-es-placeholder="correo@negocio.com" placeholder="email@business.com">
+              <div class="field-error" id="err-email"></div>
+            </div>
+            <div class="form-field">
+              <label data-en="Phone" data-es="Teléfono">Phone<span class="req">*</span></label>
+              <input type="tel" id="f-phone" required data-en-placeholder="(201) 555-0100" data-es-placeholder="(201) 555-0100" placeholder="(201) 555-0100">
+              <div class="field-error" id="err-phone"></div>
+            </div>
+          </div>
+
+          <!-- Street Address -->
+          <div class="form-row full">
+            <div class="form-field">
+              <label data-en="Street Address" data-es="Dirección">Street Address<span class="req">*</span></label>
+              <input type="text" id="f-address" required data-en-placeholder="123 Main St" data-es-placeholder="123 Calle Principal" placeholder="123 Main St">
+              <div class="field-error" id="err-address"></div>
+            </div>
+          </div>
+
+          <!-- City + State + ZIP -->
+          <div class="form-row" style="grid-template-columns: 2fr 1fr 1fr;">
+            <div class="form-field">
+              <label data-en="City" data-es="Ciudad">City<span class="req">*</span></label>
+              <input type="text" id="f-city" required data-en-placeholder="West New York" data-es-placeholder="West New York" placeholder="West New York">
+              <div class="field-error" id="err-city"></div>
+            </div>
+            <div class="form-field">
+              <label data-en="State" data-es="Estado">State<span class="req">*</span></label>
+              <input type="text" id="f-state" required data-en-placeholder="NJ" data-es-placeholder="NJ" placeholder="NJ">
+              <div class="field-error" id="err-state"></div>
+            </div>
+            <div class="form-field">
+              <label data-en="ZIP" data-es="Código Postal">ZIP<span class="req">*</span></label>
+              <input type="text" id="f-zip" required data-en-placeholder="07093" data-es-placeholder="07093" placeholder="07093">
+              <div class="field-error" id="err-zip"></div>
+            </div>
+          </div>
+
+          <!-- Business Type -->
+          <div class="form-row full">
+            <div class="form-field">
+              <label data-en="Business Type" data-es="Tipo de Negocio">Business Type<span class="req">*</span></label>
+              <select id="f-business-type" required>
+                <option value="" data-en="— Select —" data-es="— Seleccionar —">— Select —</option>
+                <option value="supermarket" data-en="Supermarket" data-es="Supermercado">Supermarket</option>
+                <option value="restaurant" data-en="Restaurant" data-es="Restaurante">Restaurant</option>
+                <option value="grocery_store" data-en="Grocery Store" data-es="Colmado / Tienda de Abarrotes">Grocery Store</option>
+                <option value="events_catering" data-en="Events & Catering" data-es="Eventos y Catering">Events & Catering</option>
+                <option value="coffee_shop" data-en="Coffee Shop" data-es="Cafetería">Coffee Shop</option>
+                <option value="other" data-en="Other" data-es="Otro">Other</option>
+              </select>
+              <div class="field-error" id="err-business-type"></div>
+            </div>
+          </div>
+
+          <!-- How did you hear about us? -->
+          <div class="form-row full">
+            <div class="form-field">
+              <label data-en="How did you hear about us?" data-es="¿Cómo se enteró de nosotros?">How did you hear about us?</label>
+              <input type="text" id="f-heard" data-en-placeholder="Social media, referral, etc." data-es-placeholder="Redes sociales, referencia, etc." placeholder="Social media, referral, etc.">
+            </div>
+          </div>
+
+          <!-- Notes / Message -->
+          <div class="form-row full">
+            <div class="form-field">
+              <label data-en="Additional Notes" data-es="Notas Adicionales">Additional Notes</label>
+              <textarea id="f-notes" data-en-placeholder="Any details about your business, preferred delivery schedule, etc." data-es-placeholder="Detalles sobre su negocio, horario de entrega preferido, etc." placeholder="Any details about your business, preferred delivery schedule, etc."></textarea>
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn" id="submit-btn" data-en="Submit Application" data-es="Enviar Solicitud">Submit Application</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Confirmation ── -->
+    <div class="confirmation-panel" id="confirmation-panel">
+      <div class="confirmation-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <h2 class="confirmation-title" data-en="Application Received!" data-es="¡Solicitud Recibida!">Application Received!</h2>
+      <p class="confirmation-msg" data-en="Thank you for your application! We'll review your information and contact you shortly to discuss next steps." data-es="¡Gracias por su solicitud! Revisaremos su información y nos pondremos en contacto pronto para discutir los próximos pasos.">Thank you for your application! We'll review your information and contact you shortly to discuss next steps.</p>
+      <a href="/" class="back-home-btn" data-en="Back to Home" data-es="Volver al Inicio">Back to Home</a>
+    </div>
+
+  </div>
+
+  <script>
+    /* ════════════════════════════════════════
+       SUPABASE INIT
+       ════════════════════════════════════════ */
+    const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
+
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+    });
+
+    /* ════════════════════════════════════════
+       LANGUAGE
+       ════════════════════════════════════════ */
+    let lang = localStorage.getItem('cecilia_lang') || 'en';
+
+    function applyLang() {
+      document.querySelectorAll('[data-en]').forEach(el => {
+        const text = el.getAttribute('data-' + lang);
+        if (text) {
+          if (text.includes('<')) el.innerHTML = text;
+          else el.textContent = text;
+        }
+      });
+      document.querySelectorAll('[data-en-placeholder]').forEach(el => {
+        const ph = el.getAttribute('data-' + lang + '-placeholder');
+        if (ph) el.placeholder = ph;
+      });
+      // Select options
+      document.querySelectorAll('select option[data-en]').forEach(opt => {
+        const text = opt.getAttribute('data-' + lang);
+        if (text) opt.textContent = text;
+      });
+      const btn = document.getElementById('lang-toggle-btn');
+      if (btn) btn.textContent = lang.toUpperCase();
+    }
+
+    function toggleLang() {
+      lang = lang === 'en' ? 'es' : 'en';
+      localStorage.setItem('cecilia_lang', lang);
+      applyLang();
+    }
+
+    /* ════════════════════════════════════════
+       THEME
+       ════════════════════════════════════════ */
+    function applyTheme() {
+      const saved = localStorage.getItem('cecilia_theme');
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const isDark = html.getAttribute('data-theme') === 'dark';
+      const next = isDark ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('cecilia_theme', next);
+    }
+
+    /* ════════════════════════════════════════
+       FORM VALIDATION & SUBMIT
+       ════════════════════════════════════════ */
+    const requiredFields = [
+      { id: 'f-business-name', err: 'err-business-name', en: 'Business name is required', es: 'El nombre del negocio es obligatorio' },
+      { id: 'f-contact-name',  err: 'err-contact-name',  en: 'Contact name is required', es: 'El nombre de contacto es obligatorio' },
+      { id: 'f-email',         err: 'err-email',          en: 'Valid email is required', es: 'Se requiere un correo electrónico válido' },
+      { id: 'f-phone',         err: 'err-phone',          en: 'Phone number is required', es: 'El número de teléfono es obligatorio' },
+      { id: 'f-address',       err: 'err-address',        en: 'Street address is required', es: 'La dirección es obligatoria' },
+      { id: 'f-city',          err: 'err-city',           en: 'City is required', es: 'La ciudad es obligatoria' },
+      { id: 'f-state',         err: 'err-state',          en: 'State is required', es: 'El estado es obligatorio' },
+      { id: 'f-zip',           err: 'err-zip',            en: 'ZIP code is required', es: 'El código postal es obligatorio' },
+      { id: 'f-business-type', err: 'err-business-type',  en: 'Please select a business type', es: 'Seleccione un tipo de negocio' },
+    ];
+
+    function clearErrors() {
+      requiredFields.forEach(f => {
+        document.getElementById(f.err).textContent = '';
+        document.getElementById(f.id).classList.remove('error');
+      });
+      const alert = document.getElementById('form-alert');
+      alert.style.display = 'none';
+      alert.textContent = '';
+    }
+
+    function showAlert(msg, type) {
+      const alert = document.getElementById('form-alert');
+      alert.className = 'form-alert ' + type;
+      alert.innerHTML = msg;
+      alert.style.display = 'block';
+      alert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function validateEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    function validate() {
+      let valid = true;
+      requiredFields.forEach(f => {
+        const el = document.getElementById(f.id);
+        const val = el.value.trim();
+        const errEl = document.getElementById(f.err);
+
+        if (!val) {
+          errEl.textContent = lang === 'es' ? f.es : f.en;
+          el.classList.add('error');
+          valid = false;
+        } else if (f.id === 'f-email' && !validateEmail(val)) {
+          errEl.textContent = lang === 'es' ? f.es : f.en;
+          el.classList.add('error');
+          valid = false;
+        }
+      });
+      return valid;
+    }
+
+    document.getElementById('wholesale-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      clearErrors();
+
+      if (!validate()) return;
+
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.textContent = lang === 'es' ? 'Enviando...' : 'Submitting...';
+
+      const email = document.getElementById('f-email').value.trim().toLowerCase();
+
+      try {
+        // ── Duplicate email check ──
+        const { data: existing, error: lookupErr } = await sb
+          .from('wholesale_accounts')
+          .select('status')
+          .ilike('email', email)
+          .maybeSingle();
+
+        if (lookupErr) console.warn('Lookup error:', lookupErr);
+
+        if (existing) {
+          const status = existing.status;
+          if (status === 'pending') {
+            showAlert(
+              lang === 'es'
+                ? 'Ya tenemos su solicitud registrada. ¡Nos pondremos en contacto pronto!'
+                : "We already have your application on file. We'll be in touch soon!",
+              'info'
+            );
+          } else if (status === 'approved') {
+            showAlert(
+              lang === 'es'
+                ? '¡Ya está aprobado! <a href="/wholesale-portal">Inicie sesión para acceder al portal mayorista.</a>'
+                : 'You\'re already approved! <a href="/wholesale-portal">Sign in to access the wholesale portal.</a>',
+              'info'
+            );
+          } else if (status === 'rejected') {
+            showAlert(
+              lang === 'es'
+                ? 'No podemos aprobar su solicitud en este momento. Por favor contáctenos directamente.'
+                : "We're unable to approve your application at this time. Please contact us directly.",
+              'error'
+            );
+          } else {
+            showAlert(
+              lang === 'es'
+                ? 'Ya tenemos su solicitud registrada.'
+                : 'We already have your application on file.',
+              'info'
+            );
+          }
+          btn.disabled = false;
+          btn.textContent = lang === 'es' ? 'Enviar Solicitud' : 'Submit Application';
+          return;
+        }
+
+        // ── Build payload ──
+        const heard = document.getElementById('f-heard').value.trim();
+        const message = document.getElementById('f-notes').value.trim();
+        let notesParts = [];
+        if (heard) notesParts.push('How they heard about us: ' + heard);
+        if (message) notesParts.push(message);
+
+        const payload = {
+          business_name: document.getElementById('f-business-name').value.trim(),
+          contact_name: document.getElementById('f-contact-name').value.trim(),
+          email: email,
+          phone: document.getElementById('f-phone').value.trim(),
+          address: document.getElementById('f-address').value.trim(),
+          city: document.getElementById('f-city').value.trim(),
+          state: document.getElementById('f-state').value.trim(),
+          zip: document.getElementById('f-zip').value.trim(),
+          business_type: document.getElementById('f-business-type').value,
+          notes: notesParts.join('\n\n') || null,
+          status: 'pending'
+        };
+
+        const { error: insertErr } = await sb.from('wholesale_accounts').insert(payload);
+
+        if (insertErr) {
+          console.error('Insert error:', insertErr);
+          showAlert(
+            lang === 'es'
+              ? 'Hubo un error al enviar su solicitud. Inténtelo de nuevo.'
+              : 'There was an error submitting your application. Please try again.',
+            'error'
+          );
+          btn.disabled = false;
+          btn.textContent = lang === 'es' ? 'Enviar Solicitud' : 'Submit Application';
+          return;
+        }
+
+        // ── Success ──
+        document.getElementById('form-section').style.display = 'none';
+        document.getElementById('confirmation-panel').style.display = 'block';
+        document.querySelector('.hero-section').style.display = 'none';
+
+      } catch (err) {
+        console.error('Submit error:', err);
+        showAlert(
+          lang === 'es'
+            ? 'Error de conexión. Inténtelo de nuevo.'
+            : 'Connection error. Please try again.',
+          'error'
+        );
+        btn.disabled = false;
+        btn.textContent = lang === 'es' ? 'Enviar Solicitud' : 'Submit Application';
+      }
+    });
+
+    // ── Clear field errors on input ──
+    requiredFields.forEach(f => {
+      document.getElementById(f.id).addEventListener('input', function() {
+        this.classList.remove('error');
+        document.getElementById(f.err).textContent = '';
+      });
+    });
+
+    /* ════════════════════════════════════════
+       INIT
+       ════════════════════════════════════════ */
+    applyTheme();
+    applyLang();
+  </script>
+</body>
+</html>

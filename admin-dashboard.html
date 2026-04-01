@@ -96,6 +96,11 @@
         <i data-lucide="users"></i>
         <span data-en="Staff" data-es="Personal">Staff</span>
       </button>
+      <button class="sidebar-nav-item" data-section="wholesale">
+        <i data-lucide="store"></i>
+        <span data-en="Wholesale" data-es="Mayoreo">Wholesale</span>
+        <span class="nav-badge" id="wholesale-badge" style="display:none">0</span>
+      </button>
     </nav>
   </aside>
 
@@ -143,6 +148,11 @@
     <button class="mobile-nav-item" data-section="staff">
       <i data-lucide="users"></i>
       <span data-en="Staff" data-es="Personal">Staff</span>
+    </button>
+    <button class="mobile-nav-item" data-section="wholesale">
+      <i data-lucide="store"></i>
+      <span data-en="Wholesale" data-es="Mayoreo">Wholesale</span>
+      <span class="nav-badge" id="wholesale-badge-m" style="display:none">0</span>
     </button>
   </nav>
 
@@ -459,6 +469,27 @@
         </h3>
         <div id="current-staff-list"></div>
       </div>
+    </div>
+
+    <!-- ── WHOLESALE MANAGEMENT ── -->
+    <div id="section-wholesale" class="dash-section" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+        <h2 class="page-title" data-en="Wholesale" data-es="Mayoreo">Wholesale</h2>
+      </div>
+      <div id="wholesale-tabs" style="display:flex;gap:8px;margin-bottom:20px">
+        <button class="ws-tab active" data-tab="applications" onclick="window._wsShowTab('applications')">
+          Applications <span class="ws-tab-count" id="ws-pending-count"></span>
+        </button>
+        <button class="ws-tab" data-tab="accounts" onclick="window._wsShowTab('accounts')">
+          Approved Accounts
+        </button>
+        <button class="ws-tab" data-tab="pricing" onclick="window._wsShowTab('pricing')">
+          Wholesale Pricing
+        </button>
+      </div>
+      <div id="ws-panel-applications"></div>
+      <div id="ws-panel-accounts" style="display:none"></div>
+      <div id="ws-panel-pricing" style="display:none"></div>
     </div>
 
   </main>
