@@ -5359,15 +5359,49 @@ window._wsOpenAccountPricing = function(accountId, businessName) {
   var pricedCount = _wsAccountPricedCount(accountId);
   var totalCount = _wsProducts.length;
 
-  var html = '<div style="background:var(--bg-card);border-radius:16px;padding:28px;max-width:580px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:85vh;overflow-y:auto">';
+  var approvedAccounts = _wsAccounts.filter(function(a) { return a.status === 'approved' && a.id !== accountId; });
+
+  var html = '<div style="background:var(--bg-card);border-radius:16px;padding:28px;max-width:620px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:85vh;overflow-y:auto">';
   html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">';
   html += '<div><h3 style="font-size:1.1rem;font-weight:700;color:var(--tx);margin:0">Pricing for ' + businessName + '</h3>';
-  html += '<p style="font-size:.82rem;color:' + (pricedCount === totalCount ? '#0a7a0a' : 'var(--red)') + ';margin:4px 0 0;font-weight:600">' + pricedCount + ' of ' + totalCount + ' products priced</p></div>';
-  html += '<button onclick="document.getElementById(\'ws-pricing-overlay\').remove()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--tx-muted)">✕</button>';
+  html += '<p style="font-size:.82rem;color:' + (pricedCount === totalCount ? '#0a7a0a' : 'var(--red)') + ';margin:4px 0 0;font-weight:600" id="ws-price-progress">' + pricedCount + ' of ' + totalCount + ' products priced</p></div>';
+  html += '<button onclick="document.getElementById(\'ws-pricing-overlay\').remove()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--tx-muted)">\u2715</button>';
   html += '</div>';
 
+  // --- Copy from / Template controls ---
+  html += '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end">';
+
+  // Copy from account
+  if (approvedAccounts.length > 0) {
+    html += '<div style="flex:1;min-width:160px"><label style="font-size:.7rem;font-weight:600;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Copy prices from</label>';
+    html += '<select id="ws-copy-from" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--bd);font-size:.82rem" onchange="window._wsCopyFromAccount(this.value,\'' + accountId + '\')">';
+    html += '<option value="">\u2014 Select account \u2014</option>';
+    approvedAccounts.forEach(function(a) {
+      html += '<option value="' + a.id + '">' + a.business_name + '</option>';
+    });
+    html += '</select></div>';
+  }
+
+  // Load template
+  html += '<div style="flex:1;min-width:160px"><label style="font-size:.7rem;font-weight:600;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Load template</label>';
+  html += '<select id="ws-load-template" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--bd);font-size:.82rem" onchange="window._wsLoadTemplate(this.value)">';
+  html += '<option value="">\u2014 Select template \u2014</option>';
+  html += '</select></div>';
+
+  // Save as template button
+  html += '<button class="ws-btn ws-btn-pricing" style="padding:6px 12px;font-size:.78rem;white-space:nowrap" onclick="window._wsSaveTemplate()">Save as Template</button>';
+  html += '</div>';
+
+  // --- Product pricing grid with category pricing ---
   groupOrder.forEach(function(cat) {
-    html += '<div style="font-size:.72rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-top:16px;padding:6px 0;border-bottom:2px solid rgba(200,16,46,.15)">' + cat + '</div>';
+    html += '<div style="font-size:.72rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-top:16px;padding:6px 0;border-bottom:2px solid rgba(200,16,46,.15);display:flex;justify-content:space-between;align-items:center">';
+    html += '<span>' + cat + '</span>';
+    html += '<div style="display:flex;gap:6px;align-items:center">';
+    html += '<span style="font-size:.65rem;color:var(--tx-faint);font-weight:400">Set all:</span>';
+    html += '<input type="number" step="0.01" min="0" placeholder="$" style="width:65px;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);font-size:.78rem;text-align:center" data-cat-price="' + cat + '" onchange="window._wsFillCategory(\'' + cat.replace(/'/g, "\\'") + '\',\'price\',this.value)">';
+    html += '<input type="number" step="1" min="1" placeholder="Qty" style="width:50px;padding:3px 6px;border-radius:4px;border:1px solid var(--bd);font-size:.78rem;text-align:center" data-cat-qty="' + cat + '" onchange="window._wsFillCategory(\'' + cat.replace(/'/g, "\\'") + '\',\'qty\',this.value)">';
+    html += '</div></div>';
+
     html += '<div class="ws-pricing-grid" style="margin-top:6px">';
     html += '<div class="ws-pg-header">Product</div><div class="ws-pg-header">Price</div><div class="ws-pg-header">Min Qty</div>';
     grouped[cat].forEach(function(p) {
@@ -5375,8 +5409,8 @@ window._wsOpenAccountPricing = function(accountId, businessName) {
       var wp = existing.wholesale_price || '';
       var mq = existing.min_qty || '';
       html += '<div class="ws-pg-name">' + p.name_en + '</div>';
-      html += '<input type="number" step="0.01" min="0" placeholder="$0.00" value="' + wp + '" data-product-id="' + p.id + '" data-field="wholesale_price">';
-      html += '<input type="number" step="1" min="1" placeholder="Min" value="' + mq + '" data-product-id="' + p.id + '" data-field="min_qty">';
+      html += '<input type="number" step="0.01" min="0" placeholder="$0.00" value="' + wp + '" data-product-id="' + p.id + '" data-field="wholesale_price" data-cat="' + cat + '">';
+      html += '<input type="number" step="1" min="1" placeholder="Min" value="' + mq + '" data-product-id="' + p.id + '" data-field="min_qty" data-cat="' + cat + '">';
     });
     html += '</div>';
   });
@@ -5388,6 +5422,95 @@ window._wsOpenAccountPricing = function(accountId, businessName) {
 
   overlay.innerHTML = html;
   overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+
+  // Load templates into dropdown
+  _wsLoadTemplateList();
+};
+
+// --- Category fill ---
+window._wsFillCategory = function(cat, type, value) {
+  var field = type === 'price' ? 'wholesale_price' : 'min_qty';
+  var inputs = document.querySelectorAll('#ws-pricing-overlay input[data-cat="' + cat + '"][data-field="' + field + '"]');
+  inputs.forEach(function(inp) { inp.value = value; });
+};
+
+// --- Copy from account ---
+window._wsCopyFromAccount = function(sourceAccountId, targetAccountId) {
+  if (!sourceAccountId) return;
+  _wsProducts.forEach(function(p) {
+    var source = _wsGetPrice(sourceAccountId, p.id);
+    if (source) {
+      var priceInput = document.querySelector('#ws-pricing-overlay input[data-product-id="' + p.id + '"][data-field="wholesale_price"]');
+      var qtyInput = document.querySelector('#ws-pricing-overlay input[data-product-id="' + p.id + '"][data-field="min_qty"]');
+      if (priceInput) priceInput.value = source.wholesale_price || '';
+      if (qtyInput) qtyInput.value = source.min_qty || '';
+    }
+  });
+  showToast('Prices copied \u2014 review and save', 'success');
+};
+
+// --- Templates ---
+async function _wsLoadTemplateList() {
+  var { data } = await sb.from('wholesale_price_templates').select('id, name').order('name');
+  var select = document.getElementById('ws-load-template');
+  if (!select || !data) return;
+  var options = '<option value="">\u2014 Select template \u2014</option>';
+  data.forEach(function(t) {
+    options += '<option value="' + t.id + '">' + t.name + '</option>';
+  });
+  select.innerHTML = options;
+}
+
+window._wsLoadTemplate = async function(templateId) {
+  if (!templateId) return;
+  var { data, error } = await sb.from('wholesale_price_templates').select('*').eq('id', templateId).single();
+  if (error || !data) { showToast('Failed to load template', 'error'); return; }
+  var prices = data.prices || {};
+  _wsProducts.forEach(function(p) {
+    var key = p.id;
+    var nameKey = p.name_en + '|' + p.tag_en;
+    var entry = prices[key] || prices[nameKey] || null;
+    if (entry) {
+      var priceInput = document.querySelector('#ws-pricing-overlay input[data-product-id="' + p.id + '"][data-field="wholesale_price"]');
+      var qtyInput = document.querySelector('#ws-pricing-overlay input[data-product-id="' + p.id + '"][data-field="min_qty"]');
+      if (priceInput) priceInput.value = entry.price || '';
+      if (qtyInput) qtyInput.value = entry.qty || '';
+    }
+  });
+  showToast('Template "' + data.name + '" loaded \u2014 review and save', 'success');
+};
+
+window._wsSaveTemplate = function() {
+  _wsConfirm('Save as Template', '<div style="margin-bottom:12px">Save the current prices as a reusable template.</div><input id="ws-template-name" type="text" placeholder="Template name (e.g. Standard Rate)" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.9rem">', 'Save Template', 'ws-btn-approve', async function() {
+    var name = document.getElementById('ws-template-name').value.trim();
+    if (!name) { showToast('Please enter a template name', 'error'); return; }
+    var prices = {};
+    var inputs = document.querySelectorAll('#ws-pricing-overlay .ws-pricing-grid input');
+    inputs.forEach(function(inp) {
+      var pid = inp.dataset.productId;
+      if (!pid) return;
+      var product = _wsProducts.find(function(p) { return p.id === pid; });
+      var nameKey = product ? (product.name_en + '|' + product.tag_en) : pid;
+      if (!prices[pid]) prices[pid] = {};
+      if (!prices[nameKey]) prices[nameKey] = {};
+      if (inp.dataset.field === 'wholesale_price') {
+        prices[pid].price = parseFloat(inp.value) || 0;
+        prices[nameKey].price = parseFloat(inp.value) || 0;
+      }
+      if (inp.dataset.field === 'min_qty') {
+        prices[pid].qty = parseInt(inp.value) || 1;
+        prices[nameKey].qty = parseInt(inp.value) || 1;
+      }
+    });
+    var { error } = await sb.from('wholesale_price_templates').upsert({
+      name: name,
+      prices: prices,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'name' });
+    if (error) { showToast('Error: ' + error.message, 'error'); return; }
+    showToast('Template "' + name + '" saved!', 'success');
+    _wsLoadTemplateList();
+  });
 };
 
 window._wsSaveAccountPricing = async function(accountId) {
