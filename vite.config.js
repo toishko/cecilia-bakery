@@ -32,6 +32,7 @@ export default defineConfig({
         account: resolve(__dirname, 'account.html'),
         productManager: resolve(__dirname, 'product-manager.html'),
         staff: resolve(__dirname, 'staff.html'),
+        wholesale: resolve(__dirname, 'wholesale.html'),
       },
     },
   },
