@@ -5267,6 +5267,8 @@ window._wsApprove = async function(id) {
         updated_at: new Date().toISOString()
       }).eq('id', id);
       if (error) { showToast('Error: ' + error.message, 'error'); return; }
+      var detailOverlay = document.getElementById('ws-detail-overlay');
+      if (detailOverlay) detailOverlay.remove();
       showToast(name + ' approved!', 'success');
       await loadWholesaleSection();
     }
@@ -5287,6 +5289,8 @@ window._wsReject = async function(id) {
         updated_at: new Date().toISOString()
       }).eq('id', id);
       if (error) { showToast('Error: ' + error.message, 'error'); return; }
+      var detailOverlay = document.getElementById('ws-detail-overlay');
+      if (detailOverlay) detailOverlay.remove();
       showToast('Application rejected', 'success');
       await loadWholesaleSection();
     }
