@@ -3384,6 +3384,11 @@ async function loadProductManager() {
   const sec = document.getElementById('section-products');
 
   sec.innerHTML = `
+    <div class="pm-section-tabs" id="pm-section-tabs" style="display:flex;gap:8px;margin-bottom:20px">
+      <button class="ws-tab active" data-pmtab="menu" onclick="window._pmSwitchSection('menu')">Menu Products</button>
+      <button class="ws-tab" data-pmtab="b2b" onclick="window._pmSwitchSection('b2b')">B2B Catalog</button>
+    </div>
+    <div id="pm-section-menu">
     <div class="pm-header">
       <h1 class="pm-title">Product <em>Manager</em></h1>
       <div class="pm-header-actions">
@@ -3401,6 +3406,17 @@ async function loadProductManager() {
     </div>
     <div id="pm-list"></div>
     ${_pmModalHTML()}
+    </div>
+    <div id="pm-section-b2b" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+        <div>
+          <h3 style="font-size:1.1rem;font-weight:700;color:var(--tx);margin:0">B2B Product Catalog</h3>
+          <p style="font-size:.82rem;color:var(--tx-muted);margin:4px 0 0">Products available to drivers and wholesale customers</p>
+        </div>
+        <button class="ws-btn ws-btn-approve" onclick="window._b2bAddProduct()">+ Add Product</button>
+      </div>
+      <div id="b2b-product-list"></div>
+    </div>
   `;
 
   lucide.createIcons();
@@ -3425,6 +3441,26 @@ async function loadProductManager() {
   _pmInjectSaveBar();
   _pmUpdateSaveBar();
 }
+
+/* ── Products section sub-tab switching (Menu Products / B2B Catalog) ── */
+window._pmSwitchSection = function(tab) {
+  document.querySelectorAll('#pm-section-tabs .ws-tab').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.pmtab === tab);
+  });
+  document.getElementById('pm-section-menu').style.display = tab === 'menu' ? 'block' : 'none';
+  document.getElementById('pm-section-b2b').style.display = tab === 'b2b' ? 'block' : 'none';
+  if (tab === 'b2b') _b2bLoadProducts();
+};
+
+/* placeholder until B2B logic is implemented */
+async function _b2bLoadProducts() {
+  const list = document.getElementById('b2b-product-list');
+  if (!list) return;
+  list.innerHTML = '<div class="ws-empty">B2B product catalog coming soon</div>';
+}
+window._b2bAddProduct = function() {
+  showToast('B2B product editor coming soon', 'info');
+};
 
 /* ── Modal structure ── */
 function _pmModalHTML() {
