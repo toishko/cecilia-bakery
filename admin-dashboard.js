@@ -5097,37 +5097,43 @@ window._wsOpenDetail = function(id) {
   if (a.status === 'pending') {
     var pricedCount = _wsAccountPricedCount(a.id);
     var totalCount = _wsProducts.length;
-    var approveDisabled = allPriced ? '' : 'disabled title="Set all wholesale prices first"';
+    var acctAllPriced = _wsAccountAllPriced(a.id);
+    var approveDisabled = acctAllPriced ? '' : 'disabled title="Set all wholesale prices first"';
     actions = '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--bd)">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
-        '<span style="font-size:.82rem;font-weight:600;color:' + (allPriced ? '#0a7a0a' : 'var(--red)') + '">' + pricedCount + ' of ' + totalCount + ' products priced</span>' +
-        '<button class="ws-btn ws-btn-pricing" onclick="window._wsOpenAccountPricing(\'' + a.id + '\',\'' + a.business_name.replace(/'/g, "\\'") + '\')">Set Prices</button>' +
+        '<span style="font-size:.82rem;font-weight:600;color:' + (acctAllPriced ? '#0a7a0a' : 'var(--red)') + '">' + pricedCount + ' of ' + totalCount + ' products priced</span>' +
+        '<button class="ws-btn ws-btn-pricing" onclick="document.getElementById(\'ws-detail-overlay\').remove();window._wsOpenAccountPricing(\'' + a.id + '\',\'' + a.business_name.replace(/'/g, "\\'") + '\')">Set Prices</button>' +
       '</div>' +
       '<div class="ws-card-actions">' +
         '<button class="ws-btn ws-btn-approve" onclick="window._wsApprove(\'' + a.id + '\')" ' + approveDisabled + '>Approve</button>' +
         '<button class="ws-btn ws-btn-reject" onclick="window._wsReject(\'' + a.id + '\')">Reject</button>' +
-      '</div>';
-    if (!allPriced) {
-      actions += '<div style="font-size:.75rem;color:var(--red);margin-top:8px">\u26a0 Set all prices for this account before approving</div>';
-    }
-    actions += '</div>';
+      '</div>' +
+      (!acctAllPriced ? '<div style="font-size:.75rem;color:var(--red);margin-top:8px">⚠ Set all prices for this account before approving</div>' : '') +
+    '</div>';
   } else if (a.status === 'approved') {
     actions = '<div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">' +
       '<span class="ws-card-status approved">APPROVED</span>' +
       (a.approved_at ? '<span style="font-size:.78rem;color:var(--tx-faint)">on ' + new Date(a.approved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + '</span>' : '') +
     '</div>' +
     '<div class="ws-card-actions" style="margin-top:12px">' +
-      '<button class="ws-btn ws-btn-pricing" onclick="window._wsOpenAccountPricing(\'' + a.id + '\',\'' + a.business_name.replace(/'/g, "\\'") + '\')">Edit Prices</button>' +
+      '<button class="ws-btn ws-btn-pricing" onclick="document.getElementById(\'ws-detail-overlay\').remove();window._wsOpenAccountPricing(\'' + a.id + '\',\'' + a.business_name.replace(/'/g, "\\'") + '\')">Edit Prices</button>' +
       '<button class="ws-btn ws-btn-reject" onclick="window._wsRevoke(\'' + a.id + '\')">Revoke Access</button>' +
     '</div>';
   } else if (a.status === 'rejected') {
-    var reApproveStyle = allPriced ? '' : 'opacity:.5';
-    actions = '<div class="ws-card-actions" style="margin-top:16px">' +
-      '<button class="ws-btn ws-btn-approve" style="' + reApproveStyle + '" onclick="window._wsApprove(\'' + a.id + '\')">Reconsider & Approve</button>' +
+    var pricedCountR = _wsAccountPricedCount(a.id);
+    var totalCountR = _wsProducts.length;
+    var acctAllPricedR = _wsAccountAllPriced(a.id);
+    var approveDisabledR = acctAllPricedR ? '' : 'disabled title="Set all wholesale prices first"';
+    actions = '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--bd)">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+        '<span style="font-size:.82rem;font-weight:600;color:' + (acctAllPricedR ? '#0a7a0a' : 'var(--red)') + '">' + pricedCountR + ' of ' + totalCountR + ' products priced</span>' +
+        '<button class="ws-btn ws-btn-pricing" onclick="document.getElementById(\'ws-detail-overlay\').remove();window._wsOpenAccountPricing(\'' + a.id + '\',\'' + a.business_name.replace(/'/g, "\\'") + '\')">Set Prices</button>' +
+      '</div>' +
+      '<div class="ws-card-actions">' +
+        '<button class="ws-btn ws-btn-approve" onclick="window._wsApprove(\'' + a.id + '\')" ' + approveDisabledR + '>Reconsider & Approve</button>' +
+      '</div>' +
+      (!acctAllPricedR ? '<div style="font-size:.75rem;color:var(--red);margin-top:8px">⚠ Set all prices for this account before approving</div>' : '') +
     '</div>';
-    if (!allPriced) {
-      actions += '<div style="font-size:.75rem;color:var(--red);margin-top:8px">\u26a0 Set wholesale prices for this account first</div>';
-    }
   }
 
   var overlay = document.getElementById('ws-detail-overlay');
