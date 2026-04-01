@@ -5089,13 +5089,13 @@ window._wsOpenDetail = function(id) {
   var allPriced = _wsProducts.length > 0 && _wsProducts.every(function(p) { return accountPrices[p.id]; });
   var actions = '';
   if (a.status === 'pending') {
-    var approveDisabled = allPriced ? '' : 'disabled title="Set all wholesale prices first"';
+    var approveStyle = allPriced ? '' : 'opacity:.5';
     actions = '<div class="ws-card-actions">' +
-      '<button class="ws-btn ws-btn-approve" onclick="window._wsApprove(\'' + a.id + '\')" ' + approveDisabled + '>Approve</button>' +
+      '<button class="ws-btn ws-btn-approve" style="' + approveStyle + '" onclick="window._wsApprove(\'' + a.id + '\')">Approve</button>' +
       '<button class="ws-btn ws-btn-reject" onclick="window._wsReject(\'' + a.id + '\')">Reject</button>' +
     '</div>';
     if (!allPriced) {
-      actions += '<div style="font-size:.75rem;color:var(--red);margin-top:8px">⚠ Set all wholesale prices before approving</div>';
+      actions += '<div style="font-size:.75rem;color:var(--red);margin-top:8px">⚠ Set wholesale prices for this account first</div>';
     }
   } else if (a.status === 'approved') {
     actions = '<div style="margin-top:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">' +
@@ -5105,12 +5105,12 @@ window._wsOpenDetail = function(id) {
       '<button class="ws-btn ws-btn-reject" onclick="window._wsRevoke(\'' + a.id + '\')">Revoke Access</button>' +
     '</div>';
   } else if (a.status === 'rejected') {
-    var reApproveDisabled = allPriced ? '' : 'disabled title="Set all wholesale prices first"';
+    var reApproveStyle = allPriced ? '' : 'opacity:.5';
     actions = '<div class="ws-card-actions" style="margin-top:16px">' +
-      '<button class="ws-btn ws-btn-approve" onclick="window._wsApprove(\'' + a.id + '\')" ' + reApproveDisabled + '>Reconsider & Approve</button>' +
+      '<button class="ws-btn ws-btn-approve" style="' + reApproveStyle + '" onclick="window._wsApprove(\'' + a.id + '\')">' + 'Reconsider & Approve</button>' +
     '</div>';
     if (!allPriced) {
-      actions += '<div style="font-size:.75rem;color:var(--red);margin-top:8px">Set all wholesale prices before approving</div>';
+      actions += '<div style="font-size:.75rem;color:var(--red);margin-top:8px">⚠ Set wholesale prices for this account first</div>';
     }
   }
 
