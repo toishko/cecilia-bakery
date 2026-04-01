@@ -33,6 +33,7 @@ export default defineConfig({
         productManager: resolve(__dirname, 'product-manager.html'),
         staff: resolve(__dirname, 'staff.html'),
         wholesale: resolve(__dirname, 'wholesale.html'),
+        wholesalePortal: resolve(__dirname, 'wholesale-portal.html'),
       },
     },
   },
