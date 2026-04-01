@@ -4992,13 +4992,13 @@ async function loadWholesaleSection() {
   _wsAccounts = data || [];
 
   // Load products for pricing
-  const { data: prods } = await sb.from('products').select('id, name_en, name_es, tag_en, tag_es, price, prices, sort_order').order('sort_order', { ascending: true });
+  const { data: prods } = await sb.from('b2b_products').select('*').order('sort_order', { ascending: true });
   _wsProducts = prods || [];
 
   // Load wholesale prices
   const { data: prices } = await sb.from('wholesale_prices').select('*');
   _wsPrices = {};
-  (prices || []).forEach(p => { _wsPrices[p.product_id] = { wholesale_price: p.wholesale_price, min_qty: p.min_qty }; });
+  (prices || []).forEach(function(p) { _wsPrices[p.b2b_product_id || p.product_id] = { wholesale_price: p.wholesale_price, min_qty: p.min_qty }; });
 
   // Update badge
   const pendingCount = _wsAccounts.filter(a => a.status === 'pending').length;
@@ -5187,7 +5187,7 @@ window._wsSavePricing = async function() {
   inputs.forEach(inp => {
     const pid = inp.dataset.productId;
     const field = inp.dataset.field;
-    if (!updates[pid]) updates[pid] = { product_id: pid };
+    if (!updates[pid]) updates[pid] = { b2b_product_id: pid };
     if (field === 'wholesale_price') updates[pid].wholesale_price = parseFloat(inp.value) || 0;
     if (field === 'min_qty') updates[pid].min_qty = parseInt(inp.value) || 1;
   });
@@ -5197,7 +5197,7 @@ window._wsSavePricing = async function() {
     const row = updates[pid];
     if (!row.wholesale_price || row.wholesale_price <= 0) continue;
     row.updated_at = new Date().toISOString();
-    const { error } = await sb.from('wholesale_prices').upsert(row, { onConflict: 'product_id' });
+    const { error } = await sb.from('wholesale_prices').upsert(row, { onConflict: 'b2b_product_id' });
     if (error) errors++;
   }
 
