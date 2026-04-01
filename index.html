@@ -4335,40 +4335,6 @@
     </div>
   </div>
 
-  <!-- FAB -->
-  <button class="chat-fab" onclick="openChat()" aria-label="Chat with us" title="Chat & Order">
-    <i data-lucide='message-circle' class='icon'></i><div class="fab-badge">1</div>
-  </button>
-
-  <!-- CHAT -->
-  <div class="chat-overlay" id="chat-overlay" onclick="closeChatOutside(event)">
-    <div class="chat-window">
-      <div class="chat-header">
-        <div class="chat-header-left">
-          <div class="chat-avatar"></div>
-          <div>
-            <div class="chat-name">Cecilia Bakery</div>
-            <div class="chat-status">
-              <span class="status-dot"></span>
-              <span id="chat-status-text">Online — ready to help</span>
-            </div>
-          </div>
-        </div>
-        <button class="chat-close" onclick="closeChat()">×</button>
-      </div>
-      <div class="call-banner">
-        <span id="call-banner-text">Prefer to speak with someone?</span>
-        <a href="tel:+12018697633"><i data-lucide='phone' class='icon'></i> (201) 869-7633</a>
-      </div>
-      <div class="chat-body" id="chat-body"></div>
-      <div class="quick-replies" id="quick-replies"></div>
-      <div class="chat-footer">
-        <textarea class="chat-input" id="chat-input" rows="1" placeholder="Type your message…"
-          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-        <button class="chat-send" onclick="sendMessage()"><i data-lucide='send' class='icon'></i></button>
-      </div>
-    </div>
-  </div>
 
   <script>
     /* ══════════════════════════════
@@ -4419,8 +4385,7 @@
     ══════════════════════════════ */
     let lang = 'en';
     let theme = 'light';
-    let chatHistory = [];
-    let chatInitialized = false;
+
 
     /* ══════════════════════════════
        I18N STRINGS  (must be before applyTheme)
@@ -4562,28 +4527,7 @@
       });
     });
 
-    /* ══════════════════════════════
-       CHAT
-    ══════════════════════════════ */
-    const SYSTEM_PROMPT = `You are the friendly order assistant at Cecilia Bakery in West New York, NJ. Your name is Ceci. Help customers choose and order cakes. Match the customer's language — if they write in Spanish, respond in Spanish; if English, respond in English.
 
-FULL MENU:
-TRES LECHES (signature): Tres Leche (classic), Tres Leche Piña, Tres Leche Strawberry, Tres Leche Hershey, Cuatro Leche
-BIRTHDAY CAKES (Big & Small): Piña, Guava, Dulce de Leche, Chocolate, Strawberry
-SQUARE CAKES: Pudin, Plain, Raisin, Maiz, Tres Leche, Cuatro Leche
-PIEZAS/SLICES: Red Velvet, Carrot Cake, Cheesecake, Pudin, Piña, Guava, Crema Piña, Crema Guava, Crema Dulce de Leche, Crema Chocolate
-BASOS (cups): Tres Leche, Cuatro Leche, Hershey
-
-Bakery info: Founded by Cecilia, owner is Alejandro Dominguez. 6101 Park Ave, West New York NJ 07093. Phone: (201) 869-7633. Every day 8:30am–5pm.
-
-Be warm and conversational. Keep replies concise. For custom orders collect: occasion, cake type, flavor, size, custom message, name, and contact number. Summarize the order at the end.`;
-
-    function openChat() {
-      document.getElementById('chat-overlay').classList.add('open');
-      document.body.style.overflow = 'hidden';
-      const badge = document.querySelector('.fab-badge');
-      if (badge) badge.remove();
-    }
     function openCustomCakeContact() {
       document.getElementById('custom-cake-contact-modal').classList.add('open');
       document.body.style.overflow = 'hidden';
@@ -4595,79 +4539,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
     function closeCustomCakeContactOutside(e) {
       if (e.target === document.getElementById('custom-cake-contact-modal')) closeCustomCakeContact();
     }
-    function closeChat() {
-      document.getElementById('chat-overlay').classList.remove('open');
-      document.body.style.overflow = '';
-    }
-    function closeChatOutside(e) {
-      if (e.target === document.getElementById('chat-overlay')) closeChat();
-    }
 
-    const chatBody = () => document.getElementById('chat-body');
-
-    function addBotMsg(text) {
-      const m = document.createElement('div');
-      m.className = 'msg bot'; m.textContent = text;
-      chatBody().appendChild(m); chatBody().scrollTop = 99999;
-    }
-    function addUserMsg(text) {
-      const m = document.createElement('div');
-      m.className = 'msg user'; m.textContent = text;
-      chatBody().appendChild(m); chatBody().scrollTop = 99999;
-    }
-    function showTyping() {
-      const m = document.createElement('div');
-      m.className = 'msg bot typing'; m.id = 'typing';
-      m.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
-      chatBody().appendChild(m); chatBody().scrollTop = 99999;
-    }
-    function removeTyping() { const el = document.getElementById('typing'); if (el) el.remove(); }
-    function showQR(arr) {
-      const qr = document.getElementById('quick-replies'); qr.innerHTML = '';
-      arr.forEach(r => {
-        const b = document.createElement('button');
-        b.className = 'qr'; b.textContent = r;
-        b.onclick = () => { qr.innerHTML = ''; sendText(r); };
-        qr.appendChild(b);
-      });
-    }
-    function clearQR() { document.getElementById('quick-replies').innerHTML = ''; }
-
-    async function sendText(text) {
-      if (!text.trim()) return;
-      clearQR(); addUserMsg(text);
-      chatHistory.push({ role: 'user', content: text });
-      showTyping();
-      try {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-6',
-            max_tokens: 400,
-            system: SYSTEM_PROMPT,
-            messages: chatHistory
-          })
-        });
-        const data = await res.json();
-        removeTyping();
-        const reply = data.content?.[0]?.text || i18n[lang].chatFallback;
-        addBotMsg(reply);
-        chatHistory.push({ role: 'assistant', content: reply });
-      } catch {
-        removeTyping();
-        addBotMsg(i18n[lang].chatOffline);
-      }
-    }
-    async function sendMessage() {
-      const inp = document.getElementById('chat-input');
-      const text = inp.value.trim();
-      if (!text) return;
-      inp.value = ''; autoResize(inp);
-      await sendText(text);
-    }
-    function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
-    function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 100) + 'px'; }
   </script>
 
   <!-- ══ CART OVERLAY + DRAWER ══ -->
