@@ -398,6 +398,8 @@ function enterDashboard(user) {
   setupRealtime();
   setupOnlineOrdersRealtime();
   updateOnlineOrdersBadge();
+  updateWholesaleBadge();
+  setupWholesaleRealtime();
   loadIncomingOrders();
   requestNotifPermission();
   // Push opt-in: only auto-subscribe if permission already granted
@@ -568,6 +570,35 @@ function setupRealtime() {
 
   // Start reliability layers
   startRealtimeGuard();
+}
+
+/* ── Wholesale badge (lightweight — no full section load) ── */
+async function updateWholesaleBadge() {
+  const { data, error } = await sb.from('wholesale_accounts').select('id', { count: 'exact', head: false }).eq('status', 'pending');
+  const count = (data && data.length) || 0;
+  const badge = document.getElementById('wholesale-badge');
+  const badgeM = document.getElementById('wholesale-badge-m');
+  if (badge) { badge.textContent = count; badge.style.display = count > 0 ? '' : 'none'; }
+  if (badgeM) { badgeM.textContent = count; badgeM.style.display = count > 0 ? '' : 'none'; }
+}
+
+/* ── Wholesale realtime subscription ── */
+function setupWholesaleRealtime() {
+  sb.channel('admin-wholesale-live')
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'wholesale_accounts'
+    }, (payload) => {
+      updateWholesaleBadge();
+      if (payload.eventType === 'INSERT') {
+        showToast('New wholesale application received!', 'success');
+      }
+      if (currentSection === 'wholesale') {
+        loadWholesaleSection();
+      }
+    })
+    .subscribe();
 }
 
 /* ── RELIABILITY LAYER 1: Visibility change ──
@@ -5093,27 +5124,72 @@ window._wsSavePricing = async function() {
 };
 
 window._wsApprove = async function(id) {
-  if (!confirm('Approve this wholesale account?')) return;
-  const { error } = await sb.from('wholesale_accounts').update({
-    status: 'approved',
-    approved_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  }).eq('id', id);
-  if (error) { showToast('Error: ' + error.message, 'error'); return; }
-  showToast('Account approved', 'success');
-  await loadWholesaleSection();
+  const account = _wsAccounts.find(a => a.id === id);
+  const name = account ? account.business_name : 'this account';
+  _wsConfirm(
+    'Approve Account',
+    'Are you sure you want to approve <strong>' + name + '</strong>? They will gain access to the wholesale ordering portal.',
+    'Approve',
+    'ws-btn-approve',
+    async function() {
+      const { error } = await sb.from('wholesale_accounts').update({
+        status: 'approved',
+        approved_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }).eq('id', id);
+      if (error) { showToast('Error: ' + error.message, 'error'); return; }
+      showToast(name + ' approved!', 'success');
+      await loadWholesaleSection();
+    }
+  );
 };
 
 window._wsReject = async function(id) {
-  if (!confirm('Reject this wholesale application?')) return;
-  const { error } = await sb.from('wholesale_accounts').update({
-    status: 'rejected',
-    updated_at: new Date().toISOString()
-  }).eq('id', id);
-  if (error) { showToast('Error: ' + error.message, 'error'); return; }
-  showToast('Application rejected', 'success');
-  await loadWholesaleSection();
+  const account = _wsAccounts.find(a => a.id === id);
+  const name = account ? account.business_name : 'this application';
+  _wsConfirm(
+    'Reject Application',
+    'Are you sure you want to reject <strong>' + name + '</strong>?',
+    'Reject',
+    'ws-btn-reject',
+    async function() {
+      const { error } = await sb.from('wholesale_accounts').update({
+        status: 'rejected',
+        updated_at: new Date().toISOString()
+      }).eq('id', id);
+      if (error) { showToast('Error: ' + error.message, 'error'); return; }
+      showToast('Application rejected', 'success');
+      await loadWholesaleSection();
+    }
+  );
 };
+
+function _wsConfirm(title, message, confirmText, confirmClass, onConfirm) {
+  let overlay = document.getElementById('ws-confirm-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'ws-confirm-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = `
+    <div style="background:var(--bg-card);border-radius:16px;padding:28px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <h3 style="font-size:1.1rem;font-weight:700;color:var(--tx);margin:0 0 8px">${title}</h3>
+      <p style="font-size:.9rem;color:var(--tx-muted);margin:0 0 24px;line-height:1.5">${message}</p>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="ws-btn ws-btn-reject" onclick="document.getElementById('ws-confirm-overlay').remove()">Cancel</button>
+        <button class="ws-btn ${confirmClass}" id="ws-confirm-btn">${confirmText}</button>
+      </div>
+    </div>`;
+  overlay.style.display = 'flex';
+  document.getElementById('ws-confirm-btn').onclick = function() {
+    overlay.remove();
+    onConfirm();
+  };
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) overlay.remove();
+  });
+}
 
 /* ── Escape helpers (scoped to avoid conflicts) ── */
 function _esc(s)     { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
