@@ -5012,7 +5012,11 @@ async function loadWholesaleSection() {
     if (pendingCount > 0) { el.textContent = pendingCount; el.style.display = 'inline-flex'; }
     else { el.style.display = 'none'; }
   });
-  document.getElementById('ws-pending-count').textContent = pendingCount || '';
+  var pendingBadge = document.getElementById('ws-pending-count');
+  if (pendingBadge) {
+    if (pendingCount > 0) { pendingBadge.textContent = pendingCount; pendingBadge.style.display = ''; }
+    else { pendingBadge.textContent = ''; pendingBadge.style.display = 'none'; }
+  }
 
   _wsRenderApplications();
   _wsRenderAccounts();
