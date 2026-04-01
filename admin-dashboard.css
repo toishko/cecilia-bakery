@@ -185,7 +185,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .mobile-nav{display:none;background:var(--bg-card);border-bottom:1px solid var(--bd);
   overflow:hidden;max-height:0;transition:max-height .3s ease,padding .3s ease;
   padding:0 16px;position:sticky;top:57px;z-index:99}
-.mobile-nav.open{max-height:400px;padding:8px 16px 16px}
+.mobile-nav.open{max-height:600px;padding:8px 16px 16px}
 .mobile-nav-item{display:flex;align-items:center;gap:12px;padding:14px 12px;
   border-radius:10px;cursor:pointer;transition:background .15s;font-size:.95rem;
   color:var(--tx-muted);border:none;background:none;width:100%;text-align:left;
