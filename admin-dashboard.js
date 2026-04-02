@@ -736,6 +736,9 @@ function handleNewOrder(order) {
 }
 
 async function handleOrderUpdate(order) {
+  // Capture last_edited_by before refetch (payload.new has it)
+  const editedBy = order.last_edited_by || '';
+
   // Refetch the full order with items so changes show immediately
   try {
     const { data } = await sb
@@ -746,10 +749,23 @@ async function handleOrderUpdate(order) {
     if (data) order = data;
   } catch (e) { /* use the payload order as fallback */ }
 
+  // Preserve last_edited_by on refetched order
+  if (editedBy && !order.last_edited_by) order.last_edited_by = editedBy;
+
   // Update in incoming orders
   const idx = incomingOrders.findIndex(o => o.id === order.id);
   if (idx !== -1) incomingOrders[idx] = order;
   else incomingOrders.unshift(order);
+
+  // Show toast with editor name if someone edited
+  if (editedBy) {
+    const driverName = getDriverName(order.driver_id);
+    const msg = lang === 'es'
+      ? `Pedido${driverName ? ' de ' + driverName : ''} editado por ${editedBy}`
+      : `${driverName ? driverName + "'s order" : 'Order'} updated by ${editedBy}`;
+    showToast(msg, 'info');
+    _staffEditedOrders.add(order.id);
+  }
 
   // Re-render if viewing
   if (currentSection === 'incoming') renderIncomingOrders();
@@ -768,14 +784,15 @@ function handleOrderItemsChange(payload) {
     // Track this order as staff-edited
     if (orderId) _staffEditedOrders.add(orderId);
 
-    // Show toast with driver name
+    // Show toast with editor name
     if (orderId) {
       try {
         const match = incomingOrders.find(o => o.id === orderId);
-        const name = match ? getDriverName(match.driver_id) : '';
-        const msg = name
-          ? (lang === 'es' ? `Pedido de ${name} editado por personal` : `${name}'s order edited by staff`)
-          : (lang === 'es' ? 'Pedido editado por personal' : 'Order edited by staff');
+        const driverName = match ? getDriverName(match.driver_id) : '';
+        const editedBy = match && match.last_edited_by ? match.last_edited_by : 'staff';
+        const msg = lang === 'es'
+          ? `Pedido${driverName ? ' de ' + driverName : ''} editado por ${editedBy}`
+          : `${driverName ? driverName + "'s order" : 'Order'} updated by ${editedBy}`;
         showToast(msg, 'info');
       } catch (_) {}
     }

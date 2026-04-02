@@ -1821,9 +1821,17 @@
           schema: 'public',
           table: 'driver_orders'
         }, function(payload) {
-          // Order status/details changed by admin
+          // Order status/details changed — show who edited
+          var editedBy = payload.new && payload.new.last_edited_by ? payload.new.last_edited_by : '';
           clearTimeout(_staffItemChangeTimer);
           _staffItemChangeTimer = setTimeout(function() {
+            if (editedBy) {
+              var driverName = '';
+              var match = staffOrders.find(function(o) { return o.id === payload.new.id; });
+              if (match) driverName = getDriverName(match.driver_id);
+              var msg = (driverName ? driverName + "'s order" : 'Order') + ' updated by ' + editedBy;
+              staffToast(msg, 'info', 3000);
+            }
             loadOrders();
             applyStaffLang();
           }, 1500);
@@ -1840,7 +1848,11 @@
             var orderId = payload.new ? payload.new.order_id : (payload.old ? payload.old.order_id : null);
             var match = staffOrders.find(function(o) { return o.id === orderId; });
             var driverName = match ? getDriverName(match.driver_id) : '';
-            if (driverName) {
+            var editedBy = match && match.last_edited_by ? match.last_edited_by : '';
+            if (editedBy) {
+              var msg = (driverName ? driverName + "'s order" : 'Order') + ' updated by ' + editedBy;
+              staffToast(msg, 'info', 3000);
+            } else if (driverName) {
               staffToast(driverName + "'s order was updated", 'info', 3000);
             } else {
               staffToast('An order was updated', 'info', 3000);
@@ -2759,8 +2771,15 @@
           if (insResult.error) { console.error('Insert failed:', insResult.error); errors.push('insert'); }
         }
 
-        // Update the order's updated_at timestamp
-        await sb.from('driver_orders').update({ updated_at: new Date().toISOString() }).eq('id', order.id);
+        // Update the order's updated_at timestamp + who edited
+        var staffName = '';
+        if (window.Clerk && window.Clerk.user) {
+          staffName = window.Clerk.user.fullName || window.Clerk.user.firstName || (window.Clerk.user.primaryEmailAddress ? window.Clerk.user.primaryEmailAddress.emailAddress : '') || 'Staff';
+        }
+        await sb.from('driver_orders').update({ 
+          updated_at: new Date().toISOString(),
+          last_edited_by: staffName
+        }).eq('id', order.id);
 
         if (errors.length) {
           staffToast(errors.length + ' change(s) failed to save. Check console for details.', 'error', 4000);
