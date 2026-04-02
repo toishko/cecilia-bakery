@@ -560,6 +560,14 @@ function setupRealtime() {
       _log('Realtime UPDATE:', payload);
       handleOrderUpdate(payload.new);
     })
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'driver_order_items'
+    }, (payload) => {
+      _log('Realtime driver_order_items change:', payload);
+      handleOrderItemsChange(payload);
+    })
     .subscribe((status) => {
       _log('Realtime subscription status:', status);
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
@@ -724,14 +732,35 @@ function handleNewOrder(order) {
   if (currentSection === 'overview') loadOverview();
 }
 
-function handleOrderUpdate(order) {
+async function handleOrderUpdate(order) {
+  // Refetch the full order with items so changes show immediately
+  try {
+    const { data } = await sb
+      .from('driver_orders')
+      .select('*, driver_order_items(*)')
+      .eq('id', order.id)
+      .single();
+    if (data) order = data;
+  } catch (e) { /* use the payload order as fallback */ }
+
   // Update in incoming orders
   const idx = incomingOrders.findIndex(o => o.id === order.id);
   if (idx !== -1) incomingOrders[idx] = order;
+  else incomingOrders.unshift(order);
 
   // Re-render if viewing
   if (currentSection === 'incoming') renderIncomingOrders();
   if (currentSection === 'overview') loadOverview();
+}
+
+// Debounced handler for item-level changes
+let _itemChangeTimer = null;
+function handleOrderItemsChange(payload) {
+  // Debounce: staff often updates multiple items at once
+  clearTimeout(_itemChangeTimer);
+  _itemChangeTimer = setTimeout(() => {
+    silentRefreshOrders();
+  }, 1500);
 }
 
 /* ═══════════════════════════════════
@@ -1513,6 +1542,22 @@ const PRODUCT_CAT = {};
   });
 })();
 
+// Fixed category display order
+const CAT_ORDER_EN = ['Tres Leche', 'Pieces', 'Frosted Pieces', 'Plain', 'Round', 'Happy Birthday \u2014 BIG', 'Happy Birthday \u2014 SMALL', 'Square', 'Cups', 'Family Size'];
+
+function sortItemsByCategory(items) {
+  return items.slice().sort(function(a, b) {
+    var catA = getCategoryLabel(a.product_key) || 'zzz';
+    var catB = getCategoryLabel(b.product_key) || 'zzz';
+    // Map to English label for ordering consistency
+    var enA = PRODUCT_CAT[a.product_key] ? PRODUCT_CAT[a.product_key].en : 'zzz';
+    var enB = PRODUCT_CAT[b.product_key] ? PRODUCT_CAT[b.product_key].en : 'zzz';
+    var ai = CAT_ORDER_EN.indexOf(enA); if (ai === -1) ai = 999;
+    var bi = CAT_ORDER_EN.indexOf(enB); if (bi === -1) bi = 999;
+    return ai - bi;
+  });
+}
+
 function getCategoryLabel(productKey) {
   const cat = PRODUCT_CAT[productKey];
   if (!cat) return '';
@@ -1548,7 +1593,7 @@ window.openOrderDetail = async function(orderId) {
     if (e2) { showToast(lang === 'es' ? 'Error cargando items' : 'Error loading items', 'error'); return; }
 
     detailOrder = order;
-    detailItems = items || [];
+    detailItems = sortItemsByCategory(items || []);
     detailTotalsVisible = true;
     // Mark order as seen when admin opens detail
     markDriverOrderSeen(orderId);
@@ -3049,7 +3094,7 @@ window.openOrderDetail = async function(orderId) {
   if (!order) return;
   const { data: items } = await sb.from('driver_order_items').select('*').eq('order_id', orderId);
   detailOrder = order;
-  detailItems = items || [];
+  detailItems = sortItemsByCategory(items || []);
   await renderOrderDetail();
   document.getElementById('detail-overlay').classList.add('open');
   document.body.dataset.scrollY = window.scrollY;

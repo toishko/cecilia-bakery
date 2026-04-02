@@ -34,39 +34,45 @@
       window.__SUPABASE_KEY = SUPABASE_KEY;
     })();
 
-    // Authenticated Supabase client using Clerk JWT (singleton — created once, reused)
+    // Authenticated Supabase client using Clerk JWT
     let _cachedSupabaseClient = null;
+    let _cachedToken = null;
     async function getSupabaseClient() {
-      if (_cachedSupabaseClient) return _cachedSupabaseClient;
       if (!window.supabase) return null;
       try {
         const token = await window.Clerk?.session?.getToken({ template: 'supabase' });
         if (token) {
-          _cachedSupabaseClient = window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY, {
-            global: {
-              headers: {
-                Authorization: `Bearer ${token}`
+          // Only recreate client if token changed (avoids unnecessary overhead)
+          if (token !== _cachedToken) {
+            _cachedToken = token;
+            _cachedSupabaseClient = window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY, {
+              global: {
+                headers: {
+                  Authorization: `Bearer ${token}`
+                }
+              },
+              auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+                detectSessionInUrl: false
               }
-            },
-            auth: {
-              persistSession: false,
-              autoRefreshToken: false,
-              detectSessionInUrl: false
-            }
-          });
+            });
+          }
           return _cachedSupabaseClient;
         }
       } catch (e) {
         console.warn('Clerk token fetch failed:', e);
       }
-      // Fallback: unauthenticated client (also cached)
-      _cachedSupabaseClient = window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false
-        }
-      });
+      // Fallback: unauthenticated client
+      if (!_cachedSupabaseClient) {
+        _cachedSupabaseClient = window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY, {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false
+          }
+        });
+      }
       return _cachedSupabaseClient;
     }
   </script>
@@ -224,9 +230,118 @@
     .state-panel.active { display: block; }
 
     .staff-container {
-      max-width: 900px;
+      max-width: 1100px;
       margin: 0 auto;
       padding: 20px;
+    }
+
+    /* ── Sidebar / Tab Bar ── */
+    .staff-dashboard-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .staff-sidebar {
+      display: flex;
+      gap: 4px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--bd);
+      margin-bottom: 20px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .staff-sidebar-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 18px;
+      border: none; background: none;
+      border-radius: 10px;
+      font-size: .85rem; font-weight: 600;
+      color: var(--tx-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .2s;
+    }
+    .staff-sidebar-item:hover { background: rgba(200,16,46,.06); color: var(--tx); }
+    .staff-sidebar-item.active {
+      background: rgba(200,16,46,.1);
+      color: var(--red);
+    }
+    .staff-sidebar-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .staff-section { display: none; }
+    .staff-section.active { display: block; }
+    .staff-main { flex: 1; min-width: 0; }
+
+    @media (min-width: 768px) {
+      .staff-dashboard-layout {
+        flex-direction: row;
+        gap: 24px;
+      }
+      .staff-sidebar {
+        flex-direction: column;
+        width: 200px;
+        flex-shrink: 0;
+        border-bottom: none;
+        border-right: 1px solid var(--bd);
+        padding: 0 16px 0 0;
+        margin-bottom: 0;
+        overflow-x: visible;
+      }
+      .staff-sidebar-item {
+        width: 100%;
+        padding: 10px 14px;
+      }
+    }
+
+    /* ── Settings Section ── */
+    .settings-card {
+      background: var(--bg-card); border: 1px solid var(--bd);
+      border-radius: 14px; padding: 20px; margin-bottom: 16px;
+    }
+    .settings-card-title {
+      font-size: .85rem; font-weight: 700; margin-bottom: 12px; color: var(--tx);
+    }
+    .settings-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid var(--bd);
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row-label { font-size: .85rem; color: var(--tx-muted); }
+    .settings-row-actions { display: flex; gap: 6px; align-items: center; }
+
+    /* ── Saved Calculations ── */
+    .saved-date-card {
+      background: var(--bg-card); border: 1px solid var(--bd);
+      border-radius: 14px; padding: 16px 20px; margin-bottom: 12px;
+      transition: box-shadow .2s;
+    }
+    .saved-date-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.06); }
+    .saved-date-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .saved-date-title {
+      font-size: .95rem; font-weight: 700; color: var(--tx);
+    }
+    .saved-date-meta {
+      font-size: .75rem; color: var(--tx-muted);
+    }
+    .saved-date-items {
+      font-size: .82rem; color: var(--tx-muted); line-height: 1.6;
+    }
+    .saved-date-actions {
+      display: flex; gap: 8px; margin-top: 12px; padding-top: 12px;
+      border-top: 1px solid var(--bd);
+    }
+    .saved-date-actions button {
+      padding: 6px 14px; border-radius: 8px; font-size: .78rem;
+      font-weight: 600; cursor: pointer; border: 1px solid var(--bd);
+      background: none; color: var(--tx-muted); transition: all .2s;
+    }
+    .saved-date-actions button:hover { border-color: var(--red); color: var(--red); }
+    .saved-date-actions button.danger:hover { background: var(--red); color: #fff; }
+    .saved-empty {
+      text-align: center; padding: 40px 20px; color: var(--tx-muted);
+      font-size: .85rem;
     }
 
     /* ── Page header ── */
@@ -834,6 +949,25 @@
       .quick-calc-card { padding: 18px; }
       .quick-calc-field input { padding: 12px 14px; font-size: 1.05rem; }
     }
+
+    /* ── Overflow fixes ── */
+    body { overflow-x: hidden; }
+    .order-driver-name, .order-biz-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+    .order-card { overflow: hidden; }
+    .staff-container { overflow-x: hidden; }
+
+    /* ── In-app Toast ── */
+    .staff-toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      padding: 12px 24px; border-radius: 12px; font-size: .85rem; font-weight: 600;
+      z-index: 9999; opacity: 0; transition: opacity .3s, transform .3s;
+      pointer-events: none; max-width: 90vw; text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,.2);
+    }
+    .staff-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .staff-toast.success { background: #0a7a0a; color: #fff; }
+    .staff-toast.error { background: var(--red, #c8102e); color: #fff; }
+    .staff-toast.info { background: var(--bg-card, #fff); color: var(--tx, #333); border: 1px solid var(--bd); }
   </style>
 </head>
 
@@ -850,8 +984,13 @@
     <div class="nav-right-group">
       <a href="/" class="nav-back">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-        Back to Home
+        <span data-en="Back to Home" data-es="Volver al Inicio">Back to Home</span>
       </a>
+      <button id="lang-toggle" onclick="toggleStaffLang()" style="background:none;border:1px solid var(--bd);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.75rem;color:var(--tx-muted);font-weight:700;margin-right:4px">ES</button>
+      <div style="display:flex;align-items:center;gap:2px;margin-right:8px">
+        <button id="font-decrease" onclick="adjustFontSize(-1)" style="background:none;border:1px solid var(--bd);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:.75rem;color:var(--tx-muted);font-weight:700">A−</button>
+        <button id="font-increase" onclick="adjustFontSize(1)" style="background:none;border:1px solid var(--bd);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:.75rem;color:var(--tx-muted);font-weight:700">A+</button>
+      </div>
       <button class="theme-btn" onclick="toggleTheme()" aria-label="Toggle theme">
         <!-- Moon icon (shown in light mode) -->
         <svg id="theme-icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -880,9 +1019,9 @@
     <div id="state-signin" class="state-panel">
       <div class="clerk-signin-wrapper">
         <div class="clerk-signin-heading">
-          <div class="staff-eyebrow">Staff Portal</div>
-          <h1 class="staff-page-title">Sign in to <em>Cecilia Bakery</em></h1>
-          <p class="clerk-signin-subtitle">Cecilia Bakery packaging team access</p>
+          <div class="staff-eyebrow" data-en="Staff Portal" data-es="Portal de Personal">Staff Portal</div>
+          <h1 class="staff-page-title" data-en="Sign in to Cecilia Bakery" data-es="Iniciar sesión en Cecilia Bakery">Sign in to <em>Cecilia Bakery</em></h1>
+          <p class="clerk-signin-subtitle" data-en="Cecilia Bakery packaging team access" data-es="Acceso del equipo de empaque de Cecilia Bakery">Cecilia Bakery packaging team access</p>
         </div>
         <div id="clerk-mount-target" class="clerk-mount-target"></div>
       </div>
@@ -898,23 +1037,23 @@
             <line x1="9" y1="9" x2="15" y2="15"/>
           </svg>
         </div>
-        <h2 class="access-denied-title">Access Denied</h2>
-        <p class="access-denied-msg">Your account does not have staff access. Contact your administrator.</p>
+        <h2 class="access-denied-title" data-en="Access Denied" data-es="Acceso Denegado">Access Denied</h2>
+        <p class="access-denied-msg" data-en="Your account does not have staff access. Contact your administrator." data-es="Su cuenta no tiene acceso de personal. Contacte a su administrador.">Your account does not have staff access. Contact your administrator.</p>
         <button class="access-denied-btn" id="denied-signout-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
             <polyline points="16 17 21 12 16 7"/>
             <line x1="21" y1="12" x2="9" y2="12"/>
           </svg>
-          Sign Out
+          <span data-en="Sign Out" data-es="Cerrar Sesión">Sign Out</span>
         </button>
       </div>
     </div>
 
     <!-- ── STATE 3: STAFF DASHBOARD ── -->
     <div id="state-dashboard" class="state-panel">
-      <div class="staff-eyebrow">Staff Portal</div>
-      <h1 class="staff-page-title">Packaging <em>Dashboard</em></h1>
+      <div class="staff-eyebrow" data-en="Staff Portal" data-es="Portal de Personal">Staff Portal</div>
+      <h1 class="staff-page-title" data-en="Packaging Dashboard" data-es="Panel de Empaque">Packaging <em>Dashboard</em></h1>
 
       <!-- User Header -->
       <div class="staff-header" id="staff-header">
@@ -922,56 +1061,123 @@
         <div class="staff-user-info">
           <div class="staff-greeting" id="staff-greeting">Hi!<span class="staff-badge">Staff Portal</span></div>
         </div>
-        <button class="staff-signout-btn" id="staff-signout-btn">Sign Out</button>
+        <button class="staff-signout-btn" id="staff-signout-btn" data-en="Sign Out" data-es="Cerrar Sesión">Sign Out</button>
       </div>
 
-      <!-- Action Bar -->
-      <div class="action-bar">
-        <select id="filter-status">
-          <option value="active">Active Orders</option>
-          <option value="pending">Pending</option>
-          <option value="confirmed">Confirmed</option>
-          <option value="sent">Sent</option>
-          <option value="all">All Orders</option>
-        </select>
-        <input type="date" id="filter-date" />
-        <button class="refresh-btn" id="refresh-orders-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="23 4 23 10 17 10"/>
-            <polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-          </svg>
-          Refresh
-        </button>
-      </div>
-
-      <!-- Orders List -->
-      <div class="section-title">
-        Driver Orders
-        <span class="count-badge" id="orders-count">0</span>
-      </div>
-      <div id="orders-list" class="order-list">
-        <div class="loading-spinner"></div>
-      </div>
-
-      <!-- Quick Calculator -->
-      <div class="quick-calc-card" id="quick-calc-card" style="display:none;">
-        <div class="quick-calc-title">
-          📦 Quick Calculator
+      <!-- Sidebar + Content Layout -->
+      <div class="staff-dashboard-layout">
+        <!-- Sidebar / Tab Bar -->
+        <div class="staff-sidebar" id="staff-sidebar">
+          <button class="staff-sidebar-item active" data-section="orders" onclick="staffShowSection('orders')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span data-en="Orders" data-es="Pedidos">Orders</span>
+          </button>
+          <button class="staff-sidebar-item" data-section="calculator" onclick="staffShowSection('calculator')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            <span data-en="Calculator" data-es="Calculadora">Calculator</span>
+          </button>
+          <button class="staff-sidebar-item" data-section="saved" onclick="staffShowSection('saved')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            <span data-en="Saved" data-es="Guardados">Saved</span>
+          </button>
+          <button class="staff-sidebar-item" data-section="settings" onclick="staffShowSection('settings')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span data-en="Settings" data-es="Ajustes">Settings</span>
+          </button>
         </div>
-        <div class="quick-calc-subtitle">One-off box math — enter values to see results instantly</div>
-        <div class="quick-calc-fields">
-          <div class="quick-calc-field">
-            <label for="qc-pieces">Total Pieces</label>
-            <input type="number" id="qc-pieces" min="1" placeholder="e.g. 5000" />
+
+        <!-- Main Content -->
+        <div class="staff-main">
+          <!-- SECTION: Orders -->
+          <div class="staff-section active" id="section-orders">
+            <!-- Action Bar -->
+            <div class="action-bar">
+              <select id="filter-status">
+                <option value="active" data-en="Active Orders" data-es="Pedidos Activos">Active Orders</option>
+                <option value="pending" data-en="Pending" data-es="Pendiente">Pending</option>
+                <option value="confirmed" data-en="Confirmed" data-es="Confirmado">Confirmed</option>
+                <option value="sent" data-en="Sent" data-es="Enviado">Sent</option>
+                <option value="all" data-en="All Orders" data-es="Todos los Pedidos">All Orders</option>
+              </select>
+              <input type="date" id="filter-date" />
+              <button class="refresh-btn" id="refresh-orders-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <polyline points="1 20 1 14 7 14"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+                <span data-en="Refresh" data-es="Actualizar">Refresh</span>
+              </button>
+            </div>
+
+            <!-- Orders List -->
+            <div class="section-title">
+              <span data-en="Driver Orders" data-es="Pedidos de Repartidores">Driver Orders</span>
+              <span class="count-badge" id="orders-count">0</span>
+            </div>
+            <div id="orders-list" class="order-list">
+              <div class="loading-spinner"></div>
+            </div>
+
           </div>
-          <div class="quick-calc-field">
-            <label for="qc-box-size">Pieces per Box</label>
-            <input type="number" id="qc-box-size" min="1" placeholder="e.g. 42" />
+
+          <!-- SECTION: Saved -->
+          <div class="staff-section" id="section-saved">
+            <div class="section-title" style="margin-bottom:16px">
+              <span data-en="Saved Calculations" data-es="Cálculos Guardados">Saved Calculations</span>
+            </div>
+            <div id="saved-calcs-list"></div>
           </div>
-        </div>
-        <div class="quick-calc-result empty" id="qc-result">
-          Enter values above to calculate
+
+          <!-- SECTION: Calculator -->
+          <div class="staff-section" id="section-calculator">
+            <div class="quick-calc-card" id="quick-calc-card">
+              <div class="quick-calc-title">
+                📦 <span data-en="Quick Calculator" data-es="Calculadora Rápida">Quick Calculator</span>
+              </div>
+              <div class="quick-calc-subtitle" data-en="One-off box math — enter values to see results instantly" data-es="Cálculo rápido de cajas — ingrese valores para ver resultados al instante">One-off box math — enter values to see results instantly</div>
+              <div class="quick-calc-fields">
+                <div class="quick-calc-field">
+                  <label for="qc-pieces" data-en="Total Pieces" data-es="Total de Piezas">Total Pieces</label>
+                  <input type="number" id="qc-pieces" min="1" placeholder="e.g. 5000" data-en-placeholder="e.g. 5000" data-es-placeholder="ej. 5000" />
+                </div>
+                <div class="quick-calc-field">
+                  <label for="qc-box-size" data-en="Pieces per Box" data-es="Piezas por Caja">Pieces per Box</label>
+                  <input type="number" id="qc-box-size" min="1" placeholder="e.g. 42" data-en-placeholder="e.g. 42" data-es-placeholder="ej. 42" />
+                </div>
+              </div>
+              <div class="quick-calc-result empty" id="qc-result">
+                <span data-en="Enter values above to calculate" data-es="Ingrese valores arriba para calcular">Enter values above to calculate</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION: Settings -->
+          <div class="staff-section" id="section-settings">
+            <div class="settings-card">
+              <div class="settings-card-title" data-en="Display" data-es="Pantalla">Display</div>
+              <div class="settings-row">
+                <span class="settings-row-label" data-en="Font Size" data-es="Tamaño de Fuente">Font Size</span>
+                <div class="settings-row-actions">
+                  <button onclick="adjustFontSize(-1)" style="padding:6px 12px;background:none;border:1px solid var(--bd);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:700;color:var(--tx)">A−</button>
+                  <span id="font-size-display" style="font-size:.82rem;color:var(--tx-muted);min-width:40px;text-align:center">100%</span>
+                  <button onclick="adjustFontSize(1)" style="padding:6px 12px;background:none;border:1px solid var(--bd);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:700;color:var(--tx)">A+</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <span class="settings-row-label" data-en="Theme" data-es="Tema">Theme</span>
+                <div class="settings-row-actions">
+                  <button onclick="toggleTheme()" style="padding:6px 14px;background:none;border:1px solid var(--bd);border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--tx)" data-en="Toggle Theme" data-es="Cambiar Tema">Toggle Theme</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <span class="settings-row-label" data-en="Language" data-es="Idioma">Language</span>
+                <div class="settings-row-actions">
+                  <button onclick="toggleStaffLang()" id="settings-lang-btn" style="padding:6px 14px;background:none;border:1px solid var(--bd);border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--tx)">Español</button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1011,6 +1217,482 @@
       try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
       applyTheme(saved || 'light');
     })();
+
+    /* ── Font Size Controls ── */
+    var currentFontSize = parseInt(localStorage.getItem('cb-staff-fontsize')) || 100;
+    document.documentElement.style.fontSize = currentFontSize + '%';
+
+    function adjustFontSize(delta) {
+      currentFontSize = Math.max(80, Math.min(140, currentFontSize + (delta * 10)));
+      document.documentElement.style.fontSize = currentFontSize + '%';
+      localStorage.setItem('cb-staff-fontsize', currentFontSize);
+      var display = document.getElementById('font-size-display');
+      if (display) display.textContent = currentFontSize + '%';
+    }
+    // Init font size display
+    (function() {
+      var d = document.getElementById('font-size-display');
+      if (d) d.textContent = currentFontSize + '%';
+    })();
+
+    /* ── Language Toggle ── */
+    var staffLang = localStorage.getItem('cb-staff-lang') || 'en';
+
+    function toggleStaffLang() {
+      staffLang = staffLang === 'en' ? 'es' : 'en';
+      localStorage.setItem('cb-staff-lang', staffLang);
+      document.getElementById('lang-toggle').textContent = staffLang === 'en' ? 'ES' : 'EN';
+      var settingsBtn = document.getElementById('settings-lang-btn');
+      if (settingsBtn) settingsBtn.textContent = staffLang === 'en' ? 'Espa\u00f1ol' : 'English';
+      applyStaffLang();
+    }
+
+    function applyStaffLang() {
+      document.querySelectorAll('[data-en]').forEach(function(el) {
+        el.textContent = staffLang === 'es' ? (el.dataset.es || el.dataset.en) : el.dataset.en;
+      });
+      document.querySelectorAll('[data-en-placeholder]').forEach(function(el) {
+        el.placeholder = staffLang === 'es' ? (el.dataset.esPlaceholder || el.dataset.enPlaceholder) : el.dataset.enPlaceholder;
+      });
+    }
+
+    // Apply language on load
+    document.getElementById('lang-toggle').textContent = staffLang === 'en' ? 'ES' : 'EN';
+    (function() {
+      var sb = document.getElementById('settings-lang-btn');
+      if (sb) sb.textContent = staffLang === 'en' ? 'Espa\u00f1ol' : 'English';
+    })();
+    applyStaffLang();
+
+    /* ── Sidebar Section Switcher ── */
+    function staffShowSection(name) {
+      document.querySelectorAll('.staff-section').forEach(function(el) {
+        el.classList.toggle('active', el.id === 'section-' + name);
+      });
+      document.querySelectorAll('.staff-sidebar-item').forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.section === name);
+      });
+      localStorage.setItem('cb-staff-section', name);
+      if (name === 'saved') renderSavedCalcs();
+    }
+
+    /* ── Per-Order Save (explicit button inside each order card) ── */
+    function staffSaveOrder(idx) {
+      var order = staffOrders[idx];
+      if (!order) { staffToast('Order not found', 'error'); return; }
+      var card = document.getElementById('staff-order-' + idx);
+      if (!card) return;
+
+      var state = { boxCalc: {}, frostState: null, calcByItemIdx: {} };
+
+      // Gather box calc inputs from this card only
+      var calcInputs = card.querySelectorAll('.box-calc-input');
+      var calcIdx = 0;
+      calcInputs.forEach(function(inp) {
+        if (inp.value && inp.id) {
+          state.boxCalc[inp.id] = inp.value;
+          state.calcByItemIdx[calcIdx] = parseInt(inp.value);
+        }
+        calcIdx++;
+      });
+
+      // Gather frost packer state for this order
+      if (typeof frostState !== 'undefined' && frostState[idx]) {
+        state.frostState = JSON.parse(JSON.stringify(frostState[idx]));
+      }
+
+      // Store order metadata + items for display in the Saved tab
+      state.driverName = getDriverName(order.driver_id);
+      state.businessName = order.business_name || '';
+      state.pickupDate = order.pickup_date || '';
+      state.savedAt = new Date().toISOString();
+      state.items = (order.driver_order_items || []).map(function(it) {
+        return {
+          key: it.product_key,
+          label: it.product_label || it.product_key,
+          qty: it.quantity || 0,
+          cat: getCategory(it.product_key) || 'Other'
+        };
+      });
+      state.itemCount = state.items.reduce(function(s, i) { return s + i.qty; }, 0);
+
+      localStorage.setItem('cb-staff-ordercalc-' + order.id, JSON.stringify(state));
+      staffToast('Order saved!', 'success');
+    }
+
+    /* ── Render Saved Calculations List (per-order, expandable) ── */
+    function renderSavedCalcs() {
+      var container = document.getElementById('saved-calcs-list');
+      if (!container) return;
+
+      var entries = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key && key.startsWith('cb-staff-ordercalc-')) {
+          var orderId = key.replace('cb-staff-ordercalc-', '');
+          try {
+            var data = JSON.parse(localStorage.getItem(key));
+            entries.push({ orderId: orderId, key: key, data: data });
+          } catch(e) {}
+        }
+      }
+
+      if (entries.length === 0) {
+        container.innerHTML = '<div class="saved-empty">' +
+          '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;opacity:.4"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>' +
+          '<div data-en="No saved orders yet" data-es="A\u00fan no hay pedidos guardados">No saved orders yet</div>' +
+          '<div style="font-size:.78rem;margin-top:4px" data-en="Expand an order and click Save to keep your box calculations" data-es="Expanda un pedido y haga clic en Guardar para conservar sus c\u00e1lculos">Expand an order and click Save to keep your box calculations</div>' +
+          '</div>';
+        applyStaffLang();
+        return;
+      }
+
+      // Sort by savedAt descending
+      entries.sort(function(a, b) {
+        return (b.data.savedAt || '').localeCompare(a.data.savedAt || '');
+      });
+
+      // Group by pickup date
+      var groups = {};
+      var groupOrder = [];
+      entries.forEach(function(entry) {
+        var dateKey = entry.data.pickupDate || 'nodate';
+        if (!groups[dateKey]) { groups[dateKey] = []; groupOrder.push(dateKey); }
+        groups[dateKey].push(entry);
+      });
+
+      var html = '';
+      var cardIdx = 0;
+      groupOrder.forEach(function(dateKey) {
+        var dateLabel = dateKey;
+        if (dateKey !== 'nodate') {
+          try {
+            var parts = dateKey.split('-');
+            var dt = new Date(parts[0], parts[1] - 1, parts[2]);
+            var today = new Date(); today.setHours(0,0,0,0);
+            var diff = Math.round((today - dt) / 86400000);
+            if (diff === 0) dateLabel = 'Today';
+            else if (diff === 1) dateLabel = 'Yesterday';
+            else if (diff === -1) dateLabel = 'Tomorrow';
+            else dateLabel = dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          } catch(e) {}
+        } else {
+          dateLabel = 'No date';
+        }
+
+        html += '<div style="margin-bottom:20px">';
+        html += '<div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--tx-muted);margin-bottom:8px;padding-left:4px">' + _esc(dateLabel) + '</div>';
+
+        groups[dateKey].forEach(function(entry) {
+          var d = entry.data;
+          var calcCount = Object.keys(d.boxCalc || {}).length;
+          var hasFrost = d.frostState && Object.keys(d.frostState).length > 0;
+          var meta = (d.itemCount || 0) + ' pieces';
+          if (calcCount > 0) meta += ' \u00b7 ' + calcCount + ' calc' + (calcCount !== 1 ? 's' : '');
+          if (hasFrost) meta += ' + frost';
+
+          var savedTime = '';
+          if (d.savedAt) {
+            try {
+              var st = new Date(d.savedAt);
+              savedTime = 'Saved ' + st.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            } catch(e) {}
+          }
+
+          var ci = cardIdx++;
+
+          // Build expanded detail view with items + calculations
+          var detailHtml = '';
+          if (d.items && d.items.length > 0) {
+            var catGroups = {};
+            var catOrder = [];
+            var giCounter = 0;
+            d.items.forEach(function(item) {
+              if (!catGroups[item.cat]) { catGroups[item.cat] = []; catOrder.push(item.cat); }
+              if (/frosted|frostin/i.test(item.cat)) {
+                item._gi = -1;
+              } else {
+                item._gi = giCounter++;
+              }
+              catGroups[item.cat].push(item);
+            });
+
+            catOrder.forEach(function(cat) {
+              detailHtml += '<div style="margin-bottom:12px">';
+              detailHtml += '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--red);padding-bottom:4px;border-bottom:1px solid var(--bd);margin-bottom:6px">' + _esc(cat) + '</div>';
+
+              // Check if this is a frosted category
+              if (/frosted|frostin/i.test(cat) && d.frostState && d.frostState.boxes && d.frostState.boxes.length > 0) {
+                // Render frost box breakdown
+                var frostFlavors = d.frostState.flavors || [];
+                d.frostState.boxes.forEach(function(box) {
+                  var totalPcs = 0;
+                  frostFlavors.forEach(function(f) { totalPcs += (box.pieces[f.key] || 0); });
+                  var isFull = totalPcs === 56;
+
+                  detailHtml += '<div style="background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;margin-bottom:8px">';
+                  detailHtml += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+                  detailHtml += '<span style="font-weight:700;font-size:.82rem">Box ' + box.num + '</span>';
+                  detailHtml += '<span style="font-size:.78rem;font-weight:600;color:' + (isFull ? '#0a7a0a' : 'var(--tx-muted)') + '">' + totalPcs + '/56 pieces' + (isFull ? ' \u2713' : '') + '</span>';
+                  detailHtml += '</div>';
+
+                  frostFlavors.forEach(function(f) {
+                    var pcs = box.pieces[f.key] || 0;
+                    if (pcs === 0) return;
+                    var lines = Math.floor(pcs / 7);
+                    var extra = pcs % 7;
+                    var breakdown = '';
+                    if (lines > 0 && extra === 0) breakdown = lines + ' line' + (lines !== 1 ? 's' : '');
+                    else if (lines === 0) breakdown = extra + ' pcs';
+                    else breakdown = lines + ' line' + (lines !== 1 ? 's' : '') + ' + ' + extra + ' pcs';
+
+                    detailHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0">';
+                    detailHtml += '<span style="font-size:.8rem;color:var(--tx)">' + _esc(f.name) + '</span>';
+                    detailHtml += '<span style="font-size:.78rem;font-weight:600;color:var(--tx)">' + pcs + ' pcs <span style="color:var(--tx-muted);font-weight:400">(' + breakdown + ')</span></span>';
+                    detailHtml += '</div>';
+                  });
+                  detailHtml += '</div>';
+                });
+
+                // Also list any remaining/ordered totals
+                catGroups[cat].forEach(function(item) {
+                  var totalPacked = 0;
+                  d.frostState.boxes.forEach(function(box) {
+                    totalPacked += (box.pieces[item.key] || 0);
+                  });
+                  var remaining = item.qty - totalPacked;
+                  detailHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0">';
+                  detailHtml += '<span style="font-size:.78rem;color:var(--tx-muted)">' + _esc(item.label) + ': ordered ' + item.qty + '</span>';
+                  if (remaining === 0) {
+                    detailHtml += '<span style="font-size:.75rem;font-weight:600;color:#0a7a0a">\u2713 All packed</span>';
+                  } else if (remaining > 0) {
+                    detailHtml += '<span style="font-size:.75rem;font-weight:600;color:var(--red)">' + remaining + ' remaining</span>';
+                  }
+                  detailHtml += '</div>';
+                });
+
+              } else {
+                // Standard items with box calc
+                catGroups[cat].forEach(function(item) {
+                  var boxSize = 0;
+                  if (d.calcByItemIdx && typeof d.calcByItemIdx[item._gi] === 'number') {
+                    boxSize = d.calcByItemIdx[item._gi];
+                  }
+                  var calcVal = '';
+                  var calcDetail = '';
+                  if (boxSize > 0) {
+                    var boxes = Math.floor(item.qty / boxSize);
+                    var leftover = item.qty - (boxes * boxSize);
+                    calcVal = boxSize + ' pcs/box';
+                    calcDetail = boxes + ' box' + (boxes !== 1 ? 'es' : '');
+                    if (leftover > 0) calcDetail += ' + ' + leftover + ' left';
+                  }
+
+                  detailHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;gap:12px">';
+                  detailHtml += '<div style="display:flex;align-items:baseline;gap:6px;min-width:0;flex:1">';
+                  detailHtml += '<span style="font-weight:600;font-size:.82rem;color:var(--tx);white-space:nowrap">' + item.qty + '\u00d7</span>';
+                  detailHtml += '<span style="font-size:.82rem;color:var(--tx);overflow:hidden;text-overflow:ellipsis">' + _esc(item.label) + '</span>';
+                  detailHtml += '</div>';
+                  if (calcVal) {
+                    detailHtml += '<div style="text-align:right;flex-shrink:0">';
+                    detailHtml += '<div style="font-size:.78rem;font-weight:700;color:var(--tx)">' + calcDetail + '</div>';
+                    detailHtml += '<div style="font-size:.68rem;color:var(--tx-muted)">' + calcVal + '</div>';
+                    detailHtml += '</div>';
+                  } else {
+                    detailHtml += '<span style="font-size:.72rem;color:var(--tx-faint);font-style:italic">no calc</span>';
+                  }
+                  detailHtml += '</div>';
+                });
+              }
+              detailHtml += '</div>';
+            });
+          } else {
+            detailHtml = '<div style="font-size:.82rem;color:var(--tx-muted);padding:8px 0">Item details not available \u2014 re-save to include items.</div>';
+          }
+
+          html += '<div class="saved-date-card" style="cursor:pointer" onclick="toggleSavedDetail(' + ci + ')">' +
+            '<div class="saved-date-header">' +
+              '<div style="display:flex;align-items:center;gap:8px">' +
+                '<svg class="saved-chevron" id="saved-chev-' + ci + '" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .25s;flex-shrink:0;color:var(--tx-faint)"><polyline points="6 9 12 15 18 9"/></svg>' +
+                '<div>' +
+                  '<div class="saved-date-title">' + _esc(d.driverName || 'Unknown Driver') + '</div>' +
+                  (d.businessName ? '<div style="font-size:.78rem;color:var(--tx-muted)">' + _esc(d.businessName) + '</div>' : '') +
+                '</div>' +
+              '</div>' +
+              '<div style="text-align:right">' +
+                '<div class="saved-date-meta">' + meta + '</div>' +
+                (savedTime ? '<div style="font-size:.7rem;color:var(--tx-faint)">' + savedTime + '</div>' : '') +
+              '</div>' +
+            '</div>' +
+            '<div class="saved-detail" id="saved-detail-' + ci + '" style="display:none;padding-top:12px;margin-top:12px;border-top:1px solid var(--bd)">' +
+              detailHtml +
+            '</div>' +
+            '<div class="saved-date-actions" onclick="event.stopPropagation()">' +
+              '<button onclick="loadSavedOrder(\'' + _esc(entry.orderId) + '\',\'' + _esc(entry.key) + '\')" data-en="Load" data-es="Cargar">Load</button>' +
+              '<button class="danger" onclick="deleteSavedCalc(\'' + _esc(entry.key) + '\')" data-en="Delete" data-es="Eliminar">Delete</button>' +
+            '</div>' +
+          '</div>';
+        });
+
+        html += '</div>';
+      });
+
+      container.innerHTML = html;
+      applyStaffLang();
+    }
+
+    function toggleSavedDetail(ci) {
+      var detail = document.getElementById('saved-detail-' + ci);
+      var chev = document.getElementById('saved-chev-' + ci);
+      if (!detail) return;
+      var isOpen = detail.style.display !== 'none';
+      detail.style.display = isOpen ? 'none' : '';
+      if (chev) chev.style.transform = isOpen ? '' : 'rotate(180deg)';
+    }
+
+    /* ── In-app Toast Helper ── */
+    function staffToast(msg, type, duration) {
+      type = type || 'info';
+      duration = duration || 3000;
+      var existing = document.getElementById('staff-toast');
+      if (existing) existing.remove();
+      var toast = document.createElement('div');
+      toast.id = 'staff-toast';
+      toast.className = 'staff-toast ' + type;
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() { toast.classList.add('show'); });
+      });
+      setTimeout(function() {
+        toast.classList.remove('show');
+        setTimeout(function() { toast.remove(); }, 300);
+      }, duration);
+    }
+
+    function deleteSavedCalc(key) {
+      localStorage.removeItem(key);
+      staffToast('Saved order deleted', 'info');
+      renderSavedCalcs();
+    }
+
+    function loadSavedOrder(orderId, storageKey) {
+      // Find the order index in current staffOrders array
+      var foundIdx = -1;
+      for (var i = 0; i < staffOrders.length; i++) {
+        if (staffOrders[i].id === orderId) { foundIdx = i; break; }
+      }
+
+      if (foundIdx === -1) {
+        staffToast('Order not loaded. Filter to the correct date first.', 'error', 3000);
+        return;
+      }
+
+      // Switch to orders, expand the card, then restore state
+      staffShowSection('orders');
+      var card = document.getElementById('staff-order-' + foundIdx);
+      var items = document.getElementById('staff-items-' + foundIdx);
+      if (items && !items.classList.contains('expanded')) {
+        toggleStaffOrder(foundIdx);
+      }
+
+      // Restore saved data
+      var saved = localStorage.getItem(storageKey);
+      if (!saved) return;
+      try {
+        var state = JSON.parse(saved);
+        // Restore box calc inputs for this card
+        if (state.boxCalc) {
+          Object.keys(state.boxCalc).forEach(function(inputId) {
+            var inp = document.getElementById(inputId);
+            if (inp) {
+              inp.value = state.boxCalc[inputId];
+              calcBox(inp);
+            }
+          });
+        }
+        // Restore frost packer state for this order
+        if (state.frostState && typeof frostState !== 'undefined') {
+          frostState[foundIdx] = state.frostState;
+          frostRenderBoxes(foundIdx);
+        }
+        staffToast('Calculations restored for ' + (state.driverName || 'order'), 'success');
+      } catch(e) { console.warn('Failed to restore:', e); }
+
+      // Scroll to the card
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    /* ── Box Calculator Auto-Persistence (still works per-order) ── */
+    function saveBoxCalcState() {
+      // Auto-save: save all orders that have calc inputs with values
+      if (!staffOrders || !staffOrders.length) return;
+      staffOrders.forEach(function(order, idx) {
+        var card = document.getElementById('staff-order-' + idx);
+        if (!card) return;
+        var inputs = card.querySelectorAll('.box-calc-input');
+        var hasValues = false;
+        var boxCalc = {};
+        inputs.forEach(function(inp) {
+          if (inp.value && inp.id) { boxCalc[inp.id] = inp.value; hasValues = true; }
+        });
+        if (!hasValues) return;
+        var state = {
+          boxCalc: boxCalc,
+          frostState: (typeof frostState !== 'undefined' && frostState[idx]) ? JSON.parse(JSON.stringify(frostState[idx])) : null,
+          driverName: getDriverName(order.driver_id),
+          businessName: order.business_name || '',
+          pickupDate: order.pickup_date || '',
+          savedAt: new Date().toISOString(),
+          itemCount: (order.driver_order_items || []).reduce(function(s, i) { return s + (i.quantity || 0); }, 0)
+        };
+        localStorage.setItem('cb-staff-ordercalc-' + order.id, JSON.stringify(state));
+      });
+    }
+
+    function loadBoxCalcState() {
+      // Auto-load: restore calc inputs for each order if saved
+      if (!staffOrders || !staffOrders.length) return;
+      staffOrders.forEach(function(order, idx) {
+        var saved = localStorage.getItem('cb-staff-ordercalc-' + order.id);
+        if (!saved) return;
+        try {
+          var state = JSON.parse(saved);
+          if (state.boxCalc) {
+            Object.keys(state.boxCalc).forEach(function(inputId) {
+              var inp = document.getElementById(inputId);
+              if (inp) {
+                inp.value = state.boxCalc[inputId];
+                calcBox(inp);
+              }
+            });
+          }
+          if (state.frostState && typeof frostState !== 'undefined') {
+            frostState[idx] = state.frostState;
+            frostRenderBoxes(idx);
+          }
+        } catch(e) { console.warn('Failed to restore box calc for order:', e); }
+      });
+    }
+
+    function cleanOldBoxCalcState() {
+      var cutoff = Date.now() - (7 * 24 * 60 * 60 * 1000);
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var key = localStorage.key(i);
+        if (key && (key.startsWith('cb-staff-ordercalc-') || key.startsWith('cb-staff-boxcalc-'))) {
+          try {
+            var data = JSON.parse(localStorage.getItem(key));
+            if (data.savedAt && new Date(data.savedAt).getTime() < cutoff) {
+              localStorage.removeItem(key);
+            }
+          } catch(e) {
+            // Old format — clean up
+            if (key.startsWith('cb-staff-boxcalc-')) localStorage.removeItem(key);
+          }
+        }
+      }
+    }
+    cleanOldBoxCalcState();
 
     /* ── Escape helper for XSS prevention ── */
     function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -1053,6 +1735,7 @@
     let cachedOrders = [];
     let cachedDrivers = {};
     let currentUser = null;
+    var staffOrders = [];
 
     function populateUserInfo(user) {
       const firstName = user.firstName || user.username || 'Staff';
@@ -1112,6 +1795,9 @@
         });
       });
     })();
+
+    // Fixed category display order — categories always appear in this sequence
+    const CAT_ORDER = ['Tres Leche', 'Pieces', 'Frosted Pieces', 'Plain', 'Round', 'Happy Birthday — BIG', 'Happy Birthday — SMALL', 'Square', 'Cups', 'Family Size', 'Other'];
 
     function getCategory(productKey) {
       return PRODUCT_CAT[productKey] || '';
@@ -1186,6 +1872,7 @@
     /* ── Render order cards with inline box calculator ── */
     function renderOrders(orders) {
       const container = document.getElementById('orders-list');
+      staffOrders = orders;
 
       // Group orders by pickup_date
       const dateGroups = {};
@@ -1231,7 +1918,9 @@
           const driverName = _esc(getDriverName(order.driver_id));
           const bizName = _esc(order.business_name || 'No business name');
           const status = order.status || 'pending';
-          const items = order.driver_order_items || [];
+          const items = (order.driver_order_items || []).slice().sort(function(a, b) {
+            return (a.id || '').localeCompare(b.id || '');
+          });
 
           // Build items summary grouped by category
           let itemsSummary = '';
@@ -1245,9 +1934,18 @@
               grouped[cat].push(it);
               itemCount += it.quantity || 0;
             });
-            itemsSummary = catOrder.map(cat => {
+            // Sort categories by fixed order
+            const sortedCats = Object.keys(grouped).sort(function(a, b) {
+              var ai = CAT_ORDER.indexOf(a); if (ai === -1) ai = 999;
+              var bi = CAT_ORDER.indexOf(b); if (bi === -1) bi = 999;
+              return ai - bi;
+            });
+            itemsSummary = sortedCats.map(cat => {
               const lines = grouped[cat].map(it =>
-                `<span class="order-items-line">${it.quantity}× ${_esc(it.product_label || it.product_key)}</span>`
+                `<span class="order-items-line" data-item-id="${it.id || ''}" data-product-key="${it.product_key}">
+                  <span class="item-qty-display">${it.quantity}×</span>
+                  <input type="number" class="item-qty-edit" value="${it.quantity}" min="0" data-original="${it.quantity}" style="display:none;width:50px;padding:2px 4px;border-radius:4px;border:1px solid var(--bd);text-align:center;font-size:.85rem">
+                  ${_esc(it.product_label || it.product_key)}</span>`
               ).join('');
               return `<span class="order-items-cat">${_esc(cat)}</span>${lines}`;
             }).join('');
@@ -1284,7 +1982,12 @@
               bcGrouped[cat].push(item);
             });
             let globalIdx = 0;
-            boxCalcItems = bcCatOrder.map(cat => {
+            const bcSortedCats = Object.keys(bcGrouped).sort(function(a, b) {
+              var ai = CAT_ORDER.indexOf(a); if (ai === -1) ai = 999;
+              var bi = CAT_ORDER.indexOf(b); if (bi === -1) bi = 999;
+              return ai - bi;
+            });
+            boxCalcItems = bcSortedCats.map(cat => {
               // Check if this category is frosted pieces
               var isFrosted = /frosted|frostin/i.test(cat);
               if (isFrosted) {
@@ -1354,6 +2057,7 @@
                 <div style="display:flex;align-items:center;gap:8px">
                   <span style="font-size:.82rem;color:var(--tx-faint);font-weight:500">${itemCount} items${timeStr ? ' · ' + timeStr : ''}</span>
                   <span class="order-status-badge ${status}">${statusLabels[status] || status}</span>
+                  <button class="staff-edit-toggle" onclick="event.stopPropagation();staffToggleEdit(${oi})" style="padding:3px 10px;background:none;border:1px solid var(--bd);border-radius:6px;font-size:.72rem;cursor:pointer;color:var(--tx-muted);font-weight:600" data-en="Edit" data-es="Editar">Edit</button>
                   <svg class="order-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .25s;color:var(--tx-faint);flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
               </div>
@@ -1364,6 +2068,15 @@
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                   ${_esc(order.notes)}
                 </span>` : ''}
+              </div>
+              <div class="order-edit-bar" id="staff-edit-bar-${oi}" style="display:none;padding:12px 0;border-top:1px solid var(--bd)">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                  <button class="staff-edit-btn" onclick="staffAddProducts(${oi})" style="padding:6px 14px;background:none;border:1px solid var(--bd);border-radius:8px;font-size:.82rem;cursor:pointer;color:var(--tx)" data-en="+ Add Products" data-es="+ Agregar Productos">+ Add Products</button>
+                  <div style="display:flex;gap:8px">
+                    <button onclick="staffCancelEdit(${oi})" style="padding:6px 14px;background:none;border:1px solid var(--bd);border-radius:8px;font-size:.82rem;cursor:pointer;color:var(--tx-muted)" data-en="Cancel" data-es="Cancelar">Cancel</button>
+                    <button class="staff-update-btn" onclick="staffUpdateOrder(${oi})" style="padding:6px 14px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer" data-en="Update Order" data-es="Actualizar Pedido">Update Order</button>
+                  </div>
+                </div>
               </div>
               ${items.length > 0 ? `
               <div class="box-calc-section" id="staff-boxcalc-${oi}" style="display:none">
@@ -1377,6 +2090,12 @@
                   ${frostPackerHtml}
                 </div>
               </div>` : ''}
+              <div class="order-save-bar" id="staff-save-bar-${oi}" style="display:none;padding:12px 0;text-align:center;border-top:1px solid var(--bd)">
+                <button onclick="staffSaveOrder(${oi})" style="padding:8px 22px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                  <span data-en="Save" data-es="Guardar">Save</span>
+                </button>
+              </div>
             </div>`;
         });
       });
@@ -1409,6 +2128,7 @@
 
       const qcCard = document.getElementById('quick-calc-card');
       if (qcCard) qcCard.style.display = '';
+      setTimeout(loadBoxCalcState, 200);
     }
 
     function toggleStaffOrder(idx) {
@@ -1417,12 +2137,14 @@
       const boxcalc = document.getElementById('staff-boxcalc-' + idx);
       const hint = document.getElementById('staff-hint-' + idx);
       const card = document.getElementById('staff-order-' + idx);
+      const saveBar = document.getElementById('staff-save-bar-' + idx);
       const chevron = card ? card.querySelector('.order-chevron') : null;
       const isExpanded = items && items.classList.contains('expanded');
 
       if (items) items.classList.toggle('expanded');
       if (meta) meta.style.display = isExpanded ? 'none' : 'flex';
       if (boxcalc) boxcalc.style.display = isExpanded ? 'none' : '';
+      if (saveBar) saveBar.style.display = isExpanded ? 'none' : '';
       if (hint) hint.classList.toggle('hidden');
       if (chevron) chevron.style.transform = isExpanded ? '' : 'rotate(180deg)';
     }
@@ -1464,6 +2186,7 @@
           <span class="result-tag">${boxes} box${boxes !== 1 ? 'es' : ''}</span>
           <span class="result-tag">${leftover} leftover</span>`;
       }
+      saveBoxCalcState();
     }
 
     /* ── Quick Calculator ── */
@@ -1648,6 +2371,7 @@
       }
 
       frostRenderBoxes(orderIndex);
+      saveBoxCalcState();
     }
 
     function frostUpdateRemaining(orderIndex) {
@@ -1704,6 +2428,307 @@
         showState('signin');
       }
     });
+
+    /* ════════════════════════════════════════
+       STAFF ORDER EDIT MODE
+       ════════════════════════════════════════ */
+    var staffEditMode = {};
+    var staffOriginalItems = {};
+
+    function staffToggleEdit(idx) {
+      var card = document.getElementById('staff-order-' + idx);
+      if (!card) return;
+
+      // Expand the card first if not expanded
+      var items = document.getElementById('staff-items-' + idx);
+      if (items && !items.classList.contains('expanded')) {
+        toggleStaffOrder(idx);
+      }
+
+      var isEditing = staffEditMode[idx];
+      if (isEditing) {
+        staffCancelEdit(idx);
+        return;
+      }
+
+      staffEditMode[idx] = true;
+
+      // Save original quantities for cancel
+      staffOriginalItems[idx] = {};
+      card.querySelectorAll('.item-qty-edit').forEach(function(inp) {
+        staffOriginalItems[idx][inp.closest('.order-items-line').dataset.itemId] = parseInt(inp.value) || 0;
+      });
+
+      // Show edit inputs, hide display text
+      card.querySelectorAll('.item-qty-display').forEach(function(el) { el.style.display = 'none'; });
+      card.querySelectorAll('.item-qty-edit').forEach(function(el) { el.style.display = 'inline-block'; });
+
+      // Show edit bar
+      var editBar = document.getElementById('staff-edit-bar-' + idx);
+      if (editBar) editBar.style.display = 'block';
+
+      // Change edit button text
+      var editBtn = card.querySelector('.staff-edit-toggle');
+      if (editBtn) { editBtn.textContent = 'Cancel'; editBtn.style.borderColor = 'var(--red)'; editBtn.style.color = 'var(--red)'; }
+    }
+
+    function staffCancelEdit(idx) {
+      var card = document.getElementById('staff-order-' + idx);
+      if (!card) return;
+
+      staffEditMode[idx] = false;
+
+      // Restore original quantities
+      if (staffOriginalItems[idx]) {
+        card.querySelectorAll('.item-qty-edit').forEach(function(inp) {
+          var itemId = inp.closest('.order-items-line').dataset.itemId;
+          if (staffOriginalItems[idx][itemId] !== undefined) {
+            inp.value = staffOriginalItems[idx][itemId];
+          }
+        });
+      }
+
+      // Hide edit inputs, show display text
+      card.querySelectorAll('.item-qty-display').forEach(function(el) { el.style.display = ''; });
+      card.querySelectorAll('.item-qty-edit').forEach(function(el) { el.style.display = 'none'; });
+
+      // Remove any added product rows
+      card.querySelectorAll('.staff-added-item').forEach(function(el) { el.remove(); });
+
+      // Hide edit bar
+      var editBar = document.getElementById('staff-edit-bar-' + idx);
+      if (editBar) editBar.style.display = 'none';
+
+      // Reset edit button
+      var editBtn = card.querySelector('.staff-edit-toggle');
+      if (editBtn) { editBtn.textContent = 'Edit'; editBtn.style.borderColor = ''; editBtn.style.color = ''; }
+    }
+
+    /* ── Product Key → Label Map (for Add Products modal) ── */
+    var STAFF_PRODUCT_LABELS = {
+      pina:'Piña', guava:'Guava', dulce:'Dulce de Leche',
+      plain:'Plain', raisin:'Raisin', pudin:'Pudín',
+      tl:'Tres Leche', tl_hershey:'TL Hershey', cuatro_leche:'Cuatro Leche', tl_straw:'TL Strawberry', tl_pina:'TL Piña',
+      pz_rv:'Red Velvet', pz_carrot:'Carrot', pz_cheese:'Cheese', pz_pudin:'Pudín', pz_pina:'Piña', pz_guava:'Guava', pz_chocoflan:'Chocoflan', pz_flan:'Flan',
+      fr_guava:'Guava', fr_pina:'Piña', fr_dulce:'Dulce de Leche', fr_choco:'Chocolate',
+      hb_b_pina:'Piña', hb_b_guava:'Guava', hb_b_dulce:'Dulce de Leche', hb_b_choco:'Chocolate', hb_b_straw:'Strawberry',
+      hb_s_pina:'Piña', hb_s_guava:'Guava', hb_s_dulce:'Dulce de Leche', hb_s_choco:'Chocolate', hb_s_straw:'Strawberry',
+      cdr_pudin:'Pudín', cdr_pound:'Pound', cdr_raisin:'Raisin', cdr_maiz:'Maíz',
+      bas_tl:'Tres Leche', bas_cl:'Cuatro Leche', bas_hershey:'Hershey',
+      fam_tl:'Tres Leche', fam_cl:'Cuatro Leche'
+    };
+
+    function staffAddProducts(idx) {
+      var overlay = document.getElementById('staff-add-overlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'staff-add-overlay';
+        document.body.appendChild(overlay);
+      }
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px';
+
+      var html = '<div style="background:var(--bg-card);border-radius:16px;padding:24px;max-width:440px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+      html += '<h3 style="margin:0;font-size:1rem;font-weight:700">Add Products</h3>';
+      html += '<button onclick="document.getElementById(\'staff-add-overlay\').remove()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--tx-muted)">✕</button></div>';
+
+      html += '<input type="text" id="staff-add-search" placeholder="Search..." oninput="staffFilterAddProducts()" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.85rem;margin-bottom:12px;box-sizing:border-box">';
+
+      var cats = {
+        redondo:  { label:'Round',   keys:['pina','guava','dulce'] },
+        plain:    { label:'Plain',   keys:['plain','raisin','pudin'] },
+        tresleche:{ label:'Tres Leche', keys:['tl','tl_hershey','cuatro_leche','tl_straw','tl_pina'] },
+        piezas:   { label:'Pieces',  keys:['pz_rv','pz_carrot','pz_cheese','pz_pudin','pz_pina','pz_guava','pz_chocoflan','pz_flan'] },
+        frostin:  { label:'Frosted Pieces', keys:['fr_guava','fr_pina','fr_dulce','fr_choco'] },
+        hb_big:   { label:'HB — BIG', keys:['hb_b_pina','hb_b_guava','hb_b_dulce','hb_b_choco','hb_b_straw'] },
+        hb_small: { label:'HB — SMALL', keys:['hb_s_pina','hb_s_guava','hb_s_dulce','hb_s_choco','hb_s_straw'] },
+        cuadrao:  { label:'Square',  keys:['cdr_pudin','cdr_pound','cdr_raisin','cdr_maiz'] },
+        basos:    { label:'Cups',    keys:['bas_tl','bas_cl','bas_hershey'] },
+        familiar: { label:'Family Size', keys:['fam_tl','fam_cl'] }
+      };
+
+      Object.keys(cats).forEach(function(catKey) {
+        var cat = cats[catKey];
+        html += '<div class="staff-add-cat" style="margin-bottom:8px">';
+        html += '<div style="font-size:.72rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;padding:4px 0;border-bottom:1px solid rgba(200,16,46,.15)">' + cat.label + '</div>';
+        cat.keys.forEach(function(key) {
+          var label = STAFF_PRODUCT_LABELS[key] || key;
+          html += '<div class="staff-add-row" data-key="' + key + '" data-name="' + _esc(label.toLowerCase()) + '" style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)">';
+          html += '<span style="font-size:.85rem">' + _esc(label) + '</span>';
+          html += '<input type="number" class="staff-add-qty" data-key="' + key + '" data-label="' + _esc(label) + '" min="0" value="0" style="width:55px;padding:4px 6px;border-radius:6px;border:1px solid var(--bd);text-align:center;font-size:.85rem">';
+          html += '</div>';
+        });
+        html += '</div>';
+      });
+
+      html += '<button onclick="staffConfirmAdd(' + idx + ')" style="width:100%;padding:12px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:.9rem;font-weight:700;cursor:pointer;margin-top:12px">Add Selected</button>';
+      html += '</div>';
+
+      overlay.innerHTML = html;
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    }
+
+    function staffFilterAddProducts() {
+      var q = document.getElementById('staff-add-search').value.toLowerCase().trim();
+      document.querySelectorAll('.staff-add-row').forEach(function(row) {
+        var match = !q || (row.dataset.name || '').indexOf(q) >= 0;
+        row.style.display = match ? 'flex' : 'none';
+      });
+      document.querySelectorAll('.staff-add-cat').forEach(function(cat) {
+        var hasVisible = false;
+        cat.querySelectorAll('.staff-add-row').forEach(function(row) {
+          if (row.style.display !== 'none') hasVisible = true;
+        });
+        cat.style.display = hasVisible ? 'block' : 'none';
+      });
+    }
+
+    function staffConfirmAdd(idx) {
+      var inputs = document.querySelectorAll('.staff-add-qty');
+      var card = document.getElementById('staff-order-' + idx);
+      var itemsSummary = document.getElementById('staff-items-' + idx);
+      if (!card || !itemsSummary) return;
+
+      inputs.forEach(function(inp) {
+        var qty = parseInt(inp.value) || 0;
+        if (qty <= 0) return;
+        var key = inp.dataset.key;
+        var label = inp.dataset.label;
+
+        // Check if product already exists in the order
+        var existing = itemsSummary.querySelector('.order-items-line[data-product-key="' + key + '"] .item-qty-edit');
+        if (existing) {
+          existing.value = parseInt(existing.value) + qty;
+          return;
+        }
+
+        // Add new item row to the appropriate category
+        var cat = getCategory(key) || 'Other';
+        var catEl = null;
+        itemsSummary.querySelectorAll('.order-items-cat').forEach(function(c) {
+          if (c.textContent.trim() === cat) catEl = c;
+        });
+
+        var newLine = document.createElement('span');
+        newLine.className = 'order-items-line staff-added-item';
+        newLine.dataset.productKey = key;
+        newLine.dataset.itemId = 'new_' + key;
+        newLine.innerHTML = '<span class="item-qty-display" style="display:none">' + qty + '×</span>' +
+          '<input type="number" class="item-qty-edit" value="' + qty + '" min="0" data-original="0" style="display:inline-block;width:50px;padding:2px 4px;border-radius:4px;border:1px solid var(--bd);text-align:center;font-size:.85rem"> ' +
+          _esc(label) + ' <span style="font-size:.68rem;color:#0a7a0a;font-weight:600">NEW</span>';
+
+        if (catEl) {
+          var sibling = catEl.nextElementSibling;
+          while (sibling && sibling.classList.contains('order-items-line')) {
+            sibling = sibling.nextElementSibling;
+          }
+          itemsSummary.insertBefore(newLine, sibling);
+        } else {
+          var newCat = document.createElement('span');
+          newCat.className = 'order-items-cat';
+          newCat.textContent = cat;
+          itemsSummary.appendChild(newCat);
+          itemsSummary.appendChild(newLine);
+        }
+      });
+
+      document.getElementById('staff-add-overlay').remove();
+    }
+
+    async function staffUpdateOrder(idx) {
+      var order = staffOrders[idx];
+      if (!order) { staffToast('Order not found', 'error'); return; }
+      var card = document.getElementById('staff-order-' + idx);
+      if (!card) return;
+
+      var sb = await getSupabaseClient();
+      if (!sb) { staffToast('Connection error. Please try again.', 'error'); return; }
+
+      // Collect all items (original + new + modified)
+      var updates = [];
+      var inserts = [];
+      var deletes = [];
+
+      card.querySelectorAll('.order-items-line').forEach(function(line) {
+        var itemId = line.dataset.itemId;
+        var productKey = line.dataset.productKey;
+        var qtyInput = line.querySelector('.item-qty-edit');
+        if (!qtyInput) return;
+        var newQty = parseInt(qtyInput.value) || 0;
+        var originalQty = parseInt(qtyInput.dataset.original) || 0;
+
+        if (itemId && itemId.startsWith('new_')) {
+          // New item added by staff
+          if (newQty > 0) {
+            var labelText = line.textContent.replace(/NEW$/, '').trim();
+            labelText = labelText.replace(/^\d+×\s*/, '').trim();
+            inserts.push({
+              order_id: order.id,
+              product_key: productKey,
+              product_label: labelText,
+              quantity: newQty,
+              price_at_order: 0
+            });
+          }
+        } else if (itemId) {
+          if (newQty === 0) {
+            deletes.push(itemId);
+          } else if (newQty !== originalQty) {
+            updates.push({ id: itemId, quantity: newQty });
+          }
+        }
+      });
+
+      if (!updates.length && !inserts.length && !deletes.length) {
+        staffCancelEdit(idx);
+        staffToast('No changes to save', 'info');
+        return;
+      }
+
+      // Show loading state
+      var updateBtn = card.querySelector('.staff-update-btn');
+      if (updateBtn) { updateBtn.textContent = 'Updating...'; updateBtn.disabled = true; }
+
+      var errors = [];
+
+      try {
+        // Process deletes
+        for (var d = 0; d < deletes.length; d++) {
+          var delResult = await sb.from('driver_order_items').delete().eq('id', deletes[d]);
+          if (delResult.error) { console.error('Delete failed:', delResult.error); errors.push('delete'); }
+        }
+
+        // Process updates
+        for (var u = 0; u < updates.length; u++) {
+          var updResult = await sb.from('driver_order_items').update({ quantity: updates[u].quantity }).eq('id', updates[u].id);
+          if (updResult.error) { console.error('Update failed:', updResult.error); errors.push('update'); }
+        }
+
+        // Process inserts
+        if (inserts.length) {
+          var insResult = await sb.from('driver_order_items').insert(inserts);
+          if (insResult.error) { console.error('Insert failed:', insResult.error); errors.push('insert'); }
+        }
+
+        // Update the order's updated_at timestamp
+        await sb.from('driver_orders').update({ updated_at: new Date().toISOString() }).eq('id', order.id);
+
+        if (errors.length) {
+          staffToast(errors.length + ' change(s) failed to save. Check console for details.', 'error', 4000);
+        } else {
+          staffToast('Order updated successfully!', 'success');
+        }
+      } catch (err) {
+        console.error('staffUpdateOrder error:', err);
+        staffToast('Failed to save changes. Please try again.', 'error', 4000);
+      }
+
+      // Reset edit mode and reload
+      staffEditMode[idx] = false;
+      if (updateBtn) { updateBtn.textContent = 'Update Order'; updateBtn.disabled = false; }
+      await loadOrders();
+      applyStaffLang();
+    }
 
     /* ════════════════════════════════════════
        CLERK INIT
@@ -1771,6 +2796,10 @@
             // Load data
             await loadDriversCache();
             await loadOrders();
+            applyStaffLang();
+            // Restore last active section
+            var lastSection = localStorage.getItem('cb-staff-section') || 'orders';
+            staffShowSection(lastSection);
           }
         } else {
           console.warn('Clerk not available');
