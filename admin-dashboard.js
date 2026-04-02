@@ -1378,12 +1378,9 @@ function renderOrderCards(orders, containerId, showLive = false) {
     html += `<div class="live-indicator"><span class="live-dot"></span>${lang === 'es' ? 'EN VIVO' : 'LIVE'}</div>`;
   }
 
-  // Helper: get date key (YYYY-MM-DD) from order
-  // Prefers pickup_date (driver-selected delivery date, already YYYY-MM-DD),
-  // falls back to submitted_at (UTC timestamp → extract local date).
+  // Helper: get date key (YYYY-MM-DD) from submitted_at (when the order was placed).
+  // submitted_at is a UTC ISO timestamp — new Date() converts it to local time automatically.
   function getDateKey(order) {
-    // pickup_date is already a YYYY-MM-DD string — use directly (no Date parsing to avoid UTC shift)
-    if (order.pickup_date) return order.pickup_date;
     if (!order.submitted_at) return '';
     const d = new Date(order.submitted_at);
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
