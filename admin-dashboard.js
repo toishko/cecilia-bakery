@@ -1378,10 +1378,14 @@ function renderOrderCards(orders, containerId, showLive = false) {
     html += `<div class="live-indicator"><span class="live-dot"></span>${lang === 'es' ? 'EN VIVO' : 'LIVE'}</div>`;
   }
 
-  // Helper: get date key (YYYY-MM-DD) from submitted_at
-  function getDateKey(dateStr) {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
+  // Helper: get date key (YYYY-MM-DD) from order
+  // Prefers pickup_date (driver-selected delivery date, already YYYY-MM-DD),
+  // falls back to submitted_at (UTC timestamp → extract local date).
+  function getDateKey(order) {
+    // pickup_date is already a YYYY-MM-DD string — use directly (no Date parsing to avoid UTC shift)
+    if (order.pickup_date) return order.pickup_date;
+    if (!order.submitted_at) return '';
+    const d = new Date(order.submitted_at);
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
 
@@ -1411,7 +1415,7 @@ function renderOrderCards(orders, containerId, showLive = false) {
 
   orders.forEach(order => {
     // Insert date separator when the date changes
-    const dateKey = getDateKey(order.submitted_at);
+    const dateKey = getDateKey(order);
     if (dateKey !== lastDateKey) {
       const dateLabel = getDateLabel(dateKey);
       html += `<div class="date-separator">
@@ -2959,7 +2963,11 @@ function formatCurrency(amount) {
 
 function formatDate(dateStr) {
   if (!dateStr) return '—';
-  const d = new Date(dateStr);
+  // Date-only strings (YYYY-MM-DD) are parsed as UTC midnight by JS,
+  // which shifts back a day in timezones west of UTC. Append T12:00:00
+  // to force local-time interpretation.
+  const safe = dateStr.length === 10 ? dateStr + 'T12:00:00' : dateStr;
+  const d = new Date(safe);
   const months = lang === 'es'
     ? ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
     : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
