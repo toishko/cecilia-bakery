@@ -701,6 +701,35 @@
       background: rgba(217, 119, 6, .1);
     }
 
+    /* ── Frosted Box Packer ── */
+    .frost-packer { margin-top:16px; padding-top:16px; border-top:2px solid rgba(200,16,46,.15); }
+    .frost-packer-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+    .frost-packer-summary { font-size:.78rem; color:var(--tx-faint); }
+    .frost-remaining { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+    .frost-flavor-row { display:flex; align-items:center; gap:8px; padding:6px 10px; background:var(--bg-surface); border-radius:8px; font-size:.82rem; }
+    .frost-flavor-name { font-weight:600; color:var(--tx); }
+    .frost-flavor-ordered { color:var(--tx-faint); font-size:.75rem; }
+    .frost-flavor-left { font-weight:600; font-size:.78rem; }
+    .frost-box { background:var(--bg-card); border:1px solid var(--bd); border-radius:10px; padding:14px; margin-bottom:10px; }
+    .frost-box-full { border-color:#0a7a0a; background:rgba(0,160,0,.02); }
+    .frost-box-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+    .frost-box-title { font-weight:700; font-size:.88rem; }
+    .frost-box-lines-used { font-size:.78rem; font-weight:600; }
+    .frost-box-visual { display:flex; gap:3px; margin-bottom:12px; height:28px; border-radius:6px; overflow:hidden; background:var(--bg-surface); }
+    .frost-line-slot { flex:1; border-radius:3px; transition:background .2s; }
+    .frost-line-empty { background:var(--bg-surface); border:1px dashed var(--bd); }
+    .frost-line-slot.frost-line-partial { opacity:0.4; position:relative; }
+    .frost-box-flavor-row { display:flex; align-items:center; gap:8px; padding:4px 0; }
+    .frost-box-flavor-name { flex:1; font-size:.82rem; font-weight:500; color:var(--tx); }
+    .frost-line-input { width:58px; padding:4px 6px; border-radius:6px; border:1px solid var(--bd); text-align:center; font-size:.85rem; background:var(--bg-input); color:var(--tx); font-family:'Outfit',sans-serif; -moz-appearance:textfield; appearance:textfield; }
+    .frost-line-input:focus { border-color:var(--red); outline:none; }
+    .frost-line-input::-webkit-outer-spin-button,
+    .frost-line-input::-webkit-inner-spin-button { -webkit-appearance:none; appearance:none; margin:0; }
+    .frost-box-flavor-calc { font-size:.78rem; color:var(--tx-faint); min-width:80px; text-align:right; }
+    .frost-box-total { text-align:center; font-weight:700; font-size:.85rem; margin-top:8px; padding-top:8px; border-top:1px solid var(--bd); }
+    .frost-add-box-btn { width:100%; padding:10px; background:none; border:1px dashed var(--bd); border-radius:8px; cursor:pointer; font-size:.85rem; color:var(--tx-muted); font-weight:600; transition:all .2s; }
+    .frost-add-box-btn:hover { border-color:var(--red); color:var(--red); }
+
     /* ── Quick Calculator Card ── */
     .quick-calc-card {
       margin-top: 32px;
@@ -1245,6 +1274,7 @@
 
           // Build inline box calculator items
           let boxCalcItems = '';
+          var frostedItems_oi = []; // collect frosted items for this order
           if (items.length > 0) {
             const bcGrouped = {};
             const bcCatOrder = [];
@@ -1255,6 +1285,19 @@
             });
             let globalIdx = 0;
             boxCalcItems = bcCatOrder.map(cat => {
+              // Check if this category is frosted pieces
+              var isFrosted = /frosted|frostin/i.test(cat);
+              if (isFrosted) {
+                // Collect frosted items instead of rendering standard calc
+                bcGrouped[cat].forEach(item => {
+                  frostedItems_oi.push({
+                    key: item.product_key,
+                    name: item.product_label || item.product_key,
+                    qty: item.quantity || 0
+                  });
+                });
+                return ''; // skip standard rendering for frosted
+              }
               let catHtml = `<div class="box-calc-cat-header">${_esc(cat)}</div>`;
               catHtml += bcGrouped[cat].map(item => {
                 const label = _esc(item.product_label || item.product_key);
@@ -1277,6 +1320,28 @@
               }).join('');
               return catHtml;
             }).join('');
+          }
+
+          // Build frosted box packer HTML if this order has frosted items
+          var frostPackerHtml = '';
+          if (frostedItems_oi.length > 0) {
+            var frostRemainingHtml = frostedItems_oi.map(function(f) {
+              return '<div class="frost-flavor-row">' +
+                '<span class="frost-flavor-name">' + _esc(f.name) + '</span>' +
+                '<span class="frost-flavor-ordered">Ordered: ' + f.qty + '</span>' +
+                '<span class="frost-flavor-left" id="frost-left-' + oi + '-' + f.key + '">Left: ' + f.qty + '</span>' +
+              '</div>';
+            }).join('');
+
+            frostPackerHtml = '<div class="frost-packer" id="frost-packer-' + oi + '">' +
+              '<div class="frost-packer-header">' +
+                '<span class="box-calc-cat-header" style="border-bottom:none;margin:0;padding:0">🧊 Frosted Box Packer</span>' +
+                '<span class="frost-packer-summary" id="frost-summary-' + oi + '">0 pieces across 0 boxes</span>' +
+              '</div>' +
+              '<div class="frost-remaining" id="frost-remaining-' + oi + '">' + frostRemainingHtml + '</div>' +
+              '<div class="frost-boxes" id="frost-boxes-' + oi + '"></div>' +
+              '<button class="frost-add-box-btn" onclick="frostAddBox(' + oi + ')">+ Add Box</button>' +
+            '</div>';
           }
 
           html += `
@@ -1309,6 +1374,7 @@
                 </button>
                 <div class="box-calc-body">
                   ${boxCalcItems}
+                  ${frostPackerHtml}
                 </div>
               </div>` : ''}
             </div>`;
@@ -1316,6 +1382,30 @@
       });
 
       container.innerHTML = html || '<div class="empty-state">No orders found</div>';
+
+      // Initialize frost packers for orders that have frosted items
+      // We need to re-detect frosted items per order and call frostInit
+      globalOi = 0;
+      dateOrder.forEach(function(dateKey) {
+        dateGroups[dateKey].forEach(function(order) {
+          var oi2 = globalOi++;
+          var orderItems = order.driver_order_items || [];
+          var frosted = [];
+          orderItems.forEach(function(item) {
+            var cat = getCategory(item.product_key) || 'Other';
+            if (/frosted|frostin/i.test(cat)) {
+              frosted.push({
+                key: item.product_key,
+                name: item.product_label || item.product_key,
+                qty: item.quantity || 0
+              });
+            }
+          });
+          if (frosted.length > 0) {
+            frostInit(oi2, frosted);
+          }
+        });
+      });
 
       const qcCard = document.getElementById('quick-calc-card');
       if (qcCard) qcCard.style.display = '';
@@ -1406,6 +1496,185 @@
         resultEl.innerHTML = `
           <span class="qc-tag">📦 ${boxes} box${boxes !== 1 ? 'es' : ''}</span>
           <span class="qc-tag">${leftover} leftover</span>`;
+      }
+    }
+
+    /* ════════════════════════════════════════
+       FROSTED BOX PACKER LOGIC
+       ════════════════════════════════════════ */
+    var frostState = {};
+
+    var FROST_COLORS = {
+      'fr_guava': '#e74c3c',
+      'fr_pina': '#f39c12',
+      'fr_dulce': '#8e6f47',
+      'fr_choco': '#5c3317'
+    };
+
+    function frostInit(orderIndex, items) {
+      frostState[orderIndex] = {
+        flavors: items,
+        boxes: []
+      };
+      frostAddBox(orderIndex);
+    }
+
+    function frostAddBox(orderIndex) {
+      var state = frostState[orderIndex];
+      if (!state) return;
+      var boxNum = state.boxes.length + 1;
+      var pieces = {};
+      state.flavors.forEach(function(f) { pieces[f.key] = 0; });
+      state.boxes.push({ num: boxNum, pieces: pieces });
+      frostRenderBoxes(orderIndex);
+    }
+
+    function frostRemoveBox(orderIndex, boxNum) {
+      var state = frostState[orderIndex];
+      if (!state) return;
+      state.boxes = state.boxes.filter(function(b) { return b.num !== boxNum; });
+      frostRenderBoxes(orderIndex);
+    }
+
+    function frostPcsBreakdown(pcs) {
+      if (pcs === 0) return '0 pcs';
+      var lines = Math.floor(pcs / 7);
+      var extra = pcs % 7;
+      if (lines > 0 && extra === 0) return lines + ' line' + (lines !== 1 ? 's' : '');
+      if (lines === 0) return extra + ' pcs';
+      return lines + ' line' + (lines !== 1 ? 's' : '') + ' + ' + extra + ' pcs';
+    }
+
+    function frostRenderBoxes(orderIndex) {
+      var state = frostState[orderIndex];
+      var container = document.getElementById('frost-boxes-' + orderIndex);
+      if (!container || !state) return;
+
+      var html = '';
+      state.boxes.forEach(function(box) {
+        var totalPieces = 0;
+        state.flavors.forEach(function(f) { totalPieces += (box.pieces[f.key] || 0); });
+        var isFull = totalPieces === 56;
+
+        html += '<div class="frost-box' + (isFull ? ' frost-box-full' : '') + '">';
+        html += '<div class="frost-box-header">';
+        html += '<span class="frost-box-title">Box ' + box.num + '</span>';
+        html += '<span class="frost-box-lines-used" style="color:' + (isFull ? '#0a7a0a' : totalPieces > 56 ? 'var(--red)' : 'var(--tx-muted)') + '">' + totalPieces + '/56 pieces' + (isFull ? ' ✓' : '') + '</span>';
+        if (state.boxes.length > 1) {
+          html += '<button onclick="frostRemoveBox(' + orderIndex + ',' + box.num + ')" style="background:none;border:none;color:var(--tx-faint);cursor:pointer;font-size:.9rem">✕</button>';
+        }
+        html += '</div>';
+
+        // Visual bar showing 8 line slots
+        html += '<div class="frost-box-visual">';
+        var slotIdx = 0;
+        state.flavors.forEach(function(f) {
+          var pcs = box.pieces[f.key] || 0;
+          var fullLines = Math.floor(pcs / 7);
+          var extraPcs = pcs % 7;
+          var color = FROST_COLORS[f.key] || 'var(--red)';
+          for (var i = 0; i < fullLines && slotIdx < 8; i++) {
+            html += '<div class="frost-line-slot" style="background:' + color + '" title="' + _esc(f.name) + ' (7 pcs)"></div>';
+            slotIdx++;
+          }
+          if (extraPcs > 0 && slotIdx < 8) {
+            html += '<div class="frost-line-slot frost-line-partial" style="background:' + color + '" title="' + _esc(f.name) + ' (' + extraPcs + ' pcs)"></div>';
+            slotIdx++;
+          }
+        });
+        for (var e = slotIdx; e < 8; e++) {
+          html += '<div class="frost-line-slot frost-line-empty"></div>';
+        }
+        html += '</div>';
+
+        // Flavor inputs
+        state.flavors.forEach(function(f) {
+          var val = box.pieces[f.key] || 0;
+          var displayVal = val > 0 ? val : '';
+          var dotColor = FROST_COLORS[f.key] || 'var(--red)';
+          html += '<div class="frost-box-flavor-row">';
+          html += '<span class="frost-box-flavor-name"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + dotColor + ';margin-right:6px;vertical-align:middle"></span>' + _esc(f.name) + '</span>';
+          html += '<input type="number" class="frost-line-input" min="0" max="56" value="' + displayVal + '" data-order="' + orderIndex + '" data-box="' + box.num + '" data-flavor="' + f.key + '" onchange="frostUpdatePieces(this)" onfocus="this.select()" placeholder="pcs">';
+          html += '<span class="frost-box-flavor-calc">' + frostPcsBreakdown(val) + '</span>';
+          html += '</div>';
+        });
+
+        html += '<div class="frost-box-total" style="color:' + (isFull ? '#0a7a0a' : 'var(--tx-muted)') + '">' + totalPieces + '/56 pieces</div>';
+        if (totalPieces > 56) {
+          html += '<div style="font-size:.75rem;color:var(--red);font-weight:600">⚠ Too many pieces! Max 56 per box.</div>';
+        }
+        html += '</div>';
+      });
+
+      container.innerHTML = html;
+      frostUpdateRemaining(orderIndex);
+    }
+
+    function frostUpdatePieces(input) {
+      var orderIndex = parseInt(input.dataset.order);
+      var boxNum = parseInt(input.dataset.box);
+      var flavorKey = input.dataset.flavor;
+      var val = parseInt(input.value) || 0;
+      if (val < 0) val = 0;
+
+      var state = frostState[orderIndex];
+      if (!state) return;
+      var box = state.boxes.find(function(b) { return b.num === boxNum; });
+      if (!box) return;
+
+      // Cap per flavor: total pieces across ALL boxes must not exceed ordered qty
+      var flavor = state.flavors.find(function(f) { return f.key === flavorKey; });
+      if (flavor) {
+        var usedInOtherBoxes = 0;
+        state.boxes.forEach(function(b) {
+          if (b.num !== boxNum) usedInOtherBoxes += (b.pieces[flavorKey] || 0);
+        });
+        var maxHere = flavor.qty - usedInOtherBoxes;
+        if (maxHere < 0) maxHere = 0;
+        if (val > maxHere) val = maxHere;
+      }
+
+      box.pieces[flavorKey] = val;
+      input.value = val;
+
+      // Cap total pieces in this box at 56
+      var totalPieces = 0;
+      state.flavors.forEach(function(f) { totalPieces += (box.pieces[f.key] || 0); });
+      if (totalPieces > 56) {
+        val = val - (totalPieces - 56);
+        if (val < 0) val = 0;
+        box.pieces[flavorKey] = val;
+        input.value = val;
+      }
+
+      frostRenderBoxes(orderIndex);
+    }
+
+    function frostUpdateRemaining(orderIndex) {
+      var state = frostState[orderIndex];
+      if (!state) return;
+
+      var totalPacked = 0;
+      var totalBoxes = state.boxes.length;
+
+      state.flavors.forEach(function(f) {
+        var packed = 0;
+        state.boxes.forEach(function(box) { packed += (box.pieces[f.key] || 0); });
+        var left = f.qty - packed;
+        totalPacked += packed;
+        var el = document.getElementById('frost-left-' + orderIndex + '-' + f.key);
+        if (el) {
+          el.textContent = 'Left: ' + left;
+          el.style.color = left === 0 ? '#0a7a0a' : left < 0 ? 'var(--red)' : 'var(--tx-muted)';
+          if (left < 0) el.textContent = 'Over by ' + Math.abs(left) + '!';
+          if (left === 0) el.textContent = 'Done ✓';
+        }
+      });
+
+      var summaryEl = document.getElementById('frost-summary-' + orderIndex);
+      var totalOrdered = state.flavors.reduce(function(s, f) { return s + f.qty; }, 0);
+      if (summaryEl) {
+        summaryEl.textContent = totalPacked + '/' + totalOrdered + ' pieces across ' + totalBoxes + ' box' + (totalBoxes !== 1 ? 'es' : '');
       }
     }
 

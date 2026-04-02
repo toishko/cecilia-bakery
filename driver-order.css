@@ -243,6 +243,39 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   color:var(--tx-muted);cursor:pointer;font-family:inherit;font-size:.85rem;transition:var(--transition)}
 .order-tab-add:hover{border-color:var(--red);color:var(--red)}
 
+/* Delete button on order tabs */
+.order-tab-delete{display:inline-flex;align-items:center;justify-content:center;
+  margin-left:6px;width:18px;height:18px;border-radius:50%;font-size:10px;
+  color:var(--tx-faint);transition:all .15s;line-height:1;vertical-align:middle;
+  flex-shrink:0}
+.order-tab-delete:hover{background:rgba(200,16,46,.15);color:var(--red)}
+.order-tab.active .order-tab-delete{color:rgba(255,255,255,.6)}
+.order-tab.active .order-tab-delete:hover{background:rgba(255,255,255,.2);color:#fff}
+
+/* ═══════════════════════════════════
+   IN-APP CONFIRMATION MODAL
+   ═══════════════════════════════════ */
+.app-confirm-overlay{position:fixed;inset:0;background:var(--bg-overlay);z-index:9999;
+  display:none;align-items:center;justify-content:center;opacity:0;
+  transition:opacity .2s ease}
+.app-confirm-overlay.open{display:flex;opacity:1}
+.app-confirm-modal{background:var(--bg-card);border:1px solid var(--bd);border-radius:16px;
+  padding:28px 24px;width:90%;max-width:340px;text-align:center;
+  box-shadow:0 12px 40px rgba(0,0,0,.25);animation:scaleIn .25s ease}
+.app-confirm-icon{width:56px;height:56px;border-radius:50%;
+  background:rgba(200,16,46,.1);display:flex;align-items:center;justify-content:center;
+  margin:0 auto 14px;color:var(--red)}
+.app-confirm-message{font-size:.92rem;color:var(--tx);line-height:1.5;margin-bottom:20px}
+.app-confirm-actions{display:flex;gap:8px}
+.app-confirm-cancel{flex:1;padding:12px;border-radius:10px;border:1px solid var(--bd);
+  background:none;color:var(--tx);font-weight:600;font-family:inherit;font-size:.9rem;
+  cursor:pointer;transition:background .15s}
+.app-confirm-cancel:hover{background:var(--bg-surface)}
+.app-confirm-yes{flex:1;padding:12px;border-radius:10px;border:none;
+  background:var(--red);color:var(--tx-on-red);font-weight:600;font-family:inherit;
+  font-size:.9rem;cursor:pointer;transition:background .15s}
+.app-confirm-yes:hover{background:var(--red-dk)}
+
 /* Header fields */
 .form-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
 @media(max-width:360px){

@@ -590,13 +590,27 @@ function renderOrderTabs() {
   orders.forEach((_, i) => {
     const en = `Order ${i + 1}`;
     const es = `Pedido ${i + 1}`;
-    html += `<button class="order-tab${i === activeOrderIdx ? ' active' : ''}" data-idx="${i}" data-en="${en}" data-es="${es}">${lang === 'es' ? es : en}</button>`;
+    html += `<button class="order-tab${i === activeOrderIdx ? ' active' : ''}" data-idx="${i}" data-en="${en}" data-es="${es}">${lang === 'es' ? es : en}`;
+    if (orders.length > 1) {
+      html += `<span class="order-tab-delete" data-delidx="${i}" title="${lang === 'es' ? 'Eliminar' : 'Remove'}">✕</span>`;
+    }
+    html += `</button>`;
   });
   html += `<button class="order-tab-add" id="add-order-btn">+</button>`;
   container.innerHTML = html;
 
   container.querySelectorAll('.order-tab').forEach(btn => {
-    btn.addEventListener('click', () => switchOrder(parseInt(btn.dataset.idx)));
+    btn.addEventListener('click', (e) => {
+      // Don't switch if clicking the delete button
+      if (e.target.classList.contains('order-tab-delete')) return;
+      switchOrder(parseInt(btn.dataset.idx));
+    });
+  });
+  container.querySelectorAll('.order-tab-delete').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      confirmRemoveOrder(parseInt(btn.dataset.delidx));
+    });
   });
   document.getElementById('add-order-btn').addEventListener('click', addOrder);
 }
@@ -616,6 +630,73 @@ function addOrder() {
   renderOrderTabs();
   loadOrderToForm(activeOrderIdx);
   updateFooterCount();
+}
+
+function confirmRemoveOrder(idx) {
+  const orderLabel = lang === 'es' ? `Pedido ${idx + 1}` : `Order ${idx + 1}`;
+  const message = lang === 'es'
+    ? `¿Eliminar ${orderLabel}? Esta acción no se puede deshacer.`
+    : `Remove ${orderLabel}? This cannot be undone.`;
+  showAppConfirm(message, () => removeOrder(idx));
+}
+
+function removeOrder(idx) {
+  if (orders.length <= 1) return;
+  orders.splice(idx, 1);
+  if (activeOrderIdx >= orders.length) activeOrderIdx = orders.length - 1;
+  else if (activeOrderIdx > idx) activeOrderIdx--;
+  else if (activeOrderIdx === idx) activeOrderIdx = Math.min(idx, orders.length - 1);
+  renderOrderTabs();
+  loadOrderToForm(activeOrderIdx);
+  updateFooterCount();
+}
+
+/* ═══════════════════════════════════
+   IN-APP CONFIRMATION MODAL
+   ═══════════════════════════════════ */
+function showAppConfirm(message, onConfirm) {
+  // Remove existing
+  let existing = document.getElementById('app-confirm-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'app-confirm-overlay';
+  overlay.className = 'app-confirm-overlay';
+  overlay.innerHTML = `
+    <div class="app-confirm-modal">
+      <div class="app-confirm-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <p class="app-confirm-message">${message}</p>
+      <div class="app-confirm-actions">
+        <button class="app-confirm-cancel" id="app-confirm-cancel">${lang === 'es' ? 'Cancelar' : 'Cancel'}</button>
+        <button class="app-confirm-yes" id="app-confirm-yes">${lang === 'es' ? 'Sí, eliminar' : 'Yes, remove'}</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('open'));
+
+  overlay.querySelector('#app-confirm-cancel').addEventListener('click', () => hideAppConfirm());
+  overlay.querySelector('#app-confirm-yes').addEventListener('click', () => {
+    hideAppConfirm();
+    if (onConfirm) onConfirm();
+  });
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) hideAppConfirm();
+  });
+}
+
+function hideAppConfirm() {
+  const overlay = document.getElementById('app-confirm-overlay');
+  if (overlay) {
+    overlay.classList.remove('open');
+    setTimeout(() => overlay.remove(), 200);
+  }
 }
 
 function saveFormToOrder(idx) {
