@@ -2179,7 +2179,10 @@
         });
       });
 
-      saveBoxCalcState();
+      // Save existing box calc state before destroying the DOM (only if cards exist)
+      if (document.getElementById('staff-order-0')) {
+        saveBoxCalcState();
+      }
       container.innerHTML = html || '<div class="empty-state">No orders found</div>';
 
       // Initialize frost packers for orders that have frosted items
@@ -2208,6 +2211,8 @@
 
       const qcCard = document.getElementById('quick-calc-card');
       if (qcCard) qcCard.style.display = '';
+      // Delay load slightly to let DOM settle, then restore saved state
+      // loadBoxCalcState will overwrite the fresh frostInit state with saved data
       setTimeout(loadBoxCalcState, 200);
     }
 
