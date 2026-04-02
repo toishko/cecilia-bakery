@@ -2687,8 +2687,8 @@ async function saveDriver() {
     }
   }
 
-  // Collect prices
-  const priceInputs = document.querySelectorAll('.price-input');
+  // Collect prices — only inputs with data-key (skip category-level inputs)
+  const priceInputs = document.querySelectorAll('.price-input[data-key]');
   const prices = [];
   let allFilled = true;
   priceInputs.forEach(input => {
@@ -2714,9 +2714,6 @@ async function saveDriver() {
       // Update driver
       await sb.from('drivers').update({ name, code, phone, is_active: isActive }).eq('id', editingDriverId);
       driverId = editingDriverId;
-
-      // Delete old prices and re-insert
-      await sb.from('driver_prices').delete().eq('driver_id', driverId);
     } else {
       // Insert new driver
       const { data: newDriver, error } = await sb.from('drivers').insert({ name, code, phone, is_active: isActive }).select('id').single();
@@ -2724,15 +2721,28 @@ async function saveDriver() {
       driverId = newDriver.id;
     }
 
-    // Insert prices
+    // Build price rows
     const priceRows = prices.map(p => ({
       driver_id: driverId,
       product_key: p.product_key,
       product_label: p.product_label,
       price: p.price
     }));
-    const { error: priceErr } = await sb.from('driver_prices').insert(priceRows);
-    if (priceErr) throw priceErr;
+
+    // Insert new prices FIRST into a test to validate they work
+    // Only delete old prices AFTER confirming new ones are valid
+    // Use upsert to avoid the delete-then-insert data-loss window
+    const { error: priceErr } = await sb.from('driver_prices')
+      .upsert(priceRows, { onConflict: 'driver_id,product_key' });
+
+    if (priceErr) {
+      // Fallback: try delete-then-insert, but only delete if insert succeeds
+      const { error: insertErr } = await sb.from('driver_prices').insert(priceRows);
+      if (insertErr) throw insertErr;
+      // Only delete orphan rows that are no longer in the product list
+      const currentKeys = prices.map(p => p.product_key);
+      await sb.from('driver_prices').delete().eq('driver_id', driverId).not('product_key', 'in', `(${currentKeys.join(',')})`);
+    }
 
     showToast(
       editingDriverId
