@@ -53,6 +53,9 @@ const PAGE_SIZE = 50;
 let realtimeChannel = null;
 let driversCache = [];
 
+// Track orders that were edited by staff (via realtime, session-only)
+const _staffEditedOrders = new Set();
+
 /* ── Seen / Unseen Order Tracking ── */
 const _SEEN_DRIVER_KEY = 'cecilia_seen_driver_orders';
 const _SEEN_ONLINE_KEY = 'cecilia_seen_online_orders';
@@ -759,11 +762,28 @@ function handleOrderItemsChange(payload) {
   // Debounce: staff often updates multiple items at once
   clearTimeout(_itemChangeTimer);
   _itemChangeTimer = setTimeout(async () => {
+    // Identify the affected order
+    const orderId = payload.new ? payload.new.order_id : (payload.old ? payload.old.order_id : null);
+
+    // Track this order as staff-edited
+    if (orderId) _staffEditedOrders.add(orderId);
+
+    // Show toast with driver name
+    if (orderId) {
+      try {
+        const match = incomingOrders.find(o => o.id === orderId);
+        const name = match ? getDriverName(match.driver_id) : '';
+        const msg = name
+          ? (lang === 'es' ? `Pedido de ${name} editado por personal` : `${name}'s order edited by staff`)
+          : (lang === 'es' ? 'Pedido editado por personal' : 'Order edited by staff');
+        showToast(msg, 'info');
+      } catch (_) {}
+    }
+
     // Refresh the order list
     silentRefreshOrders();
 
     // If the detail modal is open for the affected order, refresh it live
-    const orderId = payload.new ? payload.new.order_id : (payload.old ? payload.old.order_id : null);
     const overlay = document.getElementById('detail-overlay');
     if (orderId && detailOrder && detailOrder.id === orderId && overlay && overlay.classList.contains('open')) {
       try {
@@ -771,7 +791,6 @@ function handleOrderItemsChange(payload) {
         if (items) {
           detailItems = sortItemsByCategory(items);
           await renderOrderDetail();
-          showToast(lang === 'es' ? 'Pedido actualizado por el personal' : 'Order updated by staff', 'info');
         }
       } catch (e) { console.warn('Detail refresh failed:', e); }
     }
@@ -1513,7 +1532,7 @@ function renderOrderCards(orders, containerId, showLive = false) {
             <div class="order-card-driver">${driverName}</div>
             <div class="order-card-business">${business}</div>
           </div>
-          <div class="order-card-badges">${payBadge} ${statusBadge}</div>
+          <div class="order-card-badges">${payBadge} ${statusBadge}${_staffEditedOrders.has(order.id) ? ' <span class="badge badge-staff-edit">' + (lang === 'es' ? 'Editado' : 'Staff Edit') + '</span>' : ''}</div>
         </div>
         <div class="order-card-meta">
           <span class="order-card-number">${orderNum}</span>

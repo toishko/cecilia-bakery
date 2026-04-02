@@ -1803,6 +1803,55 @@
       return PRODUCT_CAT[productKey] || '';
     }
 
+    /* ── Staff Realtime — live updates from admin/other staff ── */
+    var _staffRealtimeChannel = null;
+    var _staffItemChangeTimer = null;
+    async function setupStaffRealtime() {
+      var sb = await getSupabaseClient();
+      if (!sb) return;
+
+      if (_staffRealtimeChannel) {
+        try { sb.removeChannel(_staffRealtimeChannel); } catch(_) {}
+      }
+
+      _staffRealtimeChannel = sb
+        .channel('staff-orders-live')
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'driver_orders'
+        }, function(payload) {
+          // Order status/details changed by admin
+          clearTimeout(_staffItemChangeTimer);
+          _staffItemChangeTimer = setTimeout(function() {
+            loadOrders();
+            applyStaffLang();
+          }, 1500);
+        })
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'driver_order_items'
+        }, function(payload) {
+          // Items changed — debounce since multiple items change at once
+          clearTimeout(_staffItemChangeTimer);
+          _staffItemChangeTimer = setTimeout(async function() {
+            // Find the order to show who edited it
+            var orderId = payload.new ? payload.new.order_id : (payload.old ? payload.old.order_id : null);
+            var match = staffOrders.find(function(o) { return o.id === orderId; });
+            var driverName = match ? getDriverName(match.driver_id) : '';
+            if (driverName) {
+              staffToast(driverName + "'s order was updated", 'info', 3000);
+            } else {
+              staffToast('An order was updated', 'info', 3000);
+            }
+            await loadOrders();
+            applyStaffLang();
+          }, 1500);
+        })
+        .subscribe();
+    }
+
     /* ── Load driver orders ── */
     async function loadOrders() {
       const container = document.getElementById('orders-list');
@@ -2796,6 +2845,7 @@
             // Load data
             await loadDriversCache();
             await loadOrders();
+            setupStaffRealtime();
             applyStaffLang();
             // Restore last active section
             var lastSection = localStorage.getItem('cb-staff-section') || 'orders';

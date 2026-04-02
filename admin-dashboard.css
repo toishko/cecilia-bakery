@@ -325,6 +325,9 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .badge-confirmed{background:rgba(0,45,98,.08);color:var(--blue)}
 [data-theme="dark"] .badge-confirmed{color:#A6CEFF}
 .badge-sent{background:rgba(27,122,74,.08);color:var(--green)}
+.badge-staff-edit{background:rgba(139,92,246,.12);color:#7C3AED;animation:staffEditPulse 2s ease-in-out 1}
+[data-theme="dark"] .badge-staff-edit{color:#A78BFA}
+@keyframes staffEditPulse{0%{transform:scale(1)}50%{transform:scale(1.1)}100%{transform:scale(1)}}
 
 /* ═══════════════════════════════════
    ORDER DETAIL MODAL
