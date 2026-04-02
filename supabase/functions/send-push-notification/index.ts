@@ -95,10 +95,21 @@ serve(async (req) => {
     // ═══════════════════════════════════
     if (table === 'driver_orders') {
       if (type === 'INSERT' && record) {
+        // Look up driver name for a more useful notification
+        let driverName = 'a driver';
+        if (record.driver_id) {
+          const { data: driver } = await sb
+            .from('drivers')
+            .select('name')
+            .eq('id', record.driver_id)
+            .single();
+          if (driver?.name) driverName = driver.name;
+        }
+        const bizInfo = record.business_name ? ` (${record.business_name})` : '';
         targets.push({
           user_type: 'admin',
-          title: '🚚 New Driver Order',
-          body: 'A new driver order has been placed',
+          title: `🚚 New Order from ${driverName}`,
+          body: `${driverName} placed a new order${bizInfo}`,
           url: '/admin-dashboard.html'
         })
       }
