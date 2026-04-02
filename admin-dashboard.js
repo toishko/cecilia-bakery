@@ -2576,9 +2576,15 @@ window.showEditDriver = async function(driverId) {
 // ── PRICE TABLE ─────────────────────
 function renderPriceTable(priceMap) {
   let html = '';
-  ADMIN_PRODUCTS.forEach(sec => {
+  ADMIN_PRODUCTS.forEach((sec, idx) => {
     html += `<div class="price-section">`;
-    html += `<div class="price-section-title">${lang === 'es' ? sec.sectionEs : sec.section}</div>`;
+    html += `<div class="price-section-title" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>${lang === 'es' ? sec.sectionEs : sec.section}</span>
+        <div style="display:flex; gap:6px; align-items:center; text-transform:none; font-weight:normal; letter-spacing:normal;">
+          <input type="number" id="cat-price-${idx}" class="price-input" style="width:70px; padding:4px 6px; font-size:0.8rem;" placeholder="0.00" step="0.01" min="0">
+          <button type="button" class="btn-save-driver" style="padding:4px 8px; font-size:0.75rem; flex:none;" onclick="applyCategoryPrice(${idx})">${lang === 'es' ? 'Aplicar' : 'Apply'}</button>
+        </div>
+      </div>`;
     sec.items.forEach(item => {
       const val = priceMap[item.key] !== undefined ? parseFloat(priceMap[item.key]).toFixed(2) : '';
       html += `<div class="price-row">
@@ -2591,6 +2597,24 @@ function renderPriceTable(priceMap) {
   });
   document.getElementById('price-table-container').innerHTML = html;
 }
+
+window.applyCategoryPrice = function(secIdx) {
+  const inputEl = document.getElementById(`cat-price-${secIdx}`);
+  if (!inputEl) return;
+  const val = inputEl.value;
+  if (!val) return;
+  const sec = ADMIN_PRODUCTS[secIdx];
+  if (!sec) return;
+  sec.items.forEach(item => {
+    const itemInput = document.querySelector(`.price-input[data-key="${item.key}"]`);
+    if (itemInput) {
+      itemInput.value = parseFloat(val).toFixed(2);
+      itemInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  });
+  inputEl.value = '';
+  showToast(lang === 'es' ? 'Precios aplicados a la categoría' : 'Prices applied to category', 'success');
+};
 
 function renderProfilePrices(priceMap) {
   let html = '';
