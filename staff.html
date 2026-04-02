@@ -2794,6 +2794,25 @@
       // Reset edit mode and reload
       staffEditMode[idx] = false;
       if (updateBtn) { updateBtn.textContent = 'Update Order'; updateBtn.disabled = false; }
+
+      // Notify admins via push notification
+      if (!errors.length) {
+        try {
+          var staffName = '';
+          if (window.Clerk && window.Clerk.user) {
+            staffName = window.Clerk.user.fullName || window.Clerk.user.firstName || 'Staff';
+          }
+          var driverName = getDriverName(order.driver_id);
+          var { triggerPushNotification } = await import('/push-utils.js');
+          await triggerPushNotification('UPDATE', 'driver_order_items', {
+            order_id: order.id,
+            driver_id: order.driver_id,
+            edited_by: staffName,
+            driver_name: driverName
+          });
+        } catch(e) { console.warn('Push notification failed:', e); }
+      }
+
       await loadOrders();
       applyStaffLang();
     }
@@ -2866,6 +2885,28 @@
             await loadOrders();
             setupStaffRealtime();
             applyStaffLang();
+
+            // Register service worker for push notifications
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                console.log('Staff: SW registered');
+                // Subscribe to push after a short delay
+                setTimeout(async function() {
+                  try {
+                    var staffSb = await getSupabaseClient();
+                    if (staffSb && window.Clerk && window.Clerk.user) {
+                      var { subscribeToPush } = await import('/push-utils.js');
+                      await subscribeToPush(staffSb, 'staff', window.Clerk.user.id, 'en', staffToast);
+                    }
+                  } catch (pushErr) {
+                    console.warn('Staff push subscription error:', pushErr);
+                  }
+                }, 2000);
+              }).catch(function(err) {
+                console.warn('Staff: SW registration failed:', err);
+              });
+            }
+
             // Restore last active section
             var lastSection = localStorage.getItem('cb-staff-section') || 'orders';
             staffShowSection(lastSection);

@@ -39,8 +39,8 @@ serve(async (req) => {
 
     console.log(`Event: ${type} on ${table}`)
 
-    // Only process driver_orders, orders, and wholesale_orders tables
-    if (table !== 'driver_orders' && table !== 'orders' && table !== 'wholesale_orders') {
+    // Only process relevant tables
+    if (table !== 'driver_orders' && table !== 'orders' && table !== 'wholesale_orders' && table !== 'driver_order_items') {
       console.log(`Table "${table}" not relevant, skipping`)
       return new Response('Not relevant', { status: 200, headers: corsHeaders(origin) })
     }
@@ -61,6 +61,8 @@ serve(async (req) => {
         if (record.delivery_status && record.delivery_status !== old_record?.delivery_status) {
           eventKey = `${type}:delivery_status=${record.delivery_status}`
         }
+      } else if (table === 'driver_order_items') {
+        eventKey = `${type}:staff_edit:${record.order_id || ''}`
       }
     }
 
@@ -89,6 +91,20 @@ serve(async (req) => {
 
     // ── Determine who to notify ──
     let targets: { user_type: string; user_id?: string; title: string; body: string; url: string }[] = []
+
+    // ═══════════════════════════════════
+    //  DRIVER_ORDER_ITEMS TABLE (staff edits)
+    // ═══════════════════════════════════
+    if (table === 'driver_order_items' && type === 'UPDATE' && record) {
+      const editedBy = record.edited_by || 'Staff'
+      const driverName = record.driver_name || 'a driver'
+      targets.push({
+        user_type: 'admin',
+        title: '📝 Order Edited',
+        body: `${driverName}'s order was edited by ${editedBy}`,
+        url: '/admin-dashboard.html'
+      })
+    }
 
     // ═══════════════════════════════════
     //  DRIVER_ORDERS TABLE
