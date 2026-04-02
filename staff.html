@@ -1297,8 +1297,8 @@
       });
 
       // Gather frost packer state for this order
-      if (typeof frostState !== 'undefined' && frostState[idx]) {
-        state.frostState = JSON.parse(JSON.stringify(frostState[idx]));
+      if (typeof frostState !== 'undefined' && frostState[order.id]) {
+        state.frostState = JSON.parse(JSON.stringify(frostState[order.id]));
       }
 
       // Store order metadata + items for display in the Saved tab
@@ -1613,8 +1613,8 @@
         }
         // Restore frost packer state for this order
         if (state.frostState && typeof frostState !== 'undefined') {
-          frostState[foundIdx] = state.frostState;
-          frostRenderBoxes(foundIdx);
+          frostState[orderId] = state.frostState;
+          frostRenderBoxes(orderId);
         }
         staffToast('Calculations restored for ' + (state.driverName || 'order'), 'success');
       } catch(e) { console.warn('Failed to restore:', e); }
@@ -1639,7 +1639,7 @@
         if (!hasValues) return;
         var state = {
           boxCalc: boxCalc,
-          frostState: (typeof frostState !== 'undefined' && frostState[idx]) ? JSON.parse(JSON.stringify(frostState[idx])) : null,
+          frostState: (typeof frostState !== 'undefined' && frostState[order.id]) ? JSON.parse(JSON.stringify(frostState[order.id])) : null,
           driverName: getDriverName(order.driver_id),
           businessName: order.business_name || '',
           pickupDate: order.pickup_date || '',
@@ -1654,7 +1654,13 @@
           }),
           itemCount: (order.driver_order_items || []).reduce(function(s, i) { return s + (i.quantity || 0); }, 0)
         };
-        localStorage.setItem('cb-staff-ordercalc-' + order.id, JSON.stringify(state));
+        try {
+          localStorage.setItem('cb-staff-ordercalc-' + order.id, JSON.stringify(state));
+        } catch(e) {
+          console.warn('localStorage save failed:', e);
+          if (typeof staffToast === 'function') staffToast('Storage full — old saved data will be cleaned', 'error');
+          cleanOldBoxCalcState();
+        }
       });
     }
 
@@ -1676,8 +1682,8 @@
             });
           }
           if (state.frostState && typeof frostState !== 'undefined') {
-            frostState[idx] = state.frostState;
-            frostRenderBoxes(idx);
+            frostState[order.id] = state.frostState;
+            frostRenderBoxes(order.id);
           }
         } catch(e) { console.warn('Failed to restore box calc for order:', e); }
       });
@@ -1833,6 +1839,8 @@
           var editedBy = payload.new && payload.new.last_edited_by ? payload.new.last_edited_by : '';
           clearTimeout(_staffItemChangeTimer);
           _staffItemChangeTimer = setTimeout(function() {
+            var anyEditing = Object.keys(staffEditMode).some(function(k) { return staffEditMode[k]; });
+            if (anyEditing) { console.log('Skipping realtime refresh — edit in progress'); return; }
             if (editedBy) {
               var driverName = '';
               var match = staffOrders.find(function(o) { return o.id === payload.new.id; });
@@ -1852,6 +1860,8 @@
           // Items changed — debounce since multiple items change at once
           clearTimeout(_staffItemChangeTimer);
           _staffItemChangeTimer = setTimeout(async function() {
+            var anyEditing = Object.keys(staffEditMode).some(function(k) { return staffEditMode[k]; });
+            if (anyEditing) { console.log('Skipping realtime refresh — edit in progress'); return; }
             // Find the order to show who edited it
             var orderId = payload.new ? payload.new.order_id : (payload.old ? payload.old.order_id : null);
             var match = staffOrders.find(function(o) { return o.id === orderId; });
@@ -2074,7 +2084,7 @@
               catHtml += bcGrouped[cat].map(item => {
                 const label = _esc(item.product_label || item.product_key);
                 const qty = item.quantity || 0;
-                const uid = `bc-${oi}-${globalIdx++}`;
+                const uid = `bc-${order.id}-${globalIdx++}`;
                 return `
                   <div class="box-calc-item">
                     <div class="box-calc-item-header">
@@ -2101,18 +2111,18 @@
               return '<div class="frost-flavor-row">' +
                 '<span class="frost-flavor-name">' + _esc(f.name) + '</span>' +
                 '<span class="frost-flavor-ordered">Ordered: ' + f.qty + '</span>' +
-                '<span class="frost-flavor-left" id="frost-left-' + oi + '-' + f.key + '">Left: ' + f.qty + '</span>' +
+                '<span class="frost-flavor-left" id="frost-left-' + order.id + '-' + f.key + '">Left: ' + f.qty + '</span>' +
               '</div>';
             }).join('');
 
-            frostPackerHtml = '<div class="frost-packer" id="frost-packer-' + oi + '">' +
+            frostPackerHtml = '<div class="frost-packer" id="frost-packer-' + order.id + '">' +
               '<div class="frost-packer-header">' +
                 '<span class="box-calc-cat-header" style="border-bottom:none;margin:0;padding:0">🧊 Frosted Box Packer</span>' +
-                '<span class="frost-packer-summary" id="frost-summary-' + oi + '">0 pieces across 0 boxes</span>' +
+                '<span class="frost-packer-summary" id="frost-summary-' + order.id + '">0 pieces across 0 boxes</span>' +
               '</div>' +
-              '<div class="frost-remaining" id="frost-remaining-' + oi + '">' + frostRemainingHtml + '</div>' +
-              '<div class="frost-boxes" id="frost-boxes-' + oi + '"></div>' +
-              '<button class="frost-add-box-btn" onclick="frostAddBox(' + oi + ')">+ Add Box</button>' +
+              '<div class="frost-remaining" id="frost-remaining-' + order.id + '">' + frostRemainingHtml + '</div>' +
+              '<div class="frost-boxes" id="frost-boxes-' + order.id + '"></div>' +
+              '<button class="frost-add-box-btn" onclick="frostAddBox(\'' + order.id + '\')">+ Add Box</button>' +
             '</div>';
           }
 
@@ -2169,6 +2179,7 @@
         });
       });
 
+      saveBoxCalcState();
       container.innerHTML = html || '<div class="empty-state">No orders found</div>';
 
       // Initialize frost packers for orders that have frosted items
@@ -2190,7 +2201,7 @@
             }
           });
           if (frosted.length > 0) {
-            frostInit(oi2, frosted);
+            frostInit(order.id, frosted);
           }
         });
       });
@@ -2303,29 +2314,29 @@
       'fr_choco': '#5c3317'
     };
 
-    function frostInit(orderIndex, items) {
-      frostState[orderIndex] = {
+    function frostInit(orderId, items) {
+      frostState[orderId] = {
         flavors: items,
         boxes: []
       };
-      frostAddBox(orderIndex);
+      frostAddBox(orderId);
     }
 
-    function frostAddBox(orderIndex) {
-      var state = frostState[orderIndex];
+    function frostAddBox(orderId) {
+      var state = frostState[orderId];
       if (!state) return;
       var boxNum = state.boxes.length + 1;
       var pieces = {};
       state.flavors.forEach(function(f) { pieces[f.key] = 0; });
       state.boxes.push({ num: boxNum, pieces: pieces });
-      frostRenderBoxes(orderIndex);
+      frostRenderBoxes(orderId);
     }
 
-    function frostRemoveBox(orderIndex, boxNum) {
-      var state = frostState[orderIndex];
+    function frostRemoveBox(orderId, boxNum) {
+      var state = frostState[orderId];
       if (!state) return;
       state.boxes = state.boxes.filter(function(b) { return b.num !== boxNum; });
-      frostRenderBoxes(orderIndex);
+      frostRenderBoxes(orderId);
     }
 
     function frostPcsBreakdown(pcs) {
@@ -2337,9 +2348,9 @@
       return lines + ' line' + (lines !== 1 ? 's' : '') + ' + ' + extra + ' pcs';
     }
 
-    function frostRenderBoxes(orderIndex) {
-      var state = frostState[orderIndex];
-      var container = document.getElementById('frost-boxes-' + orderIndex);
+    function frostRenderBoxes(orderId) {
+      var state = frostState[orderId];
+      var container = document.getElementById('frost-boxes-' + orderId);
       if (!container || !state) return;
 
       var html = '';
@@ -2353,7 +2364,7 @@
         html += '<span class="frost-box-title">Box ' + box.num + '</span>';
         html += '<span class="frost-box-lines-used" style="color:' + (isFull ? '#0a7a0a' : totalPieces > 56 ? 'var(--red)' : 'var(--tx-muted)') + '">' + totalPieces + '/56 pieces' + (isFull ? ' ✓' : '') + '</span>';
         if (state.boxes.length > 1) {
-          html += '<button onclick="frostRemoveBox(' + orderIndex + ',' + box.num + ')" style="background:none;border:none;color:var(--tx-faint);cursor:pointer;font-size:.9rem">✕</button>';
+          html += '<button onclick="frostRemoveBox(\'' + orderId + '\',' + box.num + ')" style="background:none;border:none;color:var(--tx-faint);cursor:pointer;font-size:.9rem">✕</button>';
         }
         html += '</div>';
 
@@ -2386,7 +2397,7 @@
           var dotColor = FROST_COLORS[f.key] || 'var(--red)';
           html += '<div class="frost-box-flavor-row">';
           html += '<span class="frost-box-flavor-name"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + dotColor + ';margin-right:6px;vertical-align:middle"></span>' + _esc(f.name) + '</span>';
-          html += '<input type="number" class="frost-line-input" min="0" max="56" value="' + displayVal + '" data-order="' + orderIndex + '" data-box="' + box.num + '" data-flavor="' + f.key + '" onchange="frostUpdatePieces(this)" onfocus="this.select()" placeholder="pcs">';
+          html += '<input type="number" class="frost-line-input" min="0" max="56" value="' + displayVal + '" data-order="' + orderId + '" data-box="' + box.num + '" data-flavor="' + f.key + '" onchange="frostUpdatePieces(this)" onfocus="this.select()" placeholder="pcs">';
           html += '<span class="frost-box-flavor-calc">' + frostPcsBreakdown(val) + '</span>';
           html += '</div>';
         });
@@ -2399,17 +2410,17 @@
       });
 
       container.innerHTML = html;
-      frostUpdateRemaining(orderIndex);
+      frostUpdateRemaining(orderId);
     }
 
     function frostUpdatePieces(input) {
-      var orderIndex = parseInt(input.dataset.order);
+      var orderId = input.dataset.order;
       var boxNum = parseInt(input.dataset.box);
       var flavorKey = input.dataset.flavor;
       var val = parseInt(input.value) || 0;
       if (val < 0) val = 0;
 
-      var state = frostState[orderIndex];
+      var state = frostState[orderId];
       if (!state) return;
       var box = state.boxes.find(function(b) { return b.num === boxNum; });
       if (!box) return;
@@ -2439,12 +2450,12 @@
         input.value = val;
       }
 
-      frostRenderBoxes(orderIndex);
+      frostRenderBoxes(orderId);
       saveBoxCalcState();
     }
 
-    function frostUpdateRemaining(orderIndex) {
-      var state = frostState[orderIndex];
+    function frostUpdateRemaining(orderId) {
+      var state = frostState[orderId];
       if (!state) return;
 
       var totalPacked = 0;
@@ -2455,7 +2466,7 @@
         state.boxes.forEach(function(box) { packed += (box.pieces[f.key] || 0); });
         var left = f.qty - packed;
         totalPacked += packed;
-        var el = document.getElementById('frost-left-' + orderIndex + '-' + f.key);
+        var el = document.getElementById('frost-left-' + orderId + '-' + f.key);
         if (el) {
           el.textContent = 'Left: ' + left;
           el.style.color = left === 0 ? '#0a7a0a' : left < 0 ? 'var(--red)' : 'var(--tx-muted)';
@@ -2464,7 +2475,7 @@
         }
       });
 
-      var summaryEl = document.getElementById('frost-summary-' + orderIndex);
+      var summaryEl = document.getElementById('frost-summary-' + orderId);
       var totalOrdered = state.flavors.reduce(function(s, f) { return s + f.qty; }, 0);
       if (summaryEl) {
         summaryEl.textContent = totalPacked + '/' + totalOrdered + ' pieces across ' + totalBoxes + ' box' + (totalBoxes !== 1 ? 'es' : '');
