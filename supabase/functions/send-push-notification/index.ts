@@ -39,8 +39,8 @@ serve(async (req) => {
 
     console.log(`Event: ${type} on ${table}`)
 
-    // Only process driver_orders and orders tables
-    if (table !== 'driver_orders' && table !== 'orders') {
+    // Only process driver_orders, orders, and wholesale_orders tables
+    if (table !== 'driver_orders' && table !== 'orders' && table !== 'wholesale_orders') {
       console.log(`Table "${table}" not relevant, skipping`)
       return new Response('Not relevant', { status: 200, headers: corsHeaders(origin) })
     }
@@ -157,10 +157,14 @@ serve(async (req) => {
     // ═══════════════════════════════════
     if (table === 'orders') {
       if (type === 'INSERT' && record) {
+        // Use customer first name for a more useful notification
+        const customerName = record.customer_name
+          ? record.customer_name.trim().split(/\s+/)[0]
+          : 'a customer';
         targets.push({
           user_type: 'admin',
-          title: '🛒 New Online Order',
-          body: 'A new online order has been placed',
+          title: `🛒 New Online Order from ${customerName}`,
+          body: `${customerName} placed a new online order`,
           url: '/admin-dashboard.html'
         })
       }
@@ -206,6 +210,30 @@ serve(async (req) => {
           // Admin is not notified about status changes they make themselves
           // Only the customer is notified above
         }
+      }
+    }
+
+    // ═══════════════════════════════════
+    //  WHOLESALE_ORDERS TABLE
+    // ═══════════════════════════════════
+    if (table === 'wholesale_orders') {
+      if (type === 'INSERT' && record) {
+        // Look up business name from wholesale_accounts
+        let bizName = 'a partner';
+        if (record.account_id) {
+          const { data: account } = await sb
+            .from('wholesale_accounts')
+            .select('business_name')
+            .eq('id', record.account_id)
+            .single();
+          if (account?.business_name) bizName = account.business_name;
+        }
+        targets.push({
+          user_type: 'admin',
+          title: `🏪 New Partner Order from ${bizName}`,
+          body: `${bizName} placed a new wholesale order`,
+          url: '/admin-dashboard.html'
+        })
       }
     }
 
