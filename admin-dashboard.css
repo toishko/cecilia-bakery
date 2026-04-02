@@ -637,6 +637,10 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   background:var(--bg-input);color:var(--tx);font-size:.85rem;font-family:inherit;text-align:right}
 .price-input:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 2px rgba(200,16,46,.08)}
 .price-input::placeholder{color:var(--tx-faint)}
+.credit-input{width:90px;padding:6px 10px;border:1px solid var(--bd-input);border-radius:8px;
+  background:var(--bg-input);color:var(--tx);font-size:.85rem;font-family:inherit;text-align:right}
+.credit-input:focus{border-color:var(--red);outline:none;box-shadow:0 0 0 2px rgba(200,16,46,.08)}
+.credit-input::placeholder{color:var(--tx-faint)}
 
 /* Form actions */
 .driver-form-actions{display:flex;gap:10px;margin-top:8px;padding-bottom:32px}

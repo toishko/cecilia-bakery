@@ -1552,7 +1552,7 @@ window.openOrderDetail = async function(orderId) {
     detailTotalsVisible = true;
     // Mark order as seen when admin opens detail
     markDriverOrderSeen(orderId);
-    renderOrderDetail();
+    await renderOrderDetail();
     document.getElementById('detail-overlay').classList.add('open');
     // Lock body scroll (iOS-safe)
     document.body.dataset.scrollY = window.scrollY;
@@ -1565,9 +1565,17 @@ window.openOrderDetail = async function(orderId) {
   } catch (e) { console.error(e); }
 };
 
-function renderOrderDetail() {
+async function renderOrderDetail() {
   const order = detailOrder;
   if (!order) return;
+
+  // Fetch driver credit values
+  let driverCreditMap = {};
+  if (order.driver_id) {
+    const { data: dp } = await sb.from('driver_prices').select('product_key, credit_value').eq('driver_id', order.driver_id);
+    if (dp) dp.forEach(p => { driverCreditMap[p.product_key] = p.credit_value || 0; });
+  }
+  window._currentCreditMap = driverCreditMap;
 
   const driverName = getDriverName(order.driver_id);
   const orderNum = order.order_number ? `#${order.order_number}` : '';
@@ -1695,6 +1703,47 @@ function renderOrderDetail() {
     html += `<div class="grand-total-row"><span>${lang === 'es' ? 'Total General' : 'Grand Total'}</span><span>${formatCurrency(grandTotal)}</span></div>`;
   }
 
+  // Returns & Credit section
+  window._currentGrandTotal = grandTotal;
+  html += '<div id="returns-credit-section" style="margin:16px 0;padding:16px;background:var(--bg-surface);border-radius:10px;border:1px solid var(--bd)">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;cursor:pointer" onclick="document.getElementById(\'returns-body\').style.display = document.getElementById(\'returns-body\').style.display === \'none\' ? \'block\' : \'none\'">';
+  html += '<span style="font-size:.82rem;font-weight:700;color:var(--tx);text-transform:uppercase;letter-spacing:.5px">Returns & Credit</span>';
+  html += '<span style="font-size:.78rem;color:var(--tx-faint)">▼</span></div>';
+  html += '<div id="returns-body" style="display:none">';
+  html += '<div style="font-size:.78rem;color:var(--tx-faint);margin-bottom:10px">Enter returned product quantities to calculate credit</div>';
+  html += '<div id="returns-grid" style="display:grid;grid-template-columns:1fr 60px 70px;gap:6px 10px;align-items:center;margin-bottom:12px">';
+  html += '<div style="font-size:.68rem;font-weight:700;color:var(--tx-faint);text-transform:uppercase">Product</div>';
+  html += '<div style="font-size:.68rem;font-weight:700;color:var(--tx-faint);text-transform:uppercase;text-align:center">Qty</div>';
+  html += '<div style="font-size:.68rem;font-weight:700;color:var(--tx-faint);text-transform:uppercase;text-align:right">Credit</div>';
+  // Show items from this order with credit value (fallback to price_at_order)
+  const seenKeys = new Set();
+  let lastReturnCat = '';
+  detailItems.forEach(function(item) {
+    if (seenKeys.has(item.product_key)) return;
+    seenKeys.add(item.product_key);
+    const effectiveQty = item.adjusted_quantity !== null ? item.adjusted_quantity : item.quantity;
+    if (effectiveQty === 0) return;
+    // Category header
+    const cat = getCategoryLabel(item.product_key);
+    if (cat && cat !== lastReturnCat) {
+      html += '<div style="grid-column:1/-1;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--red);padding:8px 0 4px;border-bottom:1px solid var(--bd);margin-top:' + (lastReturnCat ? '8px' : '0') + '">' + cat + '</div>';
+      lastReturnCat = cat;
+    }
+    var cv = driverCreditMap[item.product_key] || parseFloat(item.price_at_order) || 0;
+    var label = (item.product_label || item.product_key).replace(/\s*\(No Ticket\)/i, '');
+    html += '<div style="font-size:.82rem;color:var(--tx)">' + _esc(label) + '</div>';
+    html += '<input type="number" class="return-qty-input" data-key="' + item.product_key + '" data-credit="' + cv + '" value="0" min="0" max="' + effectiveQty + '" style="width:100%;padding:4px;border-radius:6px;border:1px solid var(--bd);text-align:center;font-size:.82rem;background:var(--bg-input);color:var(--tx)" oninput="window._calcReturnCredit()">';
+    html += '<div class="return-line-credit" data-key="' + item.product_key + '" style="font-size:.82rem;text-align:right;color:var(--tx-faint)">$0.00</div>';
+  });
+  html += '</div>';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--bd)">';
+  html += '<span style="font-weight:700;font-size:.9rem">Total Credit</span>';
+  html += '<span id="total-credit" style="font-weight:700;font-size:.95rem;color:#0a7a0a">$0.00</span></div>';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">';
+  html += '<span style="font-weight:700;font-size:.95rem">Adjusted Total</span>';
+  html += '<span id="adjusted-total" style="font-weight:700;font-size:1.05rem;color:var(--red)">' + formatCurrency(grandTotal) + '</span></div>';
+  html += '</div></div>';
+
   // Payment status — ALWAYS editable regardless of order age
   html += `<div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.5px;color:var(--tx-faint);font-weight:500;margin-top:12px">${lang === 'es' ? 'Estado de Pago' : 'Payment Status'}</div>`;
   html += '<div class="payment-btns">';
@@ -1760,60 +1809,63 @@ function renderSmartDateTime(order) {
   return html;
 }
 
+window._calcReturnCredit = function() {
+  var totalCredit = 0;
+  document.querySelectorAll('.return-qty-input').forEach(function(inp) {
+    var qty = parseInt(inp.value) || 0;
+    var creditPer = parseFloat(inp.dataset.credit) || 0;
+    var lineCredit = qty * creditPer;
+    totalCredit += lineCredit;
+    var lineEl = document.querySelector('.return-line-credit[data-key="' + inp.dataset.key + '"]');
+    if (lineEl) lineEl.textContent = '$' + lineCredit.toFixed(2);
+  });
+  var totalEl = document.getElementById('total-credit');
+  var adjEl = document.getElementById('adjusted-total');
+  if (totalEl) totalEl.textContent = '$' + totalCredit.toFixed(2);
+  if (adjEl) {
+    var adjusted = (window._currentGrandTotal || 0) - totalCredit;
+    adjEl.textContent = formatCurrency(Math.max(0, adjusted));
+  }
+};
+
 /* ═══════════════════════════════════
    EDIT WINDOW LOGIC
-   Qty/product edits: entire day
-   Payment status: ALWAYS editable
+   Editable until fully paid
    ═══════════════════════════════════ */
 function canEditOrder(order) {
-  // Pending orders are always editable
-  if (order.status === 'pending') return true;
-  // Sent orders: admin can edit quantities until end of day
-  if (order.admin_editable_until) {
-    return new Date(order.admin_editable_until) > new Date();
-  }
-  return false;
+  // Editable as long as not fully paid
+  if (order.payment_status === 'paid') return false;
+  return true;
 }
 
 function getEditWindowStatus(order) {
   if (order.status === 'pending') return { show: false };
-  if (!order.admin_editable_until) return { show: false };
 
-  const until = new Date(order.admin_editable_until);
-  const now = new Date();
-  const expired = until <= now;
-
-  if (expired) {
+  if (order.payment_status === 'paid') {
     return {
       show: true,
       expired: true,
       text: lang === 'es'
-        ? 'Las cantidades ya no se pueden editar (el pago sí)'
-        : 'Quantities can no longer be edited (payment still can)'
+        ? 'Este pedido está pagado — no se puede editar'
+        : 'This order is paid — editing is locked'
     };
   }
 
-  const remainingMs = until - now;
-  const remainingHrs = Math.floor(remainingMs / 1000 / 60 / 60);
-  const remainingMin = Math.ceil((remainingMs / 1000 / 60) % 60);
-  const timeStr = remainingHrs > 0
-    ? `${remainingHrs}h ${remainingMin}m`
-    : `${remainingMin} min`;
   return {
     show: true,
     expired: false,
     text: lang === 'es'
-      ? `Puedes editar cantidades por ${timeStr} más`
-      : `You can edit quantities for ${timeStr} more`
+      ? 'Puedes editar cantidades hasta que se marque como pagado'
+      : 'You can edit quantities until marked as paid'
   };
 }
 
 /* ═══════════════════════════════════
    ORDER ACTIONS
    ═══════════════════════════════════ */
-window.toggleDetailTotals = function() {
+window.toggleDetailTotals = async function() {
   detailTotalsVisible = !detailTotalsVisible;
-  renderOrderDetail();
+  await renderOrderDetail();
 };
 
 window.handleQtyAdjust = async function(input) {
@@ -1837,7 +1889,7 @@ window.handleQtyAdjust = async function(input) {
   detailItems[itemIdx].adjusted_at = new Date().toISOString();
 
   // Re-render to update totals
-  renderOrderDetail();
+  await renderOrderDetail();
 };
 
 window.addItemToOrder = async function() {
@@ -1875,11 +1927,11 @@ window.addItemToOrder = async function() {
     _isNew: true
   });
 
-  renderOrderDetail();
+  await renderOrderDetail();
   showToast(`${productLabel} ${lang === 'es' ? 'agregado' : 'added'}`, 'success');
 };
 
-window.setPaymentStatus = function(status) {
+window.setPaymentStatus = async function(status) {
   if (!detailOrder) return;
   detailOrder.payment_status = status;
 
@@ -1894,10 +1946,10 @@ window.setPaymentStatus = function(status) {
     detailOrder.payment_amount = 0;
   }
 
-  renderOrderDetail();
+  await renderOrderDetail();
 };
 
-window.handlePartialAmount = function(input) {
+window.handlePartialAmount = async function(input) {
   if (!detailOrder) return;
   let amount = parseFloat(input.value) || 0;
   if (amount < 0) { amount = 0; input.value = 0; }
@@ -1908,7 +1960,7 @@ window.handlePartialAmount = function(input) {
     input.value = amount;
   }
   detailOrder.payment_amount = amount;
-  renderOrderDetail();
+  await renderOrderDetail();
 };
 
 window.saveOrderChanges = async function() {
@@ -2621,33 +2673,44 @@ window.showEditDriver = async function(driverId) {
     driver.is_active ? (lang === 'es' ? 'Activo' : 'Active') : (lang === 'es' ? 'Desactivado' : 'Disabled');
 
   // Fetch prices
-  const { data: prices } = await sb.from('driver_prices').select('product_key, price').eq('driver_id', driverId);
+  const { data: prices } = await sb.from('driver_prices').select('product_key, price, credit_value').eq('driver_id', driverId);
   const priceMap = {};
-  if (prices) prices.forEach(p => priceMap[p.product_key] = p.price);
+  const creditMap = {};
+  if (prices) prices.forEach(p => {
+    priceMap[p.product_key] = p.price;
+    creditMap[p.product_key] = p.credit_value;
+  });
 
-  renderPriceTable(priceMap);
+  renderPriceTable(priceMap, creditMap);
   populateCopyDropdown(driverId);
   showDriversFormView();
 }
 
 // ── PRICE TABLE ─────────────────────
-function renderPriceTable(priceMap) {
+function renderPriceTable(priceMap, creditMap) {
   let html = '';
   ADMIN_PRODUCTS.forEach((sec, idx) => {
     html += `<div class="price-section">`;
-    html += `<div class="price-section-title" style="display:flex; justify-content:space-between; align-items:center;">
+    html += `<div class="price-section-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
         <span>${lang === 'es' ? sec.sectionEs : sec.section}</span>
-        <div style="display:flex; gap:6px; align-items:center; text-transform:none; font-weight:normal; letter-spacing:normal;">
-          <input type="number" id="cat-price-${idx}" class="price-input" style="width:70px; padding:4px 6px; font-size:0.8rem;" placeholder="0.00" step="0.01" min="0">
+        <div style="display:flex; gap:6px; align-items:center; text-transform:none; font-weight:normal; letter-spacing:normal; flex-wrap:wrap;">
+          <input type="number" id="cat-price-${idx}" class="price-input" style="width:70px; padding:4px 6px; font-size:0.8rem;" placeholder="${lang === 'es' ? 'Precio' : 'Price'}" step="0.01" min="0">
+          <input type="number" id="cat-credit-${idx}" class="credit-input" style="width:70px; padding:4px 6px; font-size:0.8rem;" placeholder="Credit" step="0.01" min="0">
           <button type="button" class="btn-save-driver" style="padding:4px 8px; font-size:0.75rem; flex:none;" onclick="applyCategoryPrice(${idx})">${lang === 'es' ? 'Aplicar' : 'Apply'}</button>
         </div>
       </div>`;
+    html += '<div class="price-row" style="margin-bottom:4px"><span class="price-label" style="font-size:.68rem;color:var(--tx-faint);font-weight:700;text-transform:uppercase">Product</span><div style="display:flex;gap:6px"><span style="font-size:.68rem;color:var(--tx-faint);font-weight:700;text-transform:uppercase;width:90px;text-align:center">Price</span><span style="font-size:.68rem;color:var(--tx-faint);font-weight:700;text-transform:uppercase;width:90px;text-align:center">Credit</span></div></div>';
     sec.items.forEach(item => {
       const val = priceMap[item.key] !== undefined ? parseFloat(priceMap[item.key]).toFixed(2) : '';
+      const creditVal = creditMap && creditMap[item.key] !== undefined ? parseFloat(creditMap[item.key]).toFixed(2) : '';
       html += `<div class="price-row">
         <span class="price-label">${lang === 'es' ? item.es : item.en}</span>
-        <input type="number" class="price-input" data-key="${item.key}" value="${val}"
-          placeholder="0.00" step="0.01" min="0">
+        <div style="display:flex;gap:6px">
+          <input type="number" class="price-input" data-key="${item.key}" value="${val}"
+            placeholder="0.00" step="0.01" min="0">
+          <input type="number" class="credit-input" data-key="${item.key}" value="${creditVal}"
+            placeholder="0.00" step="0.01" min="0">
+        </div>
       </div>`;
     });
     html += `</div>`;
@@ -2656,21 +2719,32 @@ function renderPriceTable(priceMap) {
 }
 
 window.applyCategoryPrice = function(secIdx) {
-  const inputEl = document.getElementById(`cat-price-${secIdx}`);
-  if (!inputEl) return;
-  const val = inputEl.value;
-  if (!val) return;
+  const priceEl = document.getElementById(`cat-price-${secIdx}`);
+  const creditEl = document.getElementById(`cat-credit-${secIdx}`);
+  const priceVal = priceEl ? priceEl.value : '';
+  const creditVal = creditEl ? creditEl.value : '';
+  if (!priceVal && !creditVal) return;
   const sec = ADMIN_PRODUCTS[secIdx];
   if (!sec) return;
   sec.items.forEach(item => {
-    const itemInput = document.querySelector(`.price-input[data-key="${item.key}"]`);
-    if (itemInput) {
-      itemInput.value = parseFloat(val).toFixed(2);
-      itemInput.dispatchEvent(new Event('input', { bubbles: true }));
+    if (priceVal) {
+      const itemInput = document.querySelector(`.price-input[data-key="${item.key}"]`);
+      if (itemInput) {
+        itemInput.value = parseFloat(priceVal).toFixed(2);
+        itemInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+    if (creditVal) {
+      const creditInput = document.querySelector(`.credit-input[data-key="${item.key}"]`);
+      if (creditInput) {
+        creditInput.value = parseFloat(creditVal).toFixed(2);
+        creditInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }
   });
-  inputEl.value = '';
-  showToast(lang === 'es' ? 'Precios aplicados a la categoría' : 'Prices applied to category', 'success');
+  if (priceEl) priceEl.value = '';
+  if (creditEl) creditEl.value = '';
+  showToast(lang === 'es' ? 'Valores aplicados a la categoría' : 'Values applied to category', 'success');
 };
 
 function renderProfilePrices(priceMap) {
@@ -2759,6 +2833,13 @@ async function saveDriver() {
     });
   });
 
+  // Collect credit values
+  const creditInputs = document.querySelectorAll('.credit-input[data-key]');
+  const creditValues = {};
+  creditInputs.forEach(inp => {
+    if (inp.value.trim() !== '') creditValues[inp.dataset.key] = parseFloat(inp.value) || 0;
+  });
+
   if (!allFilled) {
     showToast(lang === 'es' ? 'Todos los precios son obligatorios' : 'All prices are required', 'error');
     return;
@@ -2783,7 +2864,8 @@ async function saveDriver() {
       driver_id: driverId,
       product_key: p.product_key,
       product_label: p.product_label,
-      price: p.price
+      price: p.price,
+      credit_value: creditValues[p.product_key] || 0
     }));
 
     // Insert new prices FIRST into a test to validate they work
@@ -2948,7 +3030,7 @@ window.openOrderDetail = async function(orderId) {
   const { data: items } = await sb.from('driver_order_items').select('*').eq('order_id', orderId);
   detailOrder = order;
   detailItems = items || [];
-  renderOrderDetail();
+  await renderOrderDetail();
   document.getElementById('detail-overlay').classList.add('open');
   document.body.dataset.scrollY = window.scrollY;
   document.body.style.position = 'fixed';
