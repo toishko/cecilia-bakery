@@ -1644,6 +1644,14 @@
           businessName: order.business_name || '',
           pickupDate: order.pickup_date || '',
           savedAt: new Date().toISOString(),
+          items: (order.driver_order_items || []).map(function(it) {
+            return {
+              key: it.product_key,
+              label: it.product_label || it.product_key,
+              qty: it.quantity || 0,
+              cat: getCategory(it.product_key) || 'Other'
+            };
+          }),
           itemCount: (order.driver_order_items || []).reduce(function(s, i) { return s + (i.quantity || 0); }, 0)
         };
         localStorage.setItem('cb-staff-ordercalc-' + order.id, JSON.stringify(state));
