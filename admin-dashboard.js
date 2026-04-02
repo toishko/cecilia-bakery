@@ -599,6 +599,19 @@ function setupWholesaleRealtime() {
       }
     })
     .subscribe();
+
+  // Wholesale orders realtime
+  sb.channel('admin-ws-orders-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'wholesale_orders' }, function(payload) {
+      if (payload.eventType === 'INSERT') {
+        showToast('New wholesale order received!', 'success');
+      }
+      updateWholesaleBadge();
+      if (currentSection === 'wholesale') {
+        loadWholesaleSection();
+      }
+    })
+    .subscribe();
 }
 
 /* ── RELIABILITY LAYER 1: Visibility change ──
@@ -5068,6 +5081,7 @@ let _wsProducts = [];
 let _wsPrices = {};
 let _wsSelectedAccountId = null;
 let _wsAllPricesData = [];
+let _wsOrders = [];
 
 async function loadWholesaleSection() {
   _pmInjectStyles();
@@ -5082,6 +5096,10 @@ async function loadWholesaleSection() {
   // Load ALL wholesale prices (for all accounts)
   const { data: prices } = await sb.from('wholesale_prices').select('*');
   _wsAllPricesData = prices || [];
+
+  // Load wholesale orders
+  const { data: orderRes } = await sb.from('wholesale_orders').select('*, wholesale_accounts(business_name)').order('placed_at', { ascending: false });
+  _wsOrders = orderRes || [];
 
   // Build price map for selected account
   _wsBuildPriceMap();
@@ -5099,6 +5117,11 @@ async function loadWholesaleSection() {
     if (pendingCount > 0) { pendingBadge.textContent = pendingCount; pendingBadge.style.display = ''; }
     else { pendingBadge.textContent = ''; pendingBadge.style.display = 'none'; }
   }
+
+  // Update orders badge
+  var pendingOrders = _wsOrders.filter(function(o) { return o.status === 'pending'; });
+  var ordersCountEl = document.getElementById('ws-orders-count');
+  if (ordersCountEl) ordersCountEl.textContent = pendingOrders.length > 0 ? pendingOrders.length : '';
 
   _wsRenderApplications();
   _wsRenderAccounts();
@@ -5124,11 +5147,12 @@ function _wsAccountAllPriced(accountId) {
 
 window._wsShowTab = function(tab) {
   document.querySelectorAll('.ws-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-  ['applications', 'accounts', 'pricing'].forEach(t => {
+  ['applications', 'accounts', 'pricing', 'orders'].forEach(t => {
     const el = document.getElementById('ws-panel-' + t);
     if (el) el.style.display = t === tab ? 'block' : 'none';
   });
   if (tab === 'pricing') _wsRenderPricing();
+  if (tab === 'orders') _wsRenderOrders();
 };
 
 function _wsRenderApplications() {
@@ -5634,6 +5658,179 @@ window._wsSaveAccountPricing = async function(accountId) {
   }
   if (statusEl) statusEl.textContent = '';
   await loadWholesaleSection();
+};
+
+/* ═══════════════════════════════════
+   WHOLESALE ORDERS
+   ═══════════════════════════════════ */
+function _wsRenderOrders() {
+  var panel = document.getElementById('ws-panel-orders');
+  if (!panel) return;
+  if (!_wsOrders.length) {
+    panel.innerHTML = '<div class="ws-empty">No wholesale orders yet</div>';
+    return;
+  }
+
+  var pending = _wsOrders.filter(function(o) { return o.status === 'pending'; });
+  var confirmed = _wsOrders.filter(function(o) { return o.status === 'confirmed'; });
+  var delivering = _wsOrders.filter(function(o) { return o.status === 'delivering'; });
+  var delivered = _wsOrders.filter(function(o) { return o.status === 'delivered'; });
+  var cancelled = _wsOrders.filter(function(o) { return o.status === 'cancelled'; });
+
+  var html = '';
+
+  if (pending.length) {
+    html += '<h3 style="font-size:.82rem;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px">Pending Orders (' + pending.length + ')</h3>';
+    pending.forEach(function(o) { html += _wsOrderCard(o); });
+  }
+  if (confirmed.length) {
+    html += '<h3 style="font-size:.82rem;color:#0a7a0a;text-transform:uppercase;letter-spacing:.5px;margin:24px 0 12px">Confirmed (' + confirmed.length + ')</h3>';
+    confirmed.forEach(function(o) { html += _wsOrderCard(o); });
+  }
+  if (delivering.length) {
+    html += '<h3 style="font-size:.82rem;color:#1a4a8a;text-transform:uppercase;letter-spacing:.5px;margin:24px 0 12px">Delivering (' + delivering.length + ')</h3>';
+    delivering.forEach(function(o) { html += _wsOrderCard(o); });
+  }
+  if (delivered.length) {
+    html += '<h3 style="font-size:.82rem;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;margin:24px 0 12px">Delivered (' + delivered.length + ')</h3>';
+    delivered.forEach(function(o) { html += _wsOrderCard(o); });
+  }
+  if (cancelled.length) {
+    html += '<h3 style="font-size:.82rem;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;margin:24px 0 12px">Cancelled (' + cancelled.length + ')</h3>';
+    cancelled.forEach(function(o) { html += _wsOrderCard(o); });
+  }
+
+  panel.innerHTML = html;
+}
+
+function _wsOrderCard(o) {
+  var bizName = (o.wholesale_accounts && o.wholesale_accounts.business_name) || 'Unknown';
+  var date = new Date(o.placed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  var items = o.items || [];
+  var statusColors = { pending: 'color:#c77800;background:rgba(255,165,0,.12)', confirmed: 'color:#0a7a0a;background:rgba(0,160,0,.12)', delivering: 'color:#1a4a8a;background:rgba(0,45,98,.12)', delivered: 'color:#0a7a0a;background:rgba(0,160,0,.12)', cancelled: 'color:var(--red);background:rgba(200,16,46,.1)' };
+  var statusStyle = statusColors[o.status] || '';
+
+  var html = '<div class="ws-card" style="cursor:pointer" onclick="window._wsOpenOrderDetail(\'' + o.id + '\')">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+  html += '<div>';
+  html += '<div class="ws-card-biz">' + _esc(bizName) + '</div>';
+  html += '<div style="font-size:.78rem;color:var(--tx-faint)">' + date + ' · ' + items.length + ' items · $' + parseFloat(o.subtotal || 0).toFixed(2) + '</div>';
+  if (o.requested_date) {
+    html += '<div style="font-size:.78rem;color:var(--tx-muted)">Delivery: ' + _esc(o.requested_date) + (o.requested_time ? ' (' + _esc(o.requested_time) + ')' : '') + '</div>';
+  }
+  html += '</div>';
+  html += '<span class="ws-card-status" style="' + statusStyle + '">' + _esc(o.status) + '</span>';
+  html += '</div></div>';
+  return html;
+}
+
+window._wsOpenOrderDetail = function(orderId) {
+  var o = _wsOrders.find(function(x) { return x.id === orderId; });
+  if (!o) return;
+  var bizName = (o.wholesale_accounts && o.wholesale_accounts.business_name) || 'Unknown';
+  var date = new Date(o.placed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  var items = o.items || [];
+
+  var overlay = document.getElementById('ws-order-overlay');
+  if (!overlay) { overlay = document.createElement('div'); overlay.id = 'ws-order-overlay'; document.body.appendChild(overlay); }
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px';
+
+  var html = '<div style="background:var(--bg-card);border-radius:16px;padding:28px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:85vh;overflow-y:auto">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">';
+  html += '<div><h3 style="font-size:1.1rem;font-weight:700;margin:0">' + _esc(bizName) + '</h3>';
+  html += '<div style="font-size:.78rem;color:var(--tx-faint)">' + date + '</div></div>';
+  html += '<button onclick="document.getElementById(\'ws-order-overlay\').remove()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--tx-muted)">✕</button></div>';
+
+  // Items
+  html += '<div style="margin-bottom:16px">';
+  items.forEach(function(item) {
+    html += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd);font-size:.88rem">';
+    html += '<span>' + _esc(item.name) + ' × ' + item.qty + '</span>';
+    html += '<span style="font-weight:600">$' + parseFloat(item.total || 0).toFixed(2) + '</span></div>';
+  });
+  html += '<div style="display:flex;justify-content:space-between;padding:10px 0;font-weight:700;font-size:1rem">';
+  html += '<span>Total</span><span>$' + parseFloat(o.subtotal || 0).toFixed(2) + '</span></div></div>';
+
+  // Requested delivery
+  if (o.requested_date) {
+    html += '<div style="font-size:.85rem;margin-bottom:12px"><strong>Requested delivery:</strong> ' + _esc(o.requested_date) + (o.requested_time ? ' (' + _esc(o.requested_time) + ')' : '') + '</div>';
+  }
+  if (o.notes) {
+    html += '<div style="font-size:.85rem;margin-bottom:12px"><strong>Notes:</strong> ' + _esc(o.notes) + '</div>';
+  }
+
+  // Actions based on status
+  if (o.status === 'pending') {
+    html += '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--bd)">';
+    html += '<div style="margin-bottom:12px"><label style="font-size:.75rem;font-weight:600;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Confirm Delivery Date</label>';
+    html += '<input type="date" id="ws-order-date" value="' + (o.requested_date || '') + '" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.9rem;background:var(--bg-input);color:var(--tx);font-family:inherit;box-sizing:border-box"></div>';
+    html += '<div style="margin-bottom:12px"><label style="font-size:.75rem;font-weight:600;color:var(--tx-faint);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">Confirm Delivery Time</label>';
+    html += '<select id="ws-order-time" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.9rem;background:var(--bg-input);color:var(--tx);font-family:inherit;box-sizing:border-box">';
+    html += '<option value="morning"' + (o.requested_time === 'morning' ? ' selected' : '') + '>Morning (6AM - 10AM)</option>';
+    html += '<option value="midday"' + (o.requested_time === 'midday' ? ' selected' : '') + '>Midday (10AM - 2PM)</option>';
+    html += '<option value="afternoon"' + (o.requested_time === 'afternoon' ? ' selected' : '') + '>Afternoon (2PM - 6PM)</option>';
+    html += '<option value="flexible"' + (o.requested_time === 'flexible' ? ' selected' : '') + '>Flexible</option></select></div>';
+    html += '<div class="ws-card-actions">';
+    html += '<button class="ws-btn ws-btn-approve" onclick="window._wsConfirmOrder(\'' + o.id + '\')">Confirm Order</button>';
+    html += '<button class="ws-btn ws-btn-reject" onclick="window._wsCancelOrder(\'' + o.id + '\')">Cancel Order</button>';
+    html += '</div></div>';
+  } else if (o.status === 'confirmed') {
+    if (o.confirmed_date) {
+      html += '<div style="font-size:.85rem;margin-bottom:12px;color:#0a7a0a"><strong>Confirmed delivery:</strong> ' + _esc(o.confirmed_date) + (o.confirmed_time ? ' (' + _esc(o.confirmed_time) + ')' : '') + '</div>';
+    }
+    html += '<div class="ws-card-actions" style="margin-top:16px">';
+    html += '<button class="ws-btn ws-btn-approve" onclick="window._wsUpdateOrderStatus(\'' + o.id + '\',\'delivering\')">Mark Delivering</button>';
+    html += '<button class="ws-btn ws-btn-reject" onclick="window._wsCancelOrder(\'' + o.id + '\')">Cancel</button>';
+    html += '</div>';
+  } else if (o.status === 'delivering') {
+    html += '<div class="ws-card-actions" style="margin-top:16px">';
+    html += '<button class="ws-btn ws-btn-approve" onclick="window._wsUpdateOrderStatus(\'' + o.id + '\',\'delivered\')">Mark Delivered</button>';
+    html += '</div>';
+  }
+
+  html += '</div>';
+  overlay.innerHTML = html;
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+};
+
+window._wsConfirmOrder = async function(orderId) {
+  var date = document.getElementById('ws-order-date').value;
+  var time = document.getElementById('ws-order-time').value;
+  if (!date) { showToast('Please set a delivery date', 'error'); return; }
+  var { error } = await sb.from('wholesale_orders').update({
+    status: 'confirmed', confirmed_date: date, confirmed_time: time,
+    confirmed_at: new Date().toISOString(), updated_at: new Date().toISOString()
+  }).eq('id', orderId);
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  showToast('Order confirmed!', 'success');
+  document.getElementById('ws-order-overlay').remove();
+  await loadWholesaleSection();
+  _wsShowTab('orders');
+};
+
+window._wsUpdateOrderStatus = async function(orderId, status) {
+  var updates = { status: status, updated_at: new Date().toISOString() };
+  if (status === 'delivered') updates.delivered_at = new Date().toISOString();
+  var { error } = await sb.from('wholesale_orders').update(updates).eq('id', orderId);
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  showToast('Order ' + status, 'success');
+  document.getElementById('ws-order-overlay').remove();
+  await loadWholesaleSection();
+  _wsShowTab('orders');
+};
+
+window._wsCancelOrder = function(orderId) {
+  _wsConfirm('Cancel Order', 'Are you sure you want to cancel this wholesale order?', 'Cancel Order', 'ws-btn-reject', async function() {
+    var { error } = await sb.from('wholesale_orders').update({
+      status: 'cancelled', updated_at: new Date().toISOString()
+    }).eq('id', orderId);
+    if (error) { showToast('Error: ' + error.message, 'error'); return; }
+    showToast('Order cancelled', 'success');
+    var overlay = document.getElementById('ws-order-overlay');
+    if (overlay) overlay.remove();
+    await loadWholesaleSection();
+    _wsShowTab('orders');
+  });
 };
 
 /* ── Escape helpers (scoped to avoid conflicts) ── */
