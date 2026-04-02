@@ -446,6 +446,20 @@
     .refresh-btn:hover { border-color: var(--red); color: var(--red); }
     .refresh-btn svg { width: 16px; height: 16px; }
 
+    /* ── Date Separators ── */
+    .staff-date-separator {
+      display: flex; align-items: center; gap: 12px;
+      margin: 20px 0 12px; padding: 0 4px;
+    }
+    .staff-date-separator:first-child { margin-top: 0; }
+    .staff-date-separator-line { flex: 1; height: 1px; background: var(--bd); }
+    .staff-date-separator-label {
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .8px; color: var(--red); white-space: nowrap;
+      padding: 4px 12px; background: var(--bg-surface);
+      border-radius: 20px; border: 1px solid var(--bd);
+    }
+
     /* ── Order Cards ── */
     .order-list {
       display: flex; flex-direction: column; gap: 14px;
@@ -457,6 +471,8 @@
       padding: 20px;
       box-shadow: var(--shadow-card);
       transition: border-color .2s, box-shadow .2s;
+    }
+    .order-card-top {
       cursor: pointer;
     }
     .order-card:hover {
@@ -496,7 +512,17 @@
     .order-items-summary {
       font-size: .85rem; color: var(--tx-muted);
       line-height: 1.5;
+      display: none;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--bd);
     }
+    .order-items-summary.expanded { display: block; }
+    .order-expand-hint {
+      font-size: .75rem; color: var(--tx-faint);
+      margin-top: 6px; display: flex; align-items: center; gap: 4px;
+    }
+    .order-expand-hint.hidden { display: none; }
     .order-items-cat {
       display: block;
       font-size: .7rem; font-weight: 700;
@@ -1132,139 +1158,183 @@
     function renderOrders(orders) {
       const container = document.getElementById('orders-list');
 
-      const html = orders.map((order, oi) => {
-        const driverName = _esc(getDriverName(order.driver_id));
-        const bizName = _esc(order.business_name || 'No business name');
-        const status = order.status || 'pending';
+      // Group orders by pickup_date
+      const dateGroups = {};
+      const dateOrder = [];
+      orders.forEach(order => {
+        const dateKey = order.pickup_date || 'no-date';
+        if (!dateGroups[dateKey]) { dateGroups[dateKey] = []; dateOrder.push(dateKey); }
+        dateGroups[dateKey].push(order);
+      });
 
-        // Build items summary grouped by category (NO prices/totals/currency)
-        const items = order.driver_order_items || [];
-        let itemsSummary = '';
-        if (items.length > 0) {
-          // Group items by category
-          const grouped = {};
-          const catOrder = [];
-          items.forEach(it => {
-            const cat = getCategory(it.product_key) || 'Other';
-            if (!grouped[cat]) { grouped[cat] = []; catOrder.push(cat); }
-            grouped[cat].push(it);
-          });
-          itemsSummary = catOrder.map(cat => {
-            const lines = grouped[cat].map(it =>
-              `<span class="order-items-line">${it.quantity}× ${_esc(it.product_label || it.product_key)}</span>`
-            ).join('');
-            return `<span class="order-items-cat">${_esc(cat)}</span>${lines}`;
-          }).join('');
-        } else {
-          itemsSummary = 'No items';
+      // Sort date groups (newest first)
+      dateOrder.sort((a, b) => {
+        if (a === 'no-date') return 1;
+        if (b === 'no-date') return -1;
+        return b.localeCompare(a);
+      });
+
+      let globalOi = 0;
+      let html = '';
+
+      dateOrder.forEach(dateKey => {
+        // Date separator
+        let dateLabel = 'No Date';
+        if (dateKey !== 'no-date') {
+          const d = new Date(dateKey + 'T00:00:00');
+          const today = new Date();
+          today.setHours(0,0,0,0);
+          const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+          const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+          if (d.getTime() === today.getTime()) dateLabel = 'Today';
+          else if (d.getTime() === tomorrow.getTime()) dateLabel = 'Tomorrow';
+          else if (d.getTime() === yesterday.getTime()) dateLabel = 'Yesterday';
+          else dateLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
         }
+        html += `<div class="staff-date-separator">
+          <div class="staff-date-separator-line"></div>
+          <span class="staff-date-separator-label">${dateLabel}</span>
+          <div class="staff-date-separator-line"></div>
+        </div>`;
 
-        // Date / time
-        let dateStr = '';
-        if (order.pickup_date) {
-          const d = new Date(order.pickup_date + 'T00:00:00');
-          dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        }
-        let timeStr = '';
-        if (order.pickup_time) {
-          const [h, m] = order.pickup_time.split(':');
-          const hr = parseInt(h);
-          const period = hr >= 12 ? 'PM' : 'AM';
-          const hr12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
-          timeStr = `${hr12}:${m} ${period}`;
-        }
+        dateGroups[dateKey].forEach(order => {
+          const oi = globalOi++;
+          const driverName = _esc(getDriverName(order.driver_id));
+          const bizName = _esc(order.business_name || 'No business name');
+          const status = order.status || 'pending';
+          const items = order.driver_order_items || [];
 
-        const created = new Date(order.created_at);
-        const createdStr = created.toLocaleDateString('en-US', {
-          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-        });
-
-        const statusLabels = {
-          pending: 'Pending',
-          confirmed: 'Confirmed',
-          sent: 'Sent',
-          cancelled: 'Cancelled'
-        };
-
-        // Build inline box calculator items (grouped by category)
-        let boxCalcItems = '';
-        if (items.length > 0) {
-          const bcGrouped = {};
-          const bcCatOrder = [];
-          items.forEach(item => {
-            const cat = getCategory(item.product_key) || 'Other';
-            if (!bcGrouped[cat]) { bcGrouped[cat] = []; bcCatOrder.push(cat); }
-            bcGrouped[cat].push(item);
-          });
-          let globalIdx = 0;
-          boxCalcItems = bcCatOrder.map(cat => {
-            let catHtml = `<div class="box-calc-cat-header">${_esc(cat)}</div>`;
-            catHtml += bcGrouped[cat].map(item => {
-              const label = _esc(item.product_label || item.product_key);
-              const qty = item.quantity || 0;
-              const uid = `bc-${oi}-${globalIdx++}`;
-              return `
-                <div class="box-calc-item">
-                  <div class="box-calc-item-header">
-                    <span class="box-calc-item-name">${label}</span>
-                    <span class="box-calc-item-qty">${qty} pieces</span>
-                  </div>
-                  <div class="box-calc-input-row">
-                    <span class="box-calc-input-label">Pieces per box:</span>
-                    <input class="box-calc-input" type="number" min="1" id="${uid}" data-qty="${qty}" placeholder="—" oninput="calcBox(this)" />
-                  </div>
-                  <div class="box-calc-result empty" id="${uid}-result">
-                    <span class="arrow">→</span> enter box size above
-                  </div>
-                </div>`;
+          // Build items summary grouped by category
+          let itemsSummary = '';
+          let itemCount = 0;
+          if (items.length > 0) {
+            const grouped = {};
+            const catOrder = [];
+            items.forEach(it => {
+              const cat = getCategory(it.product_key) || 'Other';
+              if (!grouped[cat]) { grouped[cat] = []; catOrder.push(cat); }
+              grouped[cat].push(it);
+              itemCount += it.quantity || 0;
+            });
+            itemsSummary = catOrder.map(cat => {
+              const lines = grouped[cat].map(it =>
+                `<span class="order-items-line">${it.quantity}× ${_esc(it.product_label || it.product_key)}</span>`
+              ).join('');
+              return `<span class="order-items-cat">${_esc(cat)}</span>${lines}`;
             }).join('');
-            return catHtml;
-          }).join('');
-        }
+          } else {
+            itemsSummary = 'No items';
+          }
 
-        return `
-          <div class="order-card">
-            <div class="order-card-top">
-              <div>
-                <div class="order-driver-name">${driverName}</div>
-                <div class="order-biz-name">${bizName}</div>
+          // Time
+          let timeStr = '';
+          if (order.pickup_time) {
+            const [h, m] = order.pickup_time.split(':');
+            const hr = parseInt(h);
+            const period = hr >= 12 ? 'PM' : 'AM';
+            const hr12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
+            timeStr = `${hr12}:${m} ${period}`;
+          }
+
+          const statusLabels = {
+            pending: 'Pending',
+            confirmed: 'Confirmed',
+            sent: 'Sent',
+            cancelled: 'Cancelled'
+          };
+
+          // Build inline box calculator items
+          let boxCalcItems = '';
+          if (items.length > 0) {
+            const bcGrouped = {};
+            const bcCatOrder = [];
+            items.forEach(item => {
+              const cat = getCategory(item.product_key) || 'Other';
+              if (!bcGrouped[cat]) { bcGrouped[cat] = []; bcCatOrder.push(cat); }
+              bcGrouped[cat].push(item);
+            });
+            let globalIdx = 0;
+            boxCalcItems = bcCatOrder.map(cat => {
+              let catHtml = `<div class="box-calc-cat-header">${_esc(cat)}</div>`;
+              catHtml += bcGrouped[cat].map(item => {
+                const label = _esc(item.product_label || item.product_key);
+                const qty = item.quantity || 0;
+                const uid = `bc-${oi}-${globalIdx++}`;
+                return `
+                  <div class="box-calc-item">
+                    <div class="box-calc-item-header">
+                      <span class="box-calc-item-name">${label}</span>
+                      <span class="box-calc-item-qty">${qty} pieces</span>
+                    </div>
+                    <div class="box-calc-input-row">
+                      <span class="box-calc-input-label">Pieces per box:</span>
+                      <input class="box-calc-input" type="number" min="1" id="${uid}" data-qty="${qty}" placeholder="—" oninput="calcBox(this)" />
+                    </div>
+                    <div class="box-calc-result empty" id="${uid}-result">
+                      <span class="arrow">→</span> enter box size above
+                    </div>
+                  </div>`;
+              }).join('');
+              return catHtml;
+            }).join('');
+          }
+
+          html += `
+            <div class="order-card" id="staff-order-${oi}">
+              <div class="order-card-top" onclick="toggleStaffOrder(${oi})">
+                <div>
+                  <div class="order-driver-name">${driverName}</div>
+                  <div class="order-biz-name">${bizName}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:.82rem;color:var(--tx-faint);font-weight:500">${itemCount} items${timeStr ? ' · ' + timeStr : ''}</span>
+                  <span class="order-status-badge ${status}">${statusLabels[status] || status}</span>
+                  <svg class="order-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .25s;color:var(--tx-faint);flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
               </div>
-              <span class="order-status-badge ${status}">${statusLabels[status] || status}</span>
-            </div>
-            <div class="order-items-summary">${itemsSummary}</div>
-            <div class="order-meta-row">
-              ${dateStr ? `<span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                ${dateStr}${timeStr ? ' · ' + timeStr : ''}
-              </span>` : ''}
-              <span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                ${createdStr}
-              </span>
-              ${order.notes ? `<span title="${_esc(order.notes)}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                Note
-              </span>` : ''}
-            </div>
-            ${items.length > 0 ? `
-            <div class="box-calc-section">
-              <button class="box-calc-toggle" onclick="toggleBoxCalc(this, event)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-                Box Calculator
-                <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-              </button>
-              <div class="box-calc-body">
-                ${boxCalcItems}
+              <div class="order-expand-hint" id="staff-hint-${oi}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> Tap to view items</div>
+              <div class="order-items-summary" id="staff-items-${oi}">${itemsSummary}</div>
+              <div class="order-meta-row" id="staff-meta-${oi}" style="display:none">
+                ${order.notes ? `<span title="${_esc(order.notes)}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                  ${_esc(order.notes)}
+                </span>` : ''}
               </div>
-            </div>` : ''}
-          </div>`;
-      }).join('');
+              ${items.length > 0 ? `
+              <div class="box-calc-section" id="staff-boxcalc-${oi}" style="display:none">
+                <button class="box-calc-toggle" onclick="toggleBoxCalc(this, event)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                  Box Calculator
+                  <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div class="box-calc-body">
+                  ${boxCalcItems}
+                </div>
+              </div>` : ''}
+            </div>`;
+        });
+      });
 
-      container.innerHTML = html;
+      container.innerHTML = html || '<div class="empty-state">No orders found</div>';
 
-      // Show quick calculator now that dashboard is visible
       const qcCard = document.getElementById('quick-calc-card');
       if (qcCard) qcCard.style.display = '';
+    }
+
+    function toggleStaffOrder(idx) {
+      const items = document.getElementById('staff-items-' + idx);
+      const meta = document.getElementById('staff-meta-' + idx);
+      const boxcalc = document.getElementById('staff-boxcalc-' + idx);
+      const hint = document.getElementById('staff-hint-' + idx);
+      const card = document.getElementById('staff-order-' + idx);
+      const chevron = card ? card.querySelector('.order-chevron') : null;
+      const isExpanded = items && items.classList.contains('expanded');
+
+      if (items) items.classList.toggle('expanded');
+      if (meta) meta.style.display = isExpanded ? 'none' : 'flex';
+      if (boxcalc) boxcalc.style.display = isExpanded ? 'none' : '';
+      if (hint) hint.classList.toggle('hidden');
+      if (chevron) chevron.style.transform = isExpanded ? '' : 'rotate(180deg)';
     }
 
     /* ════════════════════════════════════════

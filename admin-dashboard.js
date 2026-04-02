@@ -2154,12 +2154,21 @@ function buildPrintHTML(showTotals) {
   html += `</tr></thead><tbody>`;
 
   let grandTotal = 0;
+  let lastPrintCat = '';
+  const colSpan = showTotals ? 4 : 2;
   detailItems.forEach(item => {
     const effectiveQty = item.adjusted_quantity !== null ? item.adjusted_quantity : item.quantity;
     const lineTotal = effectiveQty * parseFloat(item.price_at_order || 0);
     grandTotal += lineTotal;
     const adjNote = (item.adjusted_quantity !== null && item.adjusted_quantity !== item.quantity)
       ? ` (${item.quantity} → ${effectiveQty})` : '';
+
+    // Category header row
+    const cat = getCategoryLabel(item.product_key);
+    if (cat && cat !== lastPrintCat) {
+      html += `<tr><td colspan="${colSpan}" style="background:#fff5f5;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#C8102E;padding:6px 8px;border-bottom:2px solid #C8102E">${cat}</td></tr>`;
+      lastPrintCat = cat;
+    }
 
     html += `<tr>`;
     html += `<td>${item.product_label}${adjNote}</td>`;
@@ -2250,26 +2259,49 @@ function openPrintWindow(showTotals) {
     window.addEventListener('focus', removePrinting);
   });
 
-  // Share button
-  document.getElementById('pp-share-btn').addEventListener('click', () => {
-    if (navigator.share) {
-      let text = 'Cecilia Bakery\n';
-      const orderNum = overlay.querySelector('.print-order-num');
-      if (orderNum) text += orderNum.textContent + '\n\n';
-      overlay.querySelectorAll('.print-meta-item').forEach(m => { text += m.textContent.trim() + '\n'; });
-      text += '\n';
-      overlay.querySelectorAll('.print-items tbody tr').forEach(r => {
-        let line = '';
-        r.querySelectorAll('td').forEach(c => { line += c.textContent + '  '; });
-        text += line.trim() + '\n';
+  // Share button — captures print preview as image
+  document.getElementById('pp-share-btn').addEventListener('click', async () => {
+    const pageEl = overlay.querySelector('.pp-page');
+    if (!pageEl) return;
+    try {
+      const shareBtn = document.getElementById('pp-share-btn');
+      shareBtn.textContent = '⏳ ' + (lang === 'es' ? 'Generando...' : 'Generating...');
+      shareBtn.disabled = true;
+      const canvas = await html2canvas(pageEl, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        logging: false
       });
-      const total = overlay.querySelector('.print-total');
-      if (total) text += '\n' + total.textContent;
-      const pay = overlay.querySelector('.print-payment');
-      if (pay) text += '\n' + pay.textContent;
-      navigator.share({ title: 'Cecilia Bakery Order', text }).catch(() => {});
-    } else {
-      showToast(lang === 'es' ? 'Compartir no disponible' : 'Share not available', 'info');
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      const orderNum = detailOrder?.order_number || '';
+      const fileName = `cecilia-order-${orderNum}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: 'Cecilia Bakery Order',
+          files: [file]
+        });
+      } else {
+        // Fallback: download the image
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast(lang === 'es' ? 'Imagen descargada' : 'Image downloaded', 'success');
+      }
+      shareBtn.textContent = '📤 ' + (lang === 'es' ? 'Compartir' : 'Share');
+      shareBtn.disabled = false;
+    } catch (e) {
+      console.error('Share error:', e);
+      const shareBtn = document.getElementById('pp-share-btn');
+      if (shareBtn) {
+        shareBtn.textContent = '📤 ' + (lang === 'es' ? 'Compartir' : 'Share');
+        shareBtn.disabled = false;
+      }
     }
   });
 }
@@ -2279,68 +2311,56 @@ window.printOrder = function() {
 };
 
 
-window.shareWhatsApp = function() {
+window.shareWhatsApp = async function() {
   if (!detailOrder) return;
 
   const order = detailOrder;
-  const driverName = getDriverName(order.driver_id);
   const orderNum = order.order_number ? `#${order.order_number}` : `#${order.id.replace(/-/g, '').slice(-5).toUpperCase()}`;
 
-  let dateStr = '';
-  if (order.pickup_date) {
-    dateStr = formatDate(order.pickup_date);
-  } else {
-    dateStr = formatDate(order.submitted_at);
-  }
+  // Build the print preview off-screen
+  const content = buildPrintHTML(detailTotalsVisible);
+  if (!content) return;
 
-  let msg = `*CECILIA BAKERY*\n`;
-  msg += `*${lang === 'es' ? 'Pedido' : 'Order'} ${orderNum}*\n\n`;
-  msg += `*${lang === 'es' ? 'Conductor' : 'Driver'}:* ${driverName}\n`;
-  if (order.business_name) {
-    msg += `*${lang === 'es' ? 'Negocio' : 'Business'}:* ${order.business_name}\n`;
-  }
-  msg += `*${lang === 'es' ? 'Fecha' : 'Date'}:* ${dateStr}\n`;
+  const tempDiv = document.createElement('div');
+  tempDiv.style.cssText = 'position:fixed;left:-9999px;top:0;width:600px;background:#fff;padding:20px;font-family:Outfit,Segoe UI,sans-serif;color:#1a1a1a';
+  tempDiv.innerHTML = `<div class="pp-page">${content}<div class="pp-footer" style="margin-top:24px;text-align:center;font-size:.75rem;color:#aaa;border-top:1px solid #eee;padding-top:12px">ceciliabakery.com</div></div>`;
+  document.body.appendChild(tempDiv);
 
-  let grandTotal = 0;
-  let totalItems = 0;
+  try {
+    // Copy print-preview CSS styles inline for html2canvas
+    const canvas = await html2canvas(tempDiv.querySelector('.pp-page'), {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+      logging: false
+    });
+    tempDiv.remove();
 
-  // Group items by category
-  const catGrouped = {};
-  detailItems.forEach(item => {
-    const effectiveQty = item.adjusted_quantity !== null ? item.adjusted_quantity : item.quantity;
-    if (effectiveQty === 0) return;
-    const cat = getCategoryLabel(item.product_key) || (lang === 'es' ? 'Otros' : 'Other');
-    if (!catGrouped[cat]) catGrouped[cat] = [];
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    const fileName = `cecilia-order-${order.order_number || ''}.png`;
+    const file = new File([blob], fileName, { type: 'image/png' });
 
-    let label = item.product_label || item.product_key;
-    const isNoTicket = item.product_key && item.product_key.endsWith('_nt');
-    // Clean label — strip existing "(No Ticket)" / "(NT)" / "(ST)" to re-add cleanly
-    label = label.replace(/\s*\((No Ticket|NT|ST)\)/gi, '');
-
-    if (isNoTicket) label += ' (No Ticket)';
-
-    const lineTotal = effectiveQty * parseFloat(item.price_at_order || 0);
-    grandTotal += lineTotal;
-    totalItems += effectiveQty;
-
-    let line = `${effectiveQty}x ${label}`;
-    if (detailTotalsVisible) {
-      line += ` — ${formatCurrency(lineTotal)}`;
+    // Try native share with file (works on mobile)
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        title: `Cecilia Bakery Order ${orderNum}`,
+        files: [file]
+      });
+    } else {
+      // Fallback: download the image so user can manually attach to WhatsApp
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(lang === 'es' ? 'Imagen descargada — compártela en WhatsApp' : 'Image downloaded — share it on WhatsApp', 'success');
     }
-    catGrouped[cat].push(line);
-  });
-
-  Object.entries(catGrouped).forEach(([cat, lines]) => {
-    msg += `\n*${cat}*\n${lines.join('\n')}\n`;
-  });
-
-  msg += `\n${lang === 'es' ? 'Total Artículos' : 'Total Items'}: ${totalItems}`;
-  if (detailTotalsVisible) {
-    msg += `\n*${lang === 'es' ? 'Total General' : 'Grand Total'}:* ${formatCurrency(grandTotal)}`;
+  } catch (e) {
+    tempDiv.remove();
+    console.error('WhatsApp image share error:', e);
+    showToast(lang === 'es' ? 'Error al generar imagen' : 'Error generating image', 'error');
   }
-
-  const encoded = encodeURIComponent(msg);
-  window.open(`https://wa.me/?text=${encoded}`, '_blank');
 };
 
 /* ═══════════════════════════════════
