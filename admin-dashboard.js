@@ -758,8 +758,23 @@ let _itemChangeTimer = null;
 function handleOrderItemsChange(payload) {
   // Debounce: staff often updates multiple items at once
   clearTimeout(_itemChangeTimer);
-  _itemChangeTimer = setTimeout(() => {
+  _itemChangeTimer = setTimeout(async () => {
+    // Refresh the order list
     silentRefreshOrders();
+
+    // If the detail modal is open for the affected order, refresh it live
+    const orderId = payload.new ? payload.new.order_id : (payload.old ? payload.old.order_id : null);
+    const overlay = document.getElementById('detail-overlay');
+    if (orderId && detailOrder && detailOrder.id === orderId && overlay && overlay.classList.contains('open')) {
+      try {
+        const { data: items } = await sb.from('driver_order_items').select('*').eq('order_id', orderId);
+        if (items) {
+          detailItems = sortItemsByCategory(items);
+          await renderOrderDetail();
+          showToast(lang === 'es' ? 'Pedido actualizado por el personal' : 'Order updated by staff', 'info');
+        }
+      } catch (e) { console.warn('Detail refresh failed:', e); }
+    }
   }, 1500);
 }
 
