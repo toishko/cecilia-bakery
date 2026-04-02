@@ -1378,7 +1378,50 @@ function renderOrderCards(orders, containerId, showLive = false) {
     html += `<div class="live-indicator"><span class="live-dot"></span>${lang === 'es' ? 'EN VIVO' : 'LIVE'}</div>`;
   }
 
+  // Helper: get date key (YYYY-MM-DD) from submitted_at
+  function getDateKey(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  // Helper: format a date key into a user-friendly label
+  function getDateLabel(dateKey) {
+    if (!dateKey) return '—';
+    const today = getTodayStr();
+    // Yesterday
+    const yd = new Date();
+    yd.setDate(yd.getDate() - 1);
+    const yesterdayStr = yd.getFullYear() + '-' + String(yd.getMonth()+1).padStart(2,'0') + '-' + String(yd.getDate()).padStart(2,'0');
+
+    if (dateKey === today) return lang === 'es' ? 'Hoy' : 'Today';
+    if (dateKey === yesterdayStr) return lang === 'es' ? 'Ayer' : 'Yesterday';
+    // Full date
+    const d = new Date(dateKey + 'T12:00:00');
+    const monthsEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const monthsEs = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const months = lang === 'es' ? monthsEs : monthsEn;
+    const dayNames = lang === 'es'
+      ? ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
+      : ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    return `${dayNames[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  }
+
+  let lastDateKey = null;
+
   orders.forEach(order => {
+    // Insert date separator when the date changes
+    const dateKey = getDateKey(order.submitted_at);
+    if (dateKey !== lastDateKey) {
+      const dateLabel = getDateLabel(dateKey);
+      html += `<div class="date-separator">
+        <div class="date-separator-line"></div>
+        <span class="date-separator-label">${dateLabel}</span>
+        <div class="date-separator-line"></div>
+      </div>`;
+      lastDateKey = dateKey;
+    }
+
     const driverName = _esc(getDriverName(order.driver_id));
     const business = _esc(order.business_name || (lang === 'es' ? 'Sin negocio' : 'No business'));
     const time = formatTime(order.submitted_at);

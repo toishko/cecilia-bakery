@@ -288,9 +288,14 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .filter-tab:hover{border-color:var(--bd-hover);color:var(--tx)}
 .filter-tab.active{background:var(--red);color:#fff;border-color:var(--red)}
 
-/* ═══════════════════════════════════
-   ORDER CARDS
-   ═══════════════════════════════════ */
+/* Date separators between order groups */
+.date-separator{display:flex;align-items:center;gap:12px;margin:20px 0 12px;padding:0 4px}
+.date-separator:first-child{margin-top:0}
+.date-separator-line{flex:1;height:1px;background:var(--bd)}
+.date-separator-label{font-size:.72rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.8px;color:var(--red);white-space:nowrap;padding:4px 12px;
+  background:var(--bg-surface);border-radius:20px;border:1px solid var(--bd)}
+
 .order-card{background:var(--bg-card);border:1px solid var(--bd);border-radius:12px;
   padding:16px;margin-bottom:10px;cursor:pointer;overflow:hidden;box-sizing:border-box;max-width:100%;
   transition:background .15s,transform .15s,box-shadow .15s;box-shadow:var(--shadow-card)}
