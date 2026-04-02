@@ -793,8 +793,9 @@ function handleOrderItemsChange(payload) {
         const msg = lang === 'es'
           ? `Pedido${driverName ? ' de ' + driverName : ''} editado por ${editedBy}`
           : `${driverName ? driverName + "'s order" : 'Order'} updated by ${editedBy}`;
+        console.log('[REALTIME DEBUG] About to show toast:', msg);
         showToast(msg, 'info');
-      } catch (_) {}
+      } catch (e) { console.error('handleOrderItemsChange toast error:', e); }
     }
 
     // Refresh the order list
