@@ -235,62 +235,101 @@
       padding: 20px;
     }
 
-    /* ── Sidebar / Tab Bar ── */
-    .staff-dashboard-layout {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
+    /* ── Staff Dashboard Header ── */
+    .staff-dash-header {
+      background: var(--bg-card); border-bottom: 1px solid var(--bd);
+      padding: 12px 16px;
+      padding-top: calc(12px + env(safe-area-inset-top));
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
     }
-    .staff-sidebar {
-      display: flex;
-      gap: 4px;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--bd);
-      margin-bottom: 20px;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+    .staff-dash-logo { height: 36px; width: auto; object-fit: contain; }
+    [data-theme="dark"] .staff-dash-logo { filter: brightness(0) invert(1) sepia(1) saturate(2) hue-rotate(310deg); }
+
+    /* ── Hamburger Button ── */
+    .staff-menu-btn {
+      background: none; border: none; cursor: pointer; padding: 6px;
+      display: none; flex-direction: column; justify-content: center; gap: 5px;
+      width: 36px; height: 36px;
     }
-    .staff-sidebar-item {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 18px;
-      border: none; background: none;
-      border-radius: 10px;
-      font-size: .85rem; font-weight: 600;
-      color: var(--tx-muted);
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all .2s;
+    .staff-menu-btn span {
+      display: block; height: 2px; border-radius: 2px; background: var(--tx);
+      transition: transform .3s, opacity .3s, width .3s;
     }
-    .staff-sidebar-item:hover { background: rgba(200,16,46,.06); color: var(--tx); }
-    .staff-sidebar-item.active {
-      background: rgba(200,16,46,.1);
-      color: var(--red);
+    .staff-menu-btn span:nth-child(1) { width: 22px; }
+    .staff-menu-btn span:nth-child(2) { width: 16px; }
+    .staff-menu-btn span:nth-child(3) { width: 22px; }
+    .staff-menu-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); width: 22px; }
+    .staff-menu-btn.open span:nth-child(2) { opacity: 0; width: 0; }
+    .staff-menu-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); width: 22px; }
+
+    /* When dashboard is active, show hamburger and hide nav extras */
+    body.staff-dashboard-active .staff-menu-btn { display: flex; }
+    body.staff-dashboard-active .nav-right-group { display: none; }
+
+    /* ── Dropdown Nav ── */
+    .staff-dropdown-nav {
+      background: var(--bg-card); border-bottom: 1px solid var(--bd);
+      overflow: hidden; max-height: 0; transition: max-height .3s ease, padding .3s ease;
+      padding: 0 16px; position: sticky; top: 61px; z-index: 99;
     }
-    .staff-sidebar-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .staff-dropdown-nav.open { max-height: 500px; padding: 8px 16px 16px; }
+    .staff-dropdown-nav-item {
+      display: flex; align-items: center; gap: 12px; padding: 14px 12px;
+      border-radius: 10px; cursor: pointer; transition: background .15s; font-size: .95rem;
+      color: var(--tx-muted); border: none; background: none; width: 100%; text-align: left;
+      font-family: inherit;
+    }
+    .staff-dropdown-nav-item:hover,
+    .staff-dropdown-nav-item.active { background: var(--bg-surface); color: var(--tx); }
+    .staff-dropdown-nav-item.active { font-weight: 600; color: var(--red); }
+    .staff-dropdown-nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+    /* ── Nav Divider ── */
+    .staff-nav-divider {
+      height: 1px; background: var(--bd); margin: 8px 0;
+    }
+
+    /* ── Nav Settings Row (toggles inline) ── */
+    .staff-nav-setting {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 12px; font-size: .9rem; color: var(--tx-muted);
+    }
+    .staff-nav-setting-label {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .staff-nav-setting-label svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    /* ── Toggle (reuse driver pattern) ── */
+    .staff-toggle { position: relative; width: 44px; height: 26px; cursor: pointer; flex-shrink: 0; }
+    .staff-toggle input { opacity: 0; width: 0; height: 0; }
+    .staff-toggle-track { position: absolute; inset: 0; background: var(--bd); border-radius: 13px; transition: background .2s; }
+    .staff-toggle input:checked + .staff-toggle-track { background: var(--red); }
+    .staff-toggle-thumb {
+      position: absolute; top: 2px; left: 2px; width: 22px; height: 22px;
+      background: #fff; border-radius: 50%; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    }
+    .staff-toggle input:checked ~ .staff-toggle-thumb { transform: translateX(18px); }
+
+    /* ── Nav Sign Out Button ── */
+    .staff-nav-signout {
+      display: flex; align-items: center; gap: 10px; padding: 12px;
+      border-radius: 10px; cursor: pointer; font-size: .9rem;
+      color: var(--red); border: 1px solid var(--bd); background: none; width: 100%;
+      text-align: left; font-family: inherit; font-weight: 500; margin-top: 4px;
+      transition: background .15s, border-color .15s;
+    }
+    .staff-nav-signout:hover { background: rgba(200,16,46,.06); border-color: var(--red); }
+    .staff-nav-signout svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    /* ── Staff Content ── */
+    .staff-dash-content {
+      padding: 16px; max-width: 800px; margin: 0 auto; width: 100%;
+    }
     .staff-section { display: none; }
     .staff-section.active { display: block; }
     .staff-main { flex: 1; min-width: 0; }
-
-    @media (min-width: 768px) {
-      .staff-dashboard-layout {
-        flex-direction: row;
-        gap: 24px;
-      }
-      .staff-sidebar {
-        flex-direction: column;
-        width: 200px;
-        flex-shrink: 0;
-        border-bottom: none;
-        border-right: 1px solid var(--bd);
-        padding: 0 16px 0 0;
-        margin-bottom: 0;
-        overflow-x: visible;
-      }
-      .staff-sidebar-item {
-        width: 100%;
-        padding: 10px 14px;
-      }
-    }
 
     /* ── Settings Section ── */
     .settings-card {
@@ -1010,6 +1049,88 @@
         </svg>
       </button>
     </div>
+    <!-- Hamburger (visible only in dashboard state via body class) -->
+    <button class="staff-menu-btn" id="staff-menu-btn" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- ═══ DROPDOWN NAV (below main-nav, for dashboard) ═══ -->
+  <nav id="staff-dropdown-nav" class="staff-dropdown-nav">
+    <button class="staff-dropdown-nav-item active" data-section="orders" onclick="staffShowSection('orders')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <span data-en="Orders" data-es="Pedidos">Orders</span>
+    </button>
+    <button class="staff-dropdown-nav-item" data-section="calculator" onclick="staffShowSection('calculator')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      <span data-en="Calculator" data-es="Calculadora">Calculator</span>
+    </button>
+    <button class="staff-dropdown-nav-item" data-section="saved" onclick="staffShowSection('saved')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      <span data-en="Saved" data-es="Guardados">Saved</span>
+    </button>
+
+    <div class="staff-nav-divider"></div>
+
+    <!-- Notifications Toggle -->
+    <div class="staff-nav-setting">
+      <div class="staff-nav-setting-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span data-en="Notifications" data-es="Notificaciones">Notifications</span>
+      </div>
+      <label class="staff-toggle">
+        <input type="checkbox" id="staff-notif-toggle">
+        <span class="staff-toggle-track"></span>
+        <span class="staff-toggle-thumb"></span>
+      </label>
+    </div>
+
+    <!-- Dark Mode Toggle -->
+    <div class="staff-nav-setting">
+      <div class="staff-nav-setting-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <span data-en="Dark Mode" data-es="Modo Oscuro">Dark Mode</span>
+      </div>
+      <label class="staff-toggle">
+        <input type="checkbox" id="staff-theme-toggle">
+        <span class="staff-toggle-track"></span>
+        <span class="staff-toggle-thumb"></span>
+      </label>
+    </div>
+
+    <!-- Language Toggle -->
+    <div class="staff-nav-setting">
+      <div class="staff-nav-setting-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span data-en="Language" data-es="Idioma">Language</span>
+      </div>
+      <button onclick="toggleStaffLang()" id="staff-nav-lang-btn" style="padding:5px 14px;background:none;border:1px solid var(--bd);border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--tx);font-family:inherit">ES</button>
+    </div>
+
+    <!-- Text Size -->
+    <div class="staff-nav-setting">
+      <div class="staff-nav-setting-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+        <span data-en="Text Size" data-es="Tamaño de Texto">Text Size</span>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="adjustFontSize(-1)" style="padding:4px 10px;background:none;border:1px solid var(--bd);border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:700;color:var(--tx);font-family:inherit">A−</button>
+        <button onclick="adjustFontSize(1)" style="padding:4px 10px;background:none;border:1px solid var(--bd);border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:700;color:var(--tx);font-family:inherit">A+</button>
+      </div>
+    </div>
+
+    <div class="staff-nav-divider"></div>
+
+    <!-- User Info -->
+    <div style="padding:6px 12px;font-size:.82rem;color:var(--tx-muted)">
+      <span id="staff-nav-greeting">Hi!</span>
+    </div>
+
+    <!-- Sign Out -->
+    <button class="staff-nav-signout" id="staff-signout-btn" data-en="Sign Out" data-es="Cerrar Sesión">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span data-en="Sign Out" data-es="Cerrar Sesión">Sign Out</span>
+    </button>
   </nav>
 
   <!-- ═══ MAIN CONTENT ═══ -->
@@ -1052,41 +1173,9 @@
 
     <!-- ── STATE 3: STAFF DASHBOARD ── -->
     <div id="state-dashboard" class="state-panel">
-      <div class="staff-eyebrow" data-en="Staff Portal" data-es="Portal de Personal">Staff Portal</div>
-      <h1 class="staff-page-title" data-en="Packaging Dashboard" data-es="Panel de Empaque">Packaging <em>Dashboard</em></h1>
 
-      <!-- User Header -->
-      <div class="staff-header" id="staff-header">
-        <div class="staff-avatar" id="staff-avatar">?</div>
-        <div class="staff-user-info">
-          <div class="staff-greeting" id="staff-greeting">Hi!<span class="staff-badge">Staff Portal</span></div>
-        </div>
-        <button class="staff-signout-btn" id="staff-signout-btn" data-en="Sign Out" data-es="Cerrar Sesión">Sign Out</button>
-      </div>
-
-      <!-- Sidebar + Content Layout -->
-      <div class="staff-dashboard-layout">
-        <!-- Sidebar / Tab Bar -->
-        <div class="staff-sidebar" id="staff-sidebar">
-          <button class="staff-sidebar-item active" data-section="orders" onclick="staffShowSection('orders')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            <span data-en="Orders" data-es="Pedidos">Orders</span>
-          </button>
-          <button class="staff-sidebar-item" data-section="calculator" onclick="staffShowSection('calculator')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-            <span data-en="Calculator" data-es="Calculadora">Calculator</span>
-          </button>
-          <button class="staff-sidebar-item" data-section="saved" onclick="staffShowSection('saved')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            <span data-en="Saved" data-es="Guardados">Saved</span>
-          </button>
-          <button class="staff-sidebar-item" data-section="settings" onclick="staffShowSection('settings')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            <span data-en="Settings" data-es="Ajustes">Settings</span>
-          </button>
-        </div>
-
-        <!-- Main Content -->
+      <!-- Main Content -->
+      <div class="staff-dash-content">
         <div class="staff-main">
           <!-- SECTION: Orders -->
           <div class="staff-section active" id="section-orders">
@@ -1242,8 +1331,8 @@
       staffLang = staffLang === 'en' ? 'es' : 'en';
       localStorage.setItem('cb-staff-lang', staffLang);
       document.getElementById('lang-toggle').textContent = staffLang === 'en' ? 'ES' : 'EN';
-      var settingsBtn = document.getElementById('settings-lang-btn');
-      if (settingsBtn) settingsBtn.textContent = staffLang === 'en' ? 'Espa\u00f1ol' : 'English';
+      var navLangBtn = document.getElementById('staff-nav-lang-btn');
+      if (navLangBtn) navLangBtn.textContent = staffLang === 'en' ? 'ES' : 'EN';
       applyStaffLang();
     }
 
@@ -1259,18 +1348,24 @@
     // Apply language on load
     document.getElementById('lang-toggle').textContent = staffLang === 'en' ? 'ES' : 'EN';
     (function() {
-      var sb = document.getElementById('settings-lang-btn');
-      if (sb) sb.textContent = staffLang === 'en' ? 'Espa\u00f1ol' : 'English';
+      var navLangBtn = document.getElementById('staff-nav-lang-btn');
+      if (navLangBtn) navLangBtn.textContent = staffLang === 'en' ? 'ES' : 'EN';
     })();
     applyStaffLang();
 
     /* ── Sidebar Section Switcher ── */
     function staffShowSection(name) {
+      // Close hamburger dropdown
+      var nav = document.getElementById('staff-dropdown-nav');
+      var btn = document.getElementById('staff-menu-btn');
+      if (nav) nav.classList.remove('open');
+      if (btn) btn.classList.remove('open');
+
       document.querySelectorAll('.staff-section').forEach(function(el) {
         el.classList.toggle('active', el.id === 'section-' + name);
       });
-      document.querySelectorAll('.staff-sidebar-item').forEach(function(btn) {
-        btn.classList.toggle('active', btn.dataset.section === name);
+      document.querySelectorAll('.staff-dropdown-nav-item').forEach(function(navBtn) {
+        navBtn.classList.toggle('active', navBtn.dataset.section === name);
       });
       localStorage.setItem('cb-staff-section', name);
       if (name === 'saved') renderSavedCalcs();
@@ -1774,6 +1869,18 @@
     function showState(stateName) {
       document.querySelectorAll('.state-panel').forEach(p => p.classList.remove('active'));
 
+      // Toggle body class for nav appearance (hamburger vs right-group)
+      if (stateName === 'dashboard') {
+        document.body.classList.add('staff-dashboard-active');
+      } else {
+        document.body.classList.remove('staff-dashboard-active');
+        // Close dropdown if open
+        var nav = document.getElementById('staff-dropdown-nav');
+        var btn = document.getElementById('staff-menu-btn');
+        if (nav) nav.classList.remove('open');
+        if (btn) btn.classList.remove('open');
+      }
+
       if (stateName === 'signin') {
         const el = document.getElementById('state-signin');
         if (el) el.classList.add('active');
@@ -1802,16 +1909,12 @@
 
     function populateUserInfo(user) {
       const firstName = user.firstName || user.username || 'Staff';
-      const avatar = document.getElementById('staff-avatar');
-      const greeting = document.getElementById('staff-greeting');
 
-      if (user.imageUrl) {
-        avatar.innerHTML = `<img src="${_esc(user.imageUrl)}" alt="${_esc(firstName)}" />`;
-      } else {
-        avatar.textContent = firstName.charAt(0).toUpperCase();
+      // Set greeting in dropdown nav
+      var navGreeting = document.getElementById('staff-nav-greeting');
+      if (navGreeting) {
+        navGreeting.textContent = 'Hi, ' + firstName;
       }
-
-      greeting.innerHTML = `Hi, ${_esc(firstName)}<span class="staff-badge">Staff Portal</span>`;
     }
 
 
@@ -2562,6 +2665,65 @@
         showState('signin');
       }
     });
+
+    // ── Hamburger menu toggle ──
+    document.getElementById('staff-menu-btn')?.addEventListener('click', function() {
+      var nav = document.getElementById('staff-dropdown-nav');
+      var btn = document.getElementById('staff-menu-btn');
+      nav.classList.toggle('open');
+      btn.classList.toggle('open');
+    });
+
+    // ── Dark mode toggle in dropdown ──
+    var staffThemeToggle = document.getElementById('staff-theme-toggle');
+    if (staffThemeToggle) {
+      // Set initial state
+      staffThemeToggle.checked = (document.documentElement.getAttribute('data-theme') === 'dark');
+      staffThemeToggle.addEventListener('change', function() {
+        var isDark = staffThemeToggle.checked;
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+      });
+    }
+
+    // ── Notification toggle in dropdown ──
+    var staffNotifToggle = document.getElementById('staff-notif-toggle');
+    if (staffNotifToggle) {
+      // Set initial state based on current permission
+      var isGranted = ('Notification' in window && Notification.permission === 'granted');
+      staffNotifToggle.checked = isGranted;
+      staffNotifToggle.addEventListener('change', async function() {
+        if (staffNotifToggle.checked) {
+          // Enable notifications
+          var perm = await Notification.requestPermission();
+          if (perm === 'granted') {
+            staffToast('Notifications enabled!', 'success');
+            if ('serviceWorker' in navigator) {
+              try {
+                var staffSb = await getSupabaseClient();
+                if (staffSb && window.Clerk && window.Clerk.user) {
+                  var { subscribeToPush } = await import('/push-utils.js');
+                  await subscribeToPush(staffSb, 'staff', window.Clerk.user.id, 'en', staffToast);
+                }
+              } catch (e) { console.warn('Push sub error:', e); }
+            }
+          } else {
+            staffNotifToggle.checked = false;
+            staffToast('Notifications blocked. Enable in browser settings.', 'error', 5000);
+          }
+        } else {
+          // Disable notifications
+          try {
+            var staffSb = await getSupabaseClient();
+            if (staffSb && window.Clerk && window.Clerk.user) {
+              var { unsubscribeFromPush } = await import('/push-utils.js');
+              await unsubscribeFromPush(staffSb, 'staff', window.Clerk.user.id);
+            }
+          } catch (e) { console.warn('Push unsub error:', e); }
+          staffToast('Notifications disabled', 'info');
+        }
+      });
+    }
 
     /* ════════════════════════════════════════
        STAFF ORDER EDIT MODE
