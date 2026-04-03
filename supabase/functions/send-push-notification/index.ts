@@ -67,13 +67,19 @@ serve(async (req) => {
     }
 
     if (recordId) {
-      const { data: existing } = await sb
+      // For driver_orders, dedup on order_id only (ignore event_type)
+      // so INSERT + UPDATE within 60s are treated as the same event
+      let dedupQuery = sb
         .from('notification_log')
         .select('id')
         .eq('order_id', recordId)
-        .eq('event_type', eventKey)
         .gte('created_at', new Date(Date.now() - 60000).toISOString())
-        .limit(1)
+
+      if (table !== 'driver_orders') {
+        dedupQuery = dedupQuery.eq('event_type', eventKey)
+      }
+
+      const { data: existing } = await dedupQuery.limit(1)
 
       if (existing && existing.length > 0) {
         console.log(`Idempotency: already processed ${eventKey} for ${recordId}, skipping`)
@@ -90,7 +96,7 @@ serve(async (req) => {
     }
 
     // ── Determine who to notify ──
-    let targets: { user_type: string; user_id?: string; title: string; body: string; url: string }[] = []
+    let targets: { user_type: string; user_id?: string; title: string; body: string; url: string; tag?: string }[] = []
 
     // ═══════════════════════════════════
     //  DRIVER_ORDER_ITEMS TABLE (staff edits)
@@ -127,6 +133,13 @@ serve(async (req) => {
           title: `🚚 New Order from ${driverName}`,
           body: `${driverName} placed a new order${bizInfo}`,
           url: '/admin-dashboard.html'
+        })
+        targets.push({
+          user_type: 'staff',
+          title: '🚚 New Order',
+          body: `New order from ${driverName}`,
+          url: '/staff',
+          tag: 'new-order-' + record.id
         })
       }
 
@@ -276,7 +289,7 @@ serve(async (req) => {
           title: target.title,
           body: target.body,
           url: target.url,
-          tag: `cecilia-${table}-${record?.id || Date.now()}`
+          tag: target.tag || `cecilia-${table}-${record?.id || Date.now()}`
         })
 
         const pushSub = {
