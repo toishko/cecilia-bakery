@@ -1570,6 +1570,55 @@
       }, duration);
     }
 
+    /* ── Notification Opt-In Banner ── */
+    function showNotificationBanner() {
+      var dismissed = localStorage.getItem('cb-staff-notif-dismissed');
+      if (dismissed && (Date.now() - parseInt(dismissed)) < 24 * 60 * 60 * 1000) return;
+      var existing = document.getElementById('notif-banner');
+      if (existing) return;
+
+      var banner = document.createElement('div');
+      banner.id = 'notif-banner';
+      banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:var(--red);color:#fff;padding:16px 20px;z-index:9999;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 -4px 20px rgba(0,0,0,.2)';
+      banner.innerHTML = '<div style="flex:1;min-width:200px">' +
+        '<div style="font-weight:700;font-size:.95rem;margin-bottom:2px">🔔 Enable Notifications</div>' +
+        '<div style="font-size:.82rem;opacity:.9">Get notified when new orders come in and when orders are updated.</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;flex-shrink:0">' +
+          '<button onclick="dismissNotifBanner()" style="padding:8px 16px;background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;font-size:.82rem;cursor:pointer">Later</button>' +
+          '<button onclick="enableNotifications()" style="padding:8px 16px;background:#fff;color:var(--red);border:none;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer">Enable</button>' +
+        '</div>';
+      document.body.appendChild(banner);
+    }
+
+    function enableNotifications() {
+      Notification.requestPermission().then(function(perm) {
+        if (perm === 'granted') {
+          staffToast('Notifications enabled!', 'success');
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(async function(reg) {
+              try {
+                var staffSb = await getSupabaseClient();
+                if (staffSb && window.Clerk && window.Clerk.user) {
+                  var { subscribeToPush } = await import('/push-utils.js');
+                  await subscribeToPush(staffSb, 'staff', window.Clerk.user.id, 'en', staffToast);
+                }
+              } catch (e) { console.warn('Push sub after enable:', e); }
+            });
+          }
+        } else {
+          staffToast('Notifications blocked. You can enable them in your browser settings.', 'error', 5000);
+        }
+        dismissNotifBanner();
+      });
+    }
+
+    function dismissNotifBanner() {
+      var banner = document.getElementById('notif-banner');
+      if (banner) banner.remove();
+      localStorage.setItem('cb-staff-notif-dismissed', Date.now());
+    }
+
     function deleteSavedCalc(key) {
       localStorage.removeItem(key);
       staffToast('Saved order deleted', 'info');
@@ -2914,22 +2963,32 @@
             if ('serviceWorker' in navigator) {
               navigator.serviceWorker.register('/sw.js').then(function(reg) {
                 console.log('Staff: SW registered');
-                // Subscribe to push after a short delay
-                setTimeout(async function() {
-                  try {
-                    var staffSb = await getSupabaseClient();
-                    if (staffSb && window.Clerk && window.Clerk.user) {
-                      var { subscribeToPush } = await import('/push-utils.js');
-                      await subscribeToPush(staffSb, 'staff', window.Clerk.user.id, 'en', staffToast);
-                    }
-                  } catch (pushErr) {
-                    console.warn('Staff push subscription error:', pushErr);
-                  }
-                }, 2000);
               }).catch(function(err) {
                 console.warn('Staff: SW registration failed:', err);
               });
             }
+
+            // Check notification permission after a short delay
+            setTimeout(function() {
+              if ('Notification' in window && Notification.permission === 'default') {
+                showNotificationBanner();
+              } else if ('Notification' in window && Notification.permission === 'granted') {
+                // Already granted — make sure subscription exists
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.ready.then(async function(reg) {
+                    try {
+                      var staffSb = await getSupabaseClient();
+                      if (staffSb && window.Clerk && window.Clerk.user) {
+                        var { subscribeToPush } = await import('/push-utils.js');
+                        await subscribeToPush(staffSb, 'staff', window.Clerk.user.id, 'en', staffToast);
+                      }
+                    } catch (pushErr) {
+                      console.warn('Staff push subscription error:', pushErr);
+                    }
+                  });
+                }
+              }
+            }, 1500);
 
             // Restore last active section
             var lastSection = localStorage.getItem('cb-staff-section') || 'orders';

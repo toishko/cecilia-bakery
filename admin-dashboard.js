@@ -409,10 +409,11 @@ function enterDashboard(user) {
   const clerkUserId = user?.id || currentUser?.id || '';
   if ('Notification' in window && Notification.permission === 'granted') {
     subscribeToPush('admin', clerkUserId);
-  } else if ('Notification' in window && Notification.permission === 'default'
-             && !localStorage.getItem('cecilia_push_dismissed')) {
-    const optIn = document.getElementById('push-opt-in');
-    if (optIn) optIn.style.display = 'flex';
+  } else if ('Notification' in window && Notification.permission === 'default') {
+    const dismissed = localStorage.getItem('cb-admin-notif-dismissed');
+    if (!dismissed || (Date.now() - parseInt(dismissed)) >= 24 * 60 * 60 * 1000) {
+      setTimeout(function() { showAdminNotifBanner(); }, 2000);
+    }
   }
   lucide.createIcons();
 
@@ -844,6 +845,44 @@ function requestNotifPermission() {
     });
   }
 }
+
+function showAdminNotifBanner() {
+  var dismissed = localStorage.getItem('cb-admin-notif-dismissed');
+  if (dismissed && (Date.now() - parseInt(dismissed)) < 24 * 60 * 60 * 1000) return;
+  var existing = document.getElementById('admin-notif-banner');
+  if (existing) return;
+
+  var banner = document.createElement('div');
+  banner.id = 'admin-notif-banner';
+  banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:var(--red);color:#fff;padding:16px 20px;z-index:9999;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 -4px 20px rgba(0,0,0,.2)';
+  banner.innerHTML = '<div style="flex:1;min-width:200px">' +
+    '<div style="font-weight:700;font-size:.95rem;margin-bottom:2px">🔔 Enable Notifications</div>' +
+    '<div style="font-size:.82rem;opacity:.9">Get notified when new orders come in and when staff edits orders.</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;flex-shrink:0">' +
+      '<button onclick="dismissAdminNotifBanner()" style="padding:8px 16px;background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;font-size:.82rem;cursor:pointer">Later</button>' +
+      '<button onclick="enableAdminNotifications()" style="padding:8px 16px;background:#fff;color:var(--red);border:none;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer">Enable</button>' +
+    '</div>';
+  document.body.appendChild(banner);
+}
+
+window.enableAdminNotifications = function() {
+  Notification.requestPermission().then(function(perm) {
+    if (perm === 'granted') {
+      showToast(lang === 'es' ? '¡Notificaciones activadas!' : 'Notifications enabled!', 'success');
+      if (currentUser) subscribeToPush('admin', currentUser.id);
+    } else {
+      showToast(lang === 'es' ? 'Notificaciones bloqueadas. Actívalas en configuración del navegador.' : 'Notifications blocked. Enable in browser settings.', 'error');
+    }
+    dismissAdminNotifBanner();
+  });
+};
+
+window.dismissAdminNotifBanner = function() {
+  var banner = document.getElementById('admin-notif-banner');
+  if (banner) banner.remove();
+  localStorage.setItem('cb-admin-notif-dismissed', Date.now());
+};
 
 async function showBrowserNotification(title, body, section, orderId) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -3288,15 +3327,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('logout-btn').addEventListener('click', handleLogout);
 
-  // ── Push opt-in banner ──
-  document.getElementById('push-opt-in-btn')?.addEventListener('click', async () => {
-    document.getElementById('push-opt-in').style.display = 'none';
-    if (currentUser) await subscribeToPush('admin', currentUser.id);
-  });
-  document.getElementById('push-opt-in-dismiss')?.addEventListener('click', () => {
-    document.getElementById('push-opt-in').style.display = 'none';
-    localStorage.setItem('cecilia_push_dismissed', '1');
-  });
+  // ── Push opt-in banner (now uses dynamic banner instead of static HTML) ──
+  // Old push-opt-in handlers removed — now using showAdminNotifBanner()
 
   // ── Detail modal ──
   document.getElementById('detail-close').addEventListener('click', closeDetailModal);
