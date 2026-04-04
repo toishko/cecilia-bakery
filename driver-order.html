@@ -63,6 +63,10 @@
       <i data-lucide="layout-dashboard"></i>
       <span data-en="Overview" data-es="Resumen">Overview</span>
     </button>
+    <button class="dash-nav-item" data-section="sales">
+      <i data-lucide="receipt"></i>
+      <span data-en="Sales" data-es="Ventas">Sales</span>
+    </button>
     <button class="dash-nav-item" data-section="new-order">
       <i data-lucide="plus-circle"></i>
       <span data-en="New Order" data-es="Nuevo Pedido">New Order</span>
@@ -70,6 +74,10 @@
     <button class="dash-nav-item" data-section="my-orders">
       <i data-lucide="package"></i>
       <span data-en="My Orders" data-es="Mis Pedidos">My Orders</span>
+    </button>
+    <button class="dash-nav-item" data-section="clients">
+      <i data-lucide="building-2"></i>
+      <span data-en="Clients" data-es="Clientes">Clients</span>
     </button>
     <button class="dash-nav-item" data-section="settings">
       <i data-lucide="settings"></i>
@@ -99,6 +107,42 @@
       </div>
     </div>
 
+    <!-- SALES -->
+    <div id="section-sales" class="dash-section" style="display:none">
+      <h3 class="section-title" data-en="New Sale" data-es="Nueva Venta">New Sale</h3>
+
+      <!-- Client Selector -->
+      <div class="sale-client-selector" id="sale-client-selector">
+        <label data-en="Client" data-es="Cliente">Client</label>
+        <select id="sale-client-dropdown" class="sale-client-dropdown">
+          <option value="" data-en="Select a client..." data-es="Seleccionar cliente...">Select a client...</option>
+        </select>
+      </div>
+      <div id="sale-no-clients" class="sale-no-clients" style="display:none">
+        <i data-lucide="building-2"></i>
+        <p data-en="Add clients first to start making sales." data-es="Agrega clientes primero para comenzar a vender.">Add clients first to start making sales.</p>
+        <button class="sale-goto-clients-btn" id="sale-goto-clients-btn" data-en="Go to Clients" data-es="Ir a Clientes">Go to Clients</button>
+      </div>
+
+      <!-- Today's Sales Summary -->
+      <div class="sale-today-banner" id="sale-today-banner" style="display:none">
+        <div class="sale-today-label" data-en="Today's Sales" data-es="Ventas de Hoy">Today's Sales</div>
+        <div class="sale-today-amount" id="sale-today-amount">$0.00</div>
+      </div>
+
+      <!-- Product List -->
+      <div id="sale-products" class="sale-products"></div>
+    </div>
+
+    <!-- SALE FOOTER BAR -->
+    <div class="sale-footer" id="sale-footer" style="display:none">
+      <div class="sale-footer-info">
+        <span class="sale-footer-label" data-en="Total:" data-es="Total:">Total:</span>
+        <strong class="sale-footer-total" id="sale-footer-total">$0.00</strong>
+      </div>
+      <button class="sale-footer-btn" id="sale-complete-btn" disabled data-en="Complete Sale" data-es="Completar Venta">Complete Sale</button>
+    </div>
+
     <!-- MY ORDERS -->
     <div id="section-my-orders" class="dash-section" style="display:none">
       <div class="balance-banner" id="balance-banner-orders" onclick="showBalanceBreakdown()" style="cursor:pointer">
@@ -109,6 +153,20 @@
       <h3 class="section-title" data-en="My Orders" data-es="Mis Pedidos">My Orders</h3>
       <div id="all-orders">
         <div class="empty-state" data-en="No orders yet" data-es="Aún no hay pedidos">No orders yet</div>
+      </div>
+    </div>
+
+    <!-- CLIENTS -->
+    <div id="section-clients" class="dash-section" style="display:none">
+      <div class="clients-header">
+        <h3 class="section-title" data-en="My Clients" data-es="Mis Clientes">My Clients</h3>
+        <button class="clients-add-btn" id="clients-add-btn">
+          <i data-lucide="plus"></i>
+          <span data-en="Add Client" data-es="Agregar Cliente">Add Client</span>
+        </button>
+      </div>
+      <div id="clients-list">
+        <div class="empty-state clients-empty" data-en="No clients yet. Add your first client to start making sales." data-es="Aún no hay clientes. Agrega tu primer cliente para comenzar a vender.">No clients yet. Add your first client to start making sales.</div>
       </div>
     </div>
 
@@ -293,6 +351,93 @@
   <button class="push-opt-in-btn" id="push-opt-in-btn"
     data-en="Enable" data-es="Activar">Enable</button>
   <button class="push-opt-in-dismiss" id="push-opt-in-dismiss">✕</button>
+</div>
+
+<!-- CLIENT MODAL -->
+<div class="client-modal-overlay" id="client-modal-overlay">
+  <div class="client-modal">
+    <div class="client-modal-header">
+      <h3 class="client-modal-title" id="client-modal-title" data-en="Add Client" data-es="Agregar Cliente">Add Client</h3>
+      <button class="client-modal-close" id="client-modal-close"><i data-lucide="x"></i></button>
+    </div>
+    <div class="client-modal-body">
+      <div class="client-form-field">
+        <label data-en="Business Name" data-es="Nombre del Negocio">Business Name</label>
+        <input type="text" id="client-field-business" data-en-placeholder="Required" data-es-placeholder="Requerido" placeholder="Required">
+      </div>
+      <div class="client-form-field">
+        <label data-en="Contact Name" data-es="Nombre de Contacto">Contact Name</label>
+        <input type="text" id="client-field-contact" data-en-placeholder="Optional" data-es-placeholder="Opcional" placeholder="Optional">
+      </div>
+      <div class="client-form-field">
+        <label data-en="Phone" data-es="Teléfono">Phone</label>
+        <input type="tel" id="client-field-phone" data-en-placeholder="Optional" data-es-placeholder="Opcional" placeholder="Optional">
+      </div>
+      <div class="client-form-field">
+        <label data-en="Address" data-es="Dirección">Address</label>
+        <input type="text" id="client-field-address" data-en-placeholder="Optional" data-es-placeholder="Opcional" placeholder="Optional">
+      </div>
+      <div class="client-form-field">
+        <label data-en="Notes" data-es="Notas">Notes</label>
+        <textarea id="client-field-notes" rows="3" data-en-placeholder="Any notes about this client..." data-es-placeholder="Notas sobre este cliente..."
+          placeholder="Any notes about this client..."></textarea>
+      </div>
+    </div>
+    <div class="client-modal-actions">
+      <button class="client-modal-cancel" id="client-modal-cancel" data-en="Cancel" data-es="Cancelar">Cancel</button>
+      <button class="client-modal-save" id="client-modal-save" data-en="Save" data-es="Guardar">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="pay-modal-overlay" id="pay-modal-overlay">
+  <div class="pay-modal">
+    <div class="pay-modal-header">
+      <h3 class="pay-modal-title" data-en="Complete Sale" data-es="Completar Venta">Complete Sale</h3>
+      <button class="pay-modal-close" id="pay-modal-close"><i data-lucide="x"></i></button>
+    </div>
+    <div class="pay-modal-body">
+      <div class="pay-modal-total-display" id="pay-modal-total-display">$0.00</div>
+
+      <div class="pay-modal-field">
+        <label data-en="Payment Method" data-es="Método de Pago">Payment Method</label>
+        <div class="pay-toggle-group" id="pay-method-group">
+          <button class="pay-toggle-btn active" data-value="cash" data-en="Cash" data-es="Efectivo">Cash</button>
+          <button class="pay-toggle-btn" data-value="check" data-en="Check" data-es="Cheque">Check</button>
+        </div>
+      </div>
+
+      <div class="pay-modal-field">
+        <label data-en="Payment Status" data-es="Estado de Pago">Payment Status</label>
+        <div class="pay-toggle-group" id="pay-status-group">
+          <button class="pay-toggle-btn active" data-value="paid" data-en="Paid" data-es="Pagado">Paid</button>
+          <button class="pay-toggle-btn" data-value="on_account" data-en="On Account" data-es="A Cuenta">On Account</button>
+          <button class="pay-toggle-btn" data-value="unpaid" data-en="Unpaid" data-es="Sin Pagar">Unpaid</button>
+        </div>
+      </div>
+
+      <div class="pay-modal-field">
+        <label data-en="Notes (optional)" data-es="Notas (opcional)">Notes (optional)</label>
+        <textarea id="pay-notes" rows="2" data-en-placeholder="Any notes..." data-es-placeholder="Notas..." placeholder="Any notes..."></textarea>
+      </div>
+    </div>
+    <div class="pay-modal-actions">
+      <button class="pay-modal-cancel" id="pay-modal-cancel" data-en="Cancel" data-es="Cancelar">Cancel</button>
+      <button class="pay-modal-confirm" id="pay-modal-confirm" data-en="Confirm Sale" data-es="Confirmar Venta">Confirm Sale</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECEIPT VIEW (full-screen, print-optimized) -->
+<div id="screen-receipt" class="screen receipt-screen">
+  <div class="receipt-actions" id="receipt-actions">
+    <button class="receipt-back-btn" id="receipt-back-btn" data-en="← Back" data-es="← Volver">← Back</button>
+    <button class="receipt-print-btn" id="receipt-print-btn" data-en="Print" data-es="Imprimir">Print</button>
+  </div>
+  <div class="receipt-paper" id="receipt-paper">
+    <!-- Populated by JS -->
+  </div>
 </div>
 
 <!-- Update Banner -->

@@ -76,11 +76,18 @@ function showSection(name) {
   });
   // Show/hide footer and init order form
   const footer = document.getElementById('form-footer');
+  const saleFooter = document.getElementById('sale-footer');
   if (name === 'new-order') {
     initOrderForm();
     footer.style.display = 'flex';
+    saleFooter.style.display = 'none';
+  } else if (name === 'sales') {
+    footer.style.display = 'none';
+    saleFooter.style.display = 'flex';
+    initSalesSection();
   } else {
     footer.style.display = 'none';
+    saleFooter.style.display = 'none';
   }
   // Phase 5: load My Orders when switching to that tab
   if (name === 'my-orders') {
@@ -90,6 +97,9 @@ function showSection(name) {
   if (name === 'overview') {
     loadDriverBalance();
     loadRecentOrders();
+  }
+  if (name === 'clients') {
+    loadDriverClients();
   }
   // Refresh icons for dynamically rendered content
   requestAnimationFrame(() => lucide.createIcons());
@@ -399,6 +409,43 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── My Products ──
   document.getElementById('my-products-btn').addEventListener('click', openMyProducts);
   document.getElementById('mp-back').addEventListener('click', closeMyProducts);
+
+  // ── Clients ──
+  document.getElementById('clients-add-btn').addEventListener('click', () => openClientModal());
+  document.getElementById('client-modal-close').addEventListener('click', closeClientModal);
+  document.getElementById('client-modal-cancel').addEventListener('click', closeClientModal);
+  document.getElementById('client-modal-save').addEventListener('click', handleSaveClient);
+  document.getElementById('client-modal-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeClientModal();
+  });
+
+  // ── Sales ──
+  document.getElementById('sale-complete-btn').addEventListener('click', openPaymentModal);
+  document.getElementById('sale-goto-clients-btn').addEventListener('click', () => showSection('clients'));
+  document.getElementById('pay-modal-close').addEventListener('click', closePaymentModal);
+  document.getElementById('pay-modal-cancel').addEventListener('click', closePaymentModal);
+  document.getElementById('pay-modal-confirm').addEventListener('click', handleConfirmSale);
+  document.getElementById('pay-modal-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closePaymentModal();
+  });
+  document.getElementById('receipt-back-btn').addEventListener('click', () => {
+    showScreen('dashboard');
+    showSection('sales');
+  });
+  document.getElementById('receipt-print-btn').addEventListener('click', () => window.print());
+  // Pay toggle groups
+  document.querySelectorAll('#pay-method-group .pay-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#pay-method-group .pay-toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+  document.querySelectorAll('#pay-status-group .pay-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#pay-status-group .pay-toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
 
   // ── Phase 5: Receipts & History ──
   document.getElementById('order-detail-back').addEventListener('click', closeOrderDetail);
@@ -2200,6 +2247,686 @@ async function saveLangToSupabase(newLang) {
     await sb.from('drivers').update({ language: newLang }).eq('id', currentDriver.id);
   } catch (e) { /* ignore */ }
 }
+
+/* ═══════════════════════════════════
+   SALES — SUPABASE FUNCTIONS
+   ═══════════════════════════════════ */
+let _saleQty = {};   // product_key → quantity
+let _saleClientId = null;
+
+async function generateReceiptNumber() {
+  const now = new Date();
+  const dateStr = now.getFullYear()
+    + String(now.getMonth() + 1).padStart(2, '0')
+    + String(now.getDate()).padStart(2, '0');
+  const prefix = 'CB-' + dateStr + '-';
+
+  try {
+    const { data } = await sb
+      .from('driver_sales')
+      .select('receipt_number')
+      .like('receipt_number', prefix + '%')
+      .order('receipt_number', { ascending: false })
+      .limit(1);
+
+    let seq = 1;
+    if (data && data.length > 0) {
+      const lastNum = data[0].receipt_number;
+      const lastSeq = parseInt(lastNum.split('-').pop()) || 0;
+      seq = lastSeq + 1;
+    }
+    return prefix + String(seq).padStart(4, '0');
+  } catch (e) {
+    console.error('Receipt number generation error:', e);
+    return prefix + String(Math.floor(Math.random() * 9000) + 1000);
+  }
+}
+
+async function saveSale(saleData, items) {
+  if (!sb || !currentDriver) return null;
+  try {
+    const { data: sale, error: saleErr } = await sb
+      .from('driver_sales')
+      .insert({
+        receipt_number: saleData.receipt_number,
+        driver_id: currentDriver.id,
+        client_id: saleData.client_id,
+        total: saleData.total,
+        payment_method: saleData.payment_method,
+        payment_status: saleData.payment_status,
+        notes: saleData.notes || null,
+      })
+      .select()
+      .single();
+
+    if (saleErr) throw saleErr;
+
+    // Insert items
+    const saleItems = items.map(it => ({
+      sale_id: sale.id,
+      product_key: it.product_key,
+      product_label: it.product_label,
+      quantity: it.quantity,
+      unit_price: it.unit_price,
+      line_total: it.line_total,
+    }));
+
+    const { error: itemsErr } = await sb
+      .from('driver_sale_items')
+      .insert(saleItems);
+
+    if (itemsErr) throw itemsErr;
+
+    return sale;
+  } catch (e) {
+    console.error('Save sale error:', e);
+    return null;
+  }
+}
+
+async function loadTodaysSales() {
+  if (!sb || !currentDriver) return [];
+  try {
+    const today = getTodayStr();
+    const { data, error } = await sb
+      .from('driver_sales')
+      .select('*')
+      .eq('driver_id', currentDriver.id)
+      .gte('created_at', today + 'T00:00:00')
+      .lte('created_at', today + 'T23:59:59')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (e) {
+    console.error('Load today sales error:', e);
+    return [];
+  }
+}
+
+/* ═══════════════════════════════════
+   SALES — UI
+   ═══════════════════════════════════ */
+async function initSalesSection() {
+  // Ensure prices are loaded
+  if (Object.keys(driverPriceMap).length === 0) {
+    await loadDriverPriceMap();
+  }
+
+  // Load clients for dropdown
+  if (!_clientsList || _clientsList.length === 0) {
+    await loadDriverClients();
+  }
+
+  const selector = document.getElementById('sale-client-selector');
+  const noClients = document.getElementById('sale-no-clients');
+  const productsDiv = document.getElementById('sale-products');
+
+  if (!_clientsList || _clientsList.length === 0) {
+    selector.style.display = 'none';
+    noClients.style.display = 'block';
+    productsDiv.style.display = 'none';
+    document.getElementById('sale-footer').style.display = 'none';
+    document.getElementById('sale-today-banner').style.display = 'none';
+    applyLang();
+    lucide.createIcons();
+    return;
+  }
+
+  selector.style.display = 'block';
+  noClients.style.display = 'none';
+  productsDiv.style.display = 'block';
+  document.getElementById('sale-footer').style.display = 'flex';
+
+  // Populate dropdown
+  const dropdown = document.getElementById('sale-client-dropdown');
+  const currentVal = dropdown.value;
+  dropdown.innerHTML = `<option value="">${lang === 'es' ? 'Seleccionar cliente...' : 'Select a client...'}</option>`;
+  _clientsList.forEach(c => {
+    dropdown.innerHTML += `<option value="${c.id}">${_esc(c.business_name)}</option>`;
+  });
+  if (currentVal) dropdown.value = currentVal;
+  _saleClientId = dropdown.value || null;
+
+  dropdown.onchange = () => {
+    _saleClientId = dropdown.value || null;
+    updateSaleFooter();
+  };
+
+  // Build product list
+  buildSaleProducts();
+
+  // Load today's sales summary
+  loadTodaysSalesBanner();
+
+  updateSaleFooter();
+  applyLang();
+  requestAnimationFrame(() => lucide.createIcons());
+}
+
+function buildSaleProducts() {
+  const container = document.getElementById('sale-products');
+  let html = '';
+
+  Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
+    // Skip redondo for sales — simplify to standard items only
+    if (sec.type === 'redondo') return;
+
+    // Filter to visible products
+    const visibleItems = sec.items.filter(item => !hiddenProducts.has(item.key));
+    if (visibleItems.length === 0) return;
+
+    html += `<div class="sale-acc" data-section-key="${secKey}">`;
+    html += `<div class="sale-acc-header"><span class="sale-acc-title" data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</span><svg class="sale-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>`;
+    html += `<div class="sale-acc-body">`;
+
+    visibleItems.forEach(item => {
+      const price = driverPriceMap[item.key];
+      const hasPrice = price != null && price > 0;
+      const priceStr = hasPrice ? `$${price.toFixed(2)}` : (lang === 'es' ? 'Sin precio' : 'No price');
+      const qty = _saleQty[item.key] || 0;
+      const lineTotal = hasPrice && qty > 0 ? (qty * price).toFixed(2) : '';
+
+      html += `<div class="sale-prod-row${qty > 0 ? ' has-value' : ''}" data-key="${item.key}">`;
+      html += `<div class="sale-prod-info">`;
+      html += `<div class="sale-prod-name" data-en="${item.en}" data-es="${item.es}">${L(item)}</div>`;
+      html += `<div class="sale-prod-price${hasPrice ? '' : ' no-price'}">${priceStr}</div>`;
+      html += `</div>`;
+      html += `<div class="sale-qty-wrap"><button class="sale-qty-btn" data-dir="-" data-key="${item.key}">−</button><input type="number" class="sale-qty-input" data-key="${item.key}" value="${qty}" min="0"><button class="sale-qty-btn" data-dir="+" data-key="${item.key}">+</button></div>`;
+      html += `<span class="sale-line-total" data-key="${item.key}">${lineTotal ? '$' + lineTotal : ''}</span>`;
+      html += `</div>`;
+    });
+
+    html += `</div></div>`;
+  });
+
+  container.innerHTML = html;
+
+  // Bind accordion
+  container.querySelectorAll('.sale-acc-header').forEach(hdr => {
+    hdr.addEventListener('click', () => hdr.closest('.sale-acc').classList.toggle('open'));
+  });
+
+  // Bind qty buttons
+  container.querySelectorAll('.sale-qty-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const key = btn.dataset.key;
+      const inp = container.querySelector(`.sale-qty-input[data-key="${key}"]`);
+      const cur = parseInt(inp.value) || 0;
+      const delta = btn.dataset.dir === '+' ? 1 : -1;
+      const newVal = Math.max(0, cur + delta);
+      inp.value = newVal;
+      _saleQty[key] = newVal;
+      updateSaleRow(key);
+      updateSaleFooter();
+      if (document.activeElement && document.activeElement !== document.body) {
+        document.activeElement.blur();
+      }
+    });
+  });
+
+  // Bind qty input
+  container.querySelectorAll('.sale-qty-input').forEach(inp => {
+    inp.addEventListener('focus', () => { if (inp.value === '0') inp.value = ''; });
+    inp.addEventListener('blur', () => {
+      if (inp.value === '') inp.value = '0';
+      _saleQty[inp.dataset.key] = parseInt(inp.value) || 0;
+      updateSaleRow(inp.dataset.key);
+      updateSaleFooter();
+    });
+  });
+}
+
+function updateSaleRow(key) {
+  const row = document.querySelector(`.sale-prod-row[data-key="${key}"]`);
+  if (!row) return;
+  const qty = _saleQty[key] || 0;
+  const price = driverPriceMap[key];
+  const hasPrice = price != null && price > 0;
+  const lineEl = row.querySelector('.sale-line-total');
+  if (lineEl) lineEl.textContent = (hasPrice && qty > 0) ? '$' + (qty * price).toFixed(2) : '';
+  row.classList.toggle('has-value', qty > 0);
+}
+
+function getSaleTotal() {
+  let total = 0;
+  Object.entries(_saleQty).forEach(([key, qty]) => {
+    if (qty > 0) {
+      const price = driverPriceMap[key] || 0;
+      total += qty * price;
+    }
+  });
+  return total;
+}
+
+function getSaleItemCount() {
+  let count = 0;
+  Object.values(_saleQty).forEach(q => { count += (q || 0); });
+  return count;
+}
+
+function updateSaleFooter() {
+  const total = getSaleTotal();
+  const count = getSaleItemCount();
+  document.getElementById('sale-footer-total').textContent = '$' + total.toFixed(2);
+  const btn = document.getElementById('sale-complete-btn');
+  btn.disabled = !_saleClientId || count === 0;
+}
+
+async function loadTodaysSalesBanner() {
+  const banner = document.getElementById('sale-today-banner');
+  const sales = await loadTodaysSales();
+  if (sales.length === 0) {
+    banner.style.display = 'none';
+    return;
+  }
+  const todayTotal = sales.reduce((sum, s) => sum + (parseFloat(s.total) || 0), 0);
+  document.getElementById('sale-today-amount').textContent = '$' + todayTotal.toFixed(2) + ` (${sales.length})`;
+  banner.style.display = 'flex';
+}
+
+/* ── Payment Modal ── */
+function openPaymentModal() {
+  const total = getSaleTotal();
+  document.getElementById('pay-modal-total-display').textContent = '$' + total.toFixed(2);
+  document.getElementById('pay-notes').value = '';
+
+  // Reset toggles to defaults
+  document.querySelectorAll('#pay-method-group .pay-toggle-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('#pay-method-group .pay-toggle-btn[data-value="cash"]').classList.add('active');
+  document.querySelectorAll('#pay-status-group .pay-toggle-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('#pay-status-group .pay-toggle-btn[data-value="paid"]').classList.add('active');
+
+  const overlay = document.getElementById('pay-modal-overlay');
+  overlay.classList.add('open');
+  document.body.dataset.scrollY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${window.scrollY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  applyLang();
+  lucide.createIcons();
+}
+
+function closePaymentModal() {
+  document.getElementById('pay-modal-overlay').classList.remove('open');
+  const scrollY = document.body.dataset.scrollY || '0';
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  window.scrollTo(0, parseInt(scrollY));
+}
+
+async function handleConfirmSale() {
+  const confirmBtn = document.getElementById('pay-modal-confirm');
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = lang === 'es' ? 'Procesando...' : 'Processing...';
+
+  try {
+    const receiptNumber = await generateReceiptNumber();
+    const payMethod = document.querySelector('#pay-method-group .pay-toggle-btn.active')?.dataset.value || 'cash';
+    const payStatus = document.querySelector('#pay-status-group .pay-toggle-btn.active')?.dataset.value || 'paid';
+    const notes = document.getElementById('pay-notes').value.trim();
+    const total = getSaleTotal();
+
+    // Collect items
+    const items = [];
+    Object.entries(_saleQty).forEach(([key, qty]) => {
+      if (qty > 0) {
+        const price = driverPriceMap[key] || 0;
+        // Find label from PRODUCTS
+        let label = key;
+        Object.values(PRODUCTS).forEach(sec => {
+          sec.items.forEach(item => {
+            if (item.key === key) label = item.en;
+          });
+        });
+        items.push({
+          product_key: key,
+          product_label: label,
+          quantity: qty,
+          unit_price: price,
+          line_total: qty * price,
+        });
+      }
+    });
+
+    const saleData = {
+      receipt_number: receiptNumber,
+      client_id: _saleClientId,
+      total: total,
+      payment_method: payMethod,
+      payment_status: payStatus,
+      notes: notes,
+    };
+
+    const sale = await saveSale(saleData, items);
+
+    if (!sale) {
+      showToast(lang === 'es' ? 'Error al guardar la venta' : 'Error saving sale', 'error');
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = lang === 'es' ? 'Confirmar Venta' : 'Confirm Sale';
+      return;
+    }
+
+    closePaymentModal();
+
+    // Get client info for receipt
+    const client = _clientsList.find(c => c.id === _saleClientId);
+
+    // Show receipt
+    renderReceipt(sale, items, client);
+    showScreen('receipt');
+
+    // Reset form
+    _saleQty = {};
+    _saleClientId = null;
+
+    showToast(
+      lang === 'es' ? `Venta ${receiptNumber} completada` : `Sale ${receiptNumber} completed`,
+      'success'
+    );
+
+  } catch (e) {
+    console.error('Confirm sale error:', e);
+    showToast(lang === 'es' ? 'Error al procesar la venta' : 'Error processing sale', 'error');
+  }
+
+  confirmBtn.disabled = false;
+  confirmBtn.textContent = lang === 'es' ? 'Confirmar Venta' : 'Confirm Sale';
+}
+
+/* ── Receipt Rendering ── */
+function renderReceipt(sale, items, client) {
+  const paper = document.getElementById('receipt-paper');
+  const now = new Date(sale.created_at || new Date());
+  const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+  const payMethodLabel = sale.payment_method === 'cash'
+    ? (lang === 'es' ? 'Efectivo' : 'Cash')
+    : (lang === 'es' ? 'Cheque' : 'Check');
+  const payStatusLabel = sale.payment_status === 'paid'
+    ? (lang === 'es' ? 'Pagado' : 'Paid')
+    : sale.payment_status === 'on_account'
+      ? (lang === 'es' ? 'A Cuenta' : 'On Account')
+      : (lang === 'es' ? 'Sin Pagar' : 'Unpaid');
+
+  let itemsHtml = '';
+  items.forEach(it => {
+    itemsHtml += `<div class="receipt-item">
+      <span class="receipt-item-name">${_esc(it.product_label)} (${it.quantity})</span>
+      <span class="receipt-item-total">$${it.line_total.toFixed(2)}</span>
+    </div>`;
+  });
+
+  paper.innerHTML = `
+    <div class="receipt-header">
+      <div class="receipt-logo">CECILIA BAKERY</div>
+      <div class="receipt-sub">Freshly Baked with Love</div>
+    </div>
+
+    <div class="receipt-meta">
+      <div><strong>${lang === 'es' ? 'Recibo' : 'Receipt'} #:</strong> ${_esc(sale.receipt_number)}</div>
+      <div><strong>${lang === 'es' ? 'Fecha' : 'Date'}:</strong> ${dateStr} ${timeStr}</div>
+      <div><strong>${lang === 'es' ? 'Conductor' : 'Driver'}:</strong> ${_esc(currentDriver?.name || '')}</div>
+      ${client ? `<div><strong>${lang === 'es' ? 'Cliente' : 'Client'}:</strong> ${_esc(client.business_name)}</div>` : ''}
+      ${client?.address ? `<div><strong>${lang === 'es' ? 'Dir' : 'Addr'}:</strong> ${_esc(client.address)}</div>` : ''}
+      ${client?.phone ? `<div><strong>${lang === 'es' ? 'Tel' : 'Phone'}:</strong> ${_esc(client.phone)}</div>` : ''}
+    </div>
+
+    <div class="receipt-items">
+      ${itemsHtml}
+    </div>
+
+    <div class="receipt-total-row">
+      <span>TOTAL</span>
+      <span>$${sale.total.toFixed(2)}</span>
+    </div>
+
+    <div class="receipt-pay-info">
+      <div><strong>${lang === 'es' ? 'Método' : 'Method'}:</strong> ${payMethodLabel}</div>
+      <div><strong>${lang === 'es' ? 'Estado' : 'Status'}:</strong> ${payStatusLabel}</div>
+    </div>
+
+    ${sale.notes ? `<div class="receipt-notes">${_esc(sale.notes)}</div>` : ''}
+
+    <div class="receipt-footer">¡Gracias! / Thank you!</div>
+  `;
+
+  applyLang();
+}
+
+/* ═══════════════════════════════════
+   CLIENTS — SUPABASE FUNCTIONS
+   ═══════════════════════════════════ */
+let _clientsList = [];
+let _editingClientId = null;
+
+async function loadDriverClients() {
+  if (!sb || !currentDriver) return;
+  const container = document.getElementById('clients-list');
+  try {
+    const { data, error } = await sb
+      .from('driver_route_clients')
+      .select('*')
+      .eq('driver_id', currentDriver.id)
+      .eq('is_active', true)
+      .order('business_name', { ascending: true });
+
+    if (error) { console.error('Clients load error:', error); return; }
+    _clientsList = data || [];
+    renderClientsList();
+  } catch (e) { console.error('Clients error:', e); }
+}
+
+async function saveClient(clientData) {
+  if (!sb || !currentDriver) return null;
+  try {
+    const payload = {
+      driver_id: currentDriver.id,
+      business_name: clientData.business_name,
+      contact_name: clientData.contact_name || null,
+      phone: clientData.phone || null,
+      address: clientData.address || null,
+      notes: clientData.notes || null,
+    };
+
+    if (clientData.id) {
+      // Update existing
+      const { data, error } = await sb
+        .from('driver_route_clients')
+        .update(payload)
+        .eq('id', clientData.id)
+        .eq('driver_id', currentDriver.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } else {
+      // Insert new
+      const { data, error } = await sb
+        .from('driver_route_clients')
+        .insert(payload)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+  } catch (e) {
+    console.error('Save client error:', e);
+    return null;
+  }
+}
+
+async function deleteClient(clientId) {
+  if (!sb || !currentDriver) return false;
+  try {
+    const { error } = await sb
+      .from('driver_route_clients')
+      .update({ is_active: false })
+      .eq('id', clientId)
+      .eq('driver_id', currentDriver.id);
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.error('Delete client error:', e);
+    return false;
+  }
+}
+
+/* ═══════════════════════════════════
+   CLIENTS — UI
+   ═══════════════════════════════════ */
+function renderClientsList() {
+  const container = document.getElementById('clients-list');
+  if (!_clientsList || _clientsList.length === 0) {
+    container.innerHTML = `<div class="empty-state clients-empty" data-en="No clients yet. Add your first client to start making sales." data-es="Aún no hay clientes. Agrega tu primer cliente para comenzar a vender.">${lang === 'es' ? 'Aún no hay clientes. Agrega tu primer cliente para comenzar a vender.' : 'No clients yet. Add your first client to start making sales.'}</div>`;
+    return;
+  }
+
+  let html = '';
+  _clientsList.forEach(c => {
+    const name = _esc(c.business_name);
+    const addr = c.address ? _esc(c.address.length > 35 ? c.address.slice(0, 35) + '…' : c.address) : '';
+    const phone = c.phone ? _esc(c.phone) : '';
+    const contact = c.contact_name ? _esc(c.contact_name) : '';
+
+    html += `<div class="client-card" data-client-id="${c.id}">
+      <div class="client-card-row1">
+        <div class="client-card-name">${name}</div>
+        <div class="client-card-actions">
+          <button class="client-card-edit" onclick="event.stopPropagation();openClientModal('${c.id}')" title="${lang === 'es' ? 'Editar' : 'Edit'}"><i data-lucide="pencil"></i></button>
+          <button class="client-card-delete" onclick="event.stopPropagation();confirmDeleteClient('${c.id}','${name.replace(/'/g, "\\'") }')" title="${lang === 'es' ? 'Eliminar' : 'Delete'}"><i data-lucide="trash-2"></i></button>
+        </div>
+      </div>
+      <div class="client-card-row2">`;
+    if (addr) html += `<span class="client-card-detail"><i data-lucide="map-pin"></i>${addr}</span>`;
+    if (phone) html += `<span class="client-card-detail"><i data-lucide="phone"></i>${phone}</span>`;
+    if (contact) html += `<span class="client-card-detail"><i data-lucide="user"></i>${contact}</span>`;
+    if (!addr && !phone && !contact) html += `<span class="client-card-detail" style="color:var(--tx-faint)">${lang === 'es' ? 'Sin detalles' : 'No details'}</span>`;
+    html += `</div></div>`;
+  });
+
+  container.innerHTML = html;
+  requestAnimationFrame(() => lucide.createIcons());
+}
+
+function openClientModal(clientId) {
+  _editingClientId = clientId || null;
+  const titleEl = document.getElementById('client-modal-title');
+
+  // Clear form
+  document.getElementById('client-field-business').value = '';
+  document.getElementById('client-field-contact').value = '';
+  document.getElementById('client-field-phone').value = '';
+  document.getElementById('client-field-address').value = '';
+  document.getElementById('client-field-notes').value = '';
+  document.getElementById('client-field-business').classList.remove('field-error');
+
+  if (clientId) {
+    // Edit mode: populate form
+    const client = _clientsList.find(c => c.id === clientId);
+    if (client) {
+      document.getElementById('client-field-business').value = client.business_name || '';
+      document.getElementById('client-field-contact').value = client.contact_name || '';
+      document.getElementById('client-field-phone').value = client.phone || '';
+      document.getElementById('client-field-address').value = client.address || '';
+      document.getElementById('client-field-notes').value = client.notes || '';
+    }
+    titleEl.setAttribute('data-en', 'Edit Client');
+    titleEl.setAttribute('data-es', 'Editar Cliente');
+    titleEl.textContent = lang === 'es' ? 'Editar Cliente' : 'Edit Client';
+  } else {
+    titleEl.setAttribute('data-en', 'Add Client');
+    titleEl.setAttribute('data-es', 'Agregar Cliente');
+    titleEl.textContent = lang === 'es' ? 'Agregar Cliente' : 'Add Client';
+  }
+
+  const overlay = document.getElementById('client-modal-overlay');
+  overlay.classList.add('open');
+  document.body.dataset.scrollY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${window.scrollY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  applyLang();
+  lucide.createIcons();
+}
+window.openClientModal = openClientModal;
+
+function closeClientModal() {
+  document.getElementById('client-modal-overlay').classList.remove('open');
+  const scrollY = document.body.dataset.scrollY || '0';
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  window.scrollTo(0, parseInt(scrollY));
+  _editingClientId = null;
+}
+window.closeClientModal = closeClientModal;
+
+async function handleSaveClient() {
+  const businessInput = document.getElementById('client-field-business');
+  const businessName = businessInput.value.trim();
+
+  if (!businessName) {
+    businessInput.classList.add('field-error');
+    businessInput.focus();
+    showToast(lang === 'es' ? 'El nombre del negocio es requerido' : 'Business name is required', 'error');
+    return;
+  }
+  businessInput.classList.remove('field-error');
+
+  const saveBtn = document.getElementById('client-modal-save');
+  saveBtn.disabled = true;
+  saveBtn.textContent = lang === 'es' ? 'Guardando...' : 'Saving...';
+
+  const clientData = {
+    id: _editingClientId || undefined,
+    business_name: businessName,
+    contact_name: document.getElementById('client-field-contact').value.trim(),
+    phone: document.getElementById('client-field-phone').value.trim(),
+    address: document.getElementById('client-field-address').value.trim(),
+    notes: document.getElementById('client-field-notes').value.trim(),
+  };
+
+  const result = await saveClient(clientData);
+
+  saveBtn.disabled = false;
+  saveBtn.textContent = lang === 'es' ? 'Guardar' : 'Save';
+
+  if (result) {
+    closeClientModal();
+    showToast(
+      _editingClientId
+        ? (lang === 'es' ? 'Cliente actualizado' : 'Client updated')
+        : (lang === 'es' ? 'Cliente agregado' : 'Client added'),
+      'success'
+    );
+    await loadDriverClients();
+  } else {
+    showToast(lang === 'es' ? 'Error al guardar el cliente' : 'Error saving client', 'error');
+  }
+}
+
+window.confirmDeleteClient = function(clientId, clientName) {
+  const message = lang === 'es'
+    ? `¿Eliminar "${clientName}"? Esta acción no se puede deshacer.`
+    : `Remove "${clientName}"? This cannot be undone.`;
+  showAppConfirm(message, async () => {
+    const ok = await deleteClient(clientId);
+    if (ok) {
+      showToast(lang === 'es' ? 'Cliente eliminado' : 'Client removed', 'success');
+      await loadDriverClients();
+    } else {
+      showToast(lang === 'es' ? 'Error al eliminar el cliente' : 'Error removing client', 'error');
+    }
+  });
+};
 
 /* ═══════════════════════════════════
    CUSTOM SCROLLABLE TIME PICKER
