@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>Cecilia Bakery — Quick Sale</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ═══════════════════════════════════
    WOO.HTML — Woosim-safe sales page
@@ -311,9 +310,10 @@ body {
 (async function() {
   'use strict';
 
-  const SB_URL = 'https://dykztphptnytbihpavpa.supabase.co';
-  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
-  const sb = window.supabase.createClient(SB_URL, SB_KEY);
+  const API = 'https://dykztphptnytbihpavpa.supabase.co/rest/v1';
+  const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
+  const HEADERS = { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+  const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
   const content = document.getElementById('woo-content');
   const driverNameEl = document.getElementById('woo-driver-name');
@@ -326,17 +326,41 @@ body {
     return;
   }
 
+  // ── Helper: Supabase REST fetch ──
+  async function sbGet(table, query) {
+    const res = await fetch(API + '/' + table + '?' + query, { headers: HEADERS });
+    if (!res.ok) throw new Error(table + ': ' + res.status);
+    return res.json();
+  }
+  async function sbPost(table, body) {
+    const res = await fetch(API + '/' + table, {
+      method: 'POST', headers: HEADERS, body: JSON.stringify(body)
+    });
+    if (!res.ok) { const t = await res.text(); throw new Error(t); }
+    return res.json();
+  }
+
+  // ── Cache helpers ──
+  function cacheGet(key) {
+    try {
+      const raw = localStorage.getItem('woo_' + key);
+      if (!raw) return null;
+      const { data, ts } = JSON.parse(raw);
+      if (Date.now() - ts > CACHE_TTL) return null;
+      return data;
+    } catch { return null; }
+  }
+  function cacheSet(key, data) {
+    try { localStorage.setItem('woo_' + key, JSON.stringify({ data, ts: Date.now() })); } catch {}
+  }
+
   // ── Authenticate driver ──
   let driver;
   try {
-    const { data, error } = await sb
-      .from('drivers')
-      .select('*')
-      .ilike('code', driverCode)
-      .single();
-    if (error || !data) throw new Error('Driver not found');
-    if (!data.is_active) throw new Error('Account disabled');
-    driver = data;
+    const rows = await sbGet('drivers', 'code=ilike.' + encodeURIComponent(driverCode) + '&select=*&limit=1');
+    if (!rows || rows.length === 0) throw new Error('Driver not found');
+    if (!rows[0].is_active) throw new Error('Account disabled');
+    driver = rows[0];
     driverNameEl.textContent = driver.name;
   } catch (e) {
     content.innerHTML = '<div class="woo-msg error">' + (e.message || 'Login failed') + '</div>';
@@ -344,65 +368,71 @@ body {
     return;
   }
 
-  // ── Load clients ──
-  let clients = [];
-  try {
-    const { data } = await sb
-      .from('driver_route_clients')
-      .select('*')
-      .eq('driver_id', driver.id)
-      .eq('is_active', true)
-      .order('business_name', { ascending: true });
-    clients = data || [];
-  } catch (e) { console.error('Clients load error:', e); }
+  // ── Try cache first for instant render ──
+  let clients = cacheGet('clients_' + driver.id) || [];
+  let products = cacheGet('products') || {};
+  let priceMap = cacheGet('prices_' + driver.id) || {};
+  const hasCache = clients.length > 0 && Object.keys(products).length > 0;
 
-  // ── Load products ──
-  let products = {};
+  // ── State ──
+  let qty = {};
+  let clientId = null;
+  let payMethod = 'cash';
+  let payStatus = 'paid';
+
+  // Render immediately from cache if available
+  if (hasCache) {
+    renderForm();
+  }
+
+  // ── Load fresh data in parallel ──
   try {
-    const { data } = await sb
-      .from('b2b_products')
-      .select('*')
-      .order('sort_order', { ascending: true });
-    if (data) {
-      const available = data.filter(p => !p.sold_out);
-      available.forEach(p => {
+    const [clientRows, prodRows, priceRows] = await Promise.all([
+      sbGet('driver_route_clients', 'driver_id=eq.' + driver.id + '&is_active=eq.true&order=business_name.asc&select=*'),
+      sbGet('b2b_products', 'order=sort_order.asc&select=*'),
+      sbGet('driver_prices', 'driver_id=eq.' + driver.id + '&select=product_key,price'),
+    ]);
+
+    // Process clients
+    clients = clientRows || [];
+    cacheSet('clients_' + driver.id, clients);
+
+    // Process products
+    products = {};
+    if (prodRows) {
+      prodRows.filter(p => !p.sold_out).forEach(p => {
         const secKey = p.tag_en.toLowerCase().replace(/\s+/g, '_');
-        if (!products[secKey]) {
-          products[secKey] = { label: p.tag_en, items: [] };
-        }
+        if (!products[secKey]) products[secKey] = { label: p.tag_en, items: [] };
         products[secKey].items.push({
           key: p.name_en.toLowerCase().replace(/\s+/g, '_'),
           name: p.name_en,
         });
       });
     }
-  } catch (e) { console.error('Products load error:', e); }
+    cacheSet('products', products);
 
-  // ── Load driver prices ──
-  let priceMap = {};
-  try {
-    const { data } = await sb
-      .from('driver_prices')
-      .select('product_key, price')
-      .eq('driver_id', driver.id);
-    if (data) data.forEach(p => priceMap[p.product_key] = parseFloat(p.price));
-  } catch (e) { console.error('Prices load error:', e); }
+    // Process prices
+    priceMap = {};
+    if (priceRows) priceRows.forEach(p => priceMap[p.product_key] = parseFloat(p.price));
+    cacheSet('prices_' + driver.id, priceMap);
 
-  // ── State ──
-  let qty = {};      // product_key → quantity
-  let clientId = null;
-  let payMethod = 'cash';
-  let payStatus = 'paid';
+    // Re-render with fresh data (only if we already rendered from cache or first load)
+    renderForm();
+  } catch (e) {
+    console.error('Data load error:', e);
+    if (!hasCache) {
+      content.innerHTML = '<div class="woo-msg error">Failed to load. Check connection.</div>';
+    }
+  }
 
-  // ── Render the sale form ──
+  // ── Render ──
   function renderForm() {
     let html = '';
 
-    // Client selector
     html += '<div class="woo-field"><label>CLIENT</label><select id="woo-client">';
     html += '<option value="">Select a client...</option>';
     clients.forEach(c => {
-      html += '<option value="' + c.id + '">' + esc(c.business_name) + '</option>';
+      html += '<option value="' + c.id + '"' + (c.id === clientId ? ' selected' : '') + '>' + esc(c.business_name) + '</option>';
     });
     html += '</select></div>';
 
@@ -410,7 +440,6 @@ body {
       html += '<div class="woo-msg">No clients. Add clients in the Driver Portal (Safari) first.</div>';
     }
 
-    // Product sections
     Object.entries(products).forEach(([secKey, sec]) => {
       html += '<div class="woo-section" data-sec="' + secKey + '">';
       html += '<div class="woo-section-header" onclick="this.parentElement.classList.toggle(\'open\')">';
@@ -419,46 +448,40 @@ body {
       sec.items.forEach(item => {
         const price = priceMap[item.key];
         const priceStr = price ? '$' + price.toFixed(2) : 'No price';
-        html += '<div class="woo-row" data-key="' + item.key + '">';
+        const curQty = qty[item.key] || 0;
+        const lineTotal = curQty > 0 ? '$' + (curQty * (price || 0)).toFixed(2) : '';
+        html += '<div class="woo-row' + (curQty > 0 ? ' has-qty' : '') + '" data-key="' + item.key + '">';
         html += '<div class="woo-row-info"><div class="woo-row-name">' + esc(item.name) + '</div>';
         html += '<div class="woo-row-price">' + priceStr + '</div></div>';
         html += '<div class="woo-qty">';
         html += '<button type="button" data-key="' + item.key + '" data-dir="-">−</button>';
-        html += '<input type="number" data-key="' + item.key + '" value="0" min="0" inputmode="numeric">';
+        html += '<input type="number" data-key="' + item.key + '" value="' + curQty + '" min="0" inputmode="numeric">';
         html += '<button type="button" data-key="' + item.key + '" data-dir="+">+</button>';
         html += '</div>';
-        html += '<div class="woo-row-line" data-line="' + item.key + '"></div>';
+        html += '<div class="woo-row-line" data-line="' + item.key + '">' + lineTotal + '</div>';
         html += '</div>';
       });
       html += '</div></div>';
     });
 
-    // Footer
     html += '<div class="woo-footer" id="woo-footer">';
     html += '<div class="woo-total-row"><span>TOTAL</span><span id="woo-total">$0.00</span></div>';
-
-    // Payment method
     html += '<div class="woo-pay-group"><label>PAYMENT METHOD</label><div class="woo-toggles">';
-    html += '<button type="button" class="woo-toggle active" data-group="method" data-val="cash">Cash</button>';
-    html += '<button type="button" class="woo-toggle" data-group="method" data-val="check">Check</button>';
+    html += '<button type="button" class="woo-toggle' + (payMethod === 'cash' ? ' active' : '') + '" data-group="method" data-val="cash">Cash</button>';
+    html += '<button type="button" class="woo-toggle' + (payMethod === 'check' ? ' active' : '') + '" data-group="method" data-val="check">Check</button>';
     html += '</div></div>';
-
-    // Payment status
     html += '<div class="woo-pay-group"><label>PAYMENT STATUS</label><div class="woo-toggles">';
-    html += '<button type="button" class="woo-toggle active" data-group="status" data-val="paid">Paid</button>';
-    html += '<button type="button" class="woo-toggle" data-group="status" data-val="on_account">On Account</button>';
-    html += '<button type="button" class="woo-toggle" data-group="status" data-val="unpaid">Unpaid</button>';
+    html += '<button type="button" class="woo-toggle' + (payStatus === 'paid' ? ' active' : '') + '" data-group="status" data-val="paid">Paid</button>';
+    html += '<button type="button" class="woo-toggle' + (payStatus === 'on_account' ? ' active' : '') + '" data-group="status" data-val="on_account">On Account</button>';
+    html += '<button type="button" class="woo-toggle' + (payStatus === 'unpaid' ? ' active' : '') + '" data-group="status" data-val="unpaid">Unpaid</button>';
     html += '</div></div>';
-
-    // Notes
     html += '<textarea class="woo-notes" id="woo-notes" placeholder="Notes (optional)"></textarea>';
-
-    // Submit
     html += '<button type="button" class="woo-submit" id="woo-submit" disabled>Complete & Print</button>';
     html += '</div>';
 
     content.innerHTML = html;
     bindEvents();
+    updateTotal();
   }
 
   function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -480,13 +503,11 @@ body {
   }
 
   function bindEvents() {
-    // Client
     document.getElementById('woo-client').addEventListener('change', function() {
       clientId = this.value || null;
       updateTotal();
     });
 
-    // Qty buttons
     content.addEventListener('click', function(e) {
       const btn = e.target.closest('[data-dir]');
       if (!btn) return;
@@ -498,10 +519,8 @@ body {
       else val = Math.max(0, val - 1);
       inp.value = val;
       qty[key] = val;
-      // Highlight row
       const row = inp.closest('.woo-row');
       if (row) row.classList.toggle('has-qty', val > 0);
-      // Clear line total if 0
       if (val === 0) {
         const lineEl = document.querySelector('[data-line="' + key + '"]');
         if (lineEl) lineEl.textContent = '';
@@ -509,7 +528,6 @@ body {
       updateTotal();
     });
 
-    // Clear "0" on focus so driver can type directly
     content.addEventListener('focus', function(e) {
       if (e.target.tagName === 'INPUT' && e.target.dataset.key) {
         if (e.target.value === '0') e.target.value = '';
@@ -517,7 +535,6 @@ body {
       }
     }, true);
 
-    // Restore "0" on blur if empty
     content.addEventListener('blur', function(e) {
       if (e.target.tagName === 'INPUT' && e.target.dataset.key) {
         if (e.target.value === '') {
@@ -528,7 +545,6 @@ body {
       }
     }, true);
 
-    // Qty input direct edit
     content.addEventListener('input', function(e) {
       if (e.target.tagName === 'INPUT' && e.target.dataset.key) {
         const key = e.target.dataset.key;
@@ -544,7 +560,6 @@ body {
       }
     });
 
-    // Payment toggles
     content.addEventListener('click', function(e) {
       const toggle = e.target.closest('.woo-toggle');
       if (!toggle) return;
@@ -556,7 +571,6 @@ body {
       if (group === 'status') payStatus = val;
     });
 
-    // Submit
     document.getElementById('woo-submit').addEventListener('click', completeSale);
   }
 
@@ -567,27 +581,22 @@ body {
     btn.textContent = 'Saving...';
 
     try {
-      // Generate receipt number
       const now = new Date();
       const prefix = 'CB-' + now.getFullYear()
         + String(now.getMonth() + 1).padStart(2, '0')
         + String(now.getDate()).padStart(2, '0') + '-';
 
-      let receiptNumber;
-      const { data: lastReceipts } = await sb
-        .from('driver_sales')
-        .select('receipt_number')
-        .like('receipt_number', prefix + '%')
-        .order('receipt_number', { ascending: false })
-        .limit(1);
+      // Get last receipt number
+      const lastReceipts = await sbGet('driver_sales',
+        'receipt_number=like.' + encodeURIComponent(prefix + '*')
+        + '&order=receipt_number.desc&limit=1&select=receipt_number');
 
       let seq = 1;
       if (lastReceipts && lastReceipts.length > 0) {
         seq = (parseInt(lastReceipts[0].receipt_number.split('-').pop()) || 0) + 1;
       }
-      receiptNumber = prefix + String(seq).padStart(4, '0');
+      const receiptNumber = prefix + String(seq).padStart(4, '0');
 
-      // Collect items
       const items = [];
       Object.entries(qty).forEach(([key, q]) => {
         if (q > 0) {
@@ -596,11 +605,8 @@ body {
             sec.items.forEach(item => { if (item.key === key) label = item.name; });
           });
           items.push({
-            product_key: key,
-            product_label: label,
-            quantity: q,
-            unit_price: priceMap[key] || 0,
-            line_total: q * (priceMap[key] || 0),
+            product_key: key, product_label: label, quantity: q,
+            unit_price: priceMap[key] || 0, line_total: q * (priceMap[key] || 0),
           });
         }
       });
@@ -609,39 +615,20 @@ body {
       const notes = document.getElementById('woo-notes')?.value.trim() || '';
 
       // Save sale
-      const { data: sale, error: saleErr } = await sb
-        .from('driver_sales')
-        .insert({
-          receipt_number: receiptNumber,
-          driver_id: driver.id,
-          client_id: clientId,
-          total: total,
-          payment_method: payMethod,
-          payment_status: payStatus,
-          notes: notes || null,
-        })
-        .select()
-        .single();
-
-      if (saleErr) throw saleErr;
+      const saleResult = await sbPost('driver_sales', {
+        receipt_number: receiptNumber, driver_id: driver.id, client_id: clientId,
+        total: total, payment_method: payMethod, payment_status: payStatus,
+        notes: notes || null,
+      });
+      const sale = Array.isArray(saleResult) ? saleResult[0] : saleResult;
 
       // Save items
       const saleItems = items.map(it => ({
-        sale_id: sale.id,
-        product_key: it.product_key,
-        product_label: it.product_label,
-        quantity: it.quantity,
-        unit_price: it.unit_price,
-        line_total: it.line_total,
+        sale_id: sale.id, product_key: it.product_key, product_label: it.product_label,
+        quantity: it.quantity, unit_price: it.unit_price, line_total: it.line_total,
       }));
+      await sbPost('driver_sale_items', saleItems);
 
-      const { error: itemsErr } = await sb
-        .from('driver_sale_items')
-        .insert(saleItems);
-
-      if (itemsErr) throw itemsErr;
-
-      // Show receipt
       const client = clients.find(c => c.id === clientId);
       showReceipt(sale, items, client);
 
@@ -695,12 +682,11 @@ body {
       </div>
       <button type="button" class="woo-new-sale" onclick="location.reload()">+ New Sale</button>
     `;
-    // Scroll to the receipt (past the header)
     window.scrollTo(0, 0);
   }
 
   // ── Init ──
-  renderForm();
+  if (!hasCache) renderForm();
 
 })();
 </script>
