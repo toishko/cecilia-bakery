@@ -6,6 +6,12 @@
  */
 (function initPullToRefresh() {
 
+  // Bail out inside Woosim app or other embedded WebViews where position:fixed breaks
+  var ua = navigator.userAgent || '';
+  if (/woosim/i.test(ua) || /wv\b/i.test(ua) || (window.navigator.standalone === undefined && /iPhone|iPad/i.test(ua) && !/Safari/i.test(ua))) {
+    return;
+  }
+
   /* ── Keyframes ──────────────────────────────────────────────────── */
   const kf = document.createElement('style');
   kf.id = 'ptr-keyframes';

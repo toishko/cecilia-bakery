@@ -351,7 +351,8 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .form-footer{position:fixed;bottom:0;left:0;right:0;background:var(--bg-card);
   border-top:1px solid var(--bd);padding:12px 16px;display:flex;align-items:center;
   justify-content:space-between;z-index:100;backdrop-filter:blur(12px);
-  padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+  padding-bottom:calc(12px + env(safe-area-inset-bottom));
+  -webkit-transform:translateZ(0);transform:translateZ(0);will-change:transform}
 .form-footer-count{font-size:.9rem;color:var(--tx-muted)}
 .form-footer-count strong{color:var(--tx);font-weight:600}
 .form-footer-btn{padding:10px 24px;border:none;border-radius:8px;background:var(--red);
@@ -865,7 +866,8 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .sale-footer{position:fixed;bottom:0;left:0;right:0;background:var(--bg-card);
   border-top:1px solid var(--bd);padding:12px 16px;display:flex;align-items:center;
   justify-content:space-between;z-index:100;backdrop-filter:blur(12px);
-  padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+  padding-bottom:calc(12px + env(safe-area-inset-bottom));
+  -webkit-transform:translateZ(0);transform:translateZ(0);will-change:transform}
 .sale-footer-info{display:flex;align-items:center;gap:6px}
 .sale-footer-label{font-size:.9rem;color:var(--tx-muted)}
 .sale-footer-total{font-size:1.2rem;color:var(--tx);font-family:'Cormorant Garamond',serif}
