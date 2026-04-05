@@ -581,29 +581,60 @@ body {
     try {
       var today = new Date();
       var dateStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+
+      // ── Step 1: Check for picked_up orders today (auto-load) ──
+      var pickedUpOrders = await sbGet('driver_orders',
+        'driver_id=eq.' + driver.id + '&status=eq.picked_up&submitted_at=gte.' + encodeURIComponent(dateStr + 'T00:00:00') + '&select=id');
+
+      if (pickedUpOrders && pickedUpOrders.length > 0) {
+        // Load items from all picked_up orders
+        var orderIds = pickedUpOrders.map(function(o) { return o.id; });
+        var orderItems = await sbGet('driver_order_items',
+          'order_id=in.(' + orderIds.join(',') + ')&select=product_key,quantity,adjusted_quantity');
+
+        if (orderItems && orderItems.length > 0) {
+          // Aggregate items across all picked_up orders
+          var loadMap = {};
+          orderItems.forEach(function(item) {
+            var effectiveQty = (item.adjusted_quantity !== null && item.adjusted_quantity !== undefined) ? item.adjusted_quantity : item.quantity;
+            loadMap[item.product_key] = (loadMap[item.product_key] || 0) + effectiveQty;
+          });
+
+          // Also check driver_inventory for any manual additions
+          var manualRows = await sbGet('driver_inventory',
+            'driver_id=eq.' + driver.id + '&date=eq.' + dateStr + '&select=product_key,morning_load');
+          if (manualRows) {
+            manualRows.forEach(function(row) {
+              loadMap[row.product_key] = (loadMap[row.product_key] || 0) + row.morning_load;
+            });
+          }
+
+          // Get today's sales to calculate sold quantities
+          var soldMap = buildSoldMap(await getTodaySaleItems(dateStr));
+
+          inventory = {};
+          Object.keys(loadMap).forEach(function(key) {
+            var sold = soldMap[key] || 0;
+            inventory[key] = { loaded: loadMap[key], sold: sold, remaining: loadMap[key] - sold };
+          });
+          inventoryLoaded = true;
+          return;
+        }
+      }
+
+      // ── Step 2: Fall back to manual driver_inventory ──
       var loadRows = await sbGet('driver_inventory',
         'driver_id=eq.' + driver.id + '&date=eq.' + dateStr + '&select=product_key,morning_load');
       if (!loadRows || loadRows.length === 0) {
         inventoryLoaded = false;
         return;
       }
-      // Get today's sales to calculate sold quantities
-      var salesRows = await sbGet('driver_sales',
-        'driver_id=eq.' + driver.id + '&created_at=gte.' + encodeURIComponent(dateStr + 'T00:00:00') + '&select=id');
-      var soldMap = {};
-      if (salesRows && salesRows.length > 0) {
-        var saleIds = salesRows.map(function(s) { return s.id; });
-        var itemRows = await sbGet('driver_sale_items',
-          'sale_id=in.(' + saleIds.join(',') + ')&select=product_key,quantity');
-        if (itemRows) {
-          itemRows.forEach(function(it) {
-            soldMap[it.product_key] = (soldMap[it.product_key] || 0) + it.quantity;
-          });
-        }
-      }
+
+      var soldMap2 = buildSoldMap(await getTodaySaleItems(dateStr));
+
       inventory = {};
       loadRows.forEach(function(row) {
-        var sold = soldMap[row.product_key] || 0;
+        var sold = soldMap2[row.product_key] || 0;
         inventory[row.product_key] = { loaded: row.morning_load, sold: sold, remaining: row.morning_load - sold };
       });
       inventoryLoaded = true;
@@ -611,6 +642,26 @@ body {
       console.error('Inventory load error:', e);
       inventoryLoaded = false;
     }
+  }
+
+  // Helper: get today's sale items
+  async function getTodaySaleItems(dateStr) {
+    var salesRows = await sbGet('driver_sales',
+      'driver_id=eq.' + driver.id + '&created_at=gte.' + encodeURIComponent(dateStr + 'T00:00:00') + '&select=id');
+    if (!salesRows || salesRows.length === 0) return [];
+    var saleIds = salesRows.map(function(s) { return s.id; });
+    var itemRows = await sbGet('driver_sale_items',
+      'sale_id=in.(' + saleIds.join(',') + ')&select=product_key,quantity');
+    return itemRows || [];
+  }
+
+  // Helper: build sold map from sale items
+  function buildSoldMap(items) {
+    var map = {};
+    items.forEach(function(it) {
+      map[it.product_key] = (map[it.product_key] || 0) + it.quantity;
+    });
+    return map;
   }
 
   // ── Morning Load Form ──

@@ -1387,7 +1387,7 @@ async function loadIncomingOrders() {
     const { data, error } = await sb
       .from('driver_orders')
       .select('*')
-      .in('status', ['pending', 'confirmed', 'sent'])
+      .in('status', ['pending', 'confirmed', 'sent', 'picked_up'])
       .order('submitted_at', { ascending: false });
 
     if (!error && data) {
@@ -1579,6 +1579,8 @@ function renderOrderCards(orders, containerId, showLive = false) {
       statusBadge = `<span class="badge badge-confirmed">${lang === 'es' ? 'Confirmado' : 'Confirmed'}</span>`;
     } else if (order.status === 'sent') {
       statusBadge = `<span class="badge badge-sent">${lang === 'es' ? 'Enviado' : 'Sent'}</span>`;
+    } else if (order.status === 'picked_up') {
+      statusBadge = `<span class="badge badge-picked_up">${lang === 'es' ? 'Recogido' : 'Picked Up'}</span>`;
     }
 
     const unseenClass = isDriverOrderSeen(order.id) ? '' : ' order-unseen';
@@ -1912,6 +1914,9 @@ async function renderOrderDetail() {
   if (order.status === 'pending') {
     actionsHtml += `<button class="btn-confirm" onclick="confirmAndSend()" data-en="Confirm & Send" data-es="Confirmar y Enviar">${lang === 'es' ? 'Confirmar y Enviar' : 'Confirm & Send'}</button>`;
   }
+  if (order.status === 'sent') {
+    actionsHtml += `<button class="btn-pickup" onclick="markAsPickedUp()" data-en="Mark as Picked Up" data-es="Marcar como Recogido">&#10003; ${lang === 'es' ? 'Marcar como Recogido' : 'Mark as Picked Up'}</button>`;
+  }
   // Export bar
   actionsHtml += `<div class="export-bar">
     <button class="export-btn" onclick="printOrder()">
@@ -2193,6 +2198,29 @@ window.confirmAndSend = async function() {
   } catch (e) {
     console.error(e);
     showToast(lang === 'es' ? 'Error confirmando pedido' : 'Error confirming order', 'error');
+  }
+};
+
+window.markAsPickedUp = async function() {
+  if (!detailOrder) return;
+
+  try {
+    await sb.from('driver_orders').update({
+      status: 'picked_up',
+      picked_up_at: new Date().toISOString()
+    }).eq('id', detailOrder.id);
+
+    detailOrder.status = 'picked_up';
+
+    showToast(lang === 'es' ? 'Pedido marcado como recogido' : 'Order marked as picked up', 'success');
+
+    closeDetailModal();
+
+    if (currentSection === 'incoming') loadIncomingOrders();
+    if (currentSection === 'overview') loadOverview();
+  } catch (e) {
+    console.error(e);
+    showToast(lang === 'es' ? 'Error actualizando pedido' : 'Error updating order', 'error');
   }
 };
 
