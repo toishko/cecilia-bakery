@@ -119,40 +119,24 @@ body {
 }
 .woo-row-price { font-size: .75rem; color: #888; }
 
-/* Qty controls — bigger for reliable touch */
-.woo-qty {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  flex-shrink: 0;
-}
-.woo-qty button {
-  width: 40px;
+/* Qty input — simple box, no buttons */
+.woo-qty-input {
+  width: 52px;
   height: 40px;
   border: 1px solid #ddd;
-  background: #fff;
-  font-size: 1.3rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  -webkit-tap-highlight-color: transparent;
-}
-.woo-qty button:first-child { border-radius: 8px 0 0 8px; }
-.woo-qty button:last-child { border-radius: 0 8px 8px 0; }
-.woo-qty input {
-  width: 42px;
-  height: 40px;
-  border: 1px solid #ddd;
-  border-left: none;
-  border-right: none;
+  border-radius: 8px;
   text-align: center;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
   font-family: inherit;
   -webkit-appearance: none;
   appearance: none;
+  flex-shrink: 0;
+  background: #fff;
+}
+.woo-row.has-qty .woo-qty-input {
+  border-color: #C8102E;
+  background: #fff5f5;
 }
 .woo-row-line {
   font-size: .85rem;
@@ -397,16 +381,20 @@ body {
     clients = clientRows || [];
     cacheSet('clients_' + driver.id, clients);
 
-    // Process products
+    // Process products — use unique ID to avoid duplicate-name collisions
     products = {};
     if (prodRows) {
+      let idx = 0;
       prodRows.filter(p => !p.sold_out).forEach(p => {
         const secKey = p.tag_en.toLowerCase().replace(/\s+/g, '_');
         if (!products[secKey]) products[secKey] = { label: p.tag_en, items: [] };
+        const uniqueKey = (p.name_en.toLowerCase().replace(/\s+/g, '_')) + '__' + idx;
         products[secKey].items.push({
-          key: p.name_en.toLowerCase().replace(/\s+/g, '_'),
+          key: uniqueKey,
+          priceKey: p.name_en.toLowerCase().replace(/\s+/g, '_'),
           name: p.name_en,
         });
+        idx++;
       });
     }
     cacheSet('products', products);
@@ -446,18 +434,15 @@ body {
       html += '<span>' + esc(sec.label) + '</span><span class="arrow">▼</span></div>';
       html += '<div class="woo-section-body">';
       sec.items.forEach(item => {
-        const price = priceMap[item.key];
+        const pk = item.priceKey || item.key;
+        const price = priceMap[pk];
         const priceStr = price ? '$' + price.toFixed(2) : 'No price';
         const curQty = qty[item.key] || 0;
         const lineTotal = curQty > 0 ? '$' + (curQty * (price || 0)).toFixed(2) : '';
         html += '<div class="woo-row' + (curQty > 0 ? ' has-qty' : '') + '" data-key="' + item.key + '">';
         html += '<div class="woo-row-info"><div class="woo-row-name">' + esc(item.name) + '</div>';
         html += '<div class="woo-row-price">' + priceStr + '</div></div>';
-        html += '<div class="woo-qty">';
-        html += '<button type="button" data-key="' + item.key + '" data-dir="-">−</button>';
-        html += '<input type="number" data-key="' + item.key + '" value="' + curQty + '" min="0" inputmode="numeric">';
-        html += '<button type="button" data-key="' + item.key + '" data-dir="+">+</button>';
-        html += '</div>';
+        html += '<input type="number" class="woo-qty-input" data-key="' + item.key + '" data-pk="' + pk + '" value="' + curQty + '" min="0" inputmode="numeric">';
         html += '<div class="woo-row-line" data-line="' + item.key + '">' + lineTotal + '</div>';
         html += '</div>';
       });
@@ -492,9 +477,12 @@ body {
     Object.entries(qty).forEach(([key, q]) => {
       if (q > 0) {
         hasItems = true;
-        total += q * (priceMap[key] || 0);
+        // Find the priceKey for this unique key
+        const inp = document.querySelector('input[data-key="' + key + '"]');
+        const pk = inp ? (inp.dataset.pk || key) : key;
+        total += q * (priceMap[pk] || 0);
         const lineEl = document.querySelector('[data-line="' + key + '"]');
-        if (lineEl) lineEl.textContent = '$' + (q * (priceMap[key] || 0)).toFixed(2);
+        if (lineEl) lineEl.textContent = '$' + (q * (priceMap[pk] || 0)).toFixed(2);
       }
     });
     document.getElementById('woo-total').textContent = '$' + total.toFixed(2);
@@ -505,26 +493,6 @@ body {
   function bindEvents() {
     document.getElementById('woo-client').addEventListener('change', function() {
       clientId = this.value || null;
-      updateTotal();
-    });
-
-    content.addEventListener('click', function(e) {
-      const btn = e.target.closest('[data-dir]');
-      if (!btn) return;
-      const key = btn.dataset.key;
-      const inp = content.querySelector('input[data-key="' + key + '"]');
-      if (!inp) return;
-      let val = parseInt(inp.value) || 0;
-      if (btn.dataset.dir === '+') val++;
-      else val = Math.max(0, val - 1);
-      inp.value = val;
-      qty[key] = val;
-      const row = inp.closest('.woo-row');
-      if (row) row.classList.toggle('has-qty', val > 0);
-      if (val === 0) {
-        const lineEl = document.querySelector('[data-line="' + key + '"]');
-        if (lineEl) lineEl.textContent = '';
-      }
       updateTotal();
     });
 
@@ -601,12 +569,18 @@ body {
       Object.entries(qty).forEach(([key, q]) => {
         if (q > 0) {
           let label = key;
+          let pk = key;
           Object.values(products).forEach(sec => {
-            sec.items.forEach(item => { if (item.key === key) label = item.name; });
+            sec.items.forEach(item => {
+              if (item.key === key) {
+                label = item.name;
+                pk = item.priceKey || key;
+              }
+            });
           });
           items.push({
-            product_key: key, product_label: label, quantity: q,
-            unit_price: priceMap[key] || 0, line_total: q * (priceMap[key] || 0),
+            product_key: pk, product_label: label, quantity: q,
+            unit_price: priceMap[pk] || 0, line_total: q * (priceMap[pk] || 0),
           });
         }
       });
