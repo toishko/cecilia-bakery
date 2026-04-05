@@ -432,7 +432,24 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen('dashboard');
     showSection('sales');
   });
-  document.getElementById('receipt-print-btn').addEventListener('click', () => window.print());
+  document.getElementById('receipt-print-btn').addEventListener('click', () => {
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (!isIOS) {
+      // Android / Desktop — standard print dialog works
+      window.print();
+      return;
+    }
+    // iOS — copy Woosim receipt URL to clipboard
+    const url = window.location.origin + '/receipt.html?id=' + (_lastSaleId || '');
+    navigator.clipboard.writeText(url).then(() => {
+      showToast(lang === 'es'
+        ? 'Link copiado! Abre Woosim y pega el link para imprimir.'
+        : 'Link copied! Open Woosim app and paste to print.', 'success');
+    }).catch(() => {
+      // Fallback — show the URL as a prompt
+      prompt(lang === 'es' ? 'Copia este link y ábrelo en Woosim:' : 'Copy this link and open it in Woosim:', url);
+    });
+  });
   // Pay toggle groups
   document.querySelectorAll('#pay-method-group .pay-toggle-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -2253,6 +2270,7 @@ async function saveLangToSupabase(newLang) {
    ═══════════════════════════════════ */
 let _saleQty = {};   // product_key → quantity
 let _saleClientId = null;
+let _lastSaleId = null;
 
 async function generateReceiptNumber() {
   const now = new Date();
@@ -2618,6 +2636,7 @@ async function handleConfirmSale() {
 
     // Show receipt
     renderReceipt(sale, items, client);
+    _lastSaleId = sale.id;
     showScreen('receipt');
 
     // Reset form

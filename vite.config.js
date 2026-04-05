@@ -34,6 +34,7 @@ export default defineConfig({
         staff: resolve(__dirname, 'staff.html'),
         wholesale: resolve(__dirname, 'wholesale.html'),
         wholesalePortal: resolve(__dirname, 'wholesale-portal.html'),
+        receipt: resolve(__dirname, 'receipt.html'),
       },
     },
   },

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Receipt — Cecilia Bakery</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* Ultra-simple receipt page for Woosim thermal printer browser */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: monospace, 'Courier New', Courier;
+  font-size: 13px;
+  line-height: 1.4;
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+  padding: 8px;
+  background: #fff;
+  color: #000;
+}
+.center { text-align: center; }
+.bold { font-weight: bold; }
+.divider { border-top: 1px dashed #000; margin: 6px 0; }
+.row { display: flex; justify-content: space-between; padding: 2px 0; }
+.row-name { flex: 1; }
+.row-total { text-align: right; white-space: nowrap; }
+.total-row { font-size: 16px; font-weight: bold; border-top: 2px solid #000; margin-top: 6px; padding-top: 6px; }
+.meta div { padding: 1px 0; }
+.footer { margin-top: 10px; text-align: center; font-size: 11px; }
+.loading { text-align: center; padding: 40px 0; font-size: 14px; }
+.error { text-align: center; padding: 40px 0; color: red; }
+</style>
+</head>
+<body>
+<div id="receipt-content">
+  <div class="loading" id="receipt-loading">Loading receipt...</div>
+</div>
+
+<script>
+(async function() {
+  const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
+
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const container = document.getElementById('receipt-content');
+  const params = new URLSearchParams(window.location.search);
+  const saleId = params.get('id');
+
+  if (!saleId) {
+    // No ID — try to load the latest sale for the logged-in driver
+    const session = localStorage.getItem('cecilia_driver');
+    if (!session) {
+      container.innerHTML = '<div class="error">No driver session found.<br>Please log in to the Driver Portal first.</div>';
+      return;
+    }
+    const driver = JSON.parse(session);
+    const { data: latestSale, error: latestErr } = await sb
+      .from('driver_sales')
+      .select('id')
+      .eq('driver_id', driver.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (latestErr || !latestSale) {
+      container.innerHTML = '<div class="error">No recent sales found.</div>';
+      return;
+    }
+    // Redirect to self with the sale ID
+    window.location.replace(window.location.pathname + '?id=' + latestSale.id);
+    return;
+  }
+
+  try {
+    // Fetch sale
+    const { data: sale, error: saleErr } = await sb
+      .from('driver_sales')
+      .select('*')
+      .eq('id', saleId)
+      .single();
+
+    if (saleErr || !sale) throw new Error('Sale not found');
+
+    // Fetch items
+    const { data: items, error: itemsErr } = await sb
+      .from('driver_sale_items')
+      .select('*')
+      .eq('sale_id', saleId)
+      .order('product_label', { ascending: true });
+
+    if (itemsErr) throw itemsErr;
+
+    // Fetch client
+    let clientName = '';
+    let clientAddr = '';
+    let clientPhone = '';
+    if (sale.client_id) {
+      const { data: client } = await sb
+        .from('driver_route_clients')
+        .select('business_name, address, phone')
+        .eq('id', sale.client_id)
+        .single();
+      if (client) {
+        clientName = client.business_name || '';
+        clientAddr = client.address || '';
+        clientPhone = client.phone || '';
+      }
+    }
+
+    // Fetch driver name
+    let driverName = '';
+    if (sale.driver_id) {
+      const { data: driver } = await sb
+        .from('drivers')
+        .select('name')
+        .eq('id', sale.driver_id)
+        .single();
+      if (driver) driverName = driver.name || '';
+    }
+
+    // Format date
+    const dt = new Date(sale.created_at);
+    const dateStr = dt.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const timeStr = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+    // Payment labels
+    const methodLabel = sale.payment_method === 'cash' ? 'Cash' : 'Check';
+    const statusLabel = sale.payment_status === 'paid' ? 'Paid'
+      : sale.payment_status === 'on_account' ? 'On Account' : 'Unpaid';
+
+    // Build items HTML
+    let itemsHtml = '';
+    (items || []).forEach(it => {
+      const esc = s => (s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      itemsHtml += `<div class="row">
+        <span class="row-name">${esc(it.product_label)} x${it.quantity}</span>
+        <span class="row-total">$${Number(it.line_total).toFixed(2)}</span>
+      </div>`;
+    });
+
+    // Render
+    const esc = s => (s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    container.innerHTML = `
+      <div class="center bold" style="font-size:16px">CECILIA BAKERY</div>
+      <div class="center" style="font-size:11px">Freshly Baked with Love</div>
+      <div class="divider"></div>
+
+      <div class="meta">
+        <div><strong>Receipt #:</strong> ${esc(sale.receipt_number)}</div>
+        <div><strong>Date:</strong> ${dateStr} ${timeStr}</div>
+        ${driverName ? `<div><strong>Driver:</strong> ${esc(driverName)}</div>` : ''}
+        ${clientName ? `<div><strong>Client:</strong> ${esc(clientName)}</div>` : ''}
+        ${clientAddr ? `<div><strong>Addr:</strong> ${esc(clientAddr)}</div>` : ''}
+        ${clientPhone ? `<div><strong>Phone:</strong> ${esc(clientPhone)}</div>` : ''}
+      </div>
+      <div class="divider"></div>
+
+      ${itemsHtml}
+
+      <div class="row total-row">
+        <span>TOTAL</span>
+        <span>$${Number(sale.total).toFixed(2)}</span>
+      </div>
+
+      <div class="divider"></div>
+      <div class="meta">
+        <div><strong>Method:</strong> ${methodLabel}</div>
+        <div><strong>Status:</strong> ${statusLabel}</div>
+      </div>
+      ${sale.notes ? `<div class="divider"></div><div>${esc(sale.notes)}</div>` : ''}
+
+      <div class="footer">¡Gracias! / Thank you!</div>
+    `;
+
+  } catch (e) {
+    console.error('Receipt error:', e);
+    container.innerHTML = '<div class="error">Error loading receipt.<br>' + (e.message || '') + '</div>';
+  }
+})();
+</script>
+</body>
+</html>

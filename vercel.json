@@ -51,6 +51,10 @@
     {
       "source": "/wholesale-portal",
       "destination": "/wholesale-portal.html"
+    },
+    {
+      "source": "/receipt",
+      "destination": "/receipt.html"
     }
   ]
 }
