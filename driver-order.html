@@ -440,128 +440,31 @@
   </div>
 </div>
 
-<!-- Update Banner -->
-<div id="update-banner" hidden>
-  <span>New update available</span>
-  <button id="update-banner-btn">Tap to update</button>
-  <button id="update-banner-close" aria-label="Close">&times;</button>
-</div>
 
 <script src="/pull-to-refresh.js"></script>
 <script src="/swipe-dismiss.js"></script>
 <script type="module" src="/driver-order.js"></script>
-<style>
-#update-banner {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 99999;
-  background: #C8102E;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 14px 20px;
-  padding-top: calc(14px + env(safe-area-inset-top));
-  font-family: 'Outfit', sans-serif;
-  font-size: 0.82rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  transform: translateY(-100%);
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 16px rgba(200, 16, 46, 0.4);
-}
-#update-banner.visible {
-  transform: translateY(0);
-}
-#update-banner-btn {
-  background: rgba(255,255,255,0.2);
-  border: 1px solid rgba(255,255,255,0.5);
-  color: #fff;
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: 'Outfit', sans-serif;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-#update-banner-close {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,0.8);
-  font-size: 1.3rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 4px 8px;
-  margin-left: 4px;
-}
-</style>
 <script>
-function dismissBanner() {
-  const banner = document.getElementById('update-banner');
-  if (!banner) return;
-  banner.classList.remove('visible');
-  sessionStorage.setItem('cecilia_update_dismissed', '1');
-  setTimeout(() => { banner.hidden = true; }, 400);
-}
-function showUpdateBanner() {
-  if (sessionStorage.getItem('cecilia_update_dismissed')) return;
-  const banner = document.getElementById('update-banner');
-  if (!banner) return;
-  banner.hidden = false;
-  setTimeout(() => { banner.classList.add('visible'); }, 100);
-
-  // Auto-dismiss after 15s so it never permanently blocks the UI
-  setTimeout(dismissBanner, 15000);
-
-  document.getElementById('update-banner-btn')
-    ?.addEventListener('click', () => {
-      sessionStorage.setItem('cecilia_update_dismissed', '1');
-      navigator.serviceWorker.ready.then(reg => {
-        if (reg.waiting) {
-          navigator.serviceWorker.addEventListener(
-            'controllerchange',
-            () => window.location.reload(),
-            { once: true }
-          );
-          reg.waiting.postMessage('skipWaiting');
-        } else {
-          window.location.reload();
-        }
-      });
-    });
-
-  document.getElementById('update-banner-close')
-    ?.addEventListener('click', dismissBanner);
-}
-function initUpdateBanner() {
-  if (!('serviceWorker' in navigator)) return;
-  if (sessionStorage.getItem('cecilia_update_dismissed')) return;
-  const hadController = !!navigator.serviceWorker.controller;
+// Register service worker silently (no update banner — auto-updates in background)
+if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js')
     .then(reg => {
       reg.addEventListener('updatefound', () => {
-        const newWorker = reg.installing;
-        if (!newWorker) return;
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            showUpdateBanner();
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            // Auto-activate the new SW without prompting the user
+            if (reg.waiting) reg.waiting.postMessage('skipWaiting');
           }
         });
       });
-      if (reg.waiting && hadController) {
-        showUpdateBanner();
-        return;
+      if (reg.waiting && navigator.serviceWorker.controller) {
+        reg.waiting.postMessage('skipWaiting');
       }
       reg.update().catch(() => {});
     }).catch(() => {});
 }
-initUpdateBanner();
 </script>
   <script type="module" src="/src/speed-insights.js"></script>
 </body>
