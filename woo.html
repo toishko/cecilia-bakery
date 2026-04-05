@@ -264,11 +264,14 @@ body {
 .woo-toast.error { background: #C8102E; }
 .woo-toast.success { background: #16a34a; }
 
-/* Print mode — 4-inch Woosim printer = 800px */
-.woo-print-mode { background: #fff; }
+/* Print mode — fill full screen for Woosim capture */
+.woo-print-mode {
+  background: #fff;
+}
 .woo-print-mode .woo-header { display: none; }
 .woo-print-mode #woo-content {
-  width: 800px;
+  width: 100%;
+  max-width: none;
   margin: 0;
   padding: 0;
   background: #fff;
@@ -740,7 +743,7 @@ body {
 
     const F = 'font-family:Arial,Helvetica,sans-serif;color:#000;';
 
-    let h = '<div style="width:800px;margin:0;padding:8px;background:#fff;' + F + '">';
+    let h = '<div style="width:100%;margin:0;padding:8px;box-sizing:border-box;background:#fff;' + F + '">';
 
     // ── HEADER (centered) ──
     h += '<table width="100%" cellpadding="0" cellspacing="0" border="0">';
@@ -819,14 +822,13 @@ body {
     h += '<tr><td align="center" style="font-size:13px;padding:4px 0;' + F + '">Gracias! / Thank you!</td></tr>';
     h += '</table>';
 
-    h += '</div>'; // close 800px container
+    h += '</div>'; // close receipt container
 
     content.innerHTML = h;
 
-    // Switch viewport to 800px for printer capture
-    document.getElementById('woo-viewport').setAttribute('content', 'width=800, initial-scale=1.0');
+    // Fill full screen for Woosim capture
     document.getElementById('woo-app').classList.add('woo-print-mode');
-    document.body.style.width = '800px';
+    document.body.style.width = '100%';
     document.body.style.margin = '0';
     document.body.style.padding = '0';
     window.scrollTo(0, 0);
