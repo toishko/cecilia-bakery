@@ -45,31 +45,53 @@ body {
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   const container = document.getElementById('receipt-content');
   const params = new URLSearchParams(window.location.search);
-  const saleId = params.get('id');
+  let saleId = params.get('id');
+  const driverCode = params.get('code');
+
+  // Priority 1: ?code=DRIVER_PIN — look up driver by pin, load latest sale
+  // Priority 2: ?id=SALE_ID — load a specific sale
+  // Priority 3: localStorage fallback (Safari same-browser)
 
   if (!saleId) {
-    // No ID — try to load the latest sale for the logged-in driver
-    const session = localStorage.getItem('cecilia_driver');
-    if (!session) {
-      container.innerHTML = '<div class="error">No driver session found.<br>Please log in to the Driver Portal first.</div>';
-      return;
+    let driverId = null;
+
+    if (driverCode) {
+      // Look up driver by their pin code
+      const { data: driver, error: driverErr } = await sb
+        .from('drivers')
+        .select('id, name')
+        .ilike('code', driverCode)
+        .single();
+
+      if (driverErr || !driver) {
+        container.innerHTML = '<div class="error">Driver not found.<br>Check your code in the Woosim homepage URL.</div>';
+        return;
+      }
+      driverId = driver.id;
+    } else {
+      // Fallback: try localStorage (works in Safari, not in Woosim)
+      const session = localStorage.getItem('cecilia_driver');
+      if (!session) {
+        container.innerHTML = '<div class="error">Set your Woosim homepage to:<br><strong>ceciliabakery.com/receipt.html?code=YOUR_PIN</strong></div>';
+        return;
+      }
+      driverId = JSON.parse(session).id;
     }
-    const driver = JSON.parse(session);
+
+    // Fetch the latest sale for this driver
     const { data: latestSale, error: latestErr } = await sb
       .from('driver_sales')
       .select('id')
-      .eq('driver_id', driver.id)
+      .eq('driver_id', driverId)
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
     if (latestErr || !latestSale) {
-      container.innerHTML = '<div class="error">No recent sales found.</div>';
+      container.innerHTML = '<div class="center" style="padding:40px 0">No sales yet today.<br>Complete a sale in the Driver Portal first.</div>';
       return;
     }
-    // Redirect to self with the sale ID
-    window.location.replace(window.location.pathname + '?id=' + latestSale.id);
-    return;
+    saleId = latestSale.id;
   }
 
   try {
