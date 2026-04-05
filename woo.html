@@ -276,6 +276,10 @@ body {
 }
 .woo-toast.error { background: #C8102E; }
 .woo-toast.success { background: #16a34a; }
+
+/* Hide everything except receipt when printing */
+.woo-print-mode .woo-header { display: none; }
+.woo-new-sale { margin-top: 60px; }
 </style>
 </head>
 <body>
@@ -654,8 +658,10 @@ body {
         <div class="divider"></div>
         <div class="center" style="font-size:11px;margin-top:6px">¡Gracias! / Thank you!</div>
       </div>
-      <button type="button" class="woo-new-sale" onclick="location.reload()">+ New Sale</button>
+      <button type="button" class="woo-new-sale" onclick="document.getElementById('woo-app').classList.remove('woo-print-mode');location.reload()">+ New Sale</button>
     `;
+    // Hide header so Woosim only prints the receipt
+    document.getElementById('woo-app').classList.add('woo-print-mode');
     window.scrollTo(0, 0);
   }
 
