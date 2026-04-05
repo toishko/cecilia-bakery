@@ -536,6 +536,7 @@ body {
   let payStatus = 'paid';
   let inventory = {};      // product_key → { loaded, sold, remaining }
   let inventoryLoaded = false;
+  let inventorySource = '';  // 'order' or 'manual'
 
   if (hasCache) renderForm();
 
@@ -584,7 +585,7 @@ body {
 
       // ── Step 1: Check for picked_up orders today (auto-load) ──
       var pickedUpOrders = await sbGet('driver_orders',
-        'driver_id=eq.' + driver.id + '&status=eq.picked_up&pickup_date=eq.' + dateStr + '&select=id');
+        'driver_id=eq.' + driver.id + '&status=eq.picked_up&pickup_date=eq.' + dateStr + '&select=id,order_number');
 
       if (pickedUpOrders && pickedUpOrders.length > 0) {
         // Load items from all picked_up orders
@@ -601,15 +602,6 @@ body {
             loadMap[baseKey] = (loadMap[baseKey] || 0) + effectiveQty;
           });
 
-          // Also check driver_inventory for any manual additions
-          var manualRows = await sbGet('driver_inventory',
-            'driver_id=eq.' + driver.id + '&date=eq.' + dateStr + '&select=product_key,morning_load');
-          if (manualRows) {
-            manualRows.forEach(function(row) {
-              loadMap[row.product_key] = (loadMap[row.product_key] || 0) + row.morning_load;
-            });
-          }
-
           // Get today's sales to calculate sold quantities
           var soldMap = buildSoldMap(await getTodaySaleItems(dateStr));
 
@@ -618,6 +610,10 @@ body {
             var sold = soldMap[key] || 0;
             inventory[key] = { loaded: loadMap[key], sold: sold, remaining: loadMap[key] - sold };
           });
+
+          // Track source for display
+          var orderNums = pickedUpOrders.map(function(o) { return '#' + o.order_number; }).filter(function(n) { return n !== '#undefined' && n !== '#null'; });
+          inventorySource = 'order:' + (orderNums.length > 0 ? orderNums.join(', ') : 'Order');
           inventoryLoaded = true;
           return;
         }
@@ -638,6 +634,7 @@ body {
         var sold = soldMap2[row.product_key] || 0;
         inventory[row.product_key] = { loaded: row.morning_load, sold: sold, remaining: row.morning_load - sold };
       });
+      inventorySource = 'manual';
       inventoryLoaded = true;
     } catch (e) {
       console.error('Inventory load error:', e);
@@ -727,6 +724,7 @@ body {
       rows.forEach(function(r) {
         inventory[r.product_key] = { loaded: r.morning_load, sold: 0, remaining: r.morning_load };
       });
+      inventorySource = 'manual';
       inventoryLoaded = true;
       renderForm();
     } catch (e) {
@@ -777,7 +775,10 @@ body {
     // Inventory bar
     if (inventoryLoaded && Object.keys(inventory).length > 0) {
       html += '<div class="woo-inv-bar" id="woo-inv-bar">';
-      html += '<div class="woo-inv-header" onclick="this.parentElement.classList.toggle(\'open\')">INVENTORY <span class="arrow">&#9660;</span></div>';
+      var sourceLabel = inventorySource.indexOf('order:') === 0
+        ? '&#128230; ' + inventorySource.replace('order:', 'From Order ')
+        : '&#9998; Manual Entry';
+      html += '<div class="woo-inv-header" onclick="this.parentElement.classList.toggle(\'open\')">' + sourceLabel + ' <span class="arrow">&#9660;</span></div>';
       html += '<div class="woo-inv-body" id="woo-inv-body"></div>';
       html += '</div>';
     }
