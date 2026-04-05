@@ -594,12 +594,11 @@ body {
           'order_id=in.(' + orderIds.join(',') + ')&select=product_key,quantity,adjusted_quantity');
 
         if (orderItems && orderItems.length > 0) {
-          // Aggregate items — strip _nt suffix so qty + nt merge into base product
+          // Aggregate items per product_key (keep _nt variants separate)
           var loadMap = {};
           orderItems.forEach(function(item) {
             var effectiveQty = (item.adjusted_quantity !== null && item.adjusted_quantity !== undefined) ? item.adjusted_quantity : item.quantity;
-            var baseKey = item.product_key.replace(/_nt$/, '');
-            loadMap[baseKey] = (loadMap[baseKey] || 0) + effectiveQty;
+            loadMap[item.product_key] = (loadMap[item.product_key] || 0) + effectiveQty;
           });
 
           // Get today's sales to calculate sold quantities
