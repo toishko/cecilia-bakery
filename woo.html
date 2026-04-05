@@ -554,11 +554,8 @@ body {
 
     // ── Load inventory for today ──
     await loadTodayInventory();
-    if (!inventoryLoaded) {
-      renderLoadForm();
-    } else {
-      renderForm();
-    }
+    // Always show sales form — inventory bar shows if loaded
+    renderForm();
   } catch (e) {
     console.error('Data load error:', e);
     if (!hasCache) content.innerHTML = '<div class="woo-msg error">Failed to load. Check connection.</div>';
@@ -661,78 +658,7 @@ body {
     return map;
   }
 
-  // ── Morning Load Form ──
-  function renderLoadForm() {
-    var html = '<div class="woo-load-wrap">';
-    html += '<div class="woo-load-title">Morning Inventory</div>';
-    html += '<div class="woo-load-sub">Enter the quantity of each product loaded today</div>';
-    html += '<table width="100%" cellpadding="4" cellspacing="0" border="0" style="font-size:.9rem;">';
-    Object.entries(PRODUCTS).forEach(function(entry) {
-      var sec = entry[1];
-      html += '<tr><td colspan="2" class="woo-load-cat">' + esc(sec.label) + '</td></tr>';
-      sec.items.forEach(function(item) {
-        var rows = getRowKeys(item, sec.type);
-        rows.forEach(function(r) {
-          html += '<tr>';
-          html += '<td style="padding:6px 0;">' + esc(r.label) + '</td>';
-          html += '<td align="right" style="padding:6px 0;">';
-          html += '<input type="number" class="woo-load-input" data-pk="' + r.priceKey + '" value="0" min="0" inputmode="numeric">';
-          html += '</td></tr>';
-        });
-      });
-    });
-    html += '</table>';
-    html += '<button type="button" class="woo-load-btn" id="woo-save-load">Save Inventory</button>';
-    html += '</div>';
-    content.innerHTML = html;
-    content.querySelectorAll('.woo-load-input').forEach(function(inp) {
-      inp.addEventListener('focus', function() { if (this.value === '0') this.value = ''; });
-      inp.addEventListener('blur', function() { if (this.value === '') this.value = '0'; });
-    });
-    document.getElementById('woo-save-load').addEventListener('click', saveLoadForm);
-  }
 
-  // ── Save Morning Load ──
-  async function saveLoadForm() {
-    var btn = document.getElementById('woo-save-load');
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
-    try {
-      var today = new Date();
-      var dateStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
-      var rows = [];
-      content.querySelectorAll('.woo-load-input').forEach(function(inp) {
-        var val = parseInt(inp.value) || 0;
-        if (val > 0) {
-          rows.push({ driver_id: driver.id, product_key: inp.dataset.pk, morning_load: val, date: dateStr });
-        }
-      });
-      if (rows.length === 0) {
-        btn.disabled = false;
-        btn.textContent = 'Save Inventory';
-        content.innerHTML += '<div class="woo-toast error">Enter at least one product quantity</div>';
-        return;
-      }
-      var res = await fetch(API + '/driver_inventory?on_conflict=driver_id,product_key,date', {
-        method: 'POST',
-        headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation,resolution=merge-duplicates' },
-        body: JSON.stringify(rows)
-      });
-      if (!res.ok) { var t = await res.text(); throw new Error(t); }
-      inventory = {};
-      rows.forEach(function(r) {
-        inventory[r.product_key] = { loaded: r.morning_load, sold: 0, remaining: r.morning_load };
-      });
-      inventorySource = 'manual';
-      inventoryLoaded = true;
-      renderForm();
-    } catch (e) {
-      console.error('Save inventory error:', e);
-      btn.disabled = false;
-      btn.textContent = 'Save Inventory';
-      content.innerHTML += '<div class="woo-toast error">Error: ' + (e.message || 'Failed to save') + '</div>';
-    }
-  }
 
   // ── Refresh inventory display in-place ──
   function refreshInventoryDisplay() {

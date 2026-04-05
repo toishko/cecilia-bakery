@@ -67,6 +67,10 @@
       <i data-lucide="receipt"></i>
       <span data-en="Sales" data-es="Ventas">Sales</span>
     </button>
+    <button class="dash-nav-item" data-section="inventory">
+      <i data-lucide="clipboard-list"></i>
+      <span data-en="Inventory" data-es="Inventario">Inventory</span>
+    </button>
     <button class="dash-nav-item" data-section="new-order">
       <i data-lucide="plus-circle"></i>
       <span data-en="New Order" data-es="Nuevo Pedido">New Order</span>
@@ -132,6 +136,14 @@
 
       <!-- Product List -->
       <div id="sale-products" class="sale-products"></div>
+    </div>
+
+    <!-- INVENTORY -->
+    <div id="section-inventory" class="dash-section" style="display:none">
+      <h3 class="section-title" data-en="Today's Inventory" data-es="Inventario de Hoy">Today's Inventory</h3>
+      <div id="inv-source-banner"></div>
+      <div id="inv-summary"></div>
+      <div id="inv-load-form" style="display:none"></div>
     </div>
 
     <!-- SALE FOOTER BAR -->

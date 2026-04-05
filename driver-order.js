@@ -48,6 +48,11 @@ let failedAttempts = parseInt(localStorage.getItem('cecilia_code_attempts') || '
 let lockoutUntil = parseInt(localStorage.getItem('cecilia_lockout_until') || '0');
 let driverPriceMap = {}; // product_key → price, loaded on login
 
+// Inventory state
+let driverInventory = {};    // product_key → { loaded, sold, remaining }
+let inventoryLoaded = false;
+let inventorySource = '';    // 'order:#123' or 'manual'
+
 // Session timeout: 24 hours
 const DRIVER_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -100,6 +105,9 @@ function showSection(name) {
   }
   if (name === 'clients') {
     loadDriverClients();
+  }
+  if (name === 'inventory') {
+    loadInventoryTab();
   }
   // Refresh icons for dynamically rendered content
   requestAnimationFrame(() => lucide.createIcons());
@@ -2657,6 +2665,16 @@ async function handleConfirmSale() {
       'success'
     );
 
+    // Decrement inventory after sale
+    if (inventoryLoaded) {
+      items.forEach(it => {
+        if (driverInventory[it.product_key]) {
+          driverInventory[it.product_key].sold += it.quantity;
+          driverInventory[it.product_key].remaining -= it.quantity;
+        }
+      });
+    }
+
   } catch (e) {
     console.error('Confirm sale error:', e);
     showToast(lang === 'es' ? 'Error al procesar la venta' : 'Error processing sale', 'error');
@@ -3123,4 +3141,347 @@ function updateTimeDisplay(timeValue) {
 
   textEl.textContent = `${h}:${String(m).padStart(2, '0')} ${period}`;
   displayEl.classList.add('has-value');
+}
+
+/* ═══════════════════════════════════
+   INVENTORY TAB
+   ═══════════════════════════════════ */
+async function loadInventoryTab() {
+  const banner = document.getElementById('inv-source-banner');
+  const summary = document.getElementById('inv-summary');
+  const form = document.getElementById('inv-load-form');
+
+  banner.innerHTML = '';
+  summary.innerHTML = `<div class="empty-state">${lang === 'es' ? 'Cargando inventario...' : 'Loading inventory...'}</div>`;
+  form.style.display = 'none';
+
+  await loadInventoryData();
+
+  if (inventoryLoaded) {
+    renderInventoryBanner();
+    renderInventorySummary();
+    form.style.display = 'none';
+  } else {
+    banner.innerHTML = '';
+    summary.innerHTML = '';
+    form.style.display = 'block';
+    renderManualLoadForm();
+  }
+  applyLang();
+}
+
+async function loadInventoryData() {
+  if (!sb || !currentDriver) return;
+  try {
+    const today = getTodayStr();
+
+    // Step 1: Check for picked_up orders today
+    const { data: pickedUpOrders, error: e1 } = await sb
+      .from('driver_orders')
+      .select('id, order_number')
+      .eq('driver_id', currentDriver.id)
+      .eq('status', 'picked_up')
+      .eq('pickup_date', today);
+
+    if (!e1 && pickedUpOrders && pickedUpOrders.length > 0) {
+      const orderIds = pickedUpOrders.map(o => o.id);
+      const { data: orderItems, error: e2 } = await sb
+        .from('driver_order_items')
+        .select('product_key, quantity, adjusted_quantity')
+        .in('order_id', orderIds);
+
+      if (!e2 && orderItems && orderItems.length > 0) {
+        // Aggregate by product_key (keep _nt separate)
+        const loadMap = {};
+        orderItems.forEach(item => {
+          const qty = (item.adjusted_quantity !== null && item.adjusted_quantity !== undefined)
+            ? item.adjusted_quantity : item.quantity;
+          loadMap[item.product_key] = (loadMap[item.product_key] || 0) + qty;
+        });
+
+        // Get today's sold quantities
+        const soldMap = await getTodaySoldMap();
+
+        driverInventory = {};
+        Object.entries(loadMap).forEach(([key, loaded]) => {
+          const sold = soldMap[key] || 0;
+          driverInventory[key] = { loaded, sold, remaining: loaded - sold };
+        });
+
+        const orderNums = pickedUpOrders
+          .map(o => o.order_number ? '#' + o.order_number : null)
+          .filter(Boolean);
+        inventorySource = 'order:' + (orderNums.length > 0 ? orderNums.join(', ') : 'Order');
+        inventoryLoaded = true;
+        return;
+      }
+    }
+
+    // Step 2: Fall back to manual driver_inventory
+    const { data: loadRows, error: e3 } = await sb
+      .from('driver_inventory')
+      .select('product_key, morning_load')
+      .eq('driver_id', currentDriver.id)
+      .eq('date', today);
+
+    if (!e3 && loadRows && loadRows.length > 0) {
+      const soldMap = await getTodaySoldMap();
+      driverInventory = {};
+      loadRows.forEach(row => {
+        const sold = soldMap[row.product_key] || 0;
+        driverInventory[row.product_key] = { loaded: row.morning_load, sold, remaining: row.morning_load - sold };
+      });
+      inventorySource = 'manual';
+      inventoryLoaded = true;
+      return;
+    }
+
+    // No inventory for today
+    inventoryLoaded = false;
+  } catch (e) {
+    console.error('Inventory load error:', e);
+    inventoryLoaded = false;
+  }
+}
+
+async function getTodaySoldMap() {
+  const soldMap = {};
+  if (!sb || !currentDriver) return soldMap;
+  try {
+    const today = getTodayStr();
+    const { data: sales } = await sb
+      .from('driver_sales')
+      .select('id')
+      .eq('driver_id', currentDriver.id)
+      .gte('created_at', today + 'T00:00:00');
+
+    if (sales && sales.length > 0) {
+      const saleIds = sales.map(s => s.id);
+      const { data: items } = await sb
+        .from('driver_sale_items')
+        .select('product_key, quantity')
+        .in('sale_id', saleIds);
+
+      if (items) {
+        items.forEach(it => {
+          soldMap[it.product_key] = (soldMap[it.product_key] || 0) + it.quantity;
+        });
+      }
+    }
+  } catch (e) { console.error('Sold map error:', e); }
+  return soldMap;
+}
+
+function renderInventoryBanner() {
+  const banner = document.getElementById('inv-source-banner');
+  if (!banner) return;
+
+  const isOrder = inventorySource.indexOf('order:') === 0;
+  const label = isOrder
+    ? '📦 ' + inventorySource.replace('order:', lang === 'es' ? 'Cargado de Pedido ' : 'From Order ')
+    : '✏️ ' + (lang === 'es' ? 'Carga Manual' : 'Manual Entry');
+  const cls = isOrder ? 'inv-banner order' : 'inv-banner manual';
+
+  banner.innerHTML = `<div class="${cls}">${label}</div>`;
+}
+
+function renderInventorySummary() {
+  const container = document.getElementById('inv-summary');
+  if (!container) return;
+
+  const keys = Object.keys(driverInventory);
+  if (keys.length === 0) {
+    container.innerHTML = `<div class="empty-state">${lang === 'es' ? 'Sin inventario hoy' : 'No inventory today'}</div>`;
+    return;
+  }
+
+  // Build a product_key → label map from PRODUCTS catalog
+  const labelMap = {};
+  Object.values(PRODUCTS).forEach(sec => {
+    sec.items.forEach(item => {
+      labelMap[item.key] = L(item);
+      // For redondo sub-variants
+      if (item.cols) {
+        item.cols.forEach(col => {
+          const subKey = item.key + '_' + col;
+          const isNT = col.endsWith('_nt');
+          const base = isNT ? col.replace('_nt', '') : col;
+          const colLabel = base.charAt(0).toUpperCase() + base.slice(1);
+          labelMap[subKey] = L(item) + ' — ' + colLabel + (isNT ? ' NT' : '');
+        });
+      }
+    });
+  });
+
+  // Group by category
+  let html = '';
+  Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
+    // Find items in this category that are in inventory
+    const matching = [];
+    sec.items.forEach(item => {
+      // Check base key
+      if (driverInventory[item.key]) {
+        matching.push({ key: item.key, label: labelMap[item.key] || item.key, ...driverInventory[item.key] });
+      }
+      // Check sub-variants (redondo)
+      if (item.cols) {
+        item.cols.forEach(col => {
+          const subKey = item.key + '_' + col;
+          if (driverInventory[subKey]) {
+            matching.push({ key: subKey, label: labelMap[subKey] || subKey, ...driverInventory[subKey] });
+          }
+        });
+      }
+    });
+
+    if (matching.length === 0) return;
+
+    html += `<div class="inv-category">`;
+    html += `<div class="inv-cat-title" data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</div>`;
+    matching.forEach(p => {
+      const statusClass = p.remaining <= 0 ? 'out' : p.remaining < 3 ? 'low' : '';
+      html += `<div class="inv-card ${statusClass}">`;
+      html += `<div class="inv-card-name">${_esc(p.label)}</div>`;
+      html += `<div class="inv-card-counts">`;
+      html += `<span class="inv-count-loaded">${p.loaded}</span>`;
+      html += `<span class="inv-count-sep">→</span>`;
+      html += `<span class="inv-count-remaining ${statusClass}">${p.remaining}</span>`;
+      html += `</div>`;
+      html += `</div>`;
+    });
+    html += `</div>`;
+  });
+
+  // Also show any keys that didn't match a known category
+  const knownKeys = new Set();
+  Object.values(PRODUCTS).forEach(sec => {
+    sec.items.forEach(item => {
+      knownKeys.add(item.key);
+      if (item.cols) item.cols.forEach(col => knownKeys.add(item.key + '_' + col));
+    });
+  });
+  const unknown = keys.filter(k => !knownKeys.has(k));
+  if (unknown.length > 0) {
+    html += `<div class="inv-category"><div class="inv-cat-title">Other</div>`;
+    unknown.forEach(k => {
+      const p = driverInventory[k];
+      const statusClass = p.remaining <= 0 ? 'out' : p.remaining < 3 ? 'low' : '';
+      html += `<div class="inv-card ${statusClass}">`;
+      html += `<div class="inv-card-name">${_esc(labelMap[k] || k)}</div>`;
+      html += `<div class="inv-card-counts">`;
+      html += `<span class="inv-count-loaded">${p.loaded}</span>`;
+      html += `<span class="inv-count-sep">→</span>`;
+      html += `<span class="inv-count-remaining ${statusClass}">${p.remaining}</span>`;
+      html += `</div></div>`;
+    });
+    html += `</div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function renderManualLoadForm() {
+  const container = document.getElementById('inv-load-form');
+  if (!container) return;
+
+  let html = `<div class="inv-form-intro">`;
+  html += `<p data-en="Enter how many of each product you're loading today." data-es="Ingresa cuántos de cada producto cargas hoy.">${lang === 'es' ? 'Ingresa cuántos de cada producto cargas hoy.' : "Enter how many of each product you're loading today."}</p>`;
+  html += `</div>`;
+
+  Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
+    const visibleItems = sec.items.filter(item => !hiddenProducts.has(item.key));
+    if (visibleItems.length === 0) return;
+
+    html += `<div class="inv-form-section">`;
+    html += `<div class="inv-form-cat" data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</div>`;
+
+    visibleItems.forEach(item => {
+      if (sec.type === 'redondo' && item.cols) {
+        // Redondo sub-variants
+        item.cols.forEach(col => {
+          const subKey = item.key + '_' + col;
+          const isNT = col.endsWith('_nt');
+          const base = isNT ? col.replace('_nt', '') : col;
+          const colLabel = base.charAt(0).toUpperCase() + base.slice(1);
+          const fullLabel = L(item) + ' — ' + colLabel + (isNT ? ' NT' : '');
+          html += `<div class="inv-form-row">`;
+          html += `<span class="inv-form-label">${_esc(fullLabel)}</span>`;
+          html += `<input type="number" class="inv-form-input" data-pk="${subKey}" min="0" value="0" inputmode="numeric">`;
+          html += `</div>`;
+        });
+      } else {
+        html += `<div class="inv-form-row">`;
+        html += `<span class="inv-form-label" data-en="${item.en}" data-es="${item.es}">${L(item)}</span>`;
+        html += `<input type="number" class="inv-form-input" data-pk="${item.key}" min="0" value="0" inputmode="numeric">`;
+        html += `</div>`;
+      }
+    });
+
+    html += `</div>`;
+  });
+
+  html += `<button class="inv-save-btn" id="inv-save-btn" data-en="Save Inventory" data-es="Guardar Inventario">${lang === 'es' ? 'Guardar Inventario' : 'Save Inventory'}</button>`;
+
+  container.innerHTML = html;
+
+  // Bind save
+  document.getElementById('inv-save-btn').addEventListener('click', saveManualLoad);
+
+  // Focus behavior on inputs
+  container.querySelectorAll('.inv-form-input').forEach(inp => {
+    inp.addEventListener('focus', () => { if (inp.value === '0') inp.value = ''; });
+    inp.addEventListener('blur', () => { if (inp.value === '') inp.value = '0'; });
+  });
+}
+
+async function saveManualLoad() {
+  if (!sb || !currentDriver) return;
+  const btn = document.getElementById('inv-save-btn');
+  btn.disabled = true;
+  btn.textContent = lang === 'es' ? 'Guardando...' : 'Saving...';
+
+  try {
+    const today = getTodayStr();
+    const rows = [];
+    document.querySelectorAll('.inv-form-input').forEach(inp => {
+      const val = parseInt(inp.value) || 0;
+      if (val > 0) {
+        rows.push({
+          driver_id: currentDriver.id,
+          product_key: inp.dataset.pk,
+          morning_load: val,
+          date: today
+        });
+      }
+    });
+
+    if (rows.length === 0) {
+      showToast(lang === 'es' ? 'Ingresa al menos un producto' : 'Enter at least one product', 'error');
+      btn.disabled = false;
+      btn.textContent = lang === 'es' ? 'Guardar Inventario' : 'Save Inventory';
+      return;
+    }
+
+    const { error } = await sb
+      .from('driver_inventory')
+      .upsert(rows, { onConflict: 'driver_id,product_key,date' });
+
+    if (error) throw error;
+
+    // Set in-memory state
+    driverInventory = {};
+    rows.forEach(r => {
+      driverInventory[r.product_key] = { loaded: r.morning_load, sold: 0, remaining: r.morning_load };
+    });
+    inventorySource = 'manual';
+    inventoryLoaded = true;
+
+    showToast(lang === 'es' ? 'Inventario guardado' : 'Inventory saved', 'success');
+    loadInventoryTab();
+  } catch (e) {
+    console.error('Save inventory error:', e);
+    showToast(lang === 'es' ? 'Error al guardar' : 'Error saving inventory', 'error');
+    btn.disabled = false;
+    btn.textContent = lang === 'es' ? 'Guardar Inventario' : 'Save Inventory';
+  }
 }
