@@ -100,51 +100,71 @@ body {
 .woo-section-body { display: none; }
 .woo-section.open .woo-section-body { display: block; }
 
-/* Product row — large touch targets for Woosim */
+/* Column header row */
+.woo-col-header {
+  display: flex;
+  padding: 6px 16px;
+  background: #f5f5f5;
+  border-top: 1px solid #eee;
+  font-size: .7rem;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.woo-col-header .col-name { flex: 1; }
+.woo-col-header .col-qty,
+.woo-col-header .col-nt { width: 52px; text-align: center; margin-left: 6px; }
+
+/* Product row */
 .woo-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
+  padding: 10px 16px;
   border-top: 1px solid #f0f0f0;
-  min-height: 56px;
+  min-height: 48px;
 }
 .woo-row.has-qty { background: #fef2f2; }
-.woo-row-info { flex: 1; min-width: 0; padding-right: 12px; }
+.woo-row-info { flex: 1; min-width: 0; padding-right: 8px; }
 .woo-row-name {
-  font-size: .95rem;
+  font-size: .88rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.woo-row-price { font-size: .75rem; color: #888; }
+.woo-row-price { font-size: .7rem; color: #888; }
 
-/* Qty input — simple box, no buttons */
+/* Qty inputs — two columns */
 .woo-qty-input {
   width: 52px;
-  height: 40px;
+  height: 36px;
   border: 1px solid #ddd;
-  border-radius: 8px;
+  border-radius: 6px;
   text-align: center;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
   font-family: inherit;
   -webkit-appearance: none;
   appearance: none;
   flex-shrink: 0;
   background: #fff;
+  margin-left: 6px;
 }
-.woo-row.has-qty .woo-qty-input {
+.woo-qty-input.has-val {
   border-color: #C8102E;
   background: #fff5f5;
 }
+.woo-qty-input.nt-input.has-val {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
 .woo-row-line {
-  font-size: .85rem;
+  font-size: .8rem;
   font-weight: 600;
   color: #C8102E;
-  min-width: 50px;
+  min-width: 48px;
   text-align: right;
-  margin-left: 8px;
+  margin-left: 6px;
 }
 
 /* Footer / totals */
@@ -251,7 +271,9 @@ body {
   display: block;
   width: calc(100% - 32px);
   max-width: 380px;
-  margin: 16px auto;
+  margin-top: 60px;
+  margin-left: auto;
+  margin-right: auto;
   padding: 14px;
   border: none;
   border-radius: 10px;
@@ -277,9 +299,8 @@ body {
 .woo-toast.error { background: #C8102E; }
 .woo-toast.success { background: #16a34a; }
 
-/* Hide everything except receipt when printing */
+/* Hide header when showing receipt for print */
 .woo-print-mode .woo-header { display: none; }
-.woo-new-sale { margin-top: 60px; }
 </style>
 </head>
 <body>
@@ -301,7 +322,103 @@ body {
   const API = 'https://dykztphptnytbihpavpa.supabase.co/rest/v1';
   const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
   const HEADERS = { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
-  const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+  const CACHE_TTL = 10 * 60 * 1000;
+
+  // ── Hardcoded product catalog (matches driver-order.js exactly) ──
+  const PRODUCTS = {
+    redondo: {
+      label: 'Round', type: 'redondo',
+      items: [
+        { key: 'pina', name: 'Piña', cols: ['inside','top'] },
+        { key: 'guava', name: 'Guava', cols: ['inside','top'] },
+        { key: 'dulce', name: 'Dulce De Leche', cols: ['inside'] },
+      ]
+    },
+    plain: {
+      label: 'Plain',
+      items: [
+        { key: 'plain', name: 'Plain' },
+        { key: 'raisin', name: 'Raisin' },
+        { key: 'pudin', name: 'Pudin' },
+      ]
+    },
+    tresleche: {
+      label: 'Tres Leche',
+      items: [
+        { key: 'tl', name: 'Tres Leche' },
+        { key: 'tl_hershey', name: 'Tres Leche Hershey' },
+        { key: 'cuatro_leche', name: 'Cuatro Leche' },
+        { key: 'tl_straw', name: 'Tres Leche Strawberry' },
+        { key: 'tl_pina', name: 'Tres Leche Piña' },
+      ]
+    },
+    piezas: {
+      label: 'Pieces',
+      items: [
+        { key: 'pz_rv', name: 'Red Velvet' },
+        { key: 'pz_carrot', name: 'Carrot Cake' },
+        { key: 'pz_cheese', name: 'Cheesecake' },
+        { key: 'pz_pudin', name: 'Pudin' },
+        { key: 'pz_pina', name: 'Piña' },
+        { key: 'pz_guava', name: 'Guava' },
+        { key: 'pz_chocoflan', name: 'Chocoflan' },
+        { key: 'pz_flan', name: 'Flan' },
+      ]
+    },
+    frostin: {
+      label: 'Frosted Pieces',
+      items: [
+        { key: 'fr_guava', name: 'Guava' },
+        { key: 'fr_pina', name: 'Piña' },
+        { key: 'fr_dulce', name: 'Dulce De Leche' },
+        { key: 'fr_choco', name: 'Chocolate' },
+      ]
+    },
+    hb_big: {
+      label: 'Happy Birthday — BIG',
+      items: [
+        { key: 'hb_b_pina', name: 'Piña' },
+        { key: 'hb_b_guava', name: 'Guava' },
+        { key: 'hb_b_dulce', name: 'Dulce De Leche' },
+        { key: 'hb_b_choco', name: 'Chocolate' },
+        { key: 'hb_b_straw', name: 'Strawberry' },
+      ]
+    },
+    hb_small: {
+      label: 'Happy Birthday — SMALL',
+      items: [
+        { key: 'hb_s_pina', name: 'Piña' },
+        { key: 'hb_s_guava', name: 'Guava' },
+        { key: 'hb_s_dulce', name: 'Dulce De Leche' },
+        { key: 'hb_s_choco', name: 'Chocolate' },
+        { key: 'hb_s_straw', name: 'Strawberry' },
+      ]
+    },
+    cuadrao: {
+      label: 'Square',
+      items: [
+        { key: 'cdr_pudin', name: 'Pudin' },
+        { key: 'cdr_pound', name: 'Pound' },
+        { key: 'cdr_raisin', name: 'Raisin' },
+        { key: 'cdr_maiz', name: 'Maiz' },
+      ]
+    },
+    basos: {
+      label: 'Cups',
+      items: [
+        { key: 'bas_tl', name: 'Tres Leche' },
+        { key: 'bas_cl', name: 'Cuatro Leche' },
+        { key: 'bas_hershey', name: 'Hershey' },
+      ]
+    },
+    familiar: {
+      label: 'Family Size',
+      items: [
+        { key: 'fam_tl', name: 'Tres Leche' },
+        { key: 'fam_cl', name: 'Cuatro Leche' },
+      ]
+    },
+  };
 
   const content = document.getElementById('woo-content');
   const driverNameEl = document.getElementById('woo-driver-name');
@@ -314,7 +431,7 @@ body {
     return;
   }
 
-  // ── Helper: Supabase REST fetch ──
+  // ── Helpers ──
   async function sbGet(table, query) {
     const res = await fetch(API + '/' + table + '?' + query, { headers: HEADERS });
     if (!res.ok) throw new Error(table + ': ' + res.status);
@@ -327,8 +444,6 @@ body {
     if (!res.ok) { const t = await res.text(); throw new Error(t); }
     return res.json();
   }
-
-  // ── Cache helpers ──
   function cacheGet(key) {
     try {
       const raw = localStorage.getItem('woo_' + key);
@@ -341,6 +456,7 @@ body {
   function cacheSet(key, data) {
     try { localStorage.setItem('woo_' + key, JSON.stringify({ data, ts: Date.now() })); } catch {}
   }
+  function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
   // ── Authenticate driver ──
   let driver;
@@ -356,71 +472,54 @@ body {
     return;
   }
 
-  // ── Try cache first for instant render ──
+  // ── Try cache first ──
   let clients = cacheGet('clients_' + driver.id) || [];
-  let products = cacheGet('products') || {};
   let priceMap = cacheGet('prices_' + driver.id) || {};
-  const hasCache = clients.length > 0 && Object.keys(products).length > 0;
+  const hasCache = clients.length > 0;
 
   // ── State ──
-  let qty = {};
+  let qty = {};      // product_qty_key → quantity
   let clientId = null;
   let payMethod = 'cash';
   let payStatus = 'paid';
 
-  // Render immediately from cache if available
-  if (hasCache) {
-    renderForm();
-  }
+  if (hasCache) renderForm();
 
   // ── Load fresh data in parallel ──
   try {
-    const [clientRows, prodRows, priceRows] = await Promise.all([
+    const [clientRows, priceRows] = await Promise.all([
       sbGet('driver_route_clients', 'driver_id=eq.' + driver.id + '&is_active=eq.true&order=business_name.asc&select=*'),
-      sbGet('b2b_products', 'order=sort_order.asc&select=*'),
       sbGet('driver_prices', 'driver_id=eq.' + driver.id + '&select=product_key,price'),
     ]);
-
-    // Process clients
     clients = clientRows || [];
     cacheSet('clients_' + driver.id, clients);
-
-    // Process products — use unique ID to avoid duplicate-name collisions
-    products = {};
-    if (prodRows) {
-      let idx = 0;
-      prodRows.filter(p => !p.sold_out).forEach(p => {
-        const secKey = p.tag_en.toLowerCase().replace(/\s+/g, '_');
-        if (!products[secKey]) products[secKey] = { label: p.tag_en, items: [] };
-        const uniqueKey = (p.name_en.toLowerCase().replace(/\s+/g, '_')) + '__' + idx;
-        products[secKey].items.push({
-          key: uniqueKey,
-          priceKey: p.name_en.toLowerCase().replace(/\s+/g, '_'),
-          name: p.name_en,
-        });
-        idx++;
-      });
-    }
-    cacheSet('products', products);
-
-    // Process prices
     priceMap = {};
     if (priceRows) priceRows.forEach(p => priceMap[p.product_key] = parseFloat(p.price));
     cacheSet('prices_' + driver.id, priceMap);
-
-    // Re-render with fresh data (only if we already rendered from cache or first load)
     renderForm();
   } catch (e) {
     console.error('Data load error:', e);
-    if (!hasCache) {
-      content.innerHTML = '<div class="woo-msg error">Failed to load. Check connection.</div>';
+    if (!hasCache) content.innerHTML = '<div class="woo-msg error">Failed to load. Check connection.</div>';
+  }
+
+  // ── Get all qty keys for a product row ──
+  function getRowKeys(item, secType) {
+    const keys = [];
+    if (secType === 'redondo') {
+      (item.cols || []).forEach(c => {
+        keys.push({ qtyKey: item.key + '_' + c, ntKey: item.key + '_' + c + '_nt', label: item.name + ' — ' + (c === 'inside' ? 'Inside' : 'Top'), priceKey: item.key + '_' + c });
+      });
+    } else {
+      keys.push({ qtyKey: item.key, ntKey: item.key + '_nt', label: item.name, priceKey: item.key });
     }
+    return keys;
   }
 
   // ── Render ──
   function renderForm() {
     let html = '';
 
+    // Client selector
     html += '<div class="woo-field"><label>CLIENT</label><select id="woo-client">';
     html += '<option value="">Select a client...</option>';
     clients.forEach(c => {
@@ -429,30 +528,42 @@ body {
     html += '</select></div>';
 
     if (clients.length === 0) {
-      html += '<div class="woo-msg">No clients. Add clients in the Driver Portal (Safari) first.</div>';
+      html += '<div class="woo-msg">No clients. Add clients in the Driver Portal first.</div>';
     }
 
-    Object.entries(products).forEach(([secKey, sec]) => {
+    // Product sections
+    Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
       html += '<div class="woo-section" data-sec="' + secKey + '">';
       html += '<div class="woo-section-header" onclick="this.parentElement.classList.toggle(\'open\')">';
       html += '<span>' + esc(sec.label) + '</span><span class="arrow">▼</span></div>';
       html += '<div class="woo-section-body">';
+
+      // Column headers
+      html += '<div class="woo-col-header"><span class="col-name"></span><span class="col-qty">QTY</span><span class="col-nt">NT</span></div>';
+
       sec.items.forEach(item => {
-        const pk = item.priceKey || item.key;
-        const price = priceMap[pk];
-        const priceStr = price ? '$' + price.toFixed(2) : 'No price';
-        const curQty = qty[item.key] || 0;
-        const lineTotal = curQty > 0 ? '$' + (curQty * (price || 0)).toFixed(2) : '';
-        html += '<div class="woo-row' + (curQty > 0 ? ' has-qty' : '') + '" data-key="' + item.key + '">';
-        html += '<div class="woo-row-info"><div class="woo-row-name">' + esc(item.name) + '</div>';
-        html += '<div class="woo-row-price">' + priceStr + '</div></div>';
-        html += '<input type="number" class="woo-qty-input" data-key="' + item.key + '" data-pk="' + pk + '" value="' + curQty + '" min="0" inputmode="numeric">';
-        html += '<div class="woo-row-line" data-line="' + item.key + '">' + lineTotal + '</div>';
-        html += '</div>';
+        const rows = getRowKeys(item, sec.type);
+        rows.forEach(r => {
+          const price = priceMap[r.priceKey];
+          const priceStr = price ? '$' + price.toFixed(2) : '';
+          const curQty = qty[r.qtyKey] || 0;
+          const curNt = qty[r.ntKey] || 0;
+          const hasAny = curQty > 0 || curNt > 0;
+
+          html += '<div class="woo-row' + (hasAny ? ' has-qty' : '') + '" data-qk="' + r.qtyKey + '" data-nk="' + r.ntKey + '" data-pk="' + r.priceKey + '">';
+          html += '<div class="woo-row-info"><div class="woo-row-name">' + esc(r.label) + '</div>';
+          if (priceStr) html += '<div class="woo-row-price">' + priceStr + '</div>';
+          html += '</div>';
+          html += '<input type="number" class="woo-qty-input" data-field="' + r.qtyKey + '" value="' + curQty + '" min="0" inputmode="numeric">';
+          html += '<input type="number" class="woo-qty-input nt-input" data-field="' + r.ntKey + '" value="' + curNt + '" min="0" inputmode="numeric">';
+          html += '</div>';
+        });
       });
+
       html += '</div></div>';
     });
 
+    // Footer
     html += '<div class="woo-footer" id="woo-footer">';
     html += '<div class="woo-total-row"><span>TOTAL</span><span id="woo-total">$0.00</span></div>';
     html += '<div class="woo-pay-group"><label>PAYMENT METHOD</label><div class="woo-toggles">';
@@ -473,65 +584,71 @@ body {
     updateTotal();
   }
 
-  function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
+  // ── Update total ──
   function updateTotal() {
     let total = 0;
     let hasItems = false;
-    Object.entries(qty).forEach(([key, q]) => {
-      if (q > 0) {
+
+    // Walk every row and compute line total from qty + nt
+    document.querySelectorAll('.woo-row[data-qk]').forEach(row => {
+      const qk = row.dataset.qk;
+      const nk = row.dataset.nk;
+      const pk = row.dataset.pk;
+      const qVal = qty[qk] || 0;
+      const nVal = qty[nk] || 0;
+      const combined = qVal + nVal;
+      if (combined > 0) {
         hasItems = true;
-        // Find the priceKey for this unique key
-        const inp = document.querySelector('input[data-key="' + key + '"]');
-        const pk = inp ? (inp.dataset.pk || key) : key;
-        total += q * (priceMap[pk] || 0);
-        const lineEl = document.querySelector('[data-line="' + key + '"]');
-        if (lineEl) lineEl.textContent = '$' + (q * (priceMap[pk] || 0)).toFixed(2);
+        const price = priceMap[pk] || 0;
+        total += combined * price;
       }
     });
+
     document.getElementById('woo-total').textContent = '$' + total.toFixed(2);
     const btn = document.getElementById('woo-submit');
     if (btn) btn.disabled = !clientId || !hasItems;
   }
 
+  // ── Events ──
   function bindEvents() {
     document.getElementById('woo-client').addEventListener('change', function() {
       clientId = this.value || null;
       updateTotal();
     });
 
+    // Focus: clear 0
     content.addEventListener('focus', function(e) {
-      if (e.target.tagName === 'INPUT' && e.target.dataset.key) {
+      if (e.target.classList && e.target.classList.contains('woo-qty-input')) {
         if (e.target.value === '0') e.target.value = '';
         e.target.select();
       }
     }, true);
 
+    // Blur: restore 0
     content.addEventListener('blur', function(e) {
-      if (e.target.tagName === 'INPUT' && e.target.dataset.key) {
+      if (e.target.classList && e.target.classList.contains('woo-qty-input')) {
         if (e.target.value === '') {
           e.target.value = '0';
-          qty[e.target.dataset.key] = 0;
+          qty[e.target.dataset.field] = 0;
+          updateRowStyle(e.target);
           updateTotal();
         }
       }
     }, true);
 
+    // Input: update qty
     content.addEventListener('input', function(e) {
-      if (e.target.tagName === 'INPUT' && e.target.dataset.key) {
-        const key = e.target.dataset.key;
+      if (e.target.classList && e.target.classList.contains('woo-qty-input')) {
+        const field = e.target.dataset.field;
         const val = Math.max(0, parseInt(e.target.value) || 0);
-        qty[key] = val;
-        const row = e.target.closest('.woo-row');
-        if (row) row.classList.toggle('has-qty', val > 0);
-        if (val === 0) {
-          const lineEl = document.querySelector('[data-line="' + key + '"]');
-          if (lineEl) lineEl.textContent = '';
-        }
+        qty[field] = val;
+        e.target.classList.toggle('has-val', val > 0);
+        updateRowStyle(e.target);
         updateTotal();
       }
     });
 
+    // Payment toggles
     content.addEventListener('click', function(e) {
       const toggle = e.target.closest('.woo-toggle');
       if (!toggle) return;
@@ -543,7 +660,21 @@ body {
       if (group === 'status') payStatus = val;
     });
 
+    // Submit
     document.getElementById('woo-submit').addEventListener('click', completeSale);
+  }
+
+  function updateRowStyle(input) {
+    const row = input.closest('.woo-row');
+    if (!row) return;
+    const inputs = row.querySelectorAll('.woo-qty-input');
+    let hasAny = false;
+    inputs.forEach(inp => {
+      const v = parseInt(inp.value) || 0;
+      inp.classList.toggle('has-val', v > 0);
+      if (v > 0) hasAny = true;
+    });
+    row.classList.toggle('has-qty', hasAny);
   }
 
   // ── Complete Sale ──
@@ -558,7 +689,6 @@ body {
         + String(now.getMonth() + 1).padStart(2, '0')
         + String(now.getDate()).padStart(2, '0') + '-';
 
-      // Get last receipt number
       const lastReceipts = await sbGet('driver_sales',
         'receipt_number=like.' + encodeURIComponent(prefix + '*')
         + '&order=receipt_number.desc&limit=1&select=receipt_number');
@@ -569,30 +699,32 @@ body {
       }
       const receiptNumber = prefix + String(seq).padStart(4, '0');
 
+      // Collect items — combine qty + nt per product row
       const items = [];
-      Object.entries(qty).forEach(([key, q]) => {
-        if (q > 0) {
-          let label = key;
-          let pk = key;
-          Object.values(products).forEach(sec => {
-            sec.items.forEach(item => {
-              if (item.key === key) {
-                label = item.name;
-                pk = item.priceKey || key;
-              }
-            });
+      Object.values(PRODUCTS).forEach(sec => {
+        sec.items.forEach(item => {
+          const rows = getRowKeys(item, sec.type);
+          rows.forEach(r => {
+            const qVal = qty[r.qtyKey] || 0;
+            const nVal = qty[r.ntKey] || 0;
+            const combined = qVal + nVal;
+            if (combined > 0) {
+              const price = priceMap[r.priceKey] || 0;
+              items.push({
+                product_key: r.priceKey,
+                product_label: r.label,
+                quantity: combined,
+                unit_price: price,
+                line_total: combined * price,
+              });
+            }
           });
-          items.push({
-            product_key: pk, product_label: label, quantity: q,
-            unit_price: priceMap[pk] || 0, line_total: q * (priceMap[pk] || 0),
-          });
-        }
+        });
       });
 
       const total = items.reduce((s, i) => s + i.line_total, 0);
       const notes = document.getElementById('woo-notes')?.value.trim() || '';
 
-      // Save sale
       const saleResult = await sbPost('driver_sales', {
         receipt_number: receiptNumber, driver_id: driver.id, client_id: clientId,
         total: total, payment_method: payMethod, payment_status: payStatus,
@@ -600,7 +732,6 @@ body {
       });
       const sale = Array.isArray(saleResult) ? saleResult[0] : saleResult;
 
-      // Save items
       const saleItems = items.map(it => ({
         sale_id: sale.id, product_key: it.product_key, product_label: it.product_label,
         quantity: it.quantity, unit_price: it.unit_price, line_total: it.line_total,
@@ -618,7 +749,7 @@ body {
     }
   }
 
-  // ── Show Receipt ──
+  // ── Receipt — single combined qty per item ──
   function showReceipt(sale, items, client) {
     const dt = new Date(sale.created_at || new Date());
     const dateStr = dt.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -660,7 +791,6 @@ body {
       </div>
       <button type="button" class="woo-new-sale" onclick="document.getElementById('woo-app').classList.remove('woo-print-mode');location.reload()">+ New Sale</button>
     `;
-    // Hide header so Woosim only prints the receipt
     document.getElementById('woo-app').classList.add('woo-print-mode');
     window.scrollTo(0, 0);
   }
