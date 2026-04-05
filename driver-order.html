@@ -444,6 +444,7 @@
 <div id="update-banner" hidden>
   <span>New update available</span>
   <button id="update-banner-btn">Tap to update</button>
+  <button id="update-banner-close" aria-label="Close">&times;</button>
 </div>
 
 <script src="/pull-to-refresh.js"></script>
@@ -489,18 +490,40 @@
   text-transform: uppercase;
   white-space: nowrap;
 }
+#update-banner-close {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.8);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  margin-left: 4px;
+}
 </style>
 <script>
+function dismissBanner() {
+  const banner = document.getElementById('update-banner');
+  if (!banner) return;
+  banner.classList.remove('visible');
+  sessionStorage.setItem('cecilia_update_dismissed', '1');
+  setTimeout(() => { banner.hidden = true; }, 400);
+}
 function showUpdateBanner() {
+  if (sessionStorage.getItem('cecilia_update_dismissed')) return;
   const banner = document.getElementById('update-banner');
   if (!banner) return;
   banner.hidden = false;
   setTimeout(() => { banner.classList.add('visible'); }, 100);
+
+  // Auto-dismiss after 15s so it never permanently blocks the UI
+  setTimeout(dismissBanner, 15000);
+
   document.getElementById('update-banner-btn')
     ?.addEventListener('click', () => {
+      sessionStorage.setItem('cecilia_update_dismissed', '1');
       navigator.serviceWorker.ready.then(reg => {
         if (reg.waiting) {
-          // Wait for controller to change, then reload
           navigator.serviceWorker.addEventListener(
             'controllerchange',
             () => window.location.reload(),
@@ -512,14 +535,16 @@ function showUpdateBanner() {
         }
       });
     });
+
+  document.getElementById('update-banner-close')
+    ?.addEventListener('click', dismissBanner);
 }
 function initUpdateBanner() {
   if (!('serviceWorker' in navigator)) return;
+  if (sessionStorage.getItem('cecilia_update_dismissed')) return;
   const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.register('/sw.js')
     .then(reg => {
-      // FIRST: attach listener — must come before reg.update() to avoid the
-      // race where updatefound fires before the listener is registered.
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing;
         if (!newWorker) return;
@@ -529,12 +554,10 @@ function initUpdateBanner() {
           }
         });
       });
-      // SECOND: check for an already-waiting SW (e.g. tab was open across deploy)
       if (reg.waiting && hadController) {
         showUpdateBanner();
         return;
       }
-      // THIRD: trigger update check — now safe because listener is already attached
       reg.update().catch(() => {});
     }).catch(() => {});
 }
