@@ -55,6 +55,10 @@
     {
       "source": "/receipt",
       "destination": "/receipt.html"
+    },
+    {
+      "source": "/woo",
+      "destination": "/woo.html"
     }
   ]
 }
