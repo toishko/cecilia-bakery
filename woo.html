@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-<title>Cecilia Bakery — Quick Sale</title>
+<meta name="viewport" id="woo-viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Cecilia Bakery - Quick Sale</title>
 <style>
 /* ═══════════════════════════════════
    WOO.HTML — Woosim-safe sales page
@@ -264,8 +264,15 @@ body {
 .woo-toast.error { background: #C8102E; }
 .woo-toast.success { background: #16a34a; }
 
-/* Hide header when showing receipt for print */
+/* Print mode — 4-inch Woosim printer = 800px */
+.woo-print-mode { background: #fff; }
 .woo-print-mode .woo-header { display: none; }
+.woo-print-mode #woo-content {
+  width: 800px;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+}
 </style>
 </head>
 <body>
@@ -714,7 +721,7 @@ body {
     }
   }
 
-  // ── Receipt — HTML tables for thermal printer ──
+  // ── Receipt — HTML tables for 4-inch Woosim printer (800px) ──
   function showReceipt(sale, items, client) {
     const dt = new Date(sale.created_at || new Date());
     const dateStr = dt.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -731,33 +738,42 @@ body {
               .replace(/[^\x20-\x7E\n]/g, '');
     }
 
-    // Build receipt with old-school HTML tables + inline styles
-    let h = '';
-    const S = 'style="font-family:sans-serif;font-size:14px;color:#000;"';
+    const F = 'font-family:Arial,Helvetica,sans-serif;color:#000;';
 
-    // Header
-    h += '<table width="100%" cellpadding="0" cellspacing="0" border="0" ' + S + '>';
-    h += '<tr><td align="center" style="font-size:18px;font-weight:bold;padding:8px 0 2px;">Cecilia Bakery</td></tr>';
-    h += '<tr><td align="center" style="font-size:11px;padding-bottom:6px;">Freshly Baked with Love</td></tr>';
+    let h = '<div style="width:800px;margin:0;padding:8px;background:#fff;' + F + '">';
+
+    // ── HEADER (centered) ──
+    h += '<table width="100%" cellpadding="0" cellspacing="0" border="0">';
+    h += '<tr><td align="center" style="font-size:22px;font-weight:bold;padding:8px 0 2px;' + F + '">Cecilia Bakery</td></tr>';
+    h += '<tr><td align="center" style="font-size:12px;padding:0 0 1px;' + F + '">6101 Park Ave, West New York, NJ 07093</td></tr>';
+    h += '<tr><td align="center" style="font-size:12px;padding:0 0 6px;' + F + '">Tel: 551-256-0142</td></tr>';
     h += '</table>';
 
     // Divider
     h += '<hr style="border:none;border-top:1px solid #000;margin:4px 0;">';
 
-    // Info block
-    h += '<table width="100%" cellpadding="1" cellspacing="0" border="0" ' + S + '>';
+    // ── INFO SECTION (left-aligned) ──
+    h += '<table width="100%" cellpadding="1" cellspacing="0" border="0" style="font-size:14px;' + F + '">';
     h += '<tr><td>Receipt #: ' + safe(sale.receipt_number) + '</td></tr>';
     h += '<tr><td>Date: ' + safe(dateStr) + ' ' + safe(timeStr) + '</td></tr>';
     h += '<tr><td>Driver: ' + safe(driver.name) + '</td></tr>';
-    if (client) h += '<tr><td>Client: ' + safe(client.business_name) + '</td></tr>';
-    if (client?.address) h += '<tr><td>Addr: ' + safe(client.address) + '</td></tr>';
-    if (client?.phone) h += '<tr><td>Phone: ' + safe(client.phone) + '</td></tr>';
     h += '</table>';
 
+    // Divider
     h += '<hr style="border:none;border-top:1px solid #000;margin:4px 0;">';
 
-    // Items table — grouped by category
-    h += '<table width="100%" cellpadding="2" cellspacing="0" border="0" ' + S + '>';
+    // ── CLIENT (left-aligned) ──
+    if (client) {
+      h += '<table width="100%" cellpadding="1" cellspacing="0" border="0" style="font-size:14px;' + F + '">';
+      h += '<tr><td style="font-weight:bold;">' + safe(client.business_name) + '</td></tr>';
+      if (client.address) h += '<tr><td>' + safe(client.address) + '</td></tr>';
+      if (client.phone) h += '<tr><td>' + safe(client.phone) + '</td></tr>';
+      h += '</table>';
+      h += '<hr style="border:none;border-top:1px solid #000;margin:4px 0;">';
+    }
+
+    // ── ITEMS TABLE — grouped by category ──
+    h += '<table width="100%" cellpadding="3" cellspacing="0" border="0" style="font-size:14px;' + F + '">';
 
     Object.values(PRODUCTS).forEach(sec => {
       let catHasItems = false;
@@ -767,12 +783,12 @@ body {
           const match = items.find(i => i.product_key === row.priceKey);
           if (match) {
             if (!catHasItems) {
-              h += '<tr><td colspan="2" style="font-weight:bold;font-size:12px;padding:6px 0 2px;border-bottom:1px dashed #000;">' + safe(sec.label) + '</td></tr>';
+              h += '<tr><td colspan="2" style="font-weight:bold;font-size:13px;padding:8px 0 3px;border-bottom:1px solid #000;">' + safe(sec.label) + '</td></tr>';
               catHasItems = true;
             }
             h += '<tr>';
-            h += '<td style="padding:2px 0;">' + safe(match.product_label) + ' x' + match.quantity + '</td>';
-            h += '<td align="right" style="padding:2px 0;white-space:nowrap;">$' + match.line_total.toFixed(2) + '</td>';
+            h += '<td style="padding:3px 0;">' + safe(match.product_label) + ' x' + match.quantity + '</td>';
+            h += '<td align="right" style="padding:3px 0;white-space:nowrap;">$' + match.line_total.toFixed(2) + '</td>';
             h += '</tr>';
           }
         });
@@ -781,26 +797,38 @@ body {
 
     h += '</table>';
 
-    // Total
-    h += '<hr style="border:none;border-top:2px solid #000;margin:6px 0 2px;">';
-    h += '<table width="100%" cellpadding="2" cellspacing="0" border="0" ' + S + '>';
-    h += '<tr><td style="font-size:16px;font-weight:bold;">TOTAL</td>';
-    h += '<td align="right" style="font-size:16px;font-weight:bold;">$' + Number(sale.total).toFixed(2) + '</td></tr>';
-    h += '</table>';
-    h += '<hr style="border:none;border-top:2px solid #000;margin:2px 0 6px;">';
+    // ── TOTAL ──
+    h += '<hr style="border:none;border-top:2px solid #000;margin:8px 0 4px;">';
+    h += '<table width="100%" cellpadding="3" cellspacing="0" border="0" style="' + F + '">';
+    h += '<tr>';
+    h += '<td style="font-size:18px;font-weight:bold;">TOTAL</td>';
+    h += '<td align="right" style="font-size:18px;font-weight:bold;">$' + Number(sale.total).toFixed(2) + '</td>';
+    h += '</tr></table>';
+    h += '<hr style="border:none;border-top:2px solid #000;margin:4px 0 8px;">';
 
-    // Payment info
-    h += '<table width="100%" cellpadding="1" cellspacing="0" border="0" ' + S + '>';
+    // ── PAYMENT ──
+    h += '<table width="100%" cellpadding="1" cellspacing="0" border="0" style="font-size:14px;' + F + '">';
     h += '<tr><td>Method: ' + safe(methodLabel) + '</td></tr>';
     h += '<tr><td>Status: ' + safe(statusLabel) + '</td></tr>';
-    if (sale.notes) h += '<tr><td style="padding-top:4px;">' + safe(sale.notes) + '</td></tr>';
+    if (sale.notes) h += '<tr><td style="padding-top:4px;">Notes: ' + safe(sale.notes) + '</td></tr>';
     h += '</table>';
 
-    h += '<hr style="border:none;border-top:1px solid #000;margin:4px 0;">';
-    h += '<div style="text-align:center;font-size:12px;padding:4px 0;font-family:sans-serif;">Gracias! / Thank you!</div>';
+    // ── FOOTER ──
+    h += '<hr style="border:none;border-top:1px solid #000;margin:6px 0;">';
+    h += '<table width="100%" cellpadding="0" cellspacing="0" border="0">';
+    h += '<tr><td align="center" style="font-size:13px;padding:4px 0;' + F + '">Gracias! / Thank you!</td></tr>';
+    h += '</table>';
+
+    h += '</div>'; // close 800px container
 
     content.innerHTML = h;
+
+    // Switch viewport to 800px for printer capture
+    document.getElementById('woo-viewport').setAttribute('content', 'width=800, initial-scale=1.0');
     document.getElementById('woo-app').classList.add('woo-print-mode');
+    document.body.style.width = '800px';
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
     window.scrollTo(0, 0);
   }
 
