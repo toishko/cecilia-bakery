@@ -584,7 +584,7 @@ body {
 
       // ── Step 1: Check for picked_up orders today (auto-load) ──
       var pickedUpOrders = await sbGet('driver_orders',
-        'driver_id=eq.' + driver.id + '&status=eq.picked_up&submitted_at=gte.' + encodeURIComponent(dateStr + 'T00:00:00') + '&select=id');
+        'driver_id=eq.' + driver.id + '&status=eq.picked_up&pickup_date=eq.' + dateStr + '&select=id');
 
       if (pickedUpOrders && pickedUpOrders.length > 0) {
         // Load items from all picked_up orders
@@ -593,11 +593,12 @@ body {
           'order_id=in.(' + orderIds.join(',') + ')&select=product_key,quantity,adjusted_quantity');
 
         if (orderItems && orderItems.length > 0) {
-          // Aggregate items across all picked_up orders
+          // Aggregate items — strip _nt suffix so qty + nt merge into base product
           var loadMap = {};
           orderItems.forEach(function(item) {
             var effectiveQty = (item.adjusted_quantity !== null && item.adjusted_quantity !== undefined) ? item.adjusted_quantity : item.quantity;
-            loadMap[item.product_key] = (loadMap[item.product_key] || 0) + effectiveQty;
+            var baseKey = item.product_key.replace(/_nt$/, '');
+            loadMap[baseKey] = (loadMap[baseKey] || 0) + effectiveQty;
           });
 
           // Also check driver_inventory for any manual additions
