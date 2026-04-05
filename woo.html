@@ -101,25 +101,26 @@ body {
 .woo-section-body { display: none; }
 .woo-section.open .woo-section-body { display: block; }
 
-/* Product row */
+/* Product row — large touch targets for Woosim */
 .woo-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
+  padding: 14px 16px;
   border-top: 1px solid #f0f0f0;
+  min-height: 56px;
 }
 .woo-row.has-qty { background: #fef2f2; }
-.woo-row-info { flex: 1; min-width: 0; }
+.woo-row-info { flex: 1; min-width: 0; padding-right: 12px; }
 .woo-row-name {
-  font-size: .9rem;
+  font-size: .95rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .woo-row-price { font-size: .75rem; color: #888; }
 
-/* Qty controls */
+/* Qty controls — bigger for reliable touch */
 .woo-qty {
   display: flex;
   align-items: center;
@@ -127,11 +128,11 @@ body {
   flex-shrink: 0;
 }
 .woo-qty button {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border: 1px solid #ddd;
   background: #fff;
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -139,16 +140,16 @@ body {
   justify-content: center;
   -webkit-tap-highlight-color: transparent;
 }
-.woo-qty button:first-child { border-radius: 6px 0 0 6px; }
-.woo-qty button:last-child { border-radius: 0 6px 6px 0; }
+.woo-qty button:first-child { border-radius: 8px 0 0 8px; }
+.woo-qty button:last-child { border-radius: 0 8px 8px 0; }
 .woo-qty input {
-  width: 36px;
-  height: 32px;
+  width: 42px;
+  height: 40px;
   border: 1px solid #ddd;
   border-left: none;
   border-right: none;
   text-align: center;
-  font-size: .9rem;
+  font-size: 1rem;
   font-weight: 600;
   font-family: inherit;
   -webkit-appearance: none;
@@ -508,12 +509,30 @@ body {
       updateTotal();
     });
 
+    // Clear "0" on focus so driver can type directly
+    content.addEventListener('focus', function(e) {
+      if (e.target.tagName === 'INPUT' && e.target.dataset.key) {
+        if (e.target.value === '0') e.target.value = '';
+        e.target.select();
+      }
+    }, true);
+
+    // Restore "0" on blur if empty
+    content.addEventListener('blur', function(e) {
+      if (e.target.tagName === 'INPUT' && e.target.dataset.key) {
+        if (e.target.value === '') {
+          e.target.value = '0';
+          qty[e.target.dataset.key] = 0;
+          updateTotal();
+        }
+      }
+    }, true);
+
     // Qty input direct edit
     content.addEventListener('input', function(e) {
       if (e.target.tagName === 'INPUT' && e.target.dataset.key) {
         const key = e.target.dataset.key;
         const val = Math.max(0, parseInt(e.target.value) || 0);
-        e.target.value = val;
         qty[key] = val;
         const row = e.target.closest('.woo-row');
         if (row) row.classList.toggle('has-qty', val > 0);
@@ -650,8 +669,7 @@ body {
     });
 
     content.innerHTML = `
-      <div class="woo-toast success">✓ Sale ${esc(sale.receipt_number)} saved!</div>
-      <div class="woo-receipt">
+      <div class="woo-receipt" id="woo-receipt-area">
         <div class="center bold" style="font-size:15px">CECILIA BAKERY</div>
         <div class="center" style="font-size:10px">Freshly Baked with Love</div>
         <div class="divider"></div>
@@ -677,6 +695,8 @@ body {
       </div>
       <button type="button" class="woo-new-sale" onclick="location.reload()">+ New Sale</button>
     `;
+    // Scroll to the receipt (past the header)
+    window.scrollTo(0, 0);
   }
 
   // ── Init ──
