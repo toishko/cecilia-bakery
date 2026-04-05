@@ -276,6 +276,83 @@ body {
   padding: 0;
   background: #fff;
 }
+
+/* Inventory Bar */
+.woo-inv-bar {
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  border-left: 3px solid #16a34a;
+}
+.woo-inv-header {
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: .85rem;
+  cursor: pointer;
+  color: #16a34a;
+  -webkit-tap-highlight-color: transparent;
+}
+.woo-inv-header .arrow { font-size: .7rem; color: #aaa; float: right; }
+.woo-inv-bar.open .arrow { display: inline-block; }
+.woo-inv-body { display: none; padding: 0 16px 10px; }
+.woo-inv-bar.open .woo-inv-body { display: block; }
+.woo-inv-row-low td { color: #d97706; }
+.woo-inv-row-out td { color: #dc2626; font-weight: 700; }
+
+/* Morning Load Form */
+.woo-load-wrap {
+  padding: 16px;
+  background: #fff;
+}
+.woo-load-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 4px;
+  color: #C8102E;
+}
+.woo-load-sub {
+  font-size: .8rem;
+  text-align: center;
+  color: #888;
+  margin-bottom: 12px;
+}
+.woo-load-cat {
+  font-size: .8rem;
+  font-weight: 700;
+  padding: 8px 0 4px;
+  border-bottom: 1px solid #eee;
+  color: #555;
+}
+.woo-load-input {
+  width: 56px;
+  height: 32px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  text-align: center;
+  font-size: .95rem;
+  font-weight: 600;
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.woo-load-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  background: #16a34a;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 16px;
+  -webkit-tap-highlight-color: transparent;
+}
+.woo-load-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
 </style>
 </head>
 <body>
@@ -457,6 +534,8 @@ body {
   let clientId = null;
   let payMethod = 'cash';
   let payStatus = 'paid';
+  let inventory = {};      // product_key → { loaded, sold, remaining }
+  let inventoryLoaded = false;
 
   if (hasCache) renderForm();
 
@@ -471,7 +550,14 @@ body {
     priceMap = {};
     if (priceRows) priceRows.forEach(p => priceMap[p.product_key] = parseFloat(p.price));
     cacheSet('prices_' + driver.id, priceMap);
-    renderForm();
+
+    // ── Load inventory for today ──
+    await loadTodayInventory();
+    if (!inventoryLoaded) {
+      renderLoadForm();
+    } else {
+      renderForm();
+    }
   } catch (e) {
     console.error('Data load error:', e);
     if (!hasCache) content.innerHTML = '<div class="woo-msg error">Failed to load. Check connection.</div>';
@@ -490,9 +576,159 @@ body {
     return keys;
   }
 
+  // ── Inventory: load today's data ──
+  async function loadTodayInventory() {
+    try {
+      var today = new Date();
+      var dateStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+      var loadRows = await sbGet('driver_inventory',
+        'driver_id=eq.' + driver.id + '&date=eq.' + dateStr + '&select=product_key,morning_load');
+      if (!loadRows || loadRows.length === 0) {
+        inventoryLoaded = false;
+        return;
+      }
+      // Get today's sales to calculate sold quantities
+      var salesRows = await sbGet('driver_sales',
+        'driver_id=eq.' + driver.id + '&created_at=gte.' + encodeURIComponent(dateStr + 'T00:00:00') + '&select=id');
+      var soldMap = {};
+      if (salesRows && salesRows.length > 0) {
+        var saleIds = salesRows.map(function(s) { return s.id; });
+        var itemRows = await sbGet('driver_sale_items',
+          'sale_id=in.(' + saleIds.join(',') + ')&select=product_key,quantity');
+        if (itemRows) {
+          itemRows.forEach(function(it) {
+            soldMap[it.product_key] = (soldMap[it.product_key] || 0) + it.quantity;
+          });
+        }
+      }
+      inventory = {};
+      loadRows.forEach(function(row) {
+        var sold = soldMap[row.product_key] || 0;
+        inventory[row.product_key] = { loaded: row.morning_load, sold: sold, remaining: row.morning_load - sold };
+      });
+      inventoryLoaded = true;
+    } catch (e) {
+      console.error('Inventory load error:', e);
+      inventoryLoaded = false;
+    }
+  }
+
+  // ── Morning Load Form ──
+  function renderLoadForm() {
+    var html = '<div class="woo-load-wrap">';
+    html += '<div class="woo-load-title">Morning Inventory</div>';
+    html += '<div class="woo-load-sub">Enter the quantity of each product loaded today</div>';
+    html += '<table width="100%" cellpadding="4" cellspacing="0" border="0" style="font-size:.9rem;">';
+    Object.entries(PRODUCTS).forEach(function(entry) {
+      var sec = entry[1];
+      html += '<tr><td colspan="2" class="woo-load-cat">' + esc(sec.label) + '</td></tr>';
+      sec.items.forEach(function(item) {
+        var rows = getRowKeys(item, sec.type);
+        rows.forEach(function(r) {
+          html += '<tr>';
+          html += '<td style="padding:6px 0;">' + esc(r.label) + '</td>';
+          html += '<td align="right" style="padding:6px 0;">';
+          html += '<input type="number" class="woo-load-input" data-pk="' + r.priceKey + '" value="0" min="0" inputmode="numeric">';
+          html += '</td></tr>';
+        });
+      });
+    });
+    html += '</table>';
+    html += '<button type="button" class="woo-load-btn" id="woo-save-load">Save Inventory</button>';
+    html += '</div>';
+    content.innerHTML = html;
+    content.querySelectorAll('.woo-load-input').forEach(function(inp) {
+      inp.addEventListener('focus', function() { if (this.value === '0') this.value = ''; });
+      inp.addEventListener('blur', function() { if (this.value === '') this.value = '0'; });
+    });
+    document.getElementById('woo-save-load').addEventListener('click', saveLoadForm);
+  }
+
+  // ── Save Morning Load ──
+  async function saveLoadForm() {
+    var btn = document.getElementById('woo-save-load');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    try {
+      var today = new Date();
+      var dateStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+      var rows = [];
+      content.querySelectorAll('.woo-load-input').forEach(function(inp) {
+        var val = parseInt(inp.value) || 0;
+        if (val > 0) {
+          rows.push({ driver_id: driver.id, product_key: inp.dataset.pk, morning_load: val, date: dateStr });
+        }
+      });
+      if (rows.length === 0) {
+        btn.disabled = false;
+        btn.textContent = 'Save Inventory';
+        content.innerHTML += '<div class="woo-toast error">Enter at least one product quantity</div>';
+        return;
+      }
+      var res = await fetch(API + '/driver_inventory?on_conflict=driver_id,product_key,date', {
+        method: 'POST',
+        headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation,resolution=merge-duplicates' },
+        body: JSON.stringify(rows)
+      });
+      if (!res.ok) { var t = await res.text(); throw new Error(t); }
+      inventory = {};
+      rows.forEach(function(r) {
+        inventory[r.product_key] = { loaded: r.morning_load, sold: 0, remaining: r.morning_load };
+      });
+      inventoryLoaded = true;
+      renderForm();
+    } catch (e) {
+      console.error('Save inventory error:', e);
+      btn.disabled = false;
+      btn.textContent = 'Save Inventory';
+      content.innerHTML += '<div class="woo-toast error">Error: ' + (e.message || 'Failed to save') + '</div>';
+    }
+  }
+
+  // ── Refresh inventory display in-place ──
+  function refreshInventoryDisplay() {
+    var body = document.getElementById('woo-inv-body');
+    if (!body) return;
+    var html = '<table width="100%" cellpadding="2" cellspacing="0" border="0" style="font-size:.85rem;">';
+    Object.entries(PRODUCTS).forEach(function(entry) {
+      var sec = entry[1];
+      var catHtml = '';
+      var catHasItems = false;
+      sec.items.forEach(function(item) {
+        var rows = getRowKeys(item, sec.type);
+        rows.forEach(function(r) {
+          var inv = inventory[r.priceKey];
+          if (inv && inv.loaded > 0) {
+            if (!catHasItems) {
+              catHtml += '<tr><td colspan="2" style="font-weight:700;font-size:.75rem;padding:6px 0 2px;color:#888;text-transform:uppercase;">' + esc(sec.label) + '</td></tr>';
+              catHasItems = true;
+            }
+            var rem = Math.max(0, inv.remaining);
+            var cls = inv.remaining <= 0 ? ' class="woo-inv-row-out"' : inv.remaining < 3 ? ' class="woo-inv-row-low"' : '';
+            catHtml += '<tr' + cls + '>';
+            catHtml += '<td style="padding:2px 0;">' + esc(r.label) + '</td>';
+            catHtml += '<td align="right" style="padding:2px 0;white-space:nowrap;">' + rem + ' left</td>';
+            catHtml += '</tr>';
+          }
+        });
+      });
+      if (catHasItems) html += catHtml;
+    });
+    html += '</table>';
+    body.innerHTML = html;
+  }
+
   // ── Render ──
   function renderForm() {
     let html = '';
+
+    // Inventory bar
+    if (inventoryLoaded && Object.keys(inventory).length > 0) {
+      html += '<div class="woo-inv-bar" id="woo-inv-bar">';
+      html += '<div class="woo-inv-header" onclick="this.parentElement.classList.toggle(\'open\')">INVENTORY <span class="arrow">&#9660;</span></div>';
+      html += '<div class="woo-inv-body" id="woo-inv-body"></div>';
+      html += '</div>';
+    }
 
     // Client selector
     html += '<div class="woo-field"><label>CLIENT</label><select id="woo-client">';
@@ -557,6 +793,7 @@ body {
     content.innerHTML = html;
     bindEvents();
     updateTotal();
+    if (inventoryLoaded) refreshInventoryDisplay();
   }
 
   // ── Update total ──
@@ -714,6 +951,15 @@ body {
       await sbPost('driver_sale_items', saleItems);
 
       const client = clients.find(c => c.id === clientId);
+
+      // Update in-memory inventory
+      items.forEach(function(it) {
+        if (inventory[it.product_key]) {
+          inventory[it.product_key].sold += it.quantity;
+          inventory[it.product_key].remaining -= it.quantity;
+        }
+      });
+
       showReceipt(sale, items, client);
 
     } catch (e) {
@@ -835,7 +1081,7 @@ body {
   }
 
   // ── Init ──
-  if (!hasCache) renderForm();
+  // (rendering handled by inventory-aware loader above)
 
 })();
 </script>
