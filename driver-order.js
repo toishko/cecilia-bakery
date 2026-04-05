@@ -429,26 +429,27 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === e.currentTarget) closePaymentModal();
   });
   document.getElementById('receipt-back-btn').addEventListener('click', () => {
+    document.getElementById('print-instructions').style.display = 'none';
     showScreen('dashboard');
     showSection('sales');
   });
   document.getElementById('receipt-print-btn').addEventListener('click', () => {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     if (!isIOS) {
-      // Android / Desktop — standard print dialog works
       window.print();
       return;
     }
-    // iOS — copy Woosim receipt URL to clipboard
-    const url = window.location.origin + '/receipt.html?id=' + (_lastSaleId || '');
-    navigator.clipboard.writeText(url).then(() => {
-      showToast(lang === 'es'
-        ? 'Link copiado! Abre Woosim y pega el link para imprimir.'
-        : 'Link copied! Open Woosim app and paste to print.', 'success');
-    }).catch(() => {
-      // Fallback — show the URL as a prompt
-      prompt(lang === 'es' ? 'Copia este link y ábrelo en Woosim:' : 'Copy this link and open it in Woosim:', url);
-    });
+    // iOS: copy receipt URL and show visual instructions
+    const driverId = currentDriver?.id || '';
+    const url = window.location.origin + '/receipt.html?driver=' + encodeURIComponent(driverId);
+    _copyReceiptLink(url);
+    document.getElementById('print-instructions').style.display = 'block';
+    applyLang();
+  });
+  document.getElementById('print-copy-btn').addEventListener('click', () => {
+    const driverId = currentDriver?.id || '';
+    const url = window.location.origin + '/receipt.html?driver=' + encodeURIComponent(driverId);
+    _copyReceiptLink(url);
   });
   // Pay toggle groups
   document.querySelectorAll('#pay-method-group .pay-toggle-btn').forEach(btn => {
@@ -2271,6 +2272,14 @@ async function saveLangToSupabase(newLang) {
 let _saleQty = {};   // product_key → quantity
 let _saleClientId = null;
 let _lastSaleId = null;
+
+function _copyReceiptLink(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    showToast(lang === 'es' ? '¡Link copiado!' : 'Link copied!', 'success');
+  }).catch(() => {
+    prompt(lang === 'es' ? 'Copia este link:' : 'Copy this link:', url);
+  });
+}
 
 async function generateReceiptNumber() {
   const now = new Date();

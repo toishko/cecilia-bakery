@@ -47,6 +47,7 @@ body {
   const params = new URLSearchParams(window.location.search);
   let saleId = params.get('id');
   const driverCode = params.get('code');
+  const driverIdParam = params.get('driver');
 
   // Priority 1: ?code=DRIVER_PIN — look up driver by pin, load latest sale
   // Priority 2: ?id=SALE_ID — load a specific sale
@@ -55,7 +56,10 @@ body {
   if (!saleId) {
     let driverId = null;
 
-    if (driverCode) {
+    if (driverIdParam) {
+      // Direct driver UUID from the print button URL
+      driverId = driverIdParam;
+    } else if (driverCode) {
       // Look up driver by their pin code
       const { data: driver, error: driverErr } = await sb
         .from('drivers')

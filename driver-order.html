@@ -429,7 +429,6 @@
   </div>
 </div>
 
-<!-- RECEIPT VIEW (full-screen, print-optimized) -->
 <div id="screen-receipt" class="screen receipt-screen">
   <div class="receipt-actions" id="receipt-actions">
     <button class="receipt-back-btn" id="receipt-back-btn" data-en="← Back" data-es="← Volver">← Back</button>
@@ -437,6 +436,33 @@
   </div>
   <div class="receipt-paper" id="receipt-paper">
     <!-- Populated by JS -->
+  </div>
+
+  <!-- iOS Print Instructions (shown after tapping Print on iPhone) -->
+  <div id="print-instructions" class="print-instructions" style="display:none">
+    <div class="print-step">
+      <div class="print-step-num">1</div>
+      <div class="print-step-text">
+        <strong data-en="Link Copied!" data-es="¡Link Copiado!">Link Copied!</strong>
+        <span data-en="Receipt link is on your clipboard" data-es="El link del recibo está en tu portapapeles">Receipt link is on your clipboard</span>
+      </div>
+      <span class="print-step-check">✓</span>
+    </div>
+    <div class="print-step">
+      <div class="print-step-num">2</div>
+      <div class="print-step-text">
+        <strong data-en="Open Woosim App" data-es="Abre la App Woosim">Open Woosim App</strong>
+        <span data-en="Tap the address bar and paste" data-es="Toca la barra de dirección y pega">Tap the address bar and paste</span>
+      </div>
+    </div>
+    <div class="print-step">
+      <div class="print-step-num">3</div>
+      <div class="print-step-text">
+        <strong data-en="Tap Print" data-es="Toca Imprimir">Tap Print</strong>
+        <span data-en="Tap the printer icon 🖨️" data-es="Toca el icono de impresora 🖨️">Tap the printer icon 🖨️</span>
+      </div>
+    </div>
+    <button class="print-copy-btn" id="print-copy-btn" data-en="📋 Copy Print Link Again" data-es="📋 Copiar Link de Nuevo">📋 Copy Print Link Again</button>
   </div>
 </div>
 
