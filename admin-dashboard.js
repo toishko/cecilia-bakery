@@ -1912,10 +1912,7 @@ async function renderOrderDetail() {
     actionsHtml += `<button class="btn-save" onclick="savePaymentOnly()" data-en="Update Payment" data-es="Actualizar Pago">${lang === 'es' ? 'Actualizar Pago' : 'Update Payment'}</button>`;
   }
   if (order.status === 'pending') {
-    actionsHtml += `<button class="btn-confirm" onclick="confirmAndSend()" data-en="Confirm & Send" data-es="Confirmar y Enviar">${lang === 'es' ? 'Confirmar y Enviar' : 'Confirm & Send'}</button>`;
-  }
-  if (order.status === 'sent') {
-    actionsHtml += `<button class="btn-pickup" onclick="markAsPickedUp()" data-en="Mark as Picked Up" data-es="Marcar como Recogido">&#10003; ${lang === 'es' ? 'Marcar como Recogido' : 'Mark as Picked Up'}</button>`;
+    actionsHtml += `<button class="btn-pickup" onclick="confirmAndSend()" data-en="Confirm & Mark Picked Up" data-es="Confirmar y Marcar Recogido">&#10003; ${lang === 'es' ? 'Confirmar y Marcar Recogido' : 'Confirm & Mark Picked Up'}</button>`;
   }
   // Export bar
   actionsHtml += `<div class="export-bar">
@@ -2171,25 +2168,17 @@ window.confirmAndSend = async function() {
     await window.saveOrderChanges();
 
     const now = new Date();
-    // Admin can edit quantities until end of the same day
-    const endOfDay = new Date(now);
-    endOfDay.setHours(23, 59, 59, 999);
-    const editableUntil = endOfDay.toISOString();
 
     await sb.from('driver_orders').update({
-      status: 'sent',
+      status: 'picked_up',
       confirmed_at: now.toISOString(),
-      admin_editable_until: editableUntil
+      picked_up_at: now.toISOString()
     }).eq('id', detailOrder.id);
 
-    detailOrder.status = 'sent';
+    detailOrder.status = 'picked_up';
     detailOrder.confirmed_at = now.toISOString();
-    detailOrder.admin_editable_until = editableUntil;
 
-    showToast(lang === 'es' ? 'Pedido confirmado y enviado' : 'Order confirmed and sent', 'success');
-
-    // Driver notification handled by driver's own realtime subscription
-    // (no manual trigger needed — prevents double notification)
+    showToast(lang === 'es' ? 'Pedido confirmado y marcado como recogido' : 'Order confirmed & marked as picked up', 'success');
 
     closeDetailModal();
 
@@ -2228,16 +2217,26 @@ window.savePaymentOnly = async function() {
   if (!detailOrder) return;
 
   try {
-    await sb.from('driver_orders').update({
+    const updateData = {
       payment_status: detailOrder.payment_status,
       payment_amount: detailOrder.payment_amount
-    }).eq('id', detailOrder.id);
+    };
+
+    // Auto-mark as picked up when paid (if not already)
+    if (detailOrder.payment_status === 'paid' && detailOrder.status !== 'picked_up') {
+      updateData.status = 'picked_up';
+      updateData.picked_up_at = new Date().toISOString();
+      if (!detailOrder.confirmed_at) {
+        updateData.confirmed_at = new Date().toISOString();
+      }
+      detailOrder.status = 'picked_up';
+    }
+
+    await sb.from('driver_orders').update(updateData).eq('id', detailOrder.id);
 
     showToast(lang === 'es' ? 'Pago actualizado' : 'Payment updated', 'success');
 
-    // Driver notification handled by driver's own realtime subscription
-    // (no manual trigger needed — prevents double notification)
-
+    if (currentSection === 'incoming') loadIncomingOrders();
     if (currentSection === 'history') loadHistoryOrders(true);
     if (currentSection === 'overview') loadOverview();
   } catch (e) {
