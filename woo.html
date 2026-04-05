@@ -351,7 +351,7 @@ body {
       ]
     },
     hb_big: {
-      label: 'Happy Birthday — BIG',
+      label: 'Happy Birthday - BIG',
       items: [
         { key: 'hb_b_pina', name: 'Piña' },
         { key: 'hb_b_guava', name: 'Guava' },
@@ -361,7 +361,7 @@ body {
       ]
     },
     hb_small: {
-      label: 'Happy Birthday — SMALL',
+      label: 'Happy Birthday - SMALL',
       items: [
         { key: 'hb_s_pina', name: 'Piña' },
         { key: 'hb_s_guava', name: 'Guava' },
@@ -483,7 +483,7 @@ body {
     const keys = [];
     if (secType === 'redondo') {
       (item.cols || []).forEach(c => {
-        keys.push({ qtyKey: item.key + '_' + c, ntKey: item.key + '_' + c + '_nt', label: item.name + ' — ' + (c === 'inside' ? 'Inside' : 'Top'), priceKey: item.key + '_' + c });
+        keys.push({ qtyKey: item.key + '_' + c, ntKey: item.key + '_' + c + '_nt', label: item.name + ' - ' + (c === 'inside' ? 'Inside' : 'Top'), priceKey: item.key + '_' + c });
       });
     } else {
       keys.push({ qtyKey: item.key, ntKey: item.key + '_nt', label: item.name, priceKey: item.key });
@@ -734,9 +734,17 @@ body {
     const statusLabel = sale.payment_status === 'paid' ? 'Paid'
       : sale.payment_status === 'on_account' ? 'On Account' : 'Unpaid';
 
-    const W = 32; // receipt width in characters
+    const W = 48; // receipt width in chars (3-inch paper)
     const LINE = '='.repeat(W);
     const DASH = '-'.repeat(W);
+
+    // Strip non-ASCII chars the thermal printer can't handle
+    function safe(s) {
+      return s.replace(/\u00f1/g, 'n').replace(/\u00d1/g, 'N')
+              .replace(/[\u2014\u2013]/g, '-')
+              .replace(/[\u00a1]/g, '!')
+              .replace(/[^\x20-\x7E]/g, '');
+    }
 
     function pad(left, right) {
       const gap = W - left.length - right.length;
@@ -795,7 +803,8 @@ body {
     r += LINE + '\n';
     r += center('Gracias! / Thank you!') + '\n';
 
-    content.innerHTML = '<pre class="woo-receipt">' + esc(r) + '</pre>';
+    // Make entire receipt ASCII-safe
+    content.innerHTML = '<pre class="woo-receipt">' + esc(safe(r)) + '</pre>';
     document.getElementById('woo-app').classList.add('woo-print-mode');
     window.scrollTo(0, 0);
   }
