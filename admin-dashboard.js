@@ -2788,8 +2788,11 @@ function renderDriverTable() {
       ? (lang === 'es' ? 'Activo' : 'Active')
       : (lang === 'es' ? 'Desactivado' : 'Disabled');
     const balClass = d.balance > 0 ? 'has-balance' : 'no-balance';
+    const advBadge = d.advanced_features
+      ? `<span class="adv-badge" title="Advanced Features Enabled"><i data-lucide="zap" style="width:14px;height:14px;color:var(--yellow);margin-left:6px"></i></span>`
+      : '';
     return `<tr onclick="showDriverProfile('${d.id}')">
-      <td class="driver-name">${_esc(d.name)}</td>
+      <td class="driver-name" style="display:flex;align-items:center">${_esc(d.name)} ${advBadge}</td>
       <td class="driver-code"><span class="code-masked" data-code="${_escAttr(d.code)}">••••••</span> <button class="code-eye-btn" onclick="event.stopPropagation();toggleCode(this)" title="Show code"><i data-lucide="eye"></i></button></td>
       <td class="driver-phone hide-mobile">${_esc(d.phone || '—')}</td>
       <td><span class="${statusClass}">${statusText}</span></td>
