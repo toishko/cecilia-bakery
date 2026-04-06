@@ -3493,19 +3493,9 @@ async function saveManualLoad() {
    FEATURE FLAGS
    ═══════════════════════════════════ */
 async function checkAdvancedFeatures() {
-  if (!sb) return;
-  try {
-    const { data, error } = await sb
-      .from('app_config')
-      .select('value')
-      .eq('key', 'driver_advanced_features')
-      .single();
-
-    advancedFeaturesEnabled = !error && data && data.value === true;
-  } catch (e) {
-    _log('Feature flag check error:', e);
-    advancedFeaturesEnabled = false;
-  }
+  if (!currentDriver) return;
+  
+  advancedFeaturesEnabled = !!currentDriver.advanced_features;
 
   // Show or hide advanced tabs
   document.querySelectorAll('.advanced-feature').forEach(el => {

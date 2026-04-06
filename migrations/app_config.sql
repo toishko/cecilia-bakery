@@ -1,28 +1,6 @@
--- Create app_config table for global feature flags
-CREATE TABLE IF NOT EXISTS app_config (
-  key TEXT PRIMARY KEY,
-  value JSONB NOT NULL DEFAULT 'false'::jsonb,
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
+-- Add per-driver feature flag column
+ALTER TABLE drivers ADD COLUMN IF NOT EXISTS advanced_features BOOLEAN NOT NULL DEFAULT false;
 
--- Enable RLS
-ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;
-
--- Everyone can read config (drivers need to check the flag)
-CREATE POLICY "Anyone can read app_config"
-  ON app_config FOR SELECT
-  USING (true);
-
--- Only authenticated users (admins) can update
-CREATE POLICY "Authenticated users can update app_config"
-  ON app_config FOR UPDATE
-  USING (true);
-
-CREATE POLICY "Authenticated users can insert app_config"
-  ON app_config FOR INSERT
-  WITH CHECK (true);
-
--- Seed the feature flag (off by default)
-INSERT INTO app_config (key, value) VALUES
-  ('driver_advanced_features', 'false'::jsonb)
-ON CONFLICT (key) DO NOTHING;
+-- OPTIONAL: app_config table is no longer needed for this feature.
+-- If you already created it, you can drop it or keep it for future use.
+-- DROP TABLE IF EXISTS app_config;

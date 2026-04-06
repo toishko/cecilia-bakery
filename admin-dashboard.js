@@ -2854,6 +2854,9 @@ window.showEditDriver = async function(driverId) {
   document.getElementById('df-active').checked = driver.is_active;
   document.getElementById('df-active-label').textContent =
     driver.is_active ? (lang === 'es' ? 'Activo' : 'Active') : (lang === 'es' ? 'Desactivado' : 'Disabled');
+  // Advanced features toggle
+  document.getElementById('df-advanced-wrap').style.display = 'flex';
+  document.getElementById('df-advanced').checked = !!driver.advanced_features;
 
   // Fetch prices
   const { data: prices } = await sb.from('driver_prices').select('product_key, price, credit_value').eq('driver_id', driverId);
@@ -3033,11 +3036,13 @@ async function saveDriver() {
 
     if (editingDriverId) {
       // Update driver
-      await sb.from('drivers').update({ name, code, phone, is_active: isActive }).eq('id', editingDriverId);
+      const advFeatures = document.getElementById('df-advanced').checked;
+      await sb.from('drivers').update({ name, code, phone, is_active: isActive, advanced_features: advFeatures }).eq('id', editingDriverId);
       driverId = editingDriverId;
     } else {
       // Insert new driver
-      const { data: newDriver, error } = await sb.from('drivers').insert({ name, code, phone, is_active: isActive }).select('id').single();
+      const advFeatures = document.getElementById('df-advanced').checked;
+      const { data: newDriver, error } = await sb.from('drivers').insert({ name, code, phone, is_active: isActive, advanced_features: advFeatures }).select('id').single();
       if (error) throw error;
       driverId = newDriver.id;
     }
@@ -3284,9 +3289,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const notifToggle = document.getElementById('notification-toggle');
   if (notifToggle) notifToggle.checked = notificationsEnabled;
 
-  // Restore feature flag toggle from Supabase
-  loadFeatureFlags();
-
   // ── Login screen controls ──
   document.getElementById('login-lang-btn').addEventListener('click', () => {
     setLang(lang === 'en' ? 'es' : 'en');
@@ -3356,30 +3358,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   document.getElementById('logout-btn').addEventListener('click', handleLogout);
-
-  // ── Feature flag toggle ──
-  const advToggle = document.getElementById('driver-advanced-toggle');
-  if (advToggle) {
-    advToggle.addEventListener('change', async (e) => {
-      try {
-        await sb.from('app_config').upsert({
-          key: 'driver_advanced_features',
-          value: e.target.checked,
-          updated_at: new Date().toISOString()
-        });
-        showToast(
-          e.target.checked
-            ? (lang === 'es' ? 'Funciones avanzadas activadas para conductores' : 'Driver advanced features enabled')
-            : (lang === 'es' ? 'Funciones avanzadas desactivadas para conductores' : 'Driver advanced features disabled'),
-          'success'
-        );
-      } catch (err) {
-        console.error('Feature flag save error:', err);
-        e.target.checked = !e.target.checked; // revert
-        showToast(lang === 'es' ? 'Error guardando configuración' : 'Error saving setting', 'error');
-      }
-    });
-  }
 
   // ── Detail modal ──
   document.getElementById('detail-close').addEventListener('click', closeDetailModal);
@@ -6288,24 +6266,4 @@ function _b2bOpenModal(product) {
   });
 
   overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
-}
-
-/* ═══════════════════════════════════
-   FEATURE FLAGS
-   ═══════════════════════════════════ */
-async function loadFeatureFlags() {
-  try {
-    const { data, error } = await sb
-      .from('app_config')
-      .select('key, value')
-      .eq('key', 'driver_advanced_features')
-      .single();
-
-    if (!error && data) {
-      const toggle = document.getElementById('driver-advanced-toggle');
-      if (toggle) toggle.checked = data.value === true;
-    }
-  } catch (e) {
-    _log('Feature flags load error (table may not exist yet):', e);
-  }
 }
