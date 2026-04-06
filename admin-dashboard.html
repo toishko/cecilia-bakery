@@ -16,6 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <!-- Clerk -->
   <script
     async
@@ -164,30 +165,54 @@
 
     <!-- ── OVERVIEW ── -->
     <div id="section-overview" class="dash-section active">
-      <h2 class="page-title" data-en="Overview" data-es="Resumen">Overview</h2>
+      <div class="overview-header">
+        <h2 class="page-title" data-en="Overview" data-es="Resumen">Overview</h2>
+        <select id="revenue-filter" class="revenue-filter" onchange="loadOverview(this.value)">
+          <option value="today" data-en="Today" data-es="Hoy">Today</option>
+          <option value="this_week" data-en="This Week" data-es="Esta Semana">This Week</option>
+          <option value="this_month" selected data-en="This Month" data-es="Este Mes">This Month</option>
+          <option value="last_month" data-en="Last Month" data-es="Mes Pasado">Last Month</option>
+          <option value="all_time" data-en="All Time" data-es="Todo el Tiempo">All Time</option>
+        </select>
+      </div>
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-icon"><i data-lucide="shopping-bag"></i></div>
+          <div class="stat-icon"><i data-lucide="trending-up"></i></div>
           <div class="stat-info">
-            <span class="stat-value" id="stat-today-orders">0</span>
-            <span class="stat-label" data-en="Today's Orders" data-es="Pedidos de Hoy">Today's Orders</span>
+            <span class="stat-value" id="stat-gross-revenue">$0.00</span>
+            <span class="stat-label" data-en="Gross Revenue" data-es="Ingresos Brutos">Gross Revenue</span>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon revenue"><i data-lucide="dollar-sign"></i></div>
+          <div class="stat-icon revenue"><i data-lucide="check-circle"></i></div>
           <div class="stat-info">
-            <span class="stat-value" id="stat-today-revenue">$0.00</span>
-            <span class="stat-label" data-en="Today's Revenue" data-es="Ingresos de Hoy">Today's Revenue</span>
+            <span class="stat-value" id="stat-collected">$0.00</span>
+            <span class="stat-label" data-en="Total Collected" data-es="Total Cobrado">Total Collected</span>
           </div>
         </div>
         <div class="stat-card" id="stat-outstanding-card" style="cursor:pointer" onclick="showSection('incoming')">
           <div class="stat-icon unpaid"><i data-lucide="alert-circle"></i></div>
           <div class="stat-info">
             <span class="stat-value" id="stat-outstanding">$0.00</span>
-            <span class="stat-label" data-en="Outstanding Unpaid" data-es="Saldo Pendiente">Outstanding Unpaid</span>
+            <span class="stat-label" data-en="Outstanding" data-es="Pendiente">Outstanding</span>
           </div>
         </div>
       </div>
+
+      <!-- Revenue Chart -->
+      <div class="revenue-chart-wrap">
+        <h3 class="revenue-chart-title" data-en="Revenue Over Time" data-es="Ingresos en el Tiempo">Revenue Over Time</h3>
+        <div class="revenue-chart-container">
+          <canvas id="revenueChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Revenue Breakdown -->
+      <div class="revenue-breakdown-wrap">
+        <h3 class="revenue-breakdown-title" data-en="Revenue Breakdown" data-es="Desglose de Ingresos">Revenue Breakdown</h3>
+        <div id="revenue-breakdown"></div>
+      </div>
+
       <!-- Needs Attention -->
       <div id="needs-attention-wrap">
         <h3 class="needs-attention-title" data-en="Needs Attention" data-es="Requiere Atención">Needs Attention</h3>

@@ -1237,58 +1237,205 @@ function showToast(message, type = 'success') {
 /* ═══════════════════════════════════
    OVERVIEW PAGE
    ═══════════════════════════════════ */
-async function loadOverview() {
-  // Use timezone-aware boundaries for "today" in the user's local timezone
+let _revenueChart = null;
+
+async function loadOverview(timeframe) {
+  if (!timeframe) timeframe = document.getElementById('revenue-filter')?.value || 'this_month';
+
   const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  let startDate = null;
+  let endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+  if (timeframe === 'today') {
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  } else if (timeframe === 'this_week') {
+    const dayOfWeek = now.getDay();
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek, 0, 0, 0);
+  } else if (timeframe === 'this_month') {
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+  } else if (timeframe === 'last_month') {
+    startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
+    endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+  }
+  // all_time: startDate stays null
 
   try {
-    // Today's driver orders
-    const { data: todayDriverOrders, error: e1 } = await sb
-      .from('driver_orders')
-      .select('id, total_amount, payment_status, payment_amount, driver_id, business_name, submitted_at, status, order_number')
-      .gte('submitted_at', startOfDay.toISOString())
-      .lte('submitted_at', endOfDay.toISOString());
+    // ── Fetch all three data streams in parallel ──
+    const driverQuery = sb.from('driver_orders')
+      .select('total_amount, payment_amount, payment_status, submitted_at');
+    const wholesaleQuery = sb.from('wholesale_orders')
+      .select('subtotal, status, placed_at');
+    const onlineQuery = sb.from('orders')
+      .select('total_amount, delivery_status, created_at')
+      .eq('source', 'website');
 
-    // Today's online orders (website checkout)
-    const { data: todayOnlineOrders, error: e1b } = await sb
-      .from('orders')
-      .select('id, total_amount, delivery_status, created_at')
-      .eq('source', 'website')
-      .gte('created_at', startOfDay.toISOString())
-      .lte('created_at', endOfDay.toISOString());
+    if (startDate) {
+      driverQuery.gte('submitted_at', startDate.toISOString());
+      wholesaleQuery.gte('placed_at', startDate.toISOString());
+      onlineQuery.gte('created_at', startDate.toISOString());
+    }
+    driverQuery.lte('submitted_at', endDate.toISOString());
+    wholesaleQuery.lte('placed_at', endDate.toISOString());
+    onlineQuery.lte('created_at', endDate.toISOString());
 
-    const driverCount = (!e1 && todayDriverOrders) ? todayDriverOrders.length : 0;
-    const onlineCount = (!e1b && todayOnlineOrders) ? todayOnlineOrders.length : 0;
-    document.getElementById('stat-today-orders').textContent = driverCount + onlineCount;
+    const [driverRes, wholesaleRes, onlineRes] = await Promise.all([
+      driverQuery, wholesaleQuery, onlineQuery
+    ]);
 
-    // Revenue: driver payment_amount + completed online order totals
-    const driverRevenue = (!e1 && todayDriverOrders)
-      ? todayDriverOrders.reduce((sum, o) => sum + parseFloat(o.payment_amount || 0), 0)
-      : 0;
-    const onlineRevenue = (!e1b && todayOnlineOrders)
-      ? todayOnlineOrders
-          .filter(o => o.delivery_status === 'completed')
-          .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0)
-      : 0;
-    document.getElementById('stat-today-revenue').textContent = formatCurrency(driverRevenue + onlineRevenue);
+    const driverOrders = driverRes.data || [];
+    const wholesaleOrders = wholesaleRes.data || [];
+    const onlineOrders = onlineRes.data || [];
 
-    // Outstanding unpaid (all time)
-    const { data: unpaidOrders, error: e2 } = await sb
-      .from('driver_orders')
-      .select('total_amount, payment_amount, payment_status')
-      .in('payment_status', ['not_paid', 'partial']);
+    // ── Aggregate Totals ──
+    let driverGross = 0, driverCollected = 0, driverOutstanding = 0;
+    driverOrders.forEach(o => {
+      const total = parseFloat(o.total_amount || 0);
+      const paid = parseFloat(o.payment_amount || 0);
+      driverGross += total;
+      driverCollected += paid;
+      if (o.payment_status === 'not_paid' || o.payment_status === 'partial') {
+        driverOutstanding += Math.max(0, total - paid);
+      }
+    });
 
-    if (!e2 && unpaidOrders) {
-      const outstanding = unpaidOrders.reduce((sum, o) => {
-        const total = parseFloat(o.total_amount || 0);
-        const paid = parseFloat(o.payment_amount || 0);
-        return sum + Math.max(0, total - paid);
-      }, 0);
-      document.getElementById('stat-outstanding').textContent = formatCurrency(outstanding);
+    let wholesaleGross = 0, wholesaleCollected = 0;
+    wholesaleOrders.forEach(o => {
+      const sub = parseFloat(o.subtotal || 0);
+      wholesaleGross += sub;
+      if (o.status === 'delivered' || o.status === 'confirmed') {
+        wholesaleCollected += sub;
+      }
+    });
+
+    let onlineGross = 0, onlineCollected = 0;
+    onlineOrders.forEach(o => {
+      const total = parseFloat(o.total_amount || 0);
+      onlineGross += total;
+      if (o.delivery_status === 'completed') {
+        onlineCollected += total;
+      }
+    });
+
+    const totalGross = driverGross + wholesaleGross + onlineGross;
+    const totalCollected = driverCollected + wholesaleCollected + onlineCollected;
+    const totalOutstanding = driverOutstanding + Math.max(0, wholesaleGross - wholesaleCollected) + Math.max(0, onlineGross - onlineCollected);
+
+    // ── Update Stat Cards ──
+    document.getElementById('stat-gross-revenue').textContent = formatCurrency(totalGross);
+    document.getElementById('stat-collected').textContent = formatCurrency(totalCollected);
+    document.getElementById('stat-outstanding').textContent = formatCurrency(totalOutstanding);
+
+    // ── Build Chart Data ──
+    const useMonthlyBuckets = (timeframe === 'all_time' || timeframe === 'last_month');
+    const buckets = {};
+
+    function addToBucket(dateStr, amount) {
+      if (!dateStr) return;
+      const d = new Date(dateStr);
+      const key = useMonthlyBuckets
+        ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+        : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      buckets[key] = (buckets[key] || 0) + amount;
     }
 
+    driverOrders.forEach(o => addToBucket(o.submitted_at, parseFloat(o.total_amount || 0)));
+    wholesaleOrders.forEach(o => addToBucket(o.placed_at, parseFloat(o.subtotal || 0)));
+    onlineOrders.forEach(o => addToBucket(o.created_at, parseFloat(o.total_amount || 0)));
+
+    const sortedKeys = Object.keys(buckets).sort();
+    const chartLabels = sortedKeys.map(k => {
+      if (useMonthlyBuckets) {
+        const [y, m] = k.split('-');
+        return new Date(y, m - 1).toLocaleString('en-US', { month: 'short', year: '2-digit' });
+      }
+      const [y, m, d] = k.split('-');
+      return new Date(y, m - 1, d).toLocaleString('en-US', { month: 'short', day: 'numeric' });
+    });
+    const chartValues = sortedKeys.map(k => buckets[k]);
+
+    // ── Render Chart ──
+    const ctx = document.getElementById('revenueChart');
+    if (_revenueChart) { _revenueChart.destroy(); _revenueChart = null; }
+
+    if (ctx) {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(200,16,46,.06)';
+      const tickColor = isDark ? '#BFA0A8' : '#6B5057';
+
+      _revenueChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: chartLabels,
+          datasets: [{
+            label: lang === 'es' ? 'Ingresos' : 'Revenue',
+            data: chartValues,
+            backgroundColor: 'rgba(200, 16, 46, 0.7)',
+            hoverBackgroundColor: 'rgba(200, 16, 46, 0.9)',
+            borderRadius: 6,
+            borderSkipped: false,
+            maxBarThickness: 48
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: isDark ? '#1E0D12' : '#fff',
+              titleColor: isDark ? '#F2E8E4' : '#18080D',
+              bodyColor: isDark ? '#BFA0A8' : '#6B5057',
+              borderColor: isDark ? 'rgba(200,16,46,.35)' : 'rgba(200,16,46,.22)',
+              borderWidth: 1,
+              padding: 12,
+              cornerRadius: 10,
+              titleFont: { family: 'Outfit', weight: '600' },
+              bodyFont: { family: 'Outfit' },
+              callbacks: {
+                label: ctx => formatCurrency(ctx.parsed.y)
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: tickColor, font: { family: 'Outfit', size: 11 } }
+            },
+            y: {
+              grid: { color: gridColor },
+              ticks: {
+                color: tickColor,
+                font: { family: 'Outfit', size: 11 },
+                callback: v => '$' + (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v)
+              },
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    // ── Revenue Breakdown ──
+    const breakdownEl = document.getElementById('revenue-breakdown');
+    if (breakdownEl) {
+      const sources = [
+        { label: lang === 'es' ? 'Rutas (Conductores)' : 'Driver Routes', amount: driverGross, color: '#C8102E' },
+        { label: lang === 'es' ? 'Mayoreo (B2B)' : 'Wholesale (B2B)', amount: wholesaleGross, color: '#002D62' },
+        { label: lang === 'es' ? 'En Línea (Sitio Web)' : 'Online (Website)', amount: onlineGross, color: '#1B7A4A' }
+      ];
+      const maxAmount = Math.max(...sources.map(s => s.amount), 1);
+
+      breakdownEl.innerHTML = sources.map(s => {
+        const pct = Math.round((s.amount / (totalGross || 1)) * 100);
+        const barW = Math.max(2, (s.amount / maxAmount) * 100);
+        return `<div class="rev-breakdown-row">
+          <span class="rev-breakdown-dot" style="background:${s.color}"></span>
+          <span class="rev-breakdown-label">${s.label} <span style="color:var(--tx-faint);font-weight:400;font-size:.8rem">(${pct}%)</span></span>
+          <div class="rev-breakdown-bar-bg"><div class="rev-breakdown-bar" style="width:${barW}%;background:${s.color}"></div></div>
+          <span class="rev-breakdown-amount">${formatCurrency(s.amount)}</span>
+        </div>`;
+      }).join('');
+    }
 
     // Render Needs Attention from already-loaded incomingOrders
     renderNeedsAttention();
