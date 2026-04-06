@@ -3037,7 +3037,8 @@ async function saveDriver() {
     if (editingDriverId) {
       // Update driver
       const advFeatures = document.getElementById('df-advanced').checked;
-      await sb.from('drivers').update({ name, code, phone, is_active: isActive, advanced_features: advFeatures }).eq('id', editingDriverId);
+      const { error } = await sb.from('drivers').update({ name, code, phone, is_active: isActive, advanced_features: advFeatures }).eq('id', editingDriverId);
+      if (error) throw error;
       driverId = editingDriverId;
     } else {
       // Insert new driver
