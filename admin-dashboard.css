@@ -224,8 +224,8 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .stat-icon.unpaid{background:rgba(200,155,42,.08)}
 .stat-icon.unpaid svg{color:var(--yellow)}
 .stat-info{display:flex;flex-direction:column;min-width:0;overflow:hidden}
-.stat-value{font-family:'Outfit',sans-serif;font-size:2.5rem;font-weight:700;
-  line-height:1.1;color:var(--tx);overflow-wrap:break-word;word-break:break-all}
+.stat-value{font-family:'Outfit',sans-serif;font-size:2rem;font-weight:700;
+  line-height:1.1;color:var(--tx);white-space:nowrap}
 .stat-label{font-size:1rem;color:var(--tx-muted);margin-top:4px;font-weight:400}
 
 /* ═══════════════════════════════════
