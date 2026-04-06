@@ -2465,10 +2465,14 @@ function buildSaleProducts() {
       const qty = _saleQty[item.key] || 0;
       const lineTotal = hasPrice && qty > 0 ? (qty * price).toFixed(2) : '';
 
+      const maxInv = driverInventory[item.key] ? Math.max(0, driverInventory[item.key].remaining) : 0;
+      let stockStr = `<span style="color:var(--tx-muted);font-size:11px;margin-left:6px;">(${maxInv} ${lang === 'es' ? 'disp.' : 'avail.'})</span>`;
+      if (maxInv === 0) stockStr = `<span style="color:var(--red);font-size:11px;margin-left:6px;">(0 ${lang === 'es' ? 'disp.' : 'avail.'})</span>`;
+
       html += `<div class="sale-prod-row${qty > 0 ? ' has-value' : ''}" data-key="${item.key}">`;
       html += `<div class="sale-prod-info">`;
       html += `<div class="sale-prod-name" data-en="${item.en}" data-es="${item.es}">${L(item)}</div>`;
-      html += `<div class="sale-prod-price${hasPrice ? '' : ' no-price'}">${priceStr}</div>`;
+      html += `<div class="sale-prod-price${hasPrice ? '' : ' no-price'}">${priceStr}${stockStr}</div>`;
       html += `</div>`;
       html += `<div class="sale-qty-wrap"><button class="sale-qty-btn" data-dir="-" data-key="${item.key}">−</button><input type="number" class="sale-qty-input" data-key="${item.key}" value="${qty}" min="0"><button class="sale-qty-btn" data-dir="+" data-key="${item.key}">+</button></div>`;
       html += `<span class="sale-line-total" data-key="${item.key}">${lineTotal ? '$' + lineTotal : ''}</span>`;
@@ -2493,7 +2497,11 @@ function buildSaleProducts() {
       const inp = container.querySelector(`.sale-qty-input[data-key="${key}"]`);
       const cur = parseInt(inp.value) || 0;
       const delta = btn.dataset.dir === '+' ? 1 : -1;
-      const newVal = Math.max(0, cur + delta);
+      
+      const maxInv = driverInventory[key] ? Math.max(0, driverInventory[key].remaining) : 0;
+      let newVal = Math.max(0, cur + delta);
+      if (newVal > maxInv) newVal = maxInv;
+      
       inp.value = newVal;
       _saleQty[key] = newVal;
       updateSaleRow(key);
@@ -2509,8 +2517,18 @@ function buildSaleProducts() {
     inp.addEventListener('focus', () => { if (inp.value === '0') inp.value = ''; });
     inp.addEventListener('blur', () => {
       if (inp.value === '') inp.value = '0';
-      _saleQty[inp.dataset.key] = parseInt(inp.value) || 0;
-      updateSaleRow(inp.dataset.key);
+      
+      const key = inp.dataset.key;
+      const maxInv = driverInventory[key] ? Math.max(0, driverInventory[key].remaining) : 0;
+      let newVal = parseInt(inp.value) || 0;
+      if (newVal > maxInv) {
+        newVal = maxInv;
+        inp.value = newVal;
+        if (newVal === 0) showToast(lang === 'es' ? 'Sin inventario disponible' : 'No inventory available', 'error');
+      }
+      
+      _saleQty[key] = newVal;
+      updateSaleRow(key);
       updateSaleFooter();
     });
   });
