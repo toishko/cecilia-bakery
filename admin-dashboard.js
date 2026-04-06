@@ -2807,6 +2807,8 @@ function renderDriverTable() {
       th.classList.add(driverSortDir === 'asc' ? 'sort-asc' : 'sort-desc');
     }
   });
+
+  requestAnimationFrame(() => lucide.createIcons());
 }
 
 function sortDrivers(field) {
