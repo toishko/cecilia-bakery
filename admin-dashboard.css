@@ -797,6 +797,8 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 /* Settings: invite section */
 .settings-section-title{font-size:1rem;font-weight:600;margin:20px 0 10px;color:var(--tx);
   display:flex;align-items:center;gap:8px}
+.settings-label-block{flex:1;min-width:0}
+.settings-desc{font-size:.78rem;color:var(--tx-faint);margin-top:2px;line-height:1.4}
 .invite-desc{font-size:.82rem;color:var(--tx-muted);line-height:1.4;margin:0}
 .invite-gen-btn{display:flex;align-items:center;justify-content:center;gap:8px;
   width:100%;padding:12px;border:none;border-radius:10px;background:var(--red);

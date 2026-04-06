@@ -3284,6 +3284,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const notifToggle = document.getElementById('notification-toggle');
   if (notifToggle) notifToggle.checked = notificationsEnabled;
 
+  // Restore feature flag toggle from Supabase
+  loadFeatureFlags();
+
   // ── Login screen controls ──
   document.getElementById('login-lang-btn').addEventListener('click', () => {
     setLang(lang === 'en' ? 'es' : 'en');
@@ -3354,8 +3357,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('logout-btn').addEventListener('click', handleLogout);
 
-  // ── Push opt-in banner (now uses dynamic banner instead of static HTML) ──
-  // Old push-opt-in handlers removed — now using showAdminNotifBanner()
+  // ── Feature flag toggle ──
+  const advToggle = document.getElementById('driver-advanced-toggle');
+  if (advToggle) {
+    advToggle.addEventListener('change', async (e) => {
+      try {
+        await sb.from('app_config').upsert({
+          key: 'driver_advanced_features',
+          value: e.target.checked,
+          updated_at: new Date().toISOString()
+        });
+        showToast(
+          e.target.checked
+            ? (lang === 'es' ? 'Funciones avanzadas activadas para conductores' : 'Driver advanced features enabled')
+            : (lang === 'es' ? 'Funciones avanzadas desactivadas para conductores' : 'Driver advanced features disabled'),
+          'success'
+        );
+      } catch (err) {
+        console.error('Feature flag save error:', err);
+        e.target.checked = !e.target.checked; // revert
+        showToast(lang === 'es' ? 'Error guardando configuración' : 'Error saving setting', 'error');
+      }
+    });
+  }
 
   // ── Detail modal ──
   document.getElementById('detail-close').addEventListener('click', closeDetailModal);
@@ -6264,4 +6288,24 @@ function _b2bOpenModal(product) {
   });
 
   overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+}
+
+/* ═══════════════════════════════════
+   FEATURE FLAGS
+   ═══════════════════════════════════ */
+async function loadFeatureFlags() {
+  try {
+    const { data, error } = await sb
+      .from('app_config')
+      .select('key, value')
+      .eq('key', 'driver_advanced_features')
+      .single();
+
+    if (!error && data) {
+      const toggle = document.getElementById('driver-advanced-toggle');
+      if (toggle) toggle.checked = data.value === true;
+    }
+  } catch (e) {
+    _log('Feature flags load error (table may not exist yet):', e);
+  }
 }

@@ -52,6 +52,7 @@ let driverPriceMap = {}; // product_key → price, loaded on login
 let driverInventory = {};    // product_key → { loaded, sold, remaining }
 let inventoryLoaded = false;
 let inventorySource = '';    // 'order:#123' or 'manual'
+let advancedFeaturesEnabled = false; // controlled by admin Settings > Feature Flags
 
 // Session timeout: 24 hours
 const DRIVER_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -242,6 +243,8 @@ function enterDashboard() {
   // Frosted Pieces, Family Size, etc. that don't exist in the menu products table.
   // Load driver prices for summary display
   loadDriverPriceMap();
+  // Check if advanced features (Sales, Inventory, Clients) are enabled
+  checkAdvancedFeatures();
 }
 
 async function handleLogout() {
@@ -3484,4 +3487,28 @@ async function saveManualLoad() {
     btn.disabled = false;
     btn.textContent = lang === 'es' ? 'Guardar Inventario' : 'Save Inventory';
   }
+}
+
+/* ═══════════════════════════════════
+   FEATURE FLAGS
+   ═══════════════════════════════════ */
+async function checkAdvancedFeatures() {
+  if (!sb) return;
+  try {
+    const { data, error } = await sb
+      .from('app_config')
+      .select('value')
+      .eq('key', 'driver_advanced_features')
+      .single();
+
+    advancedFeaturesEnabled = !error && data && data.value === true;
+  } catch (e) {
+    _log('Feature flag check error:', e);
+    advancedFeaturesEnabled = false;
+  }
+
+  // Show or hide advanced tabs
+  document.querySelectorAll('.advanced-feature').forEach(el => {
+    el.style.display = advancedFeaturesEnabled ? '' : 'none';
+  });
 }
