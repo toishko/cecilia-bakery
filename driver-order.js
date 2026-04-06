@@ -3495,6 +3495,31 @@ async function saveManualLoad() {
 async function checkAdvancedFeatures() {
   if (!currentDriver) return;
   
+  try {
+    if (sb) {
+      const { data, error } = await sb
+        .from('drivers')
+        .select('advanced_features')
+        .eq('id', currentDriver.id)
+        .single();
+      
+      if (!error && data) {
+        currentDriver.advanced_features = data.advanced_features;
+        // Optionally update the local storage session so it persists
+        const saved = localStorage.getItem('cecilia_driver');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            parsed.advanced_features = data.advanced_features;
+            localStorage.setItem('cecilia_driver', JSON.stringify(parsed));
+          } catch(e) {}
+        }
+      }
+    }
+  } catch (e) {
+    _log('Error checking advanced features:', e);
+  }
+  
   advancedFeaturesEnabled = !!currentDriver.advanced_features;
 
   // Show or hide advanced tabs
