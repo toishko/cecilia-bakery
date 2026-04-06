@@ -3,7 +3,7 @@
 //  Network-first + Offline Fallback + Push Notifications
 // ═══════════════════════════════════
 
-const CACHE_VERSION = 'v36';                      // bump on each release
+const CACHE_VERSION = 'v37';                      // bump on each release
 const CACHE_NAME = `cecilia-cache-${CACHE_VERSION}`;
 const OFFLINE_URL = '/offline.html';
 
@@ -53,6 +53,8 @@ self.addEventListener('fetch', (event) => {
           if (event.request.mode === 'navigate') {
             return caches.match(OFFLINE_URL);
           }
+          // If not in cache and not navigate, we MUST return a valid Response
+          return new Response('', { status: 404, statusText: 'Offline or not cached' });
         })
       )
   );

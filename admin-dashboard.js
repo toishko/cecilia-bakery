@@ -491,10 +491,10 @@ function applyTheme() {
     document.documentElement.setAttribute('data-theme', saved);
     const toggle = document.getElementById('theme-toggle');
     if (toggle) toggle.checked = saved === 'dark';
-  } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'light');
     const toggle = document.getElementById('theme-toggle');
-    if (toggle) toggle.checked = true;
+    if (toggle) toggle.checked = false;
   }
 }
 
@@ -2058,8 +2058,8 @@ async function renderOrderDetail() {
     // Not fully editable, but payment is always editable
     actionsHtml += `<button class="btn-save" onclick="savePaymentOnly()" data-en="Update Payment" data-es="Actualizar Pago">${lang === 'es' ? 'Actualizar Pago' : 'Update Payment'}</button>`;
   }
-  if (order.status === 'pending') {
-    actionsHtml += `<button class="btn-pickup" onclick="confirmAndSend()" data-en="Confirm & Mark Picked Up" data-es="Confirmar y Marcar Recogido">&#10003; ${lang === 'es' ? 'Confirmar y Marcar Recogido' : 'Confirm & Mark Picked Up'}</button>`;
+  if (order.status === 'pending' || order.status === 'sent' || order.status === 'confirmed') {
+    actionsHtml += `<button class="btn-pickup" onclick="markAsPickedUp()" data-en="Mark as Picked Up" data-es="Marcar Recogido">&#10003; ${lang === 'es' ? 'Marcar Recogido' : 'Mark as Picked Up'}</button>`;
   }
   // Export bar
   actionsHtml += `<div class="export-bar">
@@ -2341,6 +2341,9 @@ window.markAsPickedUp = async function() {
   if (!detailOrder) return;
 
   try {
+    // Save any form adjustments first
+    await window.saveOrderChanges();
+
     await sb.from('driver_orders').update({
       status: 'picked_up',
       picked_up_at: new Date().toISOString()

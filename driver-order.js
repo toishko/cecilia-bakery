@@ -72,14 +72,34 @@ function showScreen(id) {
 }
 
 function showSection(name) {
-  document.getElementById('dash-nav').classList.remove('open');
-  document.getElementById('dash-menu-btn').classList.remove('open');
+  // Close mobile nav dropdown
+  const mobileNav = document.getElementById('mobile-nav');
+  const mobileBtn = document.getElementById('mobile-menu-btn');
+  if (mobileNav) mobileNav.classList.remove('open');
+  if (mobileBtn) mobileBtn.classList.remove('open');
+
+  // Hide all sections, show target
   document.querySelectorAll('.dash-section').forEach(s => s.style.display = 'none');
   const target = document.getElementById('section-' + name);
   if (target) target.style.display = 'block';
-  document.querySelectorAll('.dash-nav-item').forEach(btn => {
+
+  // Update active state on sidebar + mobile nav
+  document.querySelectorAll('.sidebar-nav-item, .mobile-nav-item').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.section === name);
   });
+
+  // Update mobile section name
+  const sectionNameEl = document.getElementById('mobile-section-name');
+  const activeBtn = document.querySelector(`.sidebar-nav-item[data-section="${name}"]`);
+  if (sectionNameEl && activeBtn) {
+    const spanEl = activeBtn.querySelector('span[data-en]');
+    if (spanEl) {
+      sectionNameEl.textContent = spanEl.getAttribute('data-' + lang) || spanEl.textContent;
+      sectionNameEl.setAttribute('data-en', spanEl.getAttribute('data-en'));
+      sectionNameEl.setAttribute('data-es', spanEl.getAttribute('data-es'));
+    }
+  }
+
   // Show/hide footer and init order form
   const footer = document.getElementById('form-footer');
   const saleFooter = document.getElementById('sale-footer');
@@ -103,6 +123,7 @@ function showSection(name) {
   if (name === 'overview') {
     loadDriverBalance();
     loadRecentOrders();
+    loadOverviewDashboard();
   }
   if (name === 'clients') {
     loadDriverClients();
@@ -325,10 +346,10 @@ function applyTheme() {
     document.documentElement.setAttribute('data-theme', saved);
     const toggle = document.getElementById('theme-toggle');
     if (toggle) toggle.checked = saved === 'dark';
-  } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'light');
     const toggle = document.getElementById('theme-toggle');
-    if (toggle) toggle.checked = true;
+    if (toggle) toggle.checked = false;
   }
 }
 
@@ -386,16 +407,27 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('login-theme-btn').addEventListener('click', toggleTheme);
 
   // ── Dashboard nav ──
-  document.getElementById('dash-menu-btn').addEventListener('click', () => {
-    const nav = document.getElementById('dash-nav');
-    const btn = document.getElementById('dash-menu-btn');
+  // Mobile hamburger toggle
+  document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+    const nav = document.getElementById('mobile-nav');
+    const btn = document.getElementById('mobile-menu-btn');
     nav.classList.toggle('open');
     btn.classList.toggle('open');
   });
-  document.querySelectorAll('.dash-nav-item').forEach(btn => {
+  // Sidebar nav items
+  document.querySelectorAll('.sidebar-nav-item').forEach(btn => {
     btn.addEventListener('click', () => showSection(btn.dataset.section));
   });
-  document.getElementById('new-order-cta').addEventListener('click', () => showSection('new-order'));
+  // Mobile nav items
+  document.querySelectorAll('.mobile-nav-item').forEach(btn => {
+    btn.addEventListener('click', () => showSection(btn.dataset.section));
+  });
+  document.getElementById('new-order-cta')?.addEventListener('click', () => showSection('new-order'));
+
+  // ── Overview filter ──
+  document.getElementById('overview-filter')?.addEventListener('change', (e) => {
+    loadOverviewDashboard(e.target.value);
+  });
 
   // ── Settings ──
   document.querySelectorAll('.lang-opt').forEach(btn => {
@@ -1110,7 +1142,11 @@ function updateFooterCount() {
   });
   document.getElementById('footer-item-count').textContent = total;
   document.getElementById('footer-continue-btn').disabled = total === 0;
+
+  document.getElementById('footer-continue-btn').disabled = total === 0;
 }
+
+
 
 /* ═══════════════════════════════════
    SEARCH
@@ -1375,11 +1411,12 @@ async function submitAllOrders() {
       document.getElementById('form-footer').style.display = 'none';
       showToast(
         lang === 'es'
-          ? `Pedido #${shortOrderId(driverEditOrderId)} actualizado`
-          : `Order #${shortOrderId(driverEditOrderId)} updated`,
+          ? `Pedido #${shortOrderId(driverEditOrderObj || driverEditOrderId)} actualizado`
+          : `Order #${shortOrderId(driverEditOrderObj || driverEditOrderId)} updated`,
         'success'
       );
       driverEditOrderId = null;
+      driverEditOrderObj = null;
       orders = [];
       showSection('my-orders');
       return;
@@ -1470,7 +1507,7 @@ async function submitAllOrders() {
 }
 
 function showConfirmation() {
-  const content = document.querySelector('.dash-content');
+  const content = document.querySelector('.main-content');
   document.querySelectorAll('.dash-section').forEach(s => s.style.display = 'none');
 
   let confirmDiv = document.getElementById('section-confirmation');
@@ -1567,10 +1604,24 @@ function productLabel(key, storedLabel) {
 }
 
 // ── SHORT ORDER ID (UUID → readable) ──
-function shortOrderId(uuid) {
-  if (!uuid) return '???';
-  const clean = uuid.replace(/-/g, '');
-  return clean.slice(-5).toUpperCase();
+function shortOrderId(orderOrUuid) {
+  if (!orderOrUuid) return '???';
+  
+  // If we passed the full order object and it has an order number, prefer it
+  if (typeof orderOrUuid === 'object') {
+    if (orderOrUuid.order_number) return orderOrUuid.order_number;
+    if (!orderOrUuid.id) return '???';
+    const clean = orderOrUuid.id.replace(/-/g, '');
+    return clean.slice(-5).toUpperCase();
+  }
+  
+  // Fallback: it's just the raw UUID string
+  if (typeof orderOrUuid === 'string') {
+    const clean = orderOrUuid.replace(/-/g, '');
+    return clean.slice(-5).toUpperCase();
+  }
+
+  return '???';
 }
 
 // ── SMART DATE / TIME LABELS ──
@@ -1693,7 +1744,7 @@ async function loadMyOrders() {
       .from('driver_orders')
       .select('*, driver_order_items(*)')
       .eq('driver_id', currentDriver.id)
-      .in('status', ['sent', 'pending'])
+      .in('status', ['pending', 'sent', 'confirmed', 'picked_up'])
       .order('created_at', { ascending: false });
 
     if (error) { console.error('My orders error:', error); return; }
@@ -1767,8 +1818,12 @@ function renderOrderCard(batch) {
     }
   }
 
-  const statusDot = primary.status === 'pending'
-    ? `<span class="status-dot pending"></span>` : '';
+  let statusBadge = '';
+  const s = primary.status;
+  if (s === 'pending') statusBadge = `<span class="status-badge pending">${lang === 'es' ? 'Pendiente' : 'Pending'}</span>`;
+  else if (s === 'confirmed') statusBadge = `<span class="status-badge confirmed">${lang === 'es' ? 'Confirmado' : 'Confirmed'}</span>`;
+  else if (s === 'sent') statusBadge = `<span class="status-badge sent">${lang === 'es' ? 'Enviado' : 'Sent'}</span>`;
+  else if (s === 'picked_up') statusBadge = `<span class="status-badge picked-up">${lang === 'es' ? 'Recogido' : 'Picked Up'}</span>`;
 
   const orderIds = batch.map(o => o.id).join(',');
   const batchLabel = isBatch ? `<span class="batch-count">${batch.length} ${lang === 'es' ? 'pedidos' : 'orders'}</span>` : '';
@@ -1780,7 +1835,7 @@ function renderOrderCard(batch) {
         <div class="order-card-total">${totalStr}</div>
       </div>
       <div class="order-card-row2">
-        <div class="order-card-left">${statusDot}${payBadge}${batchLabel}<span class="order-card-id">#${shortOrderId(primary.id)}</span></div>
+        <div class="order-card-left">${statusBadge}${payBadge}${batchLabel}<span class="order-card-id">#${shortOrderId(primary)}</span></div>
         <div class="order-card-date">${dateInfo.value} · ${timeInfo.value}</div>
       </div>
       ${editIndicator ? `<div class="order-card-edit">${editIndicator}</div>` : ''}
@@ -1789,6 +1844,7 @@ function renderOrderCard(batch) {
 
 // ── ORDER DETAIL MODAL ──
 let driverEditOrderId = null; // Track which order is being edited
+let driverEditOrderObj = null; // Track the full object for order number
 
 // Batch detail state
 let _batchOrders = [];
@@ -1849,7 +1905,7 @@ function renderOrderInDetail(idx) {
 
   // Title
   document.getElementById('order-detail-title').textContent =
-    `${lang === 'es' ? 'Pedido' : 'Order'} #${shortOrderId(order.id)}`;
+    `${lang === 'es' ? 'Pedido' : 'Order'} #${shortOrderId(order)}`;
 
   // Badge
   let badgeHtml = '';
@@ -2029,6 +2085,7 @@ window.editOrder = async function(orderId) {
 
     // Set edit mode
     driverEditOrderId = orderId;
+    driverEditOrderObj = order;
 
     // Switch to order form
     showSection('new-order');
@@ -2065,8 +2122,8 @@ window.editOrder = async function(orderId) {
     // Show editing banner
     showToast(
       lang === 'es'
-        ? `Editando pedido #${shortOrderId(orderId)}. Haz cambios y presiona Continuar.`
-        : `Editing order #${shortOrderId(orderId)}. Make changes and press Continue.`,
+        ? `Editando pedido #${shortOrderId(driverEditOrderObj || orderId)}. Haz cambios y presiona Continuar.`
+        : `Editing order #${shortOrderId(driverEditOrderObj || orderId)}. Make changes and press Continue.`,
       'info'
     );
   } catch (e) {
@@ -2118,7 +2175,7 @@ window.showBalanceBreakdown = function() {
       html += `
         <div class="balance-item">
           <div class="balance-item-info">
-            <div class="balance-item-biz">${biz} <span style="color:var(--tx-faint);font-weight:400">#${shortOrderId(o.id)}</span></div>
+            <div class="balance-item-biz">${biz} <span style="color:var(--tx-faint);font-weight:400">#${shortOrderId(o)}</span></div>
             <div class="balance-item-date">${dateStr}</div>
             <div class="balance-item-detail">${paidStr}</div>
           </div>
@@ -2568,6 +2625,67 @@ function updateSaleFooter() {
   document.getElementById('sale-footer-total').textContent = '$' + total.toFixed(2);
   const btn = document.getElementById('sale-complete-btn');
   btn.disabled = !_saleClientId || count === 0;
+
+  updateSalesTicker();
+}
+
+function updateSalesTicker() {
+  const ticker = document.getElementById('sales-ticker');
+  if (!ticker || !inventoryLoaded) return;
+
+  const tickerItems = [];
+  const labelMap = {};
+  Object.values(PRODUCTS).forEach(sec => {
+    sec.items.forEach(item => {
+      labelMap[item.key] = L(item);
+      if (item.cols) {
+        item.cols.forEach(col => {
+          const subKey = item.key + '_' + col;
+          const isNT = col.endsWith('_nt');
+          const base = isNT ? col.replace('_nt', '') : col;
+          const colLabel = base.charAt(0).toUpperCase() + base.slice(1);
+          labelMap[subKey] = L(item) + ' — ' + colLabel + (isNT ? ' NT' : '');
+        });
+      }
+    });
+  });
+
+  Object.keys(driverInventory).forEach(k => {
+    const inv = driverInventory[k];
+    const totalLoaded = parseInt(inv.loaded) || 0;
+    const initiallyRemaining = parseInt(inv.remaining) || 0;
+    // Map to _saleQty which holds the Sales tab cart!
+    const inCart = _saleQty[k] || 0;
+    
+    // Calculate true live remaining based on what they are currently typing in
+    const trulyRemaining = Math.max(0, initiallyRemaining - inCart);
+    
+    if (totalLoaded > 0 || initiallyRemaining > 0) {
+      tickerItems.push({
+        key: k,
+        label: labelMap[k] || k,
+        remaining: trulyRemaining
+      });
+    }
+  });
+
+  if (tickerItems.length === 0) {
+    ticker.style.display = 'none';
+    return;
+  }
+  
+  ticker.style.display = 'flex';
+  tickerItems.sort((a,b) => a.remaining - b.remaining);
+
+  let html = '';
+  tickerItems.forEach(item => {
+    const statusClass = item.remaining <= 0 ? 'out' : item.remaining <= 3 ? 'low' : '';
+    html += `<div class="ticker-item ${statusClass}">
+      <span class="ticker-val">${item.remaining}</span>
+      <span class="ticker-lbl">${_esc(item.label)}</span>
+    </div>`;
+  });
+  ticker.innerHTML = html;
 }
 
 async function loadTodaysSalesBanner() {
@@ -3173,7 +3291,11 @@ async function loadInventoryTab() {
   const form = document.getElementById('inv-load-form');
 
   banner.innerHTML = '';
-  summary.innerHTML = `<div class="empty-state">${lang === 'es' ? 'Cargando inventario...' : 'Loading inventory...'}</div>`;
+  let skels = '';
+  for(let i=0; i<5; i++) {
+    skels += `<div class="inv-skeleton-row"><div class="inv-sk-left"><div class="inv-sk-line" style="width:${Math.floor(Math.random()*40 + 30)}%"></div><div class="inv-sk-line thin" style="width:60%"></div></div><div class="inv-sk-ring"></div></div>`;
+  }
+  summary.innerHTML = skels;
   form.style.display = 'none';
 
   await loadInventoryData();
@@ -3189,6 +3311,9 @@ async function loadInventoryTab() {
     renderManualLoadForm();
   }
   applyLang();
+  
+  // Update sales ticker since inventory data is ready
+  updateSalesTicker();
 }
 
 async function loadInventoryData() {
@@ -3321,7 +3446,6 @@ function renderInventorySummary() {
   Object.values(PRODUCTS).forEach(sec => {
     sec.items.forEach(item => {
       labelMap[item.key] = L(item);
-      // For redondo sub-variants
       if (item.cols) {
         item.cols.forEach(col => {
           const subKey = item.key + '_' + col;
@@ -3334,17 +3458,46 @@ function renderInventorySummary() {
     });
   });
 
-  // Group by category
+  // Render a single compact row
+  function renderInvRow(p) {
+    const statusClass = p.remaining <= 0 ? 'out' : p.remaining < 3 ? 'low' : '';
+    const pct = p.loaded > 0 ? Math.max(0, (p.remaining / p.loaded) * 100) : 0;
+    const offset = 119.38 - (pct / 100) * 119.38; // 2 * PI * 19 = 119.38
+    const ringColor = p.remaining <= 0 ? '#c0392b' : p.remaining < 3 ? '#d4a017' : '#2a9d5c';
+    
+    const lblLoaded = lang === 'es' ? 'cargado' : 'loaded';
+    const lblSold = lang === 'es' ? 'vendido' : 'sold';
+    const lblLeft = lang === 'es' ? 'restante' : 'left';
+    const subtitle = `${p.loaded} ${lblLoaded} &nbsp;&middot;&nbsp; ${p.sold} ${lblSold}`;
+
+    return `<div class="inv-row ${statusClass}">
+      <div class="inv-row-info">
+        <div class="inv-row-name">${_esc(p.label)}</div>
+        <div class="inv-row-sub">${subtitle}</div>
+      </div>
+      <div class="inv-row-right">
+        <div class="inv-ring-container">
+          <svg class="inv-ring-svg" width="44" height="44">
+            <circle class="inv-ring-bg" cx="22" cy="22" r="19"></circle>
+            <circle class="inv-ring-fill" cx="22" cy="22" r="19" stroke-dashoffset="${offset}" style="stroke: ${ringColor}"></circle>
+          </svg>
+          <div class="inv-row-num">${p.remaining}</div>
+        </div>
+        <div class="inv-row-lbl">${lblLeft}</div>
+      </div>
+    </div>`;
+  }
+
+  // Collect items, separate in-stock vs sold-out
   let html = '';
+  const soldOutItems = [];
+
   Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
-    // Find items in this category that are in inventory
     const matching = [];
     sec.items.forEach(item => {
-      // Check base key
       if (driverInventory[item.key]) {
         matching.push({ key: item.key, label: labelMap[item.key] || item.key, ...driverInventory[item.key] });
       }
-      // Check sub-variants (redondo)
       if (item.cols) {
         item.cols.forEach(col => {
           const subKey = item.key + '_' + col;
@@ -3357,23 +3510,41 @@ function renderInventorySummary() {
 
     if (matching.length === 0) return;
 
-    html += `<div class="inv-category">`;
-    html += `<div class="inv-cat-title" data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</div>`;
-    matching.forEach(p => {
-      const statusClass = p.remaining <= 0 ? 'out' : p.remaining < 3 ? 'low' : '';
-      html += `<div class="inv-card ${statusClass}">`;
-      html += `<div class="inv-card-name">${_esc(p.label)}</div>`;
-      html += `<div class="inv-card-counts">`;
-      html += `<span class="inv-count-loaded">${p.loaded}</span>`;
-      html += `<span class="inv-count-sep">→</span>`;
-      html += `<span class="inv-count-remaining ${statusClass}">${p.remaining}</span>`;
-      html += `</div>`;
-      html += `</div>`;
-    });
-    html += `</div>`;
+    const inStock = matching.filter(p => p.remaining > 0);
+    const outOfStock = matching.filter(p => p.remaining <= 0);
+    outOfStock.forEach(p => soldOutItems.push({ ...p, catLabel: L(sec) }));
+
+    if (inStock.length > 0) {
+      const catTotalRem = inStock.reduce((sum, p) => sum + (parseInt(p.remaining) || 0), 0);
+      const catTotalLd = inStock.reduce((sum, p) => sum + (parseInt(p.loaded) || 0), 0);
+      const catPct = catTotalLd > 0 ? (catTotalRem / catTotalLd) * 100 : 0;
+      const catOffset = 87.96 - (catPct / 100) * 87.96;
+      const catColor = catTotalRem <= 0 ? '#c0392b' : catPct < 25 ? '#d4a017' : '#2a9d5c';
+
+      html += `<div class="inv-category">`;
+      html += `<div class="inv-cat-title" onclick="toggleInvCategory(this)">
+                 <span data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</span>
+                 <div class="inv-cat-title-right">
+                   <div class="inv-cat-total">
+                     <div class="inv-ring-container" style="width:34px;height:34px;">
+                       <svg class="inv-ring-svg" width="34" height="34">
+                         <circle class="inv-ring-bg" cx="17" cy="17" r="14"></circle>
+                         <circle class="inv-ring-fill" cx="17" cy="17" r="14" stroke-dashoffset="${catOffset}" style="stroke:${catColor};stroke-dasharray:87.96"></circle>
+                       </svg>
+                       <div class="inv-row-num" style="font-size:0.95rem;">${catTotalRem}</div>
+                     </div>
+                   </div>
+                   <svg class="inv-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                 </div>
+               </div>`;
+      html += `<div class="inv-cat-content">`;
+      inStock.sort((a, b) => a.remaining - b.remaining);
+      inStock.forEach(p => { html += renderInvRow(p); });
+      html += `</div></div>`;
+    }
   });
 
-  // Also show any keys that didn't match a known category
+  // Unknown keys
   const knownKeys = new Set();
   Object.values(PRODUCTS).forEach(sec => {
     sec.items.forEach(item => {
@@ -3383,23 +3554,66 @@ function renderInventorySummary() {
   });
   const unknown = keys.filter(k => !knownKeys.has(k));
   if (unknown.length > 0) {
-    html += `<div class="inv-category"><div class="inv-cat-title">Other</div>`;
-    unknown.forEach(k => {
+    const inStockUnknown = unknown.filter(k => driverInventory[k].remaining > 0);
+    const outUnknown = unknown.filter(k => driverInventory[k].remaining <= 0);
+    outUnknown.forEach(k => {
       const p = driverInventory[k];
-      const statusClass = p.remaining <= 0 ? 'out' : p.remaining < 3 ? 'low' : '';
-      html += `<div class="inv-card ${statusClass}">`;
-      html += `<div class="inv-card-name">${_esc(labelMap[k] || k)}</div>`;
-      html += `<div class="inv-card-counts">`;
-      html += `<span class="inv-count-loaded">${p.loaded}</span>`;
-      html += `<span class="inv-count-sep">→</span>`;
-      html += `<span class="inv-count-remaining ${statusClass}">${p.remaining}</span>`;
-      html += `</div></div>`;
+      soldOutItems.push({ key: k, label: labelMap[k] || k, ...p, catLabel: lang === 'es' ? 'Otro' : 'Other' });
     });
-    html += `</div>`;
+    if (inStockUnknown.length > 0) {
+      const catTotalRem = inStockUnknown.reduce((sum, k) => sum + (parseInt(driverInventory[k].remaining) || 0), 0);
+      const catTotalLd = inStockUnknown.reduce((sum, k) => sum + (parseInt(driverInventory[k].loaded) || 0), 0);
+      const catPct = catTotalLd > 0 ? (catTotalRem / catTotalLd) * 100 : 0;
+      const catOffset = 87.96 - (catPct / 100) * 87.96;
+      const catColor = catTotalRem <= 0 ? '#c0392b' : catPct < 25 ? '#d4a017' : '#2a9d5c';
+
+      html += `<div class="inv-category">
+                 <div class="inv-cat-title" onclick="toggleInvCategory(this)">
+                   <span>${lang === 'es' ? 'Otro' : 'Other'}</span>
+                   <div class="inv-cat-title-right">
+                     <div class="inv-cat-total">
+                       <div class="inv-ring-container" style="width:34px;height:34px;">
+                         <svg class="inv-ring-svg" width="34" height="34">
+                           <circle class="inv-ring-bg" cx="17" cy="17" r="14"></circle>
+                           <circle class="inv-ring-fill" cx="17" cy="17" r="14" stroke-dashoffset="${catOffset}" style="stroke:${catColor};stroke-dasharray:87.96"></circle>
+                         </svg>
+                         <div class="inv-row-num" style="font-size:0.95rem;">${catTotalRem}</div>
+                       </div>
+                     </div>
+                     <svg class="inv-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                   </div>
+                 </div>
+                 <div class="inv-cat-content">`;
+      inStockUnknown.forEach(k => {
+        const p = driverInventory[k];
+        html += renderInvRow({ key: k, label: labelMap[k] || k, ...p });
+      });
+      html += `</div></div>`;
+    }
+  }
+
+  // Sold-out section at bottom
+  if (soldOutItems.length > 0) {
+    html += `<div class="inv-category inv-sold-out-section collapsed">`;
+    html += `<div class="inv-cat-title inv-cat-soldout" onclick="toggleInvCategory(this)">
+               <span>${lang === 'es' ? 'Agotado' : 'Sold Out'}</span>
+               <div class="inv-cat-title-right">
+                 <span class="inv-soldout-count">${soldOutItems.length}</span>
+                 <svg class="inv-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+               </div>
+             </div>`;
+    html += `<div class="inv-cat-content">`;
+    soldOutItems.forEach(p => { html += renderInvRow(p); });
+    html += `</div></div>`;
   }
 
   container.innerHTML = html;
 }
+
+window.toggleInvCategory = function(el) {
+  const cat = el.closest('.inv-category');
+  if (cat) cat.classList.toggle('collapsed');
+};
 
 function renderManualLoadForm() {
   const container = document.getElementById('inv-load-form');
@@ -3508,6 +3722,266 @@ async function saveManualLoad() {
 }
 
 /* ═══════════════════════════════════
+   OVERVIEW ANALYTICS DASHBOARD
+   ═══════════════════════════════════ */
+let _driverRevenueChart = null;
+
+async function loadOverviewDashboard(timeframe) {
+  if (!sb || !currentDriver || !advancedFeaturesEnabled) return;
+  if (!timeframe) timeframe = document.getElementById('overview-filter')?.value || 'this_month';
+
+  const now = new Date();
+  let startDate = null;
+  let endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+  if (timeframe === 'today') {
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  } else if (timeframe === 'this_week') {
+    const dow = now.getDay();
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow, 0, 0, 0);
+  } else if (timeframe === 'this_month') {
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+  } else if (timeframe === 'last_month') {
+    startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
+    endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+  }
+  // all_time: startDate stays null
+
+  try {
+    // Fetch sales + sale items in parallel
+    let salesQuery = sb.from('driver_sales')
+      .select('id, total, client_id, created_at')
+      .eq('driver_id', currentDriver.id);
+
+    if (startDate) salesQuery = salesQuery.gte('created_at', startDate.toISOString());
+    salesQuery = salesQuery.lte('created_at', endDate.toISOString());
+    salesQuery = salesQuery.order('created_at', { ascending: false });
+
+    const { data: sales, error: salesErr } = await salesQuery;
+    if (salesErr) { console.error('Overview sales error:', salesErr); return; }
+
+    const salesData = sales || [];
+
+    // Compute stats
+    let totalRevenue = 0;
+    let totalCount = salesData.length;
+    salesData.forEach(s => { totalRevenue += parseFloat(s.total || 0); });
+
+    // Fetch all sale items for this period to get items sold + best sellers
+    const saleIds = salesData.map(s => s.id);
+    let allItems = [];
+    if (saleIds.length > 0) {
+      // Supabase .in() has a limit, so batch if needed
+      const batchSize = 100;
+      for (let i = 0; i < saleIds.length; i += batchSize) {
+        const batch = saleIds.slice(i, i + batchSize);
+        const { data: items } = await sb.from('driver_sale_items')
+          .select('product_key, product_label, quantity, line_total, sale_id')
+          .in('sale_id', batch);
+        if (items) allItems = allItems.concat(items);
+      }
+    }
+
+    let totalItemsSold = 0;
+    allItems.forEach(it => { totalItemsSold += (it.quantity || 0); });
+
+    // Update stat cards
+    document.getElementById('ov-stat-revenue').textContent = '$' + totalRevenue.toFixed(2);
+    document.getElementById('ov-stat-items').textContent = totalItemsSold;
+    document.getElementById('ov-stat-count').textContent = totalCount;
+
+    // Build chart
+    renderOverviewChart(salesData, timeframe);
+
+    // Build leaderboards
+    renderBestSellers(allItems);
+    renderTopClients(salesData);
+
+  } catch (e) { console.error('Overview dashboard error:', e); }
+}
+
+function renderOverviewChart(salesData, timeframe) {
+  const useMonthly = (timeframe === 'all_time' || timeframe === 'last_month');
+  const buckets = {};
+
+  salesData.forEach(s => {
+    if (!s.created_at) return;
+    const d = new Date(s.created_at);
+    const key = useMonthly
+      ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    buckets[key] = (buckets[key] || 0) + parseFloat(s.total || 0);
+  });
+
+  const sortedKeys = Object.keys(buckets).sort();
+  const chartLabels = sortedKeys.map(k => {
+    if (useMonthly) {
+      const [y, m] = k.split('-');
+      return new Date(y, m - 1).toLocaleString('en-US', { month: 'short', year: '2-digit' });
+    }
+    const [y, m, d] = k.split('-');
+    return new Date(y, m - 1, d).toLocaleString('en-US', { month: 'short', day: 'numeric' });
+  });
+  const chartValues = sortedKeys.map(k => buckets[k]);
+
+  const ctx = document.getElementById('driverRevenueChart');
+  if (_driverRevenueChart) { _driverRevenueChart.destroy(); _driverRevenueChart = null; }
+
+  if (ctx && chartLabels.length > 0) {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(200,16,46,.06)';
+    const tickColor = isDark ? '#BFA0A8' : '#6B5057';
+
+    _driverRevenueChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: chartLabels,
+        datasets: [{
+          label: lang === 'es' ? 'Ingresos' : 'Revenue',
+          data: chartValues,
+          backgroundColor: 'rgba(200, 16, 46, 0.7)',
+          hoverBackgroundColor: 'rgba(200, 16, 46, 0.9)',
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: 48
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: isDark ? '#1E0D12' : '#fff',
+            titleColor: isDark ? '#F2E8E4' : '#18080D',
+            bodyColor: isDark ? '#BFA0A8' : '#6B5057',
+            borderColor: isDark ? 'rgba(200,16,46,.35)' : 'rgba(200,16,46,.22)',
+            borderWidth: 1,
+            padding: 12,
+            cornerRadius: 10,
+            titleFont: { family: 'Outfit', weight: '600' },
+            bodyFont: { family: 'Outfit' },
+            callbacks: {
+              label: c => '$' + c.parsed.y.toFixed(2)
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: tickColor, font: { family: 'Outfit', size: 11 } }
+          },
+          y: {
+            grid: { color: gridColor },
+            ticks: {
+              color: tickColor,
+              font: { family: 'Outfit', size: 11 },
+              callback: v => '$' + (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v)
+            },
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  } else if (ctx) {
+    // No data — show empty state in chart area
+    const parent = ctx.parentElement;
+    if (parent) parent.innerHTML = `<div class="empty-state" style="padding:40px 0">${lang === 'es' ? 'Sin datos de ventas' : 'No sales data'}</div>`;
+  }
+}
+
+function renderBestSellers(allItems) {
+  const container = document.getElementById('ov-best-sellers');
+  if (!container) return;
+
+  // Aggregate by product_key
+  const productMap = {};
+  allItems.forEach(it => {
+    const key = it.product_key;
+    if (!productMap[key]) {
+      productMap[key] = { label: it.product_label || key, qty: 0, revenue: 0 };
+    }
+    productMap[key].qty += (it.quantity || 0);
+    productMap[key].revenue += parseFloat(it.line_total || 0);
+  });
+
+  const sorted = Object.values(productMap).sort((a, b) => b.qty - a.qty);
+  if (sorted.length === 0) {
+    container.innerHTML = `<div class="empty-state" data-en="No sales data yet" data-es="Sin datos de ventas">${lang === 'es' ? 'Sin datos de ventas' : 'No sales data yet'}</div>`;
+    return;
+  }
+
+  const topItems = sorted.slice(0, 8);
+  const maxQty = topItems[0].qty;
+
+  container.innerHTML = topItems.map((item, i) => {
+    const barW = Math.max(3, (item.qty / maxQty) * 100);
+    return `<div class="ov-lb-item">
+      <span class="ov-lb-rank">${i + 1}</span>
+      <div class="ov-lb-info">
+        <div class="ov-lb-name">${_esc(item.label)}</div>
+        <div class="ov-lb-bar-bg"><div class="ov-lb-bar" style="width:${barW}%"></div></div>
+      </div>
+      <div class="ov-lb-meta">
+        <div class="ov-lb-amount">${item.qty}</div>
+        <div class="ov-lb-sub">$${item.revenue.toFixed(2)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderTopClients(salesData) {
+  const container = document.getElementById('ov-top-clients');
+  if (!container) return;
+
+  // Aggregate by client_id
+  const clientMap = {};
+  salesData.forEach(s => {
+    const cid = s.client_id;
+    if (!cid) return;
+    if (!clientMap[cid]) {
+      clientMap[cid] = { id: cid, count: 0, revenue: 0 };
+    }
+    clientMap[cid].count++;
+    clientMap[cid].revenue += parseFloat(s.total || 0);
+  });
+
+  const sorted = Object.values(clientMap).sort((a, b) => b.revenue - a.revenue);
+  if (sorted.length === 0) {
+    container.innerHTML = `<div class="empty-state" data-en="No client data yet" data-es="Sin datos de clientes">${lang === 'es' ? 'Sin datos de clientes' : 'No client data yet'}</div>`;
+    return;
+  }
+
+  // Resolve client names from cached _clientsList
+  const clientNameMap = {};
+  if (_clientsList) {
+    _clientsList.forEach(c => { clientNameMap[c.id] = c.business_name || c.name || 'Unknown'; });
+  }
+
+  const topClients = sorted.slice(0, 5);
+  const maxRev = topClients[0].revenue;
+
+  container.innerHTML = topClients.map((c, i) => {
+    const name = clientNameMap[c.id] || (lang === 'es' ? 'Cliente' : 'Client');
+    const barW = Math.max(3, (c.revenue / maxRev) * 100);
+    const salesLabel = c.count === 1
+      ? (lang === 'es' ? '1 venta' : '1 sale')
+      : (lang === 'es' ? `${c.count} ventas` : `${c.count} sales`);
+    return `<div class="ov-lb-item">
+      <span class="ov-lb-rank">${i + 1}</span>
+      <div class="ov-lb-info">
+        <div class="ov-lb-name">${_esc(name)}</div>
+        <div class="ov-lb-bar-bg"><div class="ov-lb-bar" style="width:${barW}%;background:var(--blue)"></div></div>
+      </div>
+      <div class="ov-lb-meta">
+        <div class="ov-lb-amount">$${c.revenue.toFixed(2)}</div>
+        <div class="ov-lb-sub">${salesLabel}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════
    FEATURE FLAGS
    ═══════════════════════════════════ */
 async function checkAdvancedFeatures() {
@@ -3544,4 +4018,10 @@ async function checkAdvancedFeatures() {
   document.querySelectorAll('.advanced-feature').forEach(el => {
     el.style.display = advancedFeaturesEnabled ? '' : 'none';
   });
+
+  // Load analytics dashboardif advanced features are on
+  if (advancedFeaturesEnabled) {
+    loadDriverClients(); // pre-load client names for leaderboard
+    loadOverviewDashboard();
+  }
 }
