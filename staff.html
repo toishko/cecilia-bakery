@@ -588,6 +588,9 @@
       outline: none;
       border-color: var(--red);
     }
+    .action-bar input[type="date"].filter-hidden {
+      display: none;
+    }
     .refresh-btn {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 8px 16px;
@@ -658,13 +661,9 @@
       background: rgba(217, 119, 6, .1);
       color: var(--yellow);
     }
-    .order-status-badge.confirmed {
-      background: rgba(27, 122, 74, .1);
-      color: var(--green);
-    }
-    .order-status-badge.sent {
-      background: rgba(0, 45, 98, .1);
-      color: var(--blue);
+    .order-status-badge.picked_up {
+      background: rgba(109, 40, 217, .1);
+      color: #7c3aed;
     }
     .order-items-summary {
       font-size: .85rem; color: var(--tx-muted);
@@ -1185,11 +1184,10 @@
             <!-- Action Bar -->
             <div class="action-bar">
               <select id="filter-status">
+                <option value="all" data-en="All Orders" data-es="Todos los Pedidos">All Orders</option>
                 <option value="active" data-en="Active Orders" data-es="Pedidos Activos">Active Orders</option>
                 <option value="pending" data-en="Pending" data-es="Pendiente">Pending</option>
-                <option value="confirmed" data-en="Confirmed" data-es="Confirmado">Confirmed</option>
-                <option value="sent" data-en="Sent" data-es="Enviado">Sent</option>
-                <option value="all" data-en="All Orders" data-es="Todos los Pedidos">All Orders</option>
+                <option value="picked_up" data-en="Picked Up" data-es="Recogido">Picked Up</option>
               </select>
               <input type="date" id="filter-date" />
               <button class="refresh-btn" id="refresh-orders-btn">
@@ -2060,7 +2058,7 @@
           .select('*, driver_order_items(*)');
 
         if (statusFilter === 'active') {
-          query = query.in('status', ['pending', 'confirmed', 'sent']);
+          query = query.in('status', ['pending']);
         } else if (statusFilter !== 'all') {
           query = query.eq('status', statusFilter);
         }
@@ -2199,8 +2197,7 @@
 
           const statusLabels = {
             pending: 'Pending',
-            confirmed: 'Confirmed',
-            sent: 'Sent',
+            picked_up: 'Picked Up',
             cancelled: 'Cancelled'
           };
 
@@ -2289,7 +2286,7 @@
                   <div class="order-biz-name">${bizName}</div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px">
-                  <span style="font-size:.82rem;color:var(--tx-faint);font-weight:500">${itemCount} items${timeStr ? ' · ' + timeStr : ''}</span>
+                  ${timeStr ? `<span style="font-size:.82rem;color:var(--tx-faint);font-weight:500">${timeStr}</span>` : ''}
                   <span class="order-status-badge ${status}">${statusLabels[status] || status}</span>
                   <button class="staff-edit-toggle" onclick="event.stopPropagation();staffToggleEdit(${oi})" style="padding:3px 10px;background:none;border:1px solid var(--bd);border-radius:6px;font-size:.72rem;cursor:pointer;color:var(--tx-muted);font-weight:600" data-en="Edit" data-es="Editar">Edit</button>
                   <svg class="order-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .25s;color:var(--tx-faint);flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
@@ -2646,7 +2643,16 @@
        EVENT LISTENERS
        ════════════════════════════════════════ */
     document.getElementById('refresh-orders-btn').addEventListener('click', loadOrders);
-    document.getElementById('filter-status').addEventListener('change', loadOrders);
+    document.getElementById('filter-status').addEventListener('change', function() {
+      var dateInput = document.getElementById('filter-date');
+      if (this.value === 'all') {
+        dateInput.classList.remove('filter-hidden');
+      } else {
+        dateInput.classList.add('filter-hidden');
+        dateInput.value = '';
+      }
+      loadOrders();
+    });
     document.getElementById('filter-date').addEventListener('change', loadOrders);
     document.getElementById('qc-pieces').addEventListener('input', calcQuick);
     document.getElementById('qc-box-size').addEventListener('input', calcQuick);
