@@ -1211,6 +1211,7 @@ async function setEstimatedPickupTime(orderId, timeValue) {
 window.loadOnlineOrders = loadOnlineOrders;
 window.updateOnlineOrderStatus = updateOnlineOrderStatus;
 window.setEstimatedPickupTime = setEstimatedPickupTime;
+window.loadOverview = loadOverview;
 
 /* ═══════════════════════════════════
    TOAST
