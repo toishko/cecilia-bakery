@@ -25,8 +25,7 @@
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
     rel="stylesheet" />
 
-  <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase SDK removed — form now submits via /api/wholesale-apply -->
 
   <style>
     /* ════════════════════════════════════════
@@ -83,6 +82,18 @@
 
       --lang-border: rgba(200, 16, 46, .25);
       --lang-text: #BFA0A8;
+    }
+
+    /* ── Honeypot (invisible to humans) ── */
+    .ohnohoney {
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
+      opacity: 0;
+      height: 0;
+      width: 0;
+      overflow: hidden;
+      pointer-events: none;
     }
 
     /* ── Reset ── */
@@ -466,6 +477,12 @@
             </div>
           </div>
 
+          <!-- Honeypot — hidden from humans, bots auto-fill it -->
+          <div class="ohnohoney">
+            <label for="f-website">Website</label>
+            <input type="text" id="f-website" name="website" tabindex="-1" autocomplete="off">
+          </div>
+
           <button type="submit" class="submit-btn" id="submit-btn" data-en="Submit Application" data-es="Enviar Solicitud">Submit Application</button>
         </form>
       </div>
@@ -485,14 +502,9 @@
 
   <script>
     /* ════════════════════════════════════════
-       SUPABASE INIT
+       BOT PROTECTION — page load timestamp
        ════════════════════════════════════════ */
-    const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
-
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
-    });
+    const _pageLoadedAt = Date.now();
 
     /* ════════════════════════════════════════
        LANGUAGE
@@ -613,20 +625,36 @@
       btn.disabled = true;
       btn.textContent = lang === 'es' ? 'Enviando...' : 'Submitting...';
 
-      const email = document.getElementById('f-email').value.trim().toLowerCase();
-
       try {
-        // ── Duplicate email check ──
-        const { data: existing, error: lookupErr } = await sb
-          .from('wholesale_accounts')
-          .select('status')
-          .ilike('email', email)
-          .maybeSingle();
+        // ── Build payload for API route ──
+        const payload = {
+          business_name: document.getElementById('f-business-name').value.trim(),
+          contact_name: document.getElementById('f-contact-name').value.trim(),
+          email: document.getElementById('f-email').value.trim().toLowerCase(),
+          phone: document.getElementById('f-phone').value.trim(),
+          address: document.getElementById('f-address').value.trim(),
+          city: document.getElementById('f-city').value.trim(),
+          state: document.getElementById('f-state').value.trim(),
+          zip: document.getElementById('f-zip').value.trim(),
+          business_type: document.getElementById('f-business-type').value,
+          heard: document.getElementById('f-heard').value.trim(),
+          notes: document.getElementById('f-notes').value.trim(),
+          // Bot protection fields
+          website: document.getElementById('f-website').value, // honeypot
+          _t: _pageLoadedAt, // page load timestamp
+        };
 
-        if (lookupErr) console.warn('Lookup error:', lookupErr);
+        const response = await fetch('/api/wholesale-apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
 
-        if (existing) {
-          const status = existing.status;
+        const result = await response.json();
+
+        // ── Handle duplicate submissions ──
+        if (result.duplicate) {
+          const status = result.status;
           if (status === 'pending') {
             showAlert(
               lang === 'es'
@@ -661,35 +689,12 @@
           return;
         }
 
-        // ── Build payload ──
-        const heard = document.getElementById('f-heard').value.trim();
-        const message = document.getElementById('f-notes').value.trim();
-        let notesParts = [];
-        if (heard) notesParts.push('How they heard about us: ' + heard);
-        if (message) notesParts.push(message);
-
-        const payload = {
-          business_name: document.getElementById('f-business-name').value.trim(),
-          contact_name: document.getElementById('f-contact-name').value.trim(),
-          email: email,
-          phone: document.getElementById('f-phone').value.trim(),
-          address: document.getElementById('f-address').value.trim(),
-          city: document.getElementById('f-city').value.trim(),
-          state: document.getElementById('f-state').value.trim(),
-          zip: document.getElementById('f-zip').value.trim(),
-          business_type: document.getElementById('f-business-type').value,
-          notes: notesParts.join('\n\n') || null,
-          status: 'pending'
-        };
-
-        const { error: insertErr } = await sb.from('wholesale_accounts').insert(payload);
-
-        if (insertErr) {
-          console.error('Insert error:', insertErr);
+        // ── Handle errors ──
+        if (!result.success) {
           showAlert(
             lang === 'es'
               ? 'Hubo un error al enviar su solicitud. Inténtelo de nuevo.'
-              : 'There was an error submitting your application. Please try again.',
+              : (result.message || 'There was an error submitting your application. Please try again.'),
             'error'
           );
           btn.disabled = false;
