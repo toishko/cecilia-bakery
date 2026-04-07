@@ -573,7 +573,7 @@
       flex-wrap: wrap;
     }
     .action-bar select,
-    .action-bar input[type="date"] {
+    .action-bar #filter-date {
       padding: 8px 14px;
       border: 1px solid var(--bd);
       border-radius: var(--r);
@@ -584,11 +584,11 @@
       transition: border-color .2s;
     }
     .action-bar select:focus,
-    .action-bar input[type="date"]:focus {
+    .action-bar #filter-date:focus {
       outline: none;
       border-color: var(--red);
     }
-    .action-bar input[type="date"].filter-hidden {
+    .action-bar #filter-date.filter-hidden {
       display: none;
     }
     .refresh-btn {
@@ -1189,7 +1189,7 @@
                 <option value="pending" data-en="Pending" data-es="Pendiente">Pending</option>
                 <option value="picked_up" data-en="Picked Up" data-es="Recogido">Picked Up</option>
               </select>
-              <input type="date" id="filter-date" />
+              <input type="text" id="filter-date" placeholder="Date..." data-en-placeholder="Date..." data-es-placeholder="Fecha..." onfocus="(this.type='date')" onblur="if(!this.value) this.type='text'" />
               <button class="refresh-btn" id="refresh-orders-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="23 4 23 10 17 10"/>
@@ -2650,6 +2650,7 @@
       } else {
         dateInput.classList.add('filter-hidden');
         dateInput.value = '';
+        dateInput.type = 'text';
       }
       loadOrders();
     });
