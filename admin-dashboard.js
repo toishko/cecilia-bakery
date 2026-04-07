@@ -670,7 +670,7 @@ async function silentRefreshOrders() {
     const { data, error } = await sb
       .from('driver_orders')
       .select('*')
-      .in('status', ['pending', 'confirmed', 'sent'])
+      .in('status', ['pending', 'confirmed', 'sent', 'picked_up'])
       .order('submitted_at', { ascending: false });
 
     if (error || !data) return;
@@ -1287,6 +1287,7 @@ async function loadOverview(timeframe) {
     const onlineOrders = onlineRes.data || [];
 
     // ── Aggregate Totals ──
+    // DRIVER: has per-order payment tracking (payment_amount, payment_status)
     let driverGross = 0, driverCollected = 0, driverOutstanding = 0;
     driverOrders.forEach(o => {
       const total = parseFloat(o.total_amount || 0);
@@ -1298,27 +1299,34 @@ async function loadOverview(timeframe) {
       }
     });
 
-    let wholesaleGross = 0, wholesaleCollected = 0;
+    // WHOLESALE: payment happens on delivery; only 'delivered' = collected
+    // confirmed/scheduled = outstanding (accepted but not yet delivered/paid)
+    // pending/cancelled = neither collected nor outstanding
+    let wholesaleGross = 0, wholesaleCollected = 0, wholesaleOutstanding = 0;
     wholesaleOrders.forEach(o => {
       const sub = parseFloat(o.subtotal || 0);
       wholesaleGross += sub;
-      if (o.status === 'delivered' || o.status === 'confirmed') {
+      if (o.status === 'delivered') {
         wholesaleCollected += sub;
+      } else if (o.status === 'confirmed' || o.status === 'scheduled') {
+        wholesaleOutstanding += sub;
       }
     });
 
+    // ONLINE: customers pay at checkout (pre-paid); delivery_status tracks fulfillment
+    // All non-cancelled orders are collected; cancelled orders are excluded entirely
     let onlineGross = 0, onlineCollected = 0;
     onlineOrders.forEach(o => {
       const total = parseFloat(o.total_amount || 0);
       onlineGross += total;
-      if (o.delivery_status === 'completed') {
+      if (o.delivery_status !== 'cancelled') {
         onlineCollected += total;
       }
     });
 
     const totalGross = driverGross + wholesaleGross + onlineGross;
     const totalCollected = driverCollected + wholesaleCollected + onlineCollected;
-    const totalOutstanding = driverOutstanding + Math.max(0, wholesaleGross - wholesaleCollected) + Math.max(0, onlineGross - onlineCollected);
+    const totalOutstanding = driverOutstanding + wholesaleOutstanding;
 
     // ── Update Stat Cards ──
     document.getElementById('stat-gross-revenue').textContent = formatCurrency(totalGross);
