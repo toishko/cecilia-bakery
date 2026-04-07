@@ -572,8 +572,7 @@
       margin-bottom: 20px;
       flex-wrap: wrap;
     }
-    .action-bar select,
-    .action-bar #filter-date {
+    .action-bar select {
       padding: 8px 14px;
       border: 1px solid var(--bd);
       border-radius: var(--r);
@@ -583,13 +582,9 @@
       font-size: .85rem;
       transition: border-color .2s;
     }
-    .action-bar select:focus,
-    .action-bar #filter-date:focus {
+    .action-bar select:focus {
       outline: none;
       border-color: var(--red);
-    }
-    .action-bar #filter-date.filter-hidden {
-      display: none;
     }
     .refresh-btn {
       display: inline-flex; align-items: center; gap: 6px;
@@ -1185,11 +1180,15 @@
             <div class="action-bar">
               <select id="filter-status">
                 <option value="all" data-en="All Orders" data-es="Todos los Pedidos">All Orders</option>
-                <option value="active" data-en="Active Orders" data-es="Pedidos Activos">Active Orders</option>
                 <option value="pending" data-en="Pending" data-es="Pendiente">Pending</option>
                 <option value="picked_up" data-en="Picked Up" data-es="Recogido">Picked Up</option>
               </select>
-              <input type="text" id="filter-date" placeholder="Date..." data-en-placeholder="Date..." data-es-placeholder="Fecha..." onfocus="(this.type='date')" onblur="if(!this.value) this.type='text'" />
+              <select id="filter-date">
+                <option value="all" data-en="All Time" data-es="Todo el Tiempo">All Time</option>
+                <option value="yesterday" data-en="Yesterday" data-es="Ayer">Yesterday</option>
+                <option value="7days" data-en="Last 7 Days" data-es="Últimos 7 Días">Last 7 Days</option>
+                <option value="30days" data-en="Last 30 Days" data-es="Últimos 30 Días">Last 30 Days</option>
+              </select>
               <button class="refresh-btn" id="refresh-orders-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="23 4 23 10 17 10"/>
@@ -2057,14 +2056,29 @@
           .from('driver_orders')
           .select('*, driver_order_items(*)');
 
-        if (statusFilter === 'active') {
-          query = query.in('status', ['pending']);
-        } else if (statusFilter !== 'all') {
+        if (statusFilter !== 'all') {
           query = query.eq('status', statusFilter);
         }
 
-        if (dateFilter) {
-          query = query.eq('pickup_date', dateFilter);
+        if (dateFilter && dateFilter !== 'all') {
+          const today = new Date();
+          
+          if (dateFilter === 'yesterday') {
+            const y = new Date(today);
+            y.setDate(y.getDate() - 1);
+            const str = y.getFullYear() + '-' + String(y.getMonth()+1).padStart(2,'0') + '-' + String(y.getDate()).padStart(2,'0');
+            query = query.eq('pickup_date', str);
+          } else if (dateFilter === '7days') {
+            const past = new Date(today);
+            past.setDate(past.getDate() - 7);
+            const str = past.getFullYear() + '-' + String(past.getMonth()+1).padStart(2,'0') + '-' + String(past.getDate()).padStart(2,'0');
+            query = query.gte('pickup_date', str);
+          } else if (dateFilter === '30days') {
+            const past = new Date(today);
+            past.setDate(past.getDate() - 30);
+            const str = past.getFullYear() + '-' + String(past.getMonth()+1).padStart(2,'0') + '-' + String(past.getDate()).padStart(2,'0');
+            query = query.gte('pickup_date', str);
+          }
         }
 
         query = query.order('created_at', { ascending: false });
@@ -2643,17 +2657,7 @@
        EVENT LISTENERS
        ════════════════════════════════════════ */
     document.getElementById('refresh-orders-btn').addEventListener('click', loadOrders);
-    document.getElementById('filter-status').addEventListener('change', function() {
-      var dateInput = document.getElementById('filter-date');
-      if (this.value === 'all') {
-        dateInput.classList.remove('filter-hidden');
-      } else {
-        dateInput.classList.add('filter-hidden');
-        dateInput.value = '';
-        dateInput.type = 'text';
-      }
-      loadOrders();
-    });
+    document.getElementById('filter-status').addEventListener('change', loadOrders);
     document.getElementById('filter-date').addEventListener('change', loadOrders);
     document.getElementById('qc-pieces').addEventListener('input', calcQuick);
     document.getElementById('qc-box-size').addEventListener('input', calcQuick);
