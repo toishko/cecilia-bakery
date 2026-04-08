@@ -6491,12 +6491,15 @@ async function _noLoadProducts() {
         grouped[secKey] = { en: p.tag_en, es: p.tag_es || p.tag_en, type: p.type || 'standard', items: [] };
       }
       const itemKey = p.name_en.toLowerCase().replace(/\s+/g, '_');
-      grouped[secKey].items.push({
-        key: itemKey,
-        en: p.name_en,
-        es: p.name_es || p.name_en,
-        cols: p.type === 'redondo' ? ['inside','top','inside_nt','top_nt'] : null
-      });
+      // Deduplicate — skip if item with same key already exists in this section
+      if (!grouped[secKey].items.find(i => i.key === itemKey)) {
+        grouped[secKey].items.push({
+          key: itemKey,
+          en: p.name_en,
+          es: p.name_es || p.name_en,
+          cols: p.type === 'redondo' ? ['inside','top','inside_nt','top_nt'] : null
+        });
+      }
     });
     adminNoProducts = grouped;
     adminNoProductsLoaded = true;
@@ -6512,7 +6515,9 @@ async function _noLoadDriverPrices(driverId) {
 }
 
 async function initAdminOrderForm() {
-  // Ensure products cached
+  // Force a fresh load so deduplication always applies
+  adminNoProductsLoaded = false;
+  adminNoProducts = {};
   await _noLoadProducts();
 
   // Populate driver dropdown
@@ -6621,9 +6626,18 @@ function _noSaveFormToOrder(idx) {
   o.time = (document.getElementById('field-time') || {}).value || '';
   o.ref = (document.getElementById('field-ref') || {}).value || '';
   const section = document.getElementById('section-new-order');
-  if (section) section.querySelectorAll('.qty-input').forEach(inp => {
-    o.qty[inp.dataset.key] = parseInt(inp.value) || 0;
-  });
+  if (section) {
+    // Use Math.max to handle any remaining duplicate DOM keys gracefully —
+    // if the same product key appears more than once (e.g. duplicate DB entry),
+    // we keep the highest value so the user's entered qty is never zeroed out.
+    const tempQty = {};
+    section.querySelectorAll('.qty-input').forEach(inp => {
+      const key = inp.dataset.key;
+      const val = parseInt(inp.value) || 0;
+      tempQty[key] = Math.max(tempQty[key] || 0, val);
+    });
+    Object.assign(o.qty, tempQty);
+  }
 }
 
 function _noUpdateTimeDisplay(val) {
