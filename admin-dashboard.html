@@ -80,6 +80,10 @@
         <span data-en="Driver Orders" data-es="Pedidos de Conductores">Driver Orders</span>
         <span class="nav-badge" id="incoming-badge" style="display:none">0</span>
       </button>
+      <button class="sidebar-nav-item" data-section="new-order">
+        <i data-lucide="plus-circle"></i>
+        <span data-en="New Order" data-es="Nuevo Pedido">New Order</span>
+      </button>
       <button class="sidebar-nav-item" data-section="drivers">
         <i data-lucide="truck"></i>
         <span data-en="Drivers" data-es="Conductores">Drivers</span>
@@ -132,6 +136,10 @@
       <i data-lucide="inbox"></i>
       <span data-en="Driver Orders" data-es="Pedidos de Conductores">Driver Orders</span>
       <span class="nav-badge mobile-badge" id="incoming-badge-mobile" style="display:none">0</span>
+    </button>
+    <button class="mobile-nav-item" data-section="new-order">
+      <i data-lucide="plus-circle"></i>
+      <span data-en="New Order" data-es="Nuevo Pedido">New Order</span>
     </button>
     <button class="mobile-nav-item" data-section="drivers">
       <i data-lucide="truck"></i>
@@ -537,6 +545,60 @@
       <div id="ws-panel-orders" style="display:none"></div>
     </div>
 
+    <!-- ── NEW ORDER ── -->
+    <div id="section-new-order" class="dash-section" style="display:none; padding-bottom: 70px;">
+      <h2 class="page-title" data-en="New Driver Order" data-es="Nuevo Pedido de Conductor">New Driver Order</h2>
+
+      <!-- Driver Selection -->
+      <div class="form-fields" style="margin-bottom: 16px;">
+        <div class="form-field full">
+          <label data-en="Select Driver" data-es="Seleccionar Conductor">Select Driver</label>
+          <select id="no-driver-select" style="padding: 10px; border-radius: 8px; border: 1px solid var(--bd-input); background: var(--bg-input); color: var(--tx); font-family: 'Outfit'; font-size: 0.9rem;">
+            <option value="" data-en="— Select Driver —" data-es="— Seleccionar Conductor —">— Select Driver —</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="no-order-container" style="display:none; transition: opacity 0.2s;">
+        <!-- Order Tabs -->
+        <div class="order-tabs" id="order-tabs"></div>
+
+        <!-- Header Fields -->
+        <div class="form-fields">
+          <div class="form-field full">
+            <label data-en="Business / Delivery To" data-es="Negocio / Entregar a">Business / Delivery To</label>
+            <input type="text" id="field-business" data-en-placeholder="Where is this order going?" data-es-placeholder="¿A dónde va este pedido?" placeholder="Where is this order going?">
+          </div>
+          <div class="form-field">
+            <label data-en="Date" data-es="Fecha">Date</label>
+            <input type="date" id="field-date">
+          </div>
+          <div class="form-field">
+            <label data-en="Time" data-es="Hora">Time</label>
+            <div class="time-display" id="field-time-display">
+              <span id="field-time-text" data-en-placeholder="Select time" data-es-placeholder="Seleccionar hora">Select time</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <input type="hidden" id="field-time">
+          </div>
+          <div class="form-field full">
+            <label data-en="Order Ref #" data-es="Referencia #">Order Ref #</label>
+            <input type="text" id="field-ref" data-en-placeholder="Optional reference" data-es-placeholder="Referencia opcional" placeholder="Optional reference">
+          </div>
+        </div>
+
+        <!-- Search -->
+        <div class="form-search">
+          <i data-lucide="search"></i>
+          <input type="text" id="product-search" data-en-placeholder="Search products..." data-es-placeholder="Buscar productos..." placeholder="Search products...">
+          <button class="form-search-clear" id="search-clear">✕</button>
+        </div>
+
+        <!-- Product Sections -->
+        <div id="product-sections"></div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -550,6 +612,52 @@
     </div>
     <div id="detail-content"></div>
     <div class="detail-actions" id="detail-actions"></div>
+  </div>
+</div>
+
+<!-- ── NEW ORDER MODALS ── -->
+<!-- CUSTOM TIME PICKER MODAL -->
+<div class="tp-overlay" id="tp-overlay">
+  <div class="tp-modal">
+    <div class="tp-handle"></div>
+    <div class="tp-title" data-en="Select Time" data-es="Seleccionar Hora">Select Time</div>
+    <div class="tp-columns">
+      <div class="tp-col" id="tp-hour"><div class="tp-col-inner" id="tp-hour-inner"></div></div>
+      <span class="tp-colon">:</span>
+      <div class="tp-col" id="tp-minute"><div class="tp-col-inner" id="tp-minute-inner"></div></div>
+      <div class="tp-col" id="tp-period"><div class="tp-col-inner" id="tp-period-inner"></div></div>
+    </div>
+    <div class="tp-actions">
+      <button class="tp-cancel" id="tp-cancel" data-en="Cancel" data-es="Cancelar">Cancel</button>
+      <button class="tp-confirm" id="tp-confirm" data-en="Confirm" data-es="Confirmar">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER BAR (only visible during order form) -->
+<div class="form-footer" id="form-footer" style="display:none; z-index: 9999;">
+  <div class="form-footer-count"><span data-en="Items:" data-es="Artículos:">Items:</span> <strong id="footer-item-count">0</strong></div>
+  <button class="form-footer-btn" id="footer-continue-btn" disabled data-en="Continue" data-es="Continuar">Continue</button>
+</div>
+
+<!-- SUMMARY MODAL -->
+<div class="summary-overlay" id="summary-overlay">
+  <div class="summary-modal">
+    <div class="summary-handle"></div>
+    <div class="summary-nav">
+      <button class="summary-nav-btn" id="summary-prev">←</button>
+      <h3 class="summary-title" id="summary-title">Order 1 of 1</h3>
+      <button class="summary-nav-btn" id="summary-next">→</button>
+    </div>
+    <div id="summary-content"></div>
+    <div class="summary-notes">
+      <label data-en="Notes" data-es="Notas">Notes</label>
+      <textarea id="summary-notes" data-en-placeholder="Any special instructions..." data-es-placeholder="Instrucciones especiales..." placeholder="Any special instructions..."></textarea>
+    </div>
+    <div class="summary-actions">
+      <button class="btn-back" id="summary-back" data-en="Go Back" data-es="Regresar">Go Back</button>
+      <button class="btn-submit" id="summary-submit" data-en="Submit Order" data-es="Enviar Pedido">Submit Order</button>
+    </div>
   </div>
 </div>
 

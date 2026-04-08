@@ -152,6 +152,12 @@ async function showSection(name) {
   const target = document.getElementById('section-' + name);
   if (target) target.style.display = 'block';
 
+  // Hide the new-order footer bar if navigating away
+  if (name !== 'new-order') {
+    const ff = document.getElementById('form-footer');
+    if (ff) ff.style.display = 'none';
+  }
+
   // Update nav active states
   document.querySelectorAll('.sidebar-nav-item, .mobile-nav-item').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.section === name);
@@ -176,10 +182,10 @@ async function showSection(name) {
     } catch (_) {}
   }
 
-  // Load section data
   if (name === 'overview') loadOverview();
   if (name === 'online-orders') { loadOnlineOrders(); markAllOnlineOrdersSeen(); }
   if (name === 'incoming') loadIncomingOrders();
+  if (name === 'new-order') initAdminOrderForm();
   if (name === 'history') loadHistoryOrders(true);
   if (name === 'drivers') {
     const subview = sessionStorage.getItem('driver_subview');
@@ -201,6 +207,7 @@ window.__adminRefresh = async function () {
     overview:  loadOverview,
     'online-orders': loadOnlineOrders,
     incoming:  loadIncomingOrders,
+    'new-order': initAdminOrderForm,
     drivers:   loadDriverList,
     history:   () => loadHistoryOrders(true),
     products:  loadProductManager,
@@ -6432,3 +6439,645 @@ function _b2bOpenModal(product) {
 
   overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
 }
+
+/* ═══════════════════════════════════
+   ADMIN NEW ORDER
+   Mirrors the driver-side "New Order" tab exactly.
+   Admin selects a driver → their prices are loaded →
+   products are shown → order is submitted as if the
+   driver placed it themselves (status: 'pending', payment: 'not_paid').
+   ═══════════════════════════════════ */
+
+let adminNoOrders = [];
+let adminNoActiveOrderIdx = 0;
+let adminNoProducts = {};
+let adminNoSelectedDriverId = null;
+let adminNoDriverPriceMap = {};
+let adminNoSummaryIdx = 0;
+let adminNoProductsLoaded = false;
+
+function _noL(obj) { return obj[lang] || obj.en; }
+
+function _noGetTodayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function _noCreateBlankOrder() {
+  const qty = {};
+  Object.values(adminNoProducts).forEach(sec => {
+    sec.items.forEach(item => {
+      if (sec.type === 'redondo') {
+        ['inside','top','inside_nt','top_nt'].forEach(c => { qty[item.key + '_' + c] = 0; });
+      } else {
+        qty[item.key] = 0;
+        qty[item.key + '_nt'] = 0;
+      }
+    });
+  });
+  return { business: '', date: _noGetTodayStr(), time: '', ref: '', notes: '', qty };
+}
+
+async function _noLoadProducts() {
+  if (adminNoProductsLoaded) return;
+  try {
+    const { data, error } = await sb.from('b2b_products').select('*').order('sort_order', { ascending: true });
+    if (error || !data || data.length === 0) return;
+    const available = data.filter(p => !p.sold_out);
+    const grouped = {};
+    available.forEach(p => {
+      const secKey = p.tag_en.toLowerCase().replace(/\s+/g, '_');
+      if (!grouped[secKey]) {
+        grouped[secKey] = { en: p.tag_en, es: p.tag_es || p.tag_en, type: p.type || 'standard', items: [] };
+      }
+      const itemKey = p.name_en.toLowerCase().replace(/\s+/g, '_');
+      grouped[secKey].items.push({
+        key: itemKey,
+        en: p.name_en,
+        es: p.name_es || p.name_en,
+        cols: p.type === 'redondo' ? ['inside','top','inside_nt','top_nt'] : null
+      });
+    });
+    adminNoProducts = grouped;
+    adminNoProductsLoaded = true;
+  } catch (err) { console.warn('Admin New Order: product load failed', err); }
+}
+
+async function _noLoadDriverPrices(driverId) {
+  try {
+    const { data } = await sb.from('driver_prices').select('product_key, price').eq('driver_id', driverId);
+    adminNoDriverPriceMap = {};
+    if (data) data.forEach(p => adminNoDriverPriceMap[p.product_key] = parseFloat(p.price));
+  } catch(e) { console.warn('Admin New Order: prices load failed', e); }
+}
+
+async function initAdminOrderForm() {
+  // Ensure products cached
+  await _noLoadProducts();
+
+  // Populate driver dropdown
+  if (driversCache.length === 0) await loadDriversCache();
+  const select = document.getElementById('no-driver-select');
+  if (!select) return;
+
+  select.innerHTML = '<option value="">— Select Driver —</option>';
+  driversCache.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.id;
+    opt.textContent = d.name;
+    select.appendChild(opt);
+  });
+
+  // Restore previously selected driver if switching back to tab
+  if (adminNoSelectedDriverId) {
+    select.value = adminNoSelectedDriverId;
+    _noShowFormContainer();
+  }
+
+  select.onchange = async () => {
+    adminNoSelectedDriverId = select.value || null;
+    if (adminNoSelectedDriverId) {
+      await _noLoadDriverPrices(adminNoSelectedDriverId);
+      // Reset orders when changing driver
+      adminNoOrders = [_noCreateBlankOrder()];
+      adminNoActiveOrderIdx = 0;
+      _noShowFormContainer();
+    } else {
+      document.getElementById('no-order-container').style.display = 'none';
+      document.getElementById('form-footer').style.display = 'none';
+    }
+  };
+}
+
+function _noShowFormContainer() {
+  if (adminNoOrders.length === 0) adminNoOrders = [_noCreateBlankOrder()];
+  document.getElementById('no-order-container').style.display = 'block';
+  _noRenderOrderTabs();
+  _noBuildProductSections();
+  _noLoadOrderToForm(adminNoActiveOrderIdx);
+  document.getElementById('form-footer').style.display = 'flex';
+  _noUpdateFooterCount();
+}
+
+/* ── TABS ── */
+function _noRenderOrderTabs() {
+  const container = document.getElementById('order-tabs');
+  if (!container) return;
+  let html = '';
+  adminNoOrders.forEach((_, i) => {
+    html += `<button class="order-tab${i === adminNoActiveOrderIdx ? ' active' : ''}" data-idx="${i}">Order ${i + 1}`;
+    if (adminNoOrders.length > 1) html += `<span class="order-tab-delete" data-delidx="${i}" title="Remove">✕</span>`;
+    html += `</button>`;
+  });
+  html += `<button class="order-tab-add" id="no-add-order-btn">+</button>`;
+  container.innerHTML = html;
+
+  container.querySelectorAll('.order-tab').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      if (e.target.classList.contains('order-tab-delete')) return;
+      _noSwitchOrder(parseInt(btn.dataset.idx));
+    });
+  });
+  container.querySelectorAll('.order-tab-delete').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); _noRemoveOrder(parseInt(btn.dataset.delidx)); });
+  });
+  const addBtn = document.getElementById('no-add-order-btn');
+  if (addBtn) addBtn.addEventListener('click', _noAddOrder);
+}
+
+function _noSwitchOrder(idx) {
+  _noSaveFormToOrder(adminNoActiveOrderIdx);
+  adminNoActiveOrderIdx = idx;
+  _noRenderOrderTabs();
+  _noLoadOrderToForm(idx);
+  _noUpdateFooterCount();
+}
+
+function _noAddOrder() {
+  _noSaveFormToOrder(adminNoActiveOrderIdx);
+  adminNoOrders.push(_noCreateBlankOrder());
+  adminNoActiveOrderIdx = adminNoOrders.length - 1;
+  _noRenderOrderTabs();
+  _noLoadOrderToForm(adminNoActiveOrderIdx);
+  _noUpdateFooterCount();
+}
+
+function _noRemoveOrder(idx) {
+  if (adminNoOrders.length <= 1) return;
+  adminNoOrders.splice(idx, 1);
+  if (adminNoActiveOrderIdx >= adminNoOrders.length) adminNoActiveOrderIdx = adminNoOrders.length - 1;
+  else if (adminNoActiveOrderIdx > idx) adminNoActiveOrderIdx--;
+  _noRenderOrderTabs();
+  _noLoadOrderToForm(adminNoActiveOrderIdx);
+  _noUpdateFooterCount();
+}
+
+/* ── FORM SYNC ── */
+function _noSaveFormToOrder(idx) {
+  const o = adminNoOrders[idx];
+  if (!o) return;
+  o.business = (document.getElementById('field-business') || {}).value || '';
+  o.date = (document.getElementById('field-date') || {}).value || '';
+  o.time = (document.getElementById('field-time') || {}).value || '';
+  o.ref = (document.getElementById('field-ref') || {}).value || '';
+  const section = document.getElementById('section-new-order');
+  if (section) section.querySelectorAll('.qty-input').forEach(inp => {
+    o.qty[inp.dataset.key] = parseInt(inp.value) || 0;
+  });
+}
+
+function _noUpdateTimeDisplay(val) {
+  const textEl = document.getElementById('field-time-text');
+  if (!textEl) return;
+  if (val) {
+    let [h, m] = val.split(':');
+    let period = 'AM';
+    h = parseInt(h);
+    if (h >= 12) { period = 'PM'; if (h > 12) h -= 12; }
+    if (h === 0) h = 12;
+    textEl.textContent = `${h}:${m || '00'} ${period}`;
+    textEl.style.color = 'var(--tx)';
+  } else {
+    textEl.textContent = 'Select time';
+    textEl.style.color = 'var(--tx-faint)';
+  }
+}
+
+function _noLoadOrderToForm(idx) {
+  const o = adminNoOrders[idx];
+  if (!o) return;
+  const bEl = document.getElementById('field-business');
+  const dEl = document.getElementById('field-date');
+  const tEl = document.getElementById('field-time');
+  const rEl = document.getElementById('field-ref');
+  if (bEl) bEl.value = o.business;
+  if (dEl) dEl.value = o.date;
+  if (tEl) tEl.value = o.time;
+  if (rEl) rEl.value = o.ref;
+  _noUpdateTimeDisplay(o.time);
+
+  const section = document.getElementById('section-new-order');
+  if (section) section.querySelectorAll('.qty-input').forEach(inp => {
+    inp.value = o.qty[inp.dataset.key] || 0;
+    _noUpdateRowHighlight(inp);
+  });
+}
+
+function _noUpdateRowHighlight(inp) {
+  const row = inp.closest('.prod-row');
+  if (!row) return;
+  const hasVal = Array.from(row.querySelectorAll('.qty-input')).some(i => parseInt(i.value) > 0);
+  row.classList.toggle('has-value', hasVal);
+}
+
+function _noUpdateFooterCount() {
+  let total = 0;
+  const section = document.getElementById('section-new-order');
+  if (section) section.querySelectorAll('.qty-input').forEach(inp => { total += parseInt(inp.value) || 0; });
+  const countEl = document.getElementById('footer-item-count');
+  const contBtn = document.getElementById('footer-continue-btn');
+  if (countEl) countEl.textContent = total;
+  if (contBtn) contBtn.disabled = total === 0;
+}
+
+function _noQtyControl(key) {
+  return `<div class="qty-wrap"><button class="qty-btn" data-dir="-">−</button><input type="number" class="qty-input" data-key="${key}" value="0" min="0"><button class="qty-btn" data-dir="+">+</button></div>`;
+}
+
+function _noBuildProductSections() {
+  const container = document.getElementById('product-sections');
+  if (!container) return;
+  let html = '';
+
+  Object.entries(adminNoProducts).forEach(([secKey, sec]) => {
+    if (sec.items.length === 0) return;
+    html += `<div class="acc-section" id="no-sec-${secKey}">`;
+    html += `<div class="acc-header"><span class="acc-title">${_noL(sec)}</span><svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>`;
+    html += `<div class="acc-body"><div class="prod-table">`;
+
+    if (sec.type === 'redondo') {
+      sec.items.forEach(item => {
+        const insideLabel = `${_noL(item)} — Inside`;
+        html += `<div class="prod-row"><span class="prod-name">${insideLabel}</span>`;
+        html += `<div class="prod-qty-group"><span class="prod-qty-label">Qty</span>${_noQtyControl(item.key + '_inside')}</div>`;
+        html += `<div class="prod-qty-group"><span class="prod-qty-label">No Tkt</span>${_noQtyControl(item.key + '_inside_nt')}</div></div>`;
+        const topLabel = `${_noL(item)} — Top`;
+        html += `<div class="prod-row"><span class="prod-name">${topLabel}</span>`;
+        html += `<div class="prod-qty-group"><span class="prod-qty-label">Qty</span>${_noQtyControl(item.key + '_top')}</div>`;
+        html += `<div class="prod-qty-group"><span class="prod-qty-label">No Tkt</span>${_noQtyControl(item.key + '_top_nt')}</div></div>`;
+      });
+    } else {
+      sec.items.forEach(item => {
+        html += `<div class="prod-row"><span class="prod-name">${_noL(item)}</span>`;
+        html += `<div class="prod-qty-group"><span class="prod-qty-label">Qty</span>${_noQtyControl(item.key)}</div>`;
+        html += `<div class="prod-qty-group"><span class="prod-qty-label">No Tkt</span>${_noQtyControl(item.key + '_nt')}</div></div>`;
+      });
+    }
+    html += `</div></div></div>`;
+  });
+
+  container.innerHTML = html;
+
+  container.querySelectorAll('.acc-header').forEach(hdr => {
+    hdr.addEventListener('click', () => hdr.closest('.acc-section').classList.toggle('open'));
+  });
+  container.querySelectorAll('.qty-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const inp = btn.parentElement.querySelector('.qty-input');
+      const cur = parseInt(inp.value) || 0;
+      inp.value = Math.max(0, cur + (btn.dataset.dir === '+' ? 1 : -1));
+      _noUpdateRowHighlight(inp);
+      _noUpdateFooterCount();
+      if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+    });
+  });
+  container.querySelectorAll('.qty-input').forEach(inp => {
+    inp.addEventListener('focus', () => { if (inp.value === '0') inp.value = ''; });
+    inp.addEventListener('blur', () => {
+      if (inp.value === '') inp.value = '0';
+      _noUpdateRowHighlight(inp);
+      _noUpdateFooterCount();
+    });
+  });
+}
+
+function _noHandleSearch() {
+  const q = (document.getElementById('product-search') || {}).value?.toLowerCase().trim() || '';
+  const clearBtn = document.getElementById('search-clear');
+  if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
+  const section = document.getElementById('section-new-order');
+  if (!section) return;
+  section.querySelectorAll('.acc-section').forEach(sec => {
+    let hasMatch = false;
+    sec.querySelectorAll('.prod-row').forEach(row => {
+      const name = row.querySelector('.prod-name')?.textContent.toLowerCase() || '';
+      const match = !q || name.includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) hasMatch = true;
+    });
+    sec.style.display = hasMatch ? '' : 'none';
+    if (q && hasMatch) sec.classList.add('open');
+  });
+}
+
+/* ── SUMMARY ── */
+function _noOpenSummary() {
+  _noSaveFormToOrder(adminNoActiveOrderIdx);
+  adminNoSummaryIdx = 0;
+  _noRenderSummaryOrder(0);
+  const overlay = document.getElementById('summary-overlay');
+  if (overlay) overlay.classList.add('open');
+}
+
+function _noCloseSummary() {
+  const overlay = document.getElementById('summary-overlay');
+  if (overlay) overlay.classList.remove('open');
+}
+
+function _noNavigateSummary(dir) {
+  const notesEl = document.getElementById('summary-notes');
+  if (notesEl) adminNoOrders[adminNoSummaryIdx].notes = notesEl.value;
+  adminNoSummaryIdx = Math.max(0, Math.min(adminNoOrders.length - 1, adminNoSummaryIdx + dir));
+  _noRenderSummaryOrder(adminNoSummaryIdx);
+}
+
+function _noRenderSummaryOrder(idx) {
+  const o = adminNoOrders[idx];
+  const titleEl = document.getElementById('summary-title');
+  if (titleEl) titleEl.textContent = `Order ${idx+1} of ${adminNoOrders.length}`;
+  const prevBtn = document.getElementById('summary-prev');
+  const nextBtn = document.getElementById('summary-next');
+  if (prevBtn) prevBtn.disabled = idx === 0;
+  if (nextBtn) nextBtn.disabled = idx === adminNoOrders.length - 1;
+
+  let html = '';
+  if (o.business || o.date || o.time || o.ref) {
+    html += '<div class="summary-meta">';
+    if (o.business) html += `<div><strong>Business:</strong> ${o.business}</div>`;
+    if (o.date) html += `<div><strong>Date:</strong> ${o.date}</div>`;
+    if (o.time) html += `<div><strong>Time:</strong> ${o.time}</div>`;
+    if (o.ref) html += `<div><strong>Ref:</strong> ${o.ref}</div>`;
+    html += '</div>';
+  }
+
+  let grandTotal = 0;
+  let hasAnyPrice = false;
+  Object.entries(adminNoProducts).forEach(([, sec]) => {
+    const items = [];
+    sec.items.forEach(item => {
+      if (sec.type === 'redondo') {
+        ['inside','top','inside_nt','top_nt'].forEach(col => {
+          const k = item.key + '_' + col;
+          const v = o.qty[k] || 0;
+          if (v > 0) {
+            const colClean = col.replace('_nt','').replace('inside','Inside').replace('top','Top');
+            const isNT = col.includes('nt');
+            items.push({ name: `${_noL(item)} (${colClean})`, qty: v, nt: isNT, key: k, price: adminNoDriverPriceMap[k] });
+          }
+        });
+      } else {
+        const v = o.qty[item.key] || 0;
+        const vnt = o.qty[item.key + '_nt'] || 0;
+        if (v > 0) items.push({ name: _noL(item), qty: v, nt: false, key: item.key, price: adminNoDriverPriceMap[item.key] });
+        if (vnt > 0) items.push({ name: _noL(item), qty: vnt, nt: true, key: item.key + '_nt', price: adminNoDriverPriceMap[item.key + '_nt'] });
+      }
+    });
+    if (items.length > 0) {
+      html += `<div class="summary-section"><div class="summary-section-title">${_noL(sec)}</div>`;
+      items.forEach(it => {
+        const hasPrice = it.price != null && it.price > 0;
+        if (hasPrice) hasAnyPrice = true;
+        const priceStr = hasPrice ? `$${it.price.toFixed(2)}` : '—';
+        const lineTotal = hasPrice ? it.qty * it.price : 0;
+        if (hasPrice) grandTotal += lineTotal;
+        html += `<div class="summary-item">
+          <span class="summary-item-name">${it.name}${it.nt ? '<span class="no-ticket-tag">No Ticket</span>' : ''}</span>
+          <span class="summary-item-price-col">
+            <span class="summary-item-qty">×${it.qty}</span>
+            <span class="summary-item-unit">${priceStr}</span>
+            <span class="summary-item-line">${hasPrice ? '$' + lineTotal.toFixed(2) : ''}</span>
+          </span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+  });
+
+  if (hasAnyPrice) html += `<div class="summary-total"><span>Total</span><span>$${grandTotal.toFixed(2)}</span></div>`;
+  if (!html) html = `<div class="empty-state">No items</div>`;
+
+  const contentEl = document.getElementById('summary-content');
+  if (contentEl) contentEl.innerHTML = html;
+  const notesEl = document.getElementById('summary-notes');
+  if (notesEl) notesEl.value = o.notes || '';
+}
+
+/* ── SUBMIT ── */
+async function _noSubmitAllOrders() {
+  const notesEl = document.getElementById('summary-notes');
+  if (notesEl) adminNoOrders[adminNoSummaryIdx].notes = notesEl.value;
+
+  const submitBtn = document.getElementById('summary-submit');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting...'; }
+
+  try {
+    const batchId = crypto.randomUUID();
+    const editableUntil = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+    for (let i = 0; i < adminNoOrders.length; i++) {
+      const o = adminNoOrders[i];
+      const items = [];
+
+      Object.entries(adminNoProducts).forEach(([, sec]) => {
+        sec.items.forEach(item => {
+          if (sec.type === 'redondo') {
+            ['inside','top','inside_nt','top_nt'].forEach(col => {
+              const k = item.key + '_' + col;
+              const v = o.qty[k] || 0;
+              if (v > 0) {
+                const ntTag = col.endsWith('_nt') ? ' (No Ticket)' : '';
+                const colClean = col.replace('_nt','');
+                items.push({ product_key: k, product_label: `${item.en} (${colClean})${ntTag}`, quantity: v });
+              }
+            });
+          } else {
+            const v = o.qty[item.key] || 0;
+            const vnt = o.qty[item.key + '_nt'] || 0;
+            if (v > 0) items.push({ product_key: item.key, product_label: item.en, quantity: v });
+            if (vnt > 0) items.push({ product_key: item.key + '_nt', product_label: item.en + ' (No Ticket)', quantity: vnt });
+          }
+        });
+      });
+
+      if (items.length === 0) continue;
+
+      const orderPayload = {
+        driver_id: adminNoSelectedDriverId,
+        batch_id: batchId,
+        business_name: o.business || null,
+        pickup_date: o.date || null,
+        pickup_time: o.time || null,
+        driver_ref: o.ref || null,
+        notes: o.notes || null,
+        status: 'pending',
+        payment_status: 'not_paid',
+        editable_until: editableUntil,
+      };
+
+      let { data: orderData, error: orderErr } = await sb.from('driver_orders').insert(orderPayload).select('id').single();
+      if (orderErr) {
+        // Retry without batch_id in case column doesn't exist yet
+        delete orderPayload.batch_id;
+        const res = await sb.from('driver_orders').insert(orderPayload).select('id').single();
+        orderData = res.data; orderErr = res.error;
+      }
+      if (orderErr) throw orderErr;
+
+      const orderItems = items.map(it => ({
+        order_id: orderData.id,
+        product_key: it.product_key,
+        product_label: it.product_label,
+        quantity: it.quantity,
+        price_at_order: adminNoDriverPriceMap[it.product_key] || 0,
+      }));
+
+      await sb.from('driver_order_items').insert(orderItems);
+      const orderTotal = orderItems.reduce((sum, it) => sum + it.quantity * it.price_at_order, 0);
+      await sb.from('driver_orders').update({ total_amount: orderTotal }).eq('id', orderData.id);
+    }
+
+    _noCloseSummary();
+    showToast('Order submitted successfully!', 'success');
+
+    // Reset state
+    adminNoOrders = [];
+    adminNoActiveOrderIdx = 0;
+    adminNoSelectedDriverId = null;
+    adminNoDriverPriceMap = {};
+    const driverSelect = document.getElementById('no-driver-select');
+    if (driverSelect) driverSelect.value = '';
+    document.getElementById('no-order-container').style.display = 'none';
+    document.getElementById('form-footer').style.display = 'none';
+
+    // Navigate to Driver Orders so admin can see the new order
+    showSection('incoming');
+
+  } catch (err) {
+    console.error('Admin New Order submit error:', err);
+    showToast('Error: ' + err.message, 'error');
+  } finally {
+    if (submitBtn) { submitBtn.textContent = 'Submit Order'; submitBtn.disabled = false; }
+  }
+}
+
+/* ── TIME PICKER (Admin New Order) ── */
+let _noTpCallback = null;
+
+function _noInitTimePicker(initialVal, cb) {
+  _noTpCallback = cb;
+  const overlay = document.getElementById('tp-overlay');
+  if (!overlay) return;
+
+  let currentH = 5, currentM = 30, currentP = 'AM';
+  if (initialVal) {
+    let [hStr, mStr] = initialVal.split(':');
+    let h = parseInt(hStr), m = parseInt(mStr) || 0;
+    currentP = h >= 12 ? 'PM' : 'AM';
+    if (h > 12) h -= 12;
+    if (h === 0) h = 12;
+    currentH = h; currentM = m;
+  }
+
+  const buildCol = (innerId, values, activeVal) => {
+    const inner = document.getElementById(innerId);
+    if (!inner) return;
+    inner.innerHTML = '';
+    values.forEach(v => {
+      const div = document.createElement('div');
+      div.className = 'tp-item' + (v === activeVal ? ' active' : '');
+      div.textContent = typeof v === 'number' && innerId !== 'tp-period-inner' ? String(v).padStart(2, '0') : v;
+      inner.appendChild(div);
+      div.addEventListener('click', () => {
+        inner.querySelectorAll('.tp-item').forEach(i => i.classList.remove('active'));
+        div.classList.add('active');
+      });
+    });
+    // Scroll to active
+    setTimeout(() => {
+      const active = inner.querySelector('.active');
+      if (active) inner.scrollTop = active.offsetTop - inner.parentElement.offsetHeight / 2 + 20;
+    }, 10);
+  };
+
+  buildCol('tp-hour-inner', [12,1,2,3,4,5,6,7,8,9,10,11], currentH);
+  buildCol('tp-minute-inner', [0,15,30,45], currentM);
+  buildCol('tp-period-inner', ['AM','PM'], currentP);
+
+  overlay.classList.add('open');
+
+  const cancelBtn = document.getElementById('tp-cancel');
+  const confirmBtn = document.getElementById('tp-confirm');
+  if (cancelBtn) cancelBtn.onclick = () => overlay.classList.remove('open');
+  if (confirmBtn) confirmBtn.onclick = () => {
+    const hActive = document.getElementById('tp-hour-inner')?.querySelector('.active');
+    const mActive = document.getElementById('tp-minute-inner')?.querySelector('.active');
+    const pActive = document.getElementById('tp-period-inner')?.querySelector('.active');
+    if (!hActive || !mActive || !pActive) { overlay.classList.remove('open'); return; }
+    let h = parseInt(hActive.textContent);
+    const mVal = mActive.textContent;
+    const pStr = pActive.textContent;
+    if (pStr === 'PM' && h !== 12) h += 12;
+    if (pStr === 'AM' && h === 12) h = 0;
+    const val = String(h).padStart(2,'0') + ':' + mVal;
+    const disp = hActive.textContent + ':' + mVal + ' ' + pStr;
+    overlay.classList.remove('open');
+    if (_noTpCallback) _noTpCallback(val, disp);
+  };
+}
+
+/* ── WIRE UP STATIC EVENT LISTENERS ON DOM  ── */
+(function _noBindStaticListeners() {
+  function doWire() {
+    const timeDisplay = document.getElementById('field-time-display');
+    if (timeDisplay) {
+      timeDisplay.addEventListener('click', () => {
+        const currentVal = (document.getElementById('field-time') || {}).value || '';
+        _noInitTimePicker(currentVal, (val, disp) => {
+          const tEl = document.getElementById('field-time');
+          const textEl = document.getElementById('field-time-text');
+          if (tEl) tEl.value = val;
+          if (textEl) { textEl.textContent = disp; textEl.style.color = 'var(--tx)'; }
+        });
+      });
+    }
+
+    const contBtn = document.getElementById('footer-continue-btn');
+    if (contBtn && !contBtn._noBound) {
+      contBtn._noBound = true;
+      contBtn.addEventListener('click', _noOpenSummary);
+    }
+
+    const sumPrev = document.getElementById('summary-prev');
+    if (sumPrev && !sumPrev._noBound) {
+      sumPrev._noBound = true;
+      sumPrev.addEventListener('click', () => _noNavigateSummary(-1));
+    }
+    const sumNext = document.getElementById('summary-next');
+    if (sumNext && !sumNext._noBound) {
+      sumNext._noBound = true;
+      sumNext.addEventListener('click', () => _noNavigateSummary(1));
+    }
+    const sumBack = document.getElementById('summary-back');
+    if (sumBack && !sumBack._noBound) {
+      sumBack._noBound = true;
+      sumBack.addEventListener('click', _noCloseSummary);
+    }
+    const sumSubmit = document.getElementById('summary-submit');
+    if (sumSubmit && !sumSubmit._noBound) {
+      sumSubmit._noBound = true;
+      sumSubmit.addEventListener('click', _noSubmitAllOrders);
+    }
+
+    const searchEl = document.getElementById('product-search');
+    if (searchEl && !searchEl._noBound) {
+      searchEl._noBound = true;
+      searchEl.addEventListener('input', _noHandleSearch);
+    }
+    const clearBtn = document.getElementById('search-clear');
+    if (clearBtn && !clearBtn._noBound) {
+      clearBtn._noBound = true;
+      clearBtn.addEventListener('click', () => {
+        const s = document.getElementById('product-search');
+        if (s) s.value = '';
+        _noHandleSearch();
+      });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', doWire);
+  } else {
+    doWire();
+  }
+})();
