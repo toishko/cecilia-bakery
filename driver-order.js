@@ -1073,44 +1073,12 @@ function buildProductSections() {
    LOAD PRODUCTS FROM SUPABASE
    ═══════════════════════════════════ */
 async function loadDriverProducts() {
-  if (!sb) return;
-  try {
-    const { data, error } = await sb
-      .from('b2b_products')
-      .select('*')
-      .order('sort_order', { ascending: true });
-
-    if (error || !data || data.length === 0) {
-      console.warn('Driver: using hardcoded fallback product catalog');
-      return;
-    }
-
-    const available = data.filter(p => !p.sold_out);
-
-    // Group rows by tag_en — each tag becomes a section
-    const grouped = {};
-    available.forEach(p => {
-      const secKey = p.tag_en.toLowerCase().replace(/\s+/g, '_');
-      if (!grouped[secKey]) {
-        grouped[secKey] = {
-          en: p.tag_en,
-          es: p.tag_es || p.tag_en,
-          type: 'standard',
-          items: []
-        };
-      }
-      grouped[secKey].items.push({
-        key: p.name_en.toLowerCase().replace(/\s+/g, '_'),
-        en: p.name_en,
-        es: p.name_es || p.name_en,
-      });
-    });
-
-    PRODUCTS = grouped;
-    _log('Driver: loaded', data.length, 'products from Supabase');
-  } catch (err) {
-    console.warn('Driver: product load failed, using hardcoded fallback:', err);
-  }
+  // The hardcoded PRODUCTS catalog above uses canonical keys (e.g. hb_s_pina,
+  // pz_pina, fr_pina) that match driver_prices exactly. Loading from
+  // b2b_products would generate naive keys from name_en (e.g. "piña" for ALL
+  // Piña variants), breaking price lookups and causing duplicate items.
+  // Keep using the hardcoded catalog until b2b_products stores proper keys.
+  _log('Driver: using hardcoded product catalog (canonical keys)');
 }
 
 // ── Load driver prices into global map (for summary display) ──

@@ -6480,30 +6480,103 @@ function _noCreateBlankOrder() {
 
 async function _noLoadProducts() {
   if (adminNoProductsLoaded) return;
-  try {
-    const { data, error } = await sb.from('b2b_products').select('*').order('sort_order', { ascending: true });
-    if (error || !data || data.length === 0) return;
-    const available = data.filter(p => !p.sold_out);
-    const grouped = {};
-    available.forEach(p => {
-      const secKey = p.tag_en.toLowerCase().replace(/\s+/g, '_');
-      if (!grouped[secKey]) {
-        grouped[secKey] = { en: p.tag_en, es: p.tag_es || p.tag_en, type: p.type || 'standard', items: [] };
-      }
-      const itemKey = p.name_en.toLowerCase().replace(/\s+/g, '_');
-      // Deduplicate — skip if item with same key already exists in this section
-      if (!grouped[secKey].items.find(i => i.key === itemKey)) {
-        grouped[secKey].items.push({
-          key: itemKey,
-          en: p.name_en,
-          es: p.name_es || p.name_en,
-          cols: p.type === 'redondo' ? ['inside','top','inside_nt','top_nt'] : null
-        });
-      }
-    });
-    adminNoProducts = grouped;
-    adminNoProductsLoaded = true;
-  } catch (err) { console.warn('Admin New Order: product load failed', err); }
+
+  // Use the canonical hardcoded catalog — keys match driver_prices exactly
+  adminNoProducts = {
+    redondo: {
+      en: 'Round', es: 'Redondo', type: 'redondo',
+      items: [
+        { key: 'pina', en: 'Piña', es: 'Piña', cols: ['inside','inside_nt','top','top_nt'] },
+        { key: 'guava', en: 'Guava', es: 'Guayaba', cols: ['inside','inside_nt','top','top_nt'] },
+        { key: 'dulce', en: 'Dulce De Leche', es: 'Dulce De Leche', cols: ['inside','inside_nt'] },
+      ]
+    },
+    plain: {
+      en: 'Plain', es: 'Plain', type: 'standard',
+      items: [
+        { key: 'plain', en: 'Plain', es: 'Plain' },
+        { key: 'raisin', en: 'Raisin', es: 'Pasas' },
+        { key: 'pudin', en: 'Pudin', es: 'Pudín' },
+      ]
+    },
+    tresleche: {
+      en: 'Tres Leche', es: 'Tres Leche', type: 'standard',
+      items: [
+        { key: 'tl', en: 'Tres Leche', es: 'Tres Leche' },
+        { key: 'tl_hershey', en: 'Tres Leche Hershey', es: 'Tres Leche Hershey' },
+        { key: 'cuatro_leche', en: 'Cuatro Leche', es: 'Cuatro Leche' },
+        { key: 'tl_straw', en: 'Tres Leche Strawberry', es: 'Tres Leche Fresa' },
+        { key: 'tl_pina', en: 'Tres Leche Piña', es: 'Tres Leche Piña' },
+      ]
+    },
+    piezas: {
+      en: 'Pieces', es: 'Piezas', type: 'standard',
+      items: [
+        { key: 'pz_rv', en: 'Red Velvet', es: 'Red Velvet' },
+        { key: 'pz_carrot', en: 'Carrot Cake', es: 'Zanahoria' },
+        { key: 'pz_cheese', en: 'Cheesecake', es: 'Cheesecake' },
+        { key: 'pz_pudin', en: 'Pudin', es: 'Pudin' },
+        { key: 'pz_pina', en: 'Piña', es: 'Piña' },
+        { key: 'pz_guava', en: 'Guava', es: 'Guayaba' },
+        { key: 'pz_chocoflan', en: 'Chocoflan', es: 'Chocoflan' },
+        { key: 'pz_flan', en: 'Flan', es: 'Flan' },
+      ]
+    },
+    frostin: {
+      en: 'Frosted Pieces', es: 'Piezas Frostin', type: 'standard',
+      items: [
+        { key: 'fr_guava', en: 'Guava', es: 'Guayaba' },
+        { key: 'fr_pina', en: 'Piña', es: 'Piña' },
+        { key: 'fr_dulce', en: 'Dulce De Leche', es: 'Dulce De Leche' },
+        { key: 'fr_choco', en: 'Chocolate', es: 'Chocolate' },
+      ]
+    },
+    hb_big: {
+      en: 'Happy Birthday — BIG', es: 'Feliz Cumpleaños — GRANDE', type: 'standard',
+      items: [
+        { key: 'hb_b_pina', en: 'Piña', es: 'Piña' },
+        { key: 'hb_b_guava', en: 'Guava', es: 'Guayaba' },
+        { key: 'hb_b_dulce', en: 'Dulce De Leche', es: 'Dulce De Leche' },
+        { key: 'hb_b_choco', en: 'Chocolate', es: 'Chocolate' },
+        { key: 'hb_b_straw', en: 'Strawberry', es: 'Fresa' },
+      ]
+    },
+    hb_small: {
+      en: 'Happy Birthday — SMALL', es: 'Feliz Cumpleaños — PEQUEÑO', type: 'standard',
+      items: [
+        { key: 'hb_s_pina', en: 'Piña', es: 'Piña' },
+        { key: 'hb_s_guava', en: 'Guava', es: 'Guayaba' },
+        { key: 'hb_s_dulce', en: 'Dulce De Leche', es: 'Dulce De Leche' },
+        { key: 'hb_s_choco', en: 'Chocolate', es: 'Chocolate' },
+        { key: 'hb_s_straw', en: 'Strawberry', es: 'Fresa' },
+      ]
+    },
+    cuadrao: {
+      en: 'Square', es: 'Cuadrao', type: 'standard',
+      items: [
+        { key: 'cdr_pudin', en: 'Pudin', es: 'Pudin' },
+        { key: 'cdr_pound', en: 'Pound', es: 'Pound' },
+        { key: 'cdr_raisin', en: 'Raisin', es: 'Pasas' },
+        { key: 'cdr_maiz', en: 'Maiz', es: 'Maiz' },
+      ]
+    },
+    basos: {
+      en: 'Cups', es: 'Basos', type: 'standard',
+      items: [
+        { key: 'bas_tl', en: 'Tres Leche', es: 'Tres Leche' },
+        { key: 'bas_cl', en: 'Cuatro Leche', es: 'Cuatro Leche' },
+        { key: 'bas_hershey', en: 'Hershey', es: 'Hershey' },
+      ]
+    },
+    familiar: {
+      en: 'Family Size', es: 'Familiar', type: 'standard',
+      items: [
+        { key: 'fam_tl', en: 'Tres Leche', es: 'Tres Leche' },
+        { key: 'fam_cl', en: 'Cuatro Leche', es: 'Cuatro Leche' },
+      ]
+    },
+  };
+  adminNoProductsLoaded = true;
 }
 
 async function _noLoadDriverPrices(driverId) {
@@ -6627,16 +6700,9 @@ function _noSaveFormToOrder(idx) {
   o.ref = (document.getElementById('field-ref') || {}).value || '';
   const section = document.getElementById('section-new-order');
   if (section) {
-    // Use Math.max to handle any remaining duplicate DOM keys gracefully —
-    // if the same product key appears more than once (e.g. duplicate DB entry),
-    // we keep the highest value so the user's entered qty is never zeroed out.
-    const tempQty = {};
     section.querySelectorAll('.qty-input').forEach(inp => {
-      const key = inp.dataset.key;
-      const val = parseInt(inp.value) || 0;
-      tempQty[key] = Math.max(tempQty[key] || 0, val);
+      o.qty[inp.dataset.key] = parseInt(inp.value) || 0;
     });
-    Object.assign(o.qty, tempQty);
   }
 }
 
