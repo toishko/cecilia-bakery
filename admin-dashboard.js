@@ -2070,7 +2070,7 @@ async function renderOrderDetail() {
   if (order.status === 'pending' || (order.status === 'sent' && canEditOrder(order))) {
     // Fully editable: one "Save Changes" button that saves everything including payment
     actionsHtml += `<button class="btn-save" onclick="saveOrderChanges()" data-en="Save Changes" data-es="Guardar Cambios">${lang === 'es' ? 'Guardar Cambios' : 'Save Changes'}</button>`;
-  } else if (order.status === 'sent') {
+  } else if (order.status === 'sent' || order.status === 'confirmed' || order.status === 'picked_up') {
     // Not fully editable, but payment is always editable
     actionsHtml += `<button class="btn-save" onclick="savePaymentOnly()" data-en="Update Payment" data-es="Actualizar Pago">${lang === 'es' ? 'Actualizar Pago' : 'Update Payment'}</button>`;
   }

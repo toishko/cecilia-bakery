@@ -424,6 +424,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('new-order-cta')?.addEventListener('click', () => showSection('new-order'));
 
+  // ── Quick action cards (overview) ──
+  document.getElementById('qa-new-order')?.addEventListener('click', () => showSection('new-order'));
+  document.getElementById('qa-log-sale')?.addEventListener('click', () => showSection('sales'));
+  document.getElementById('qa-inventory')?.addEventListener('click', () => showSection('inventory'));
+  document.getElementById('qa-clients')?.addEventListener('click', () => showSection('clients'));
+
   // ── Overview filter ──
   document.getElementById('overview-filter')?.addEventListener('change', (e) => {
     loadOverviewDashboard(e.target.value);
