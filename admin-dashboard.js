@@ -782,18 +782,34 @@ async function handleOrderUpdate(order) {
 
 // Debounced handler for item-level changes
 let _itemChangeTimer = null;
+let _isSavingOrder = false; // prevents realtime from clobbering detailItems mid-save
 function handleOrderItemsChange(payload) {
+  // Skip entirely while the admin is actively saving — the save function
+  // manages detailItems itself; letting realtime overwrite it mid-save
+  // causes duplicate inserts and lost _isNew flags.
+  if (_isSavingOrder) {
+    _log('[REALTIME] Suppressed during active save');
+    return;
+  }
+
   // Debounce: staff often updates multiple items at once
   clearTimeout(_itemChangeTimer);
   _itemChangeTimer = setTimeout(async () => {
+    // Re-check flag after debounce delay (save may have started in the interim)
+    if (_isSavingOrder) return;
+
     // Identify the affected order
     const orderId = payload.new ? payload.new.order_id : (payload.old ? payload.old.order_id : null);
 
     // Track this order as staff-edited
     if (orderId) _staffEditedOrders.add(orderId);
 
-    // Show toast with editor name
-    if (orderId) {
+    // If this is the order the admin currently has open and is editing,
+    // skip the toast and live-refresh — the admin IS the editor.
+    const isOwnEdit = orderId && detailOrder && detailOrder.id === orderId;
+
+    // Show toast with editor name (only for external edits)
+    if (orderId && !isOwnEdit) {
       try {
         const match = incomingOrders.find(o => o.id === orderId);
         const driverName = match ? getDriverName(match.driver_id) : '';
@@ -810,8 +826,9 @@ function handleOrderItemsChange(payload) {
     silentRefreshOrders();
 
     // If the detail modal is open for the affected order, refresh it live
+    // BUT only if it's an external edit — not our own save.
     const overlay = document.getElementById('detail-overlay');
-    if (orderId && detailOrder && detailOrder.id === orderId && overlay && overlay.classList.contains('open')) {
+    if (orderId && detailOrder && detailOrder.id === orderId && overlay && overlay.classList.contains('open') && !isOwnEdit) {
       try {
         const { data: items } = await sb.from('driver_order_items').select('*').eq('order_id', orderId);
         if (items) {
@@ -2267,6 +2284,8 @@ window.handlePartialAmount = async function(input) {
 window.saveOrderChanges = async function() {
   if (!detailOrder) return;
 
+  // Block realtime from overwriting detailItems while we're saving
+  _isSavingOrder = true;
   try {
     // Save item adjustments (existing items)
     for (const item of detailItems) {
@@ -2320,6 +2339,8 @@ window.saveOrderChanges = async function() {
   } catch (e) {
     console.error(e);
     showToast(lang === 'es' ? 'Error guardando cambios' : 'Error saving changes', 'error');
+  } finally {
+    _isSavingOrder = false;
   }
 };
 
