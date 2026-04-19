@@ -1553,13 +1553,7 @@ function openPendingSheet() {
   overlay.classList.add('open');
 
   // Lock body scroll
-  document.body.dataset.scrollY = window.scrollY;
-  document.body.style.position = 'fixed';
-  document.body.style.top = `-${window.scrollY}px`;
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-  document.body.style.overflow = 'hidden';
-  document.body.style.width = '100%';
+  document.documentElement.classList.add('scroll-locked');
 
   // Dismiss on tap outside the sheet panel (delay to avoid immediate self-dismiss)
   setTimeout(() => {
@@ -1584,13 +1578,7 @@ function closePendingSheet() {
   }
   document.removeEventListener('keydown', _pendingSheetEscHandler);
   // Restore body scroll
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  document.body.style.overflow = '';
-  document.body.style.width = '';
-  window.scrollTo(0, parseInt(document.body.dataset.scrollY || '0') || 0);
+  document.documentElement.classList.remove('scroll-locked');
 }
 window.closePendingSheet = closePendingSheet;
 
@@ -1859,13 +1847,7 @@ function openOrderedSheet() {
   overlay.classList.add('open');
 
   // Lock body scroll
-  document.body.dataset.scrollY = window.scrollY;
-  document.body.style.position = 'fixed';
-  document.body.style.top = `-${window.scrollY}px`;
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-  document.body.style.overflow = 'hidden';
-  document.body.style.width = '100%';
+  document.documentElement.classList.add('scroll-locked');
 
   // Animate bars after paint
   requestAnimationFrame(() => {
@@ -1881,13 +1863,7 @@ function closeOrderedSheet() {
   const overlay = document.getElementById('ordered-sheet-overlay');
   if (overlay) overlay.classList.remove('open');
   // Restore body scroll
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  document.body.style.overflow = '';
-  document.body.style.width = '';
-  window.scrollTo(0, parseInt(document.body.dataset.scrollY || '0') || 0);
+  document.documentElement.classList.remove('scroll-locked');
 }
 window.openOrderedSheet = openOrderedSheet;
 window.closeOrderedSheet = closeOrderedSheet;
@@ -2384,25 +2360,12 @@ function openQueueSheet() {
   renderNeedsAttention();
   overlay.classList.add('open');
   // Lock body
-  document.body.dataset.scrollY = window.scrollY;
-  document.body.style.position = 'fixed';
-  document.body.style.top = `-${window.scrollY}px`;
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-  document.body.style.overflow = 'hidden';
-  document.body.style.width = '100%';
+  document.documentElement.classList.add('scroll-locked');
 }
 
 function closeQueueSheet() {
   document.getElementById('queue-sheet-overlay').classList.remove('open');
-  const scrollY = document.body.dataset.scrollY || '0';
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  document.body.style.overflow = '';
-  document.body.style.width = '';
-  window.scrollTo(0, parseInt(scrollY));
+  document.documentElement.classList.remove('scroll-locked');
 }
 window.openQueueSheet = openQueueSheet;
 window.closeQueueSheet = closeQueueSheet;
@@ -2819,14 +2782,8 @@ window.openOrderSheet = async function(orderId) {
     markDriverOrderSeen(orderId);
     await renderOrderSheet();
     document.getElementById('order-sheet-overlay').classList.add('open');
-    // Lock body scroll (iOS-safe)
-    document.body.dataset.scrollY = window.scrollY;
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${window.scrollY}px`;
-    document.body.style.left = '0';
-    document.body.style.right = '0';
-    document.body.style.overflow = 'hidden';
-    document.body.style.width = '100%';
+    // Lock body scroll
+    document.documentElement.classList.add('scroll-locked');
   } catch (e) { console.error(e); }
 };
 
@@ -2835,13 +2792,7 @@ window.closeOrderSheet = function() {
   if (overlay) overlay.classList.remove('open');
   
   // Restore body scroll
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  document.body.style.overflow = '';
-  document.body.style.width = '';
-  window.scrollTo(0, parseInt(document.body.dataset.scrollY || '0') || 0);
+  document.documentElement.classList.remove('scroll-locked');
 
   detailOrder = null;
   detailItems = [];
@@ -3552,19 +3503,14 @@ function openPrintWindow(showTotals) {
   document.body.appendChild(overlay);
 
   // Unlock the body scroll so the overlay can scroll freely
-  const savedTop = document.body.style.top;
-  const savedScrollY = parseInt(savedTop || '0', 10) * -1;
-  document.body.style.position = '';
-  document.body.style.top = '';
-  window.scrollTo(0, savedScrollY);
+  document.documentElement.classList.remove('scroll-locked');
 
   // Close button — re-lock body if modal is still open
   document.getElementById('pp-close-btn').addEventListener('click', () => {
     overlay.remove();
     const detailOverlay = document.getElementById('order-sheet-overlay');
     if (detailOverlay && detailOverlay.classList.contains('open')) {
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${window.scrollY}px`;
+      document.documentElement.classList.add('scroll-locked');
     }
   });
 
@@ -4384,13 +4330,7 @@ window.openOrderDetail = async function(orderId) {
   detailItems = sortItemsByCategory(items || []);
   await renderOrderSheet();
   document.getElementById('order-sheet-overlay').classList.add('open');
-  document.body.dataset.scrollY = window.scrollY;
-  document.body.style.position = 'fixed';
-  document.body.style.top = `-${window.scrollY}px`;
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-  document.body.style.overflow = 'hidden';
-  document.body.style.width = '100%';
+  document.documentElement.classList.add('scroll-locked');
 };
 
 /* ═══════════════════════════════════
