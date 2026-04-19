@@ -1634,7 +1634,7 @@ window._openHistoryForDriver = _openHistoryForDriver;
     }
     const h = window.innerHeight;
     const fabH = fab.offsetHeight;
-    fabY = Math.max(60, Math.min(fabY, h - fabH - NAV_HEIGHT - EDGE_MARGIN));
+    fabY = Math.max(80, Math.min(fabY, h - fabH - NAV_HEIGHT - EDGE_MARGIN));
     fab.style.left = fabX + 'px';
     fab.style.top = fabY + 'px';
     try { sessionStorage.setItem('fab_pos', JSON.stringify({ x: fabX, y: fabY })); } catch(_) {}
@@ -1650,8 +1650,32 @@ window._openHistoryForDriver = _openHistoryForDriver;
   function restorePosition() {
     try {
       const saved = JSON.parse(sessionStorage.getItem('fab_pos'));
-      if (saved) { fabX = saved.x; fabY = saved.y; fab.style.left = fabX + 'px'; fab.style.top = fabY + 'px'; fab.style.right = 'auto'; fab.style.bottom = 'auto'; fab.style.position = 'fixed'; }
-      else initPosition();
+      if (saved) {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        const fabW = fab.offsetWidth || 52;
+        const fabH = fab.offsetHeight || 52;
+        const minY = 80; // below header/notch
+        const maxY = h - fabH - NAV_HEIGHT - EDGE_MARGIN;
+        const maxX = w - fabW - EDGE_MARGIN;
+
+        // Validate: if saved position is out of visible bounds, reset to default
+        if (saved.x < 0 || saved.x > maxX || saved.y < minY || saved.y > maxY) {
+          sessionStorage.removeItem('fab_pos');
+          initPosition();
+          return;
+        }
+
+        fabX = saved.x;
+        fabY = saved.y;
+        fab.style.left = fabX + 'px';
+        fab.style.top = fabY + 'px';
+        fab.style.right = 'auto';
+        fab.style.bottom = 'auto';
+        fab.style.position = 'fixed';
+      } else {
+        initPosition();
+      }
     } catch(_) { initPosition(); }
   }
 
