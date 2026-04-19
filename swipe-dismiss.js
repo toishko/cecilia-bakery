@@ -152,5 +152,35 @@
         () => { if (typeof closeTimePicker === 'function') closeTimePicker(); }
       );
     }
+
+    // Admin: Action Queue sheet
+    const queueOverlay = document.getElementById('queue-sheet-overlay');
+    if (queueOverlay) {
+      initSwipeDismiss(
+        queueOverlay,
+        document.getElementById('queue-sheet'),
+        () => { if (typeof closeQueueSheet === 'function') closeQueueSheet(); }
+      );
+    }
+
+    // Admin: Pending Collection sheet
+    const pendingOverlay = document.getElementById('pending-sheet-overlay');
+    if (pendingOverlay) {
+      initSwipeDismiss(
+        pendingOverlay,
+        document.getElementById('pending-sheet'),
+        () => { if (typeof closePendingSheet === 'function') closePendingSheet(); }
+      );
+    }
+
+    // Admin: Total Ordered Value breakdown sheet
+    const orderedOverlay = document.getElementById('ordered-sheet-overlay');
+    if (orderedOverlay) {
+      initSwipeDismiss(
+        orderedOverlay,
+        document.getElementById('ordered-sheet'),
+        () => { if (typeof closeOrderedSheet === 'function') closeOrderedSheet(); }
+      );
+    }
   });
 })();

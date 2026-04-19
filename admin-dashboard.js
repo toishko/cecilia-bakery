@@ -2368,6 +2368,13 @@ async function loadOverview(timeframe) {
 
 /* ── Global Action Queue Sheet ── */
 function openQueueSheet() {
+  // Toggle: if already open, close it
+  const overlay = document.getElementById('queue-sheet-overlay');
+  if (overlay && overlay.classList.contains('open')) {
+    closeQueueSheet();
+    return;
+  }
+
   // Close any other open sheets first
   if (typeof closeOrderSheet === 'function') closeOrderSheet();
   if (typeof closeOrderedSheet === 'function') closeOrderedSheet();
@@ -2375,7 +2382,6 @@ function openQueueSheet() {
   _closeActionSheet();
 
   renderNeedsAttention();
-  const overlay = document.getElementById('queue-sheet-overlay');
   overlay.classList.add('open');
   // Lock body
   document.body.dataset.scrollY = window.scrollY;
