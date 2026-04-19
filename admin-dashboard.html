@@ -618,6 +618,24 @@
         <!-- Order Tabs -->
         <div class="order-tabs" id="order-tabs"></div>
 
+        <!-- Scan Ticket -->
+        <div class="scan-ticket-wrap" id="scan-ticket-wrap">
+          <button class="scan-ticket-btn" id="scan-ticket-btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span data-en="Scan Ticket" data-es="Escanear Ticket">Scan Ticket</span>
+          </button>
+          <input type="file" id="scan-ticket-input" accept="image/*" capture="environment" style="display:none">
+        </div>
+
+        <!-- Scan Result Banner -->
+        <div class="scan-result-banner" id="scan-result-banner" style="display:none">
+          <div class="scan-result-info">
+            <span class="scan-result-icon">✓</span>
+            <span class="scan-result-text" id="scan-result-text"></span>
+          </div>
+          <button class="scan-result-clear" id="scan-result-clear" type="button" data-en="Clear" data-es="Limpiar">Clear</button>
+        </div>
+
         <!-- Header Fields -->
         <div class="form-fields">
           <div class="form-field full">

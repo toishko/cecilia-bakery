@@ -100,7 +100,9 @@ After every task I complete, I must:
 | `docs/IMPLEMENTATION_INSIGHTS.md` | Insights analytics tab: donut charts, driver leaderboard, revenue breakdowns | 🔄 In Progress |
 | `docs/IMPLEMENTATION_ORDERS_UI.md` | Orders UI redesign: avatar lists, receipt slide-out sheet, modern filters | 🔄 In Progress |
 | `docs/IMPLEMENTATION_NEEDS_ATTENTION.md` | Needs Attention UI refactor: global action queue, slide-out sheet | 🔄 In Progress |
+| `docs/IMPLEMENTATION_TICKET_SCANNER.md` | OCR ticket scanner: photo-to-order auto-fill via AI vision | 🔄 In Progress |
 | `docs/IMPLEMENTATION_futureplans.md` | Future features: analytics dashboard, wholesale portal, production tracking | 🔄 Analytics In Progress |
+| `docs/NOTES_PRODUCT_CATALOG.md` | Definitive product key reference + printed ticket code mappings | ✅ Active |
 
 ---
 

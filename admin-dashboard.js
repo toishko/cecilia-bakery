@@ -1552,6 +1552,15 @@ function openPendingSheet() {
 
   overlay.classList.add('open');
 
+  // Lock body scroll
+  document.body.dataset.scrollY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${window.scrollY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.overflow = 'hidden';
+  document.body.style.width = '100%';
+
   // Dismiss on tap outside the sheet panel (delay to avoid immediate self-dismiss)
   setTimeout(() => {
     _pendingSheetListener = (e) => {
@@ -1574,7 +1583,16 @@ function closePendingSheet() {
     _pendingSheetListener = null;
   }
   document.removeEventListener('keydown', _pendingSheetEscHandler);
+  // Restore body scroll
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.overflow = '';
+  document.body.style.width = '';
+  window.scrollTo(0, parseInt(document.body.dataset.scrollY || '0') || 0);
 }
+window.closePendingSheet = closePendingSheet;
 
 /* Navigate to Order History pre-filtered to a specific driver's unpaid orders */
 function _openHistoryForDriver(driverId) {
@@ -1831,6 +1849,15 @@ function openOrderedSheet() {
 
   overlay.classList.add('open');
 
+  // Lock body scroll
+  document.body.dataset.scrollY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${window.scrollY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.overflow = 'hidden';
+  document.body.style.width = '100%';
+
   // Animate bars after paint
   requestAnimationFrame(() => {
     setTimeout(() => {
@@ -1844,6 +1871,14 @@ function openOrderedSheet() {
 function closeOrderedSheet() {
   const overlay = document.getElementById('ordered-sheet-overlay');
   if (overlay) overlay.classList.remove('open');
+  // Restore body scroll
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.overflow = '';
+  document.body.style.width = '';
+  window.scrollTo(0, parseInt(document.body.dataset.scrollY || '0') || 0);
 }
 window.openOrderedSheet = openOrderedSheet;
 window.closeOrderedSheet = closeOrderedSheet;
@@ -7602,6 +7637,27 @@ async function initAdminOrderForm() {
       document.getElementById('form-footer').style.display = 'none';
     }
   };
+
+  // ── Ticket Scanner wiring ──
+  const scanBtn = document.getElementById('scan-ticket-btn');
+  const scanInput = document.getElementById('scan-ticket-input');
+  const scanBanner = document.getElementById('scan-result-banner');
+  const scanClear = document.getElementById('scan-result-clear');
+
+  if (scanBtn && scanInput) {
+    scanBtn.onclick = () => scanInput.click();
+    scanInput.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      await _noScanTicketFile(file);
+      scanInput.value = ''; // reset for re-scan
+    };
+  }
+  if (scanClear) {
+    scanClear.onclick = () => {
+      _noClearScanResults();
+    };
+  }
 }
 
 function _noShowFormContainer() {
@@ -7612,6 +7668,132 @@ function _noShowFormContainer() {
   _noLoadOrderToForm(adminNoActiveOrderIdx);
   document.getElementById('form-footer').style.display = 'flex';
   _noUpdateFooterCount();
+}
+
+/* ── TICKET SCANNER LOGIC ── */
+async function _noScanTicketFile(file) {
+  const btn = document.getElementById('scan-ticket-btn');
+  const banner = document.getElementById('scan-result-banner');
+  const bannerText = document.getElementById('scan-result-text');
+
+  // Show scanning state
+  if (btn) { btn.classList.add('scanning'); btn.querySelector('span').textContent = lang === 'es' ? 'Escaneando...' : 'Scanning...'; }
+
+  try {
+    // Convert file to base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    // Send to API
+    const resp = await fetch('/api/scan-ticket', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64 }),
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok || !data.success) {
+      throw new Error(data.message || 'Scan failed');
+    }
+
+    if (data.items.length === 0) {
+      if (banner && bannerText) {
+        banner.style.display = 'flex';
+        banner.className = 'scan-result-banner has-warnings';
+        bannerText.textContent = lang === 'es' ? 'No se encontraron productos en la imagen.' : 'No products found in image.';
+      }
+      return;
+    }
+
+    // Fill form with scanned items
+    const order = adminNoOrders[adminNoActiveOrderIdx];
+    let filled = 0, uncertain = 0, unmatched = 0;
+
+    data.items.forEach(item => {
+      if (!item.matched || !item.systemKey) {
+        unmatched++;
+        return;
+      }
+
+      const key = item.systemKey;
+      const qty = parseFloat(item.qty) || 0;
+      if (qty <= 0) return;
+
+      // Set quantity in the order data
+      if (key in order.qty) {
+        order.qty[key] = qty;
+        filled++;
+      } else if ((key + '_inside') in order.qty) {
+        // Redondo: default to inside variant
+        order.qty[key + '_inside'] = qty;
+        filled++;
+      } else {
+        unmatched++;
+        return;
+      }
+
+      // Update the visible input and highlight it
+      const input = document.querySelector(`.qty-input[data-key="${key}"], .qty-input[data-key="${key}_inside"]`);
+      if (input) {
+        input.value = qty;
+        input.classList.add(item.confident ? 'scan-filled' : 'scan-uncertain');
+        if (!item.confident) uncertain++;
+      }
+    });
+
+    // Update footer count
+    _noUpdateFooterCount();
+
+    // Show result banner
+    if (banner && bannerText) {
+      banner.style.display = 'flex';
+      let msg = lang === 'es'
+        ? `${filled} producto(s) escaneado(s)`
+        : `${filled} product(s) scanned`;
+      if (uncertain > 0) msg += lang === 'es' ? `, ${uncertain} por revisar` : `, ${uncertain} to review`;
+      if (unmatched > 0) msg += lang === 'es' ? `, ${unmatched} sin coincidencia` : `, ${unmatched} unmatched`;
+      bannerText.textContent = msg;
+      banner.className = (uncertain > 0 || unmatched > 0)
+        ? 'scan-result-banner has-warnings'
+        : 'scan-result-banner';
+    }
+
+  } catch (err) {
+    console.error('Ticket scan error:', err);
+    if (banner && bannerText) {
+      banner.style.display = 'flex';
+      banner.className = 'scan-result-banner has-warnings';
+      bannerText.textContent = err.message || (lang === 'es' ? 'Error al escanear' : 'Scan failed');
+    }
+  } finally {
+    // Reset button
+    if (btn) {
+      btn.classList.remove('scanning');
+      btn.querySelector('span').textContent = lang === 'es' ? 'Escanear Ticket' : 'Scan Ticket';
+    }
+  }
+}
+
+function _noClearScanResults() {
+  // Remove highlights
+  document.querySelectorAll('.scan-filled, .scan-uncertain').forEach(el => {
+    el.classList.remove('scan-filled', 'scan-uncertain');
+  });
+
+  // Reset all quantities to 0
+  const order = adminNoOrders[adminNoActiveOrderIdx];
+  if (order) Object.keys(order.qty).forEach(k => { order.qty[k] = 0; });
+  _noLoadOrderToForm(adminNoActiveOrderIdx);
+  _noUpdateFooterCount();
+
+  // Hide banner
+  const banner = document.getElementById('scan-result-banner');
+  if (banner) banner.style.display = 'none';
 }
 
 /* ── TABS ── */
