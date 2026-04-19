@@ -1745,150 +1745,257 @@ window._openHistoryForDriver = _openHistoryForDriver;
   window.addEventListener('resize', () => { if (fab.style.display !== 'none') snapToEdge(); });
 })();
 
-/* ── Total Ordered Value Breakdown Sheet ── */
-function openOrderedSheet() {
+/* ── Total Ordered Value Breakdown Sheet (Filterable) ── */
+let _orderedSheetTimeframe = 'this_month';
+let _orderedSheetDriverExpanded = false;
+
+function openOrderedSheet(timeframe) {
   const overlay = document.getElementById('ordered-sheet-overlay');
   const content = document.getElementById('ordered-sheet-content');
   const periodEl = document.getElementById('ordered-sheet-period');
   if (!overlay || !content) return;
 
-  // Get the current timeframe label
-  const activePill = document.querySelector('.overview-time-selector .insights-pill.active, [id="overview-timeframe-selector"] .insights-pill.active');
-  const periodLabel = activePill?.textContent?.trim() || 'This Month';
+  // Use passed timeframe, or fall back to the current sheet state, or the overview filter
+  if (timeframe) {
+    _orderedSheetTimeframe = timeframe;
+  } else if (!_orderedSheetTimeframe) {
+    _orderedSheetTimeframe = document.getElementById('revenue-filter')?.value || 'this_month';
+  }
+
+  // Show overlay + loading state
+  overlay.classList.add('open');
+  document.documentElement.classList.add('scroll-locked');
+  content.innerHTML = `<div style="padding:40px;text-align:center;color:var(--tx-muted)">${lang === 'es' ? 'Cargando...' : 'Loading...'}</div>`;
+
+  // Update subtitle
+  const periodLabels = {
+    today: lang === 'es' ? 'Hoy' : 'Today',
+    this_week: lang === 'es' ? 'Esta Semana' : 'This Week',
+    this_month: lang === 'es' ? 'Este Mes' : 'This Month',
+    last_month: lang === 'es' ? 'Mes Pasado' : 'Last Month',
+    all_time: lang === 'es' ? 'Todo el Tiempo' : 'All Time'
+  };
+  const periodLabel = periodLabels[_orderedSheetTimeframe] || 'This Month';
   if (periodEl) periodEl.textContent = lang === 'es'
     ? `Total facturado · ${periodLabel}`
     : `Everything invoiced, paid or not · ${periodLabel}`;
 
-  const b = _channelBreakdown;
-  const total = b.driverGross + b.wholesaleGross + b.onlineGross;
-  const totalCollected = b.driverCollected + b.wholesaleCollected + b.onlineCollected;
-  const totalOutstanding = b.driverOutstanding + b.wholesaleOutstanding;
+  _fetchAndRenderOrderedSheet();
+}
 
-  const pct = (v) => total > 0 ? Math.round((v / total) * 100) : 0;
-  const pctOf = (v, base) => base > 0 ? Math.round((v / base) * 100) : 0;
-  const fc = (v) => formatCurrency(v);
+async function _fetchAndRenderOrderedSheet() {
+  const content = document.getElementById('ordered-sheet-content');
+  if (!content || !sb) return;
 
-  // Channel rows
-  const channels = [
-    {
-      key: 'driver',
-      label: lang === 'es' ? 'Conductores' : 'Driver Orders',
-      sublabel: lang === 'es' ? 'Órdenes de campo' : 'Field deliveries',
-      amount: b.driverGross,
-      iconClass: 'icon-driver',
-      fillClass: 'fill-driver',
-      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 7v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
-    },
-    {
-      key: 'wholesale',
-      label: lang === 'es' ? 'Mayoreo' : 'Wholesale',
-      sublabel: lang === 'es' ? 'Órdenes mayoristas' : 'Bulk business orders',
-      amount: b.wholesaleGross,
-      iconClass: 'icon-wholesale',
-      fillClass: 'fill-wholesale',
-      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/><path d="M3 9l2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/><path d="M12 3v6"/></svg>`,
-    },
-    {
-      key: 'online',
-      label: lang === 'es' ? 'Pedidos en Línea' : 'Online Orders',
-      sublabel: lang === 'es' ? 'Ventas por internet' : 'Website & app orders',
-      amount: b.onlineGross,
-      iconClass: 'icon-online',
-      fillClass: 'fill-online',
-      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>`,
+  const timeframe = _orderedSheetTimeframe;
+
+  // Build date range (same logic as loadOverview)
+  function _toLocalISO(d) {
+    const p = n => n < 10 ? '0' + n : n;
+    return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  }
+  const now = new Date();
+  let startDate = null;
+  let endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+  if (timeframe === 'today') {
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  } else if (timeframe === 'this_week') {
+    const dow = now.getDay() || 7;
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow + 1, 0, 0, 0);
+  } else if (timeframe === 'this_month') {
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+  } else if (timeframe === 'last_month') {
+    startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
+    endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+  }
+
+  try {
+    // Fetch all three channels in parallel — driver query includes driver_id for breakdown
+    const dQ = sb.from('driver_orders').select('total_amount, payment_amount, payment_status, driver_id');
+    const wQ = sb.from('wholesale_orders').select('subtotal, status');
+    const oQ = sb.from('orders').select('total_amount, delivery_status').eq('source', 'website');
+
+    if (startDate) {
+      dQ.gte('submitted_at', _toLocalISO(startDate));
+      wQ.gte('placed_at', _toLocalISO(startDate));
+      oQ.gte('created_at', _toLocalISO(startDate));
     }
-  ].filter(c => c.amount > 0);
+    dQ.lte('submitted_at', _toLocalISO(endDate));
+    wQ.lte('placed_at', _toLocalISO(endDate));
+    oQ.lte('created_at', _toLocalISO(endDate));
 
-  const channelRowsHTML = channels.map(c => `
-    <div class="ordered-channel-row">
-      <div class="ordered-channel-icon ${c.iconClass}">${c.icon}</div>
-      <div class="ordered-channel-info">
-        <div class="ordered-channel-name">${c.label}</div>
-        <div class="ordered-channel-count">${c.sublabel}</div>
-      </div>
-      <div class="ordered-channel-right">
-        <div class="ordered-channel-amount">${fc(c.amount)}</div>
-        <div class="ordered-channel-pct">${pct(c.amount)}% of total</div>
-      </div>
-    </div>
-  `).join('');
+    const [dRes, wRes, oRes] = await Promise.all([dQ, wQ, oQ]);
+    const driverOrders = dRes.data || [];
+    const wholesaleOrders = wRes.data || [];
+    const onlineOrders = oRes.data || [];
 
-  // Segmented capture bar widths
-  const collectedPct  = pctOf(totalCollected, total);
-  const outstandingPct = pctOf(totalOutstanding, total);
+    // Aggregate driver channel
+    let driverGross = 0, driverCollected = 0, driverOutstanding = 0;
+    const perDriver = {};
+    driverOrders.forEach(o => {
+      const total = parseFloat(o.total_amount || 0);
+      const paid = parseFloat(o.payment_amount || 0);
+      driverGross += total;
+      driverCollected += paid;
+      if (o.payment_status === 'not_paid' || o.payment_status === 'partial') {
+        driverOutstanding += Math.max(0, total - paid);
+      }
+      // Per-driver breakdown
+      const did = o.driver_id || 'unknown';
+      if (!perDriver[did]) perDriver[did] = { gross: 0, collected: 0, outstanding: 0, count: 0 };
+      perDriver[did].gross += total;
+      perDriver[did].collected += paid;
+      if (o.payment_status === 'not_paid' || o.payment_status === 'partial') {
+        perDriver[did].outstanding += Math.max(0, total - paid);
+      }
+      perDriver[did].count++;
+    });
 
-  // Financial fate section
-  const fateHTML = `
-    <div class="capture-section">
-      <div class="airy-date-header" style="margin:0 0 14px 0">${lang === 'es' ? '¿QUÉ PASÓ CON ESTE DINERO?' : 'WHAT HAPPENED TO THIS MONEY?'}</div>
+    // Aggregate wholesale
+    let wholesaleGross = 0, wholesaleCollected = 0, wholesaleOutstanding = 0;
+    wholesaleOrders.forEach(o => {
+      const sub = parseFloat(o.subtotal || 0);
+      wholesaleGross += sub;
+      if (o.status === 'delivered') wholesaleCollected += sub;
+      else if (o.status === 'confirmed' || o.status === 'scheduled') wholesaleOutstanding += sub;
+    });
 
-      <!-- Segmented bar -->
-      <div class="capture-bar-wrap">
-        <div class="capture-bar">
-          <div class="capture-bar-fill fill-collected" style="width:0%" data-target="${collectedPct}%"></div>
-          <div class="capture-bar-fill fill-outstanding" style="width:0%" data-target="${outstandingPct}%"></div>
+    // Aggregate online
+    let onlineGross = 0, onlineCollected = 0;
+    onlineOrders.forEach(o => {
+      const total = parseFloat(o.total_amount || 0);
+      onlineGross += total;
+      if (o.delivery_status !== 'cancelled') onlineCollected += total;
+    });
+
+    const total = driverGross + wholesaleGross + onlineGross;
+    const totalCollected = driverCollected + wholesaleCollected + onlineCollected;
+    const totalOutstanding = driverOutstanding + wholesaleOutstanding;
+
+    const pct = (v) => total > 0 ? Math.round((v / total) * 100) : 0;
+    const pctOf = (v, base) => base > 0 ? Math.round((v / base) * 100) : 0;
+    const fc = (v) => formatCurrency(v);
+
+    // ── Time pills HTML ──
+    const pills = [
+      { key: 'today', en: 'Today', es: 'Hoy' },
+      { key: 'this_week', en: 'Week', es: 'Sem' },
+      { key: 'this_month', en: 'Month', es: 'Mes' },
+      { key: 'all_time', en: 'All', es: 'Todo' }
+    ];
+    const pillsHTML = `<div class="ordered-sheet-pills">${pills.map(p =>
+      `<button class="insights-pill${_orderedSheetTimeframe === p.key ? ' active' : ''}" data-value="${p.key}">${lang === 'es' ? p.es : p.en}</button>`
+    ).join('')}</div>`;
+
+    // ── Channel rows ──
+    const channels = [
+      {
+        key: 'driver', expandable: true,
+        label: lang === 'es' ? 'Conductores' : 'Driver Orders',
+        sublabel: lang === 'es' ? 'Órdenes de campo' : 'Field deliveries',
+        amount: driverGross,
+        iconClass: 'icon-driver',
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 7v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
+      },
+      {
+        key: 'wholesale',
+        label: lang === 'es' ? 'Mayoreo' : 'Wholesale',
+        sublabel: lang === 'es' ? 'Órdenes mayoristas' : 'Bulk business orders',
+        amount: wholesaleGross,
+        iconClass: 'icon-wholesale',
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/><path d="M3 9l2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/><path d="M12 3v6"/></svg>`,
+      },
+      {
+        key: 'online',
+        label: lang === 'es' ? 'Pedidos en Línea' : 'Online Orders',
+        sublabel: lang === 'es' ? 'Ventas por internet' : 'Website & app orders',
+        amount: onlineGross,
+        iconClass: 'icon-online',
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>`,
+      }
+    ].filter(c => c.amount > 0);
+
+    // Per-driver rows (sorted by gross descending)
+    const driverRows = Object.entries(perDriver)
+      .map(([id, d]) => ({ id, name: getDriverName(id), ...d }))
+      .sort((a, b) => b.gross - a.gross);
+
+    const driverBreakdownHTML = driverRows.length > 0 ? driverRows.map(d => {
+      const initials = _getInitials(d.name);
+      return `<div class="ordered-driver-row">
+        <div class="ordered-driver-avatar">${initials}</div>
+        <div class="ordered-driver-info">
+          <div class="ordered-driver-name">${_esc(d.name)}</div>
+          <div class="ordered-driver-meta">${d.count} ${lang === 'es' ? (d.count === 1 ? 'pedido' : 'pedidos') : (d.count === 1 ? 'order' : 'orders')}</div>
         </div>
-        <div class="capture-bar-legend">
-          <span class="capture-legend-dot dot-collected"></span>
-          <span class="capture-legend-label">${lang === 'es' ? 'Cobrado' : 'Collected'}</span>
-          <span class="capture-legend-dot dot-outstanding" style="margin-left:12px"></span>
-          <span class="capture-legend-label">${lang === 'es' ? 'Por Cobrar' : 'Still Owed'}</span>
+        <div class="ordered-driver-amounts">
+          <div class="ordered-driver-gross">${fc(d.gross)}</div>
+          ${d.outstanding > 0 ? `<div class="ordered-driver-owed">${lang === 'es' ? 'Debe' : 'Owes'}: ${fc(d.outstanding)}</div>` : `<div class="ordered-driver-clear">${lang === 'es' ? 'Al día' : 'Clear'}</div>`}
+        </div>
+      </div>`;
+    }).join('') : '';
+
+    const channelRowsHTML = channels.map(c => {
+      const isDriver = c.key === 'driver' && c.expandable && driverRows.length > 0;
+      const chevron = isDriver ? `<svg class="ordered-expand-chevron${_orderedSheetDriverExpanded ? ' expanded' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>` : '';
+      return `
+      <div class="ordered-channel-row${isDriver ? ' expandable' : ''}" ${isDriver ? 'id="ordered-driver-channel"' : ''}>
+        <div class="ordered-channel-icon ${c.iconClass}">${c.icon}</div>
+        <div class="ordered-channel-info">
+          <div class="ordered-channel-name">${c.label} ${chevron}</div>
+          <div class="ordered-channel-count">${c.sublabel}</div>
+        </div>
+        <div class="ordered-channel-right">
+          <div class="ordered-channel-amount">${fc(c.amount)}</div>
+          <div class="ordered-channel-pct">${pct(c.amount)}% ${lang === 'es' ? 'del total' : 'of total'}</div>
         </div>
       </div>
+      ${isDriver ? `<div class="ordered-driver-breakdown${_orderedSheetDriverExpanded ? ' expanded' : ''}" id="ordered-driver-list">${driverBreakdownHTML}</div>` : ''}
+    `;
+    }).join('');
 
-      <!-- Two summary rows -->
-      <div class="capture-row">
-        <div class="capture-row-left">
-          <span class="capture-dot dot-collected"></span>
-          <div>
-            <div class="capture-row-label">${lang === 'es' ? 'Cobrado' : 'Collected'}</div>
-            <div class="capture-row-sub">${collectedPct}% of invoiced</div>
-          </div>
-        </div>
-        <div class="capture-row-amount collected">${fc(totalCollected)}</div>
+    content.innerHTML = `
+      ${pillsHTML}
+      <div class="ordered-total-hero">
+        <div class="ordered-total-label">${lang === 'es' ? 'Total Facturado' : 'Total Invoiced'}</div>
+        <div class="ordered-total-value">${fc(total)}</div>
       </div>
-      <div class="capture-row" style="border-bottom:none">
-        <div class="capture-row-left">
-          <span class="capture-dot dot-outstanding"></span>
-          <div>
-            <div class="capture-row-label">${lang === 'es' ? 'Pendiente de Pago' : 'Still Owed'}</div>
-            <div class="capture-row-sub">${outstandingPct}% of invoiced</div>
-          </div>
-        </div>
-        <div class="capture-row-amount outstanding">${fc(totalOutstanding)}</div>
-      </div>
-    </div>
-  `;
+      <div class="ordered-channels">${channelRowsHTML}</div>
+    `;
 
-  content.innerHTML = `
-    <div class="ordered-total-hero">
-      <div class="ordered-total-label">${lang === 'es' ? 'Total Facturado' : 'Total Invoiced'}</div>
-      <div class="ordered-total-value">${fc(total)}</div>
-    </div>
-    <div class="ordered-channels">${channelRowsHTML}</div>
-    ${fateHTML}
-  `;
-
-  overlay.classList.add('open');
-
-  // Lock body scroll
-  document.documentElement.classList.add('scroll-locked');
-
-  // Animate bars after paint
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      content.querySelectorAll('.capture-bar-fill').forEach(bar => {
-        bar.style.width = bar.dataset.target;
+    // ── Wire up pill clicks ──
+    content.querySelectorAll('.ordered-sheet-pills .insights-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        _orderedSheetTimeframe = pill.dataset.value;
+        _fetchAndRenderOrderedSheet();
       });
-    }, 80);
-  });
+    });
+
+    // ── Wire up driver channel expand/collapse ──
+    const driverChannel = document.getElementById('ordered-driver-channel');
+    if (driverChannel) {
+      driverChannel.style.cursor = 'pointer';
+      driverChannel.addEventListener('click', () => {
+        _orderedSheetDriverExpanded = !_orderedSheetDriverExpanded;
+        const list = document.getElementById('ordered-driver-list');
+        const chev = driverChannel.querySelector('.ordered-expand-chevron');
+        if (list) list.classList.toggle('expanded', _orderedSheetDriverExpanded);
+        if (chev) chev.classList.toggle('expanded', _orderedSheetDriverExpanded);
+      });
+    }
+
+  } catch (err) {
+    console.error('Ordered sheet fetch error:', err);
+    content.innerHTML = `<div style="padding:40px;text-align:center;color:var(--red)">${lang === 'es' ? 'Error al cargar datos' : 'Failed to load data'}</div>`;
+  }
 }
 
 function closeOrderedSheet() {
   const overlay = document.getElementById('ordered-sheet-overlay');
   if (overlay) overlay.classList.remove('open');
-  // Restore body scroll
   document.documentElement.classList.remove('scroll-locked');
+  _orderedSheetDriverExpanded = false;
 }
 window.openOrderedSheet = openOrderedSheet;
 window.closeOrderedSheet = closeOrderedSheet;
