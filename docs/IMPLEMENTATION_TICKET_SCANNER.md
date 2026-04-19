@@ -26,70 +26,58 @@ No new database tables needed. No n8n. One Vercel serverless function.
 
 ## Checklist
 
-### Phase 1: API Route
+### Phase 1: API Route ✅
 - [x] Create `/api/scan-ticket.js` Vercel serverless function
 - [x] Accept base64 image in POST body
 - [x] Send to AI vision model (OpenAI GPT-4o)
-- [x] Engineered prompt: extract only CODE + QUANTITY from the table, ignore headers/totals/notes
+- [x] Engineered prompt: describes exact ticket layout, column positions, handwriting patterns
 - [x] Force structured JSON output format
 - [x] Rate limit (5 scans/min per IP)
 - [x] Origin validation (reuse pattern from place-order.js)
 
-### Phase 2: Ticket-to-Catalog Mapping
-- [x] Build a mapping table inside the API that maps ticket codes to system product keys
+### Phase 2: Ticket-to-Catalog Mapping ✅
+- [x] Build a mapping table inside the API (31 confirmed codes)
 - [x] Include mapping in the API so AI returns system keys alongside raw codes
-- [x] Fallback: if AI can't map a code, return the raw code + description for manual matching
-  - 9226S → hb_s_dulce (Birthday Cake Small - Dulce de Leche)
-  - 9165S → hb_s_pina (Birthday Cake Small - Pineapple)
-  - 9745 → pz_pudin (Bread Pudding Slice)
-  - 9158 → fr_choco (Cake Slice Chocolate)
-  - 9141 → TODO: Cake Slice Dulce de Leche (verify key)
-  - 9134 → pz_guava (Cake Slice Guava)
-  - 9776 → pz_pina (Cake Slice Pineapple)
-  - 9970 → pz_chocoflan (Chocoflan Slice)
-  - 9752 → pz_flan (Flan Slice)
-  - 9813 → fam_tl (Tres Leches Family)
-  - 9738 → tl (Tres Leches Slice)
-  - 9820 → cuatro_leche (Cuatro Leches Slice)
-  - 9969 → tl_hershey (Hershey Tres Leches Slice)
-  - 9868 → tl_pina (Pineapple Tres Leches Slice)
-  - 9875 → tl_straw (Strawberry Tres Leches Slice)
-  - 9769 → pz_cheese (Strawberry Cheesecake Slice)
-  - 9936 → pz_rv (Red Velvet Cake Slice)
-  - 9943 → TODO: Carrot Cake Slice (verify key)
-  - 9226 → hb_b_dulce (Birthday Cake Large - Dulce de Leche)
-  - 9196 → hb_b_straw (Birthday Cake Large - Strawberry)
-  - 9172S → hb_s_choco (Birthday Cake Small - Chocolate)
-  - 9189S → hb_s_guava (Birthday Cake Small - Guava)
-  - 9196S → TODO: Birthday Cake Small - Strawberry (verify key)
-  - 9110 → cdr_maiz (CB Cornbread Family Sz)
-- [ ] Include mapping in the API prompt so AI returns system keys, not ticket codes
-- [ ] Fallback: if AI can't map a code, return the raw code + description for manual matching
+- [x] Fallback: if AI sees an unknown code, return it as unmatched for manual review
+- [x] All mappings confirmed with user — see `docs/NOTES_PRODUCT_CATALOG.md` for definitive list
 
-### Phase 3: Frontend UI
+### Phase 3: Frontend UI ✅
 - [x] Add a "📷 Scan Ticket" button in the New Order form (appears after driver is selected)
 - [x] Mobile: opens device camera; Desktop: opens file picker
 - [x] Show loading spinner while processing
 - [x] On success: auto-fill product quantities in the form
-- [x] Highlight any unmatched/uncertain items in yellow for manual review
+- [x] Highlight scanned items in green, uncertain items in yellow for manual review
 - [ ] Show a small thumbnail of the scanned ticket for reference
 - [x] Never auto-submit — admin always reviews first
+- [x] "Clear" button to reset all scanned quantities and highlights
 
 ### Phase 4: Polish
 - [ ] Success/error toast notifications
-- [ ] "Clear scan" button to reset filled quantities
 - [ ] Optional: attach the ticket image to the order record (Supabase Storage)
+
+## Quantity Rules (confirmed 2026-04-19)
+
+| Product Type | What qty means | Valid values |
+|---|---|---|
+| Birthday Cakes (all HB small & large) | 1 = one whole cake | Whole numbers only: 1, 2, 3... |
+| Everything else (frosted, pieces, tres leche, family, square) | 1 = one dozen (12pk), 0.5 = half dozen | 0.5 increments: 0.5, 1, 1.5, 2... |
+
+The AI reads the number exactly as written — no conversion or multiplication.
 
 ## API Key Requirement
 
-- Need an OpenAI API key (for GPT-4o vision) OR use Vercel AI Gateway
-- Store as `OPENAI_API_KEY` in Vercel env variables (never in code)
+- OpenAI API key (for GPT-4o vision)
+- Stored as `OPENAI_API_KEY` in Vercel env variables (never in code)
 - Approximate cost: ~$0.01–0.03 per scan
 
 ## Notes & Decisions
 
+- 2026-04-19: Initial implementation with 25 confirmed ticket codes
+- 2026-04-19: Added 6 more codes (HB large: 9165/9172/9189, square: 9103/9202, family: 9011) — total 31
+- 2026-04-19: Major prompt overhaul for consistency — describes exact ticket layout (columns, where handwritten qty appears), tells AI to scan ALL rows not just valid codes, adds handwriting pattern hints
+- 2026-04-19: Increased max_tokens from 1500 to 3000 for larger tickets
+- 2026-04-19: 12 products remain unmapped (no ticket code yet) — driver doesn't order them currently
 - The ticket codes (9226S, 9745, etc.) are printed — very OCR-friendly
-- Handwritten quantities are simple numbers (0.5, 1, 1.5, 2) — low error risk
-- The mapping table needs to be verified with the user since some codes aren't in the current catalog
+- Handwritten quantities are simple numbers (0.5, 1, 1.5, 2) — but camera angle/lighting affects accuracy
 - Multi-page tickets: user can scan each page separately, quantities accumulate
 - This is designed for one driver's workflow but the button is available whenever any driver is selected
