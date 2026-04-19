@@ -2190,3 +2190,147 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   box-shadow: 0 0 0 2px rgba(234,179,8,0.5);
   transition: box-shadow 0.3s;
 }
+
+/* ── Review Scan Button ── */
+.scan-review-btn {
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: var(--green);
+  border: none;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.1s;
+}
+.scan-review-btn:active { transform: scale(0.96); }
+
+/* ── Review Scan Sheet Overlay ── */
+.scan-review-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: flex-end; justify-content: center;
+  pointer-events: none; opacity: 0;
+  transition: opacity 0.25s;
+}
+.scan-review-overlay.open {
+  pointer-events: auto; opacity: 1;
+}
+.scan-review-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.45);
+}
+.scan-review-sheet {
+  position: relative; z-index: 2;
+  width: 100%; max-width: 500px;
+  max-height: 82vh;
+  background: var(--bg-card, #fff);
+  border-radius: 20px 20px 0 0;
+  display: flex; flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.25,1,0.5,1);
+  box-shadow: 0 -4px 30px rgba(0,0,0,0.15);
+}
+.scan-review-overlay.open .scan-review-sheet {
+  transform: translateY(0);
+}
+.scan-review-handle {
+  display: flex; justify-content: center; padding: 10px 0 4px;
+}
+.scan-review-handle span {
+  width: 36px; height: 4px;
+  background: var(--bd, #ddd);
+  border-radius: 4px;
+}
+.scan-review-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 20px 12px;
+  border-bottom: 1px solid var(--bd, #eee);
+}
+.scan-review-header h3 {
+  font-size: 1.05rem; font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  color: var(--tx);
+  margin: 0;
+}
+.scan-review-close {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg-surface, #f5f5f5);
+  color: var(--tx-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.scan-review-close:hover { background: var(--bd); }
+.scan-review-body {
+  overflow-y: auto; padding: 16px 20px 24px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Review table rows */
+.scan-review-row {
+  display: flex; align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--bd, #eee);
+  gap: 12px;
+}
+.scan-review-row:last-child { border-bottom: none; }
+.scan-review-row.uncertain {
+  background: rgba(234,179,8,0.06);
+  border-radius: 8px;
+  padding: 10px 8px;
+  margin: 0 -8px;
+}
+.scan-review-code {
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  color: var(--tx-muted);
+  min-width: 52px;
+  flex-shrink: 0;
+}
+.scan-review-desc {
+  flex: 1;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--tx);
+  font-family: 'Outfit', sans-serif;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scan-review-qty {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--green);
+  font-family: 'Outfit', sans-serif;
+  min-width: 38px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.scan-review-raw {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--tx-muted);
+  display: block;
+  text-align: right;
+}
+.scan-review-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #eab308;
+  margin-left: 4px;
+}
+.scan-review-summary {
+  font-size: 0.78rem;
+  color: var(--tx-muted);
+  font-family: 'Outfit', sans-serif;
+  padding-top: 12px;
+  font-weight: 500;
+  text-align: center;
+}

@@ -7639,6 +7639,20 @@ async function initAdminOrderForm() {
       _noClearScanResults();
     };
   }
+
+  // Review scan button
+  const scanReviewBtn = document.getElementById('scan-review-btn');
+  if (scanReviewBtn) {
+    scanReviewBtn.onclick = () => _noOpenScanReview();
+  }
+  const scanReviewClose = document.getElementById('scan-review-close');
+  if (scanReviewClose) {
+    scanReviewClose.onclick = () => _noCloseScanReview();
+  }
+  const scanReviewBackdrop = document.getElementById('scan-review-backdrop');
+  if (scanReviewBackdrop) {
+    scanReviewBackdrop.onclick = () => _noCloseScanReview();
+  }
 }
 
 function _noShowFormContainer() {
@@ -7736,6 +7750,22 @@ async function _noScanTicketFile(file) {
     // Update footer count
     _noUpdateFooterCount();
 
+    // Store scan data for review sheet (in ticket order)
+    _lastScanData = data.items.map(item => {
+      const key = item.systemKey;
+      const rawQty = parseFloat(item.qty) || 0;
+      const isBirthdayCake = key && key.startsWith('hb_');
+      return {
+        code: item.code,
+        description: item.description,
+        rawQty: rawQty,
+        convertedQty: (key && rawQty > 0) ? (isBirthdayCake ? rawQty : Math.round(rawQty * 12)) : 0,
+        confident: item.confident,
+        matched: item.matched,
+        isBirthdayCake,
+      };
+    });
+
     // Show result banner
     if (banner && bannerText) {
       banner.style.display = 'flex';
@@ -7766,6 +7796,63 @@ async function _noScanTicketFile(file) {
   }
 }
 
+// ── Stored scan data for review ──
+let _lastScanData = null;
+
+function _noOpenScanReview() {
+  const overlay = document.getElementById('scan-review-overlay');
+  const body = document.getElementById('scan-review-body');
+  if (!overlay || !body || !_lastScanData || _lastScanData.length === 0) return;
+
+  // Build rows in ticket order
+  let html = '';
+  let totalItems = 0;
+  let uncertainCount = 0;
+
+  _lastScanData.forEach(item => {
+    if (item.rawQty <= 0 && item.matched) return; // skip zero-qty matched
+    const isUncertain = !item.confident;
+    if (isUncertain) uncertainCount++;
+    if (item.matched && item.rawQty > 0) totalItems++;
+
+    const rowClass = isUncertain ? 'scan-review-row uncertain' : 'scan-review-row';
+    const badge = isUncertain ? '<span class="scan-review-badge">⚠</span>' : '';
+
+    // Show converted qty and raw ticket value
+    const rawLabel = item.isBirthdayCake
+      ? '' // birthday cakes don't need conversion note
+      : `<span class="scan-review-raw">(${item.rawQty} on ticket)</span>`;
+
+    html += `<div class="${rowClass}">
+      <span class="scan-review-code">${item.code}</span>
+      <span class="scan-review-desc">${item.description}${badge}</span>
+      <span class="scan-review-qty">${item.convertedQty}${rawLabel}</span>
+    </div>`;
+  });
+
+  // Summary
+  const lang = document.documentElement.lang || 'en';
+  let summary = lang === 'es'
+    ? `${totalItems} producto(s)`
+    : `${totalItems} item(s)`;
+  if (uncertainCount > 0) {
+    summary += lang === 'es'
+      ? ` · ${uncertainCount} incierto(s)`
+      : ` · ${uncertainCount} uncertain`;
+  }
+  html += `<div class="scan-review-summary">${summary}</div>`;
+
+  body.innerHTML = html;
+  overlay.classList.add('open');
+  document.documentElement.classList.add('scroll-locked');
+}
+
+function _noCloseScanReview() {
+  const overlay = document.getElementById('scan-review-overlay');
+  if (overlay) overlay.classList.remove('open');
+  document.documentElement.classList.remove('scroll-locked');
+}
+
 function _noClearScanResults() {
   // Remove highlights
   document.querySelectorAll('.scan-filled, .scan-uncertain').forEach(el => {
@@ -7777,6 +7864,9 @@ function _noClearScanResults() {
   if (order) Object.keys(order.qty).forEach(k => { order.qty[k] = 0; });
   _noLoadOrderToForm(adminNoActiveOrderIdx);
   _noUpdateFooterCount();
+
+  // Clear stored scan data
+  _lastScanData = null;
 
   // Hide banner
   const banner = document.getElementById('scan-result-banner');

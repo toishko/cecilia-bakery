@@ -45,9 +45,10 @@ No new database tables needed. No n8n. One Vercel serverless function.
 - [x] Add a "📷 Scan Ticket" button in the New Order form (appears after driver is selected)
 - [x] Mobile: opens device camera; Desktop: opens file picker
 - [x] Show loading spinner while processing
-- [x] On success: auto-fill product quantities in the form
+- [x] On success: auto-fill product quantities in the form (with ×12 conversion for non-birthday items)
 - [x] Highlight scanned items in green, uncertain items in yellow for manual review
-- [ ] Show a small thumbnail of the scanned ticket for reference
+- [x] "Review" button opens slide-up sheet showing items in ticket order for side-by-side verification
+- [x] Review sheet shows converted qty + raw ticket value in parentheses
 - [x] Never auto-submit — admin always reviews first
 - [x] "Clear" button to reset all scanned quantities and highlights
 
