@@ -7839,7 +7839,7 @@ function _noSaveFormToOrder(idx) {
   const section = document.getElementById('section-new-order');
   if (section) {
     section.querySelectorAll('.qty-input').forEach(inp => {
-      o.qty[inp.dataset.key] = parseInt(inp.value) || 0;
+      o.qty[inp.dataset.key] = parseFloat(inp.value) || 0;
     });
   }
 }
@@ -7891,7 +7891,7 @@ function _noUpdateRowHighlight(inp) {
 function _noUpdateFooterCount() {
   let total = 0;
   const section = document.getElementById('section-new-order');
-  if (section) section.querySelectorAll('.qty-input').forEach(inp => { total += parseInt(inp.value) || 0; });
+  if (section) section.querySelectorAll('.qty-input').forEach(inp => { total += parseFloat(inp.value) || 0; });
   const countEl = document.getElementById('footer-item-count');
   const contBtn = document.getElementById('footer-continue-btn');
   if (countEl) countEl.textContent = total;
@@ -7899,7 +7899,7 @@ function _noUpdateFooterCount() {
 }
 
 function _noQtyControl(key) {
-  return `<div class="qty-wrap"><button class="qty-btn" data-dir="-">−</button><input type="number" class="qty-input" data-key="${key}" value="0" min="0"><button class="qty-btn" data-dir="+">+</button></div>`;
+  return `<div class="qty-wrap"><button class="qty-btn" data-dir="-">−</button><input type="number" class="qty-input" data-key="${key}" value="0" min="0" step="0.5"><button class="qty-btn" data-dir="+">+</button></div>`;
 }
 
 function _noBuildProductSections() {
@@ -7943,8 +7943,10 @@ function _noBuildProductSections() {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const inp = btn.parentElement.querySelector('.qty-input');
-      const cur = parseInt(inp.value) || 0;
-      inp.value = Math.max(0, cur + (btn.dataset.dir === '+' ? 1 : -1));
+      const cur = parseFloat(inp.value) || 0;
+      const step = 0.5;
+      const next = btn.dataset.dir === '+' ? cur + step : cur - step;
+      inp.value = Math.max(0, Math.round(next * 10) / 10);
       _noUpdateRowHighlight(inp);
       _noUpdateFooterCount();
       if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();

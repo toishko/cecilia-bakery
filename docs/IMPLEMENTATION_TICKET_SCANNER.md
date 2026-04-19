@@ -76,7 +76,7 @@ The AI reads the number exactly as written — no conversion or multiplication.
 - 2026-04-19: Added 6 more codes (HB large: 9165/9172/9189, square: 9103/9202, family: 9011) — total 31
 - 2026-04-19: Major prompt overhaul for consistency — describes exact ticket layout (columns, where handwritten qty appears), tells AI to scan ALL rows not just valid codes, adds handwriting pattern hints
 - 2026-04-19: Increased max_tokens from 1500 to 3000 for larger tickets
-- 2026-04-19: 12 products remain unmapped (no ticket code yet) — driver doesn't order them currently
+- 2026-04-19: **CRITICAL BUG FIX** — `parseInt` was used throughout the New Order form, silently truncating all 0.5 quantities to 0. Changed to `parseFloat`. Also set input step=0.5 and +/- buttons to increment by 0.5.
 - The ticket codes (9226S, 9745, etc.) are printed — very OCR-friendly
 - Handwritten quantities are simple numbers (0.5, 1, 1.5, 2) — but camera angle/lighting affects accuracy
 - Multi-page tickets: user can scan each page separately, quantities accumulate
