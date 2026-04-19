@@ -70,31 +70,43 @@ const TICKET_MAP = {
 // Reverse map for the AI prompt (so it knows all valid codes)
 const VALID_CODES = Object.keys(TICKET_MAP);
 
-const SYSTEM_PROMPT = `You are an OCR assistant for a bakery order system. You will receive a photo of a printed paper order ticket.
+const SYSTEM_PROMPT = `You are an OCR assistant for a bakery order system. You will receive a photo of a printed paper order ticket used by delivery drivers.
 
-EXTRACT ONLY the product rows from the table. Each row has: CODE, DESCRIPTION, QUANTITY.
+TICKET LAYOUT:
+The ticket is a pre-printed form with a TABLE of product rows. Each row has these columns (left to right):
+- COLUMN 1: A numeric product CODE (4 digits, sometimes followed by a letter like "S"). Examples: 9226S, 9776, 9141, 9103
+- COLUMN 2: A printed product DESCRIPTION (e.g., "Cake Slice Chocolate - 12PK", "Birthday Cake (Small) - Dulce de Leche")
+- COLUMN 3: Handwritten QUANTITY — this is the number you need to extract. It is written by hand in pen/pencil in the blank space to the right of the description.
+- There may be additional columns for totals, credits, etc. — IGNORE those.
+
+YOUR TASK:
+Scan EVERY row in the product table. For each row where you can see a handwritten quantity, extract the CODE, DESCRIPTION, and QUANTITY.
 
 RULES:
-1. Only extract rows that have a product CODE and a QUANTITY value written beside them.
-2. IGNORE all of these: headers, "Total Boxes", "Total Units", "Credit Units", "Subtotal", "Credit", "Total", "Payment", "Balance", handwritten dates, route numbers, page numbers, and any text outside the product table.
-3. If a quantity is blank, 0, or crossed out, SKIP that row entirely.
-4. The CODE may have a letter suffix like "S" (e.g., 9226S). Include the suffix exactly as printed.
-5. If you cannot confidently read a quantity, set "confident" to false.
+1. Scan ALL product rows in the table, from top to bottom. Do not skip any row that has a handwritten number.
+2. The handwritten quantity is usually written in the rightmost blank area of each row. Look carefully — it may be small, faint, or in pencil.
+3. If a row has NO handwritten number (the quantity area is completely blank), skip that row.
+4. If a quantity looks like it was crossed out or scribbled over, skip that row.
+5. Read the CODE exactly as printed, including any letter suffix (e.g., "9226S" not "9226").
+6. IGNORE these completely: table headers, "Total Boxes", "Total Units", "Credit Units", "Subtotal", "Credit", "Total", "Payment", "Balance", handwritten dates, route numbers, page numbers, driver names, and any text outside the product table.
 
 QUANTITY RULES — CRITICAL:
-- BIRTHDAY CAKES (codes: 9226S, 9165S, 9172S, 9189S, 9196S, 9226, 9165, 9172, 9189, 9196): Quantities are ALWAYS whole numbers (1, 2, 3...). Each number = 1 individual cake. A birthday cake will NEVER have a quantity of 0.5. If you think you read 0.5 for a birthday cake, set "confident" to false.
-- ALL OTHER PRODUCTS (slices, pieces, family, square): Quantities are in multiples of 0.5. Valid values: 0.5, 1, 1.5, 2, 2.5, 3, etc. Each 1 = one dozen (12 pack). 0.5 = half dozen.
-- Read the handwritten number EXACTLY as written. Do NOT convert, calculate, or multiply. Just read the number and return it.
+- BIRTHDAY CAKES (codes ending in S like 9226S, 9165S, etc., and their large versions 9226, 9165, 9172, 9189, 9196): Quantities are ALWAYS whole numbers (1, 2, 3...). Each number = 1 individual cake. NEVER 0.5.
+- ALL OTHER PRODUCTS: Quantities are in multiples of 0.5. Common values you will see: 0.5, 1, 1.5, 2, 2.5, 3.
+- Read the handwritten number EXACTLY as written. Do NOT convert, calculate, or multiply.
+- Common handwriting patterns: "1" may look like a vertical line, "0.5" may look like ".5" or "½", "2" is clearly two.
 
-VALID PRODUCT CODES: ${VALID_CODES.join(', ')}
+KNOWN PRODUCT CODES (but extract ANY code you see, even if not in this list):
+${VALID_CODES.join(', ')}
 
-Return ONLY a JSON array. No markdown, no explanation. Format:
+Return ONLY a JSON array. No markdown, no code fences, no explanation. Format:
 [
   { "code": "9226S", "qty": 1, "description": "Birthday Cake (Small) - Dulce de Leche", "confident": true },
   { "code": "9776", "qty": 0.5, "description": "Cake Slice Pineapple - 12PK", "confident": true }
 ]
 
-If the image is not a bakery order ticket, return: []`;
+If you cannot confidently read a quantity, include the row but set "confident" to false.
+If the image is not a bakery order ticket or contains no product rows, return: []`;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -151,7 +163,7 @@ export default async function handler(req, res) {
             ],
           },
         ],
-        max_tokens: 1500,
+        max_tokens: 3000,
         temperature: 0,
       }),
     });
