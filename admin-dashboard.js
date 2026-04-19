@@ -7706,6 +7706,8 @@ async function _noScanTicketFile(file) {
     }
 
     // Fill form with scanned items
+    // Save current form state first to avoid data bleed between orders
+    _noSaveFormToOrder(adminNoActiveOrderIdx);
     const order = adminNoOrders[adminNoActiveOrderIdx];
     let filled = 0, uncertain = 0, unmatched = 0;
 
@@ -7725,12 +7727,11 @@ async function _noScanTicketFile(file) {
       const isBirthdayCake = key.startsWith('hb_');
       const qty = isBirthdayCake ? rawQty : Math.round(rawQty * 12);
 
-      // Set quantity in the order data
+      // Set quantity in the order data ONLY
       if (key in order.qty) {
         order.qty[key] = qty;
         filled++;
       } else if ((key + '_inside') in order.qty) {
-        // Redondo: default to inside variant
         order.qty[key + '_inside'] = qty;
         filled++;
       } else {
@@ -7738,12 +7739,19 @@ async function _noScanTicketFile(file) {
         return;
       }
 
-      // Update the visible input and highlight it
+      if (!item.confident) uncertain++;
+    });
+
+    // Reload form from data to sync DOM with the correct order
+    _noLoadOrderToForm(adminNoActiveOrderIdx);
+
+    // Re-apply scan highlights after reload
+    data.items.forEach(item => {
+      if (!item.matched || !item.systemKey) return;
+      const key = item.systemKey;
       const input = document.querySelector(`.qty-input[data-key="${key}"], .qty-input[data-key="${key}_inside"]`);
-      if (input) {
-        input.value = qty;
-        input.classList.add(item.confident ? 'scan-filled' : 'scan-uncertain');
-        if (!item.confident) uncertain++;
+      if (input && (parseFloat(item.qty) || 0) > 0) {
+        input.classList.add(item.confident !== false ? 'scan-filled' : 'scan-uncertain');
       }
     });
 
@@ -8178,6 +8186,10 @@ async function _noSubmitAllOrders() {
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting...'; }
 
   try {
+    if (!adminNoSelectedDriverId) {
+      throw new Error('No driver selected. Please go back and select a driver.');
+    }
+
     const batchId = crypto.randomUUID();
     const editableUntil = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
