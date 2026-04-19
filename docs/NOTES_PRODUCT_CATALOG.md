@@ -136,6 +136,9 @@
 | 9196S | Birthday Cake (Small) - Strawberry | `hb_s_straw` | HB Small | ✅ |
 | 9226 | Birthday Cake (Large) - Dulce de Leche | `hb_b_dulce` | HB Big | ✅ |
 | 9196 | Birthday Cake (Large) - Strawberry | `hb_b_straw` | HB Big | ✅ |
+| 9165 | Birthday Cake (Large) - Pineapple | `hb_b_pina` | HB Big | ✅ |
+| 9172 | Birthday Cake (Large) - Chocolate | `hb_b_choco` | HB Big | ✅ |
+| 9189 | Birthday Cake (Large) - Guava | `hb_b_guava` | HB Big | ✅ |
 | 9745 | Bread Pudding Slice - 12PK | `pz_pudin` | Pieces | ✅ |
 | 9158 | Cake Slice Chocolate - 12PK | `fr_choco` | Frosted | ✅ |
 | 9141 | Cake Slice Dulce de Leche - 12PK | `fr_dulce` | Frosted | ✅ |
@@ -144,6 +147,7 @@
 | 9970 | Chocoflan Slice - 12PK | `pz_chocoflan` | Pieces | ✅ |
 | 9752 | Flan Slice - 12PK | `pz_flan` | Pieces | ✅ |
 | 9813 | Tres Leches Family - 12PK | `fam_tl` | Family | ✅ |
+| 9011 | Cuatro Leche Family Sz | `fam_cl` | Family | ✅ |
 | 9738 | Tres Leches Slice - 12PK | `tl` | Tres Leche | ✅ |
 | 9820 | Cuatro Leches Slice - 12PK | `cuatro_leche` | Tres Leche | ✅ |
 | 9969 | Hershey Tres Leches Slice - 12PK | `tl_hershey` | Tres Leche | ✅ |
@@ -153,6 +157,8 @@
 | 9936 | Red Velvet Cake Slice - 12PK | `pz_rv` | Pieces | ✅ |
 | 9943 | Carrot Cake Slice - 12PK | `pz_carrot` | Pieces | ✅ |
 | 9110 | CB Cornbread Family Sz - 12PK | `cdr_maiz` | Square | ✅ |
+| 9103 | CB Pound Cake Family Sz - 12PK | `cdr_pound` | Square | ✅ |
+| 9202 | CB Raisin Pound Cake Family Sz - 12PK | `cdr_raisin` | Square | ✅ |
 
 ---
 
@@ -164,3 +170,15 @@
 - Round cakes have position variants: `inside`, `top`, `inside_nt`, `top_nt`
 - Standard/frosted/pieces items have base key + `_nt` variant
 - **Always confirm new ticket code mappings with the user before using them in production**
+
+### Quantity Rules (CRITICAL — confirmed 2026-04-19)
+
+| Product Type | Ticket Qty Meaning | Valid Values | Example |
+|---|---|---|---|
+| **Birthday Cakes** (all HB small & large) | Each number = 1 whole cake | Whole numbers only: 1, 2, 3... | "2" = 2 cakes |
+| **Everything else** (frosted, pieces, tres leche, family, square) | Each 1 = one dozen (12pk), 0.5 = half dozen | 0.5 increments: 0.5, 1, 1.5, 2... | "0.5" = 6 slices, "1" = 12 slices |
+
+- The AI reads the number **exactly as written** — no conversion or multiplication
+- If the AI reads 0.5 for a birthday cake → flag as uncertain (invalid for that product)
+- These rules are embedded in the AI prompt in `/api/scan-ticket.js`
+

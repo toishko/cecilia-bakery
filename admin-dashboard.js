@@ -1617,6 +1617,7 @@ window._openHistoryForDriver = _openHistoryForDriver;
   let startX = 0, startY = 0;
   let fabX = 0, fabY = 0;
   let idleTimer = null;
+  let handledByTouch = false; // Prevents click from double-firing after touch
   const DRAG_THRESHOLD = 8;
   const IDLE_DELAY = 3000;
   const EDGE_MARGIN = 10;
@@ -1666,7 +1667,7 @@ window._openHistoryForDriver = _openHistoryForDriver;
     } catch(_) { initPosition(); }
   }
 
-  // Touch
+  // Touch events (mobile)
   fab.addEventListener('touchstart', (e) => {
     isDragging = true; dragMoved = false;
     const t = e.touches[0]; startX = t.clientX - fabX; startY = t.clientY - fabY;
@@ -1681,13 +1682,20 @@ window._openHistoryForDriver = _openHistoryForDriver;
     if (dragMoved) { fabX = t.clientX - startX; fabY = t.clientY - startY; fab.style.left = fabX + 'px'; fab.style.top = fabY + 'px'; }
   }, { passive: true });
 
-  fab.addEventListener('touchend', () => {
+  fab.addEventListener('touchend', (e) => {
     isDragging = false; fab.style.transform = 'scale(1)';
-    if (dragMoved) snapToEdge(); else openQueueSheet();
+    if (dragMoved) {
+      snapToEdge();
+    } else {
+      // This was a tap — handle it here, block the follow-up click
+      handledByTouch = true;
+      setTimeout(() => { handledByTouch = false; }, 400);
+      openQueueSheet();
+    }
     resetIdleTimer();
   });
 
-  // Mouse (desktop)
+  // Mouse events (desktop)
   fab.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
     isDragging = true; dragMoved = false;
@@ -1707,14 +1715,15 @@ window._openHistoryForDriver = _openHistoryForDriver;
     resetIdleTimer();
   });
 
-  // Prevent onclick on drag
+  // Click handler — only fires on desktop (blocked on mobile by handledByTouch)
   fab.removeAttribute('onclick');
   fab.addEventListener('click', (e) => {
+    if (handledByTouch) { e.preventDefault(); e.stopPropagation(); return; }
     if (dragMoved) { e.preventDefault(); e.stopPropagation(); return; }
     openQueueSheet();
   });
 
-  // Wake on hover
+  // Wake on hover (desktop)
   fab.addEventListener('mouseenter', () => { fab.style.opacity = '1'; clearTimeout(idleTimer); });
   fab.addEventListener('mouseleave', resetIdleTimer);
 

@@ -37,6 +37,9 @@ const TICKET_MAP = {
   // Birthday Cake (Large)
   '9226':  'hb_b_dulce',
   '9196':  'hb_b_straw',
+  '9165':  'hb_b_pina',
+  '9172':  'hb_b_choco',
+  '9189':  'hb_b_guava',
   // Frosted Pieces (12PK slices WITH frosting)
   '9158':  'fr_choco',
   '9141':  'fr_dulce',
@@ -57,8 +60,11 @@ const TICKET_MAP = {
   '9875':  'tl_straw',
   // Family Size
   '9813':  'fam_tl',
+  '9011':  'fam_cl',
   // Square
   '9110':  'cdr_maiz',
+  '9103':  'cdr_pound',
+  '9202':  'cdr_raisin',
 };
 
 // Reverse map for the AI prompt (so it knows all valid codes)
@@ -69,12 +75,16 @@ const SYSTEM_PROMPT = `You are an OCR assistant for a bakery order system. You w
 EXTRACT ONLY the product rows from the table. Each row has: CODE, DESCRIPTION, QUANTITY.
 
 RULES:
-1. Only extract rows that have a product CODE and a QUANTITY value.
+1. Only extract rows that have a product CODE and a QUANTITY value written beside them.
 2. IGNORE all of these: headers, "Total Boxes", "Total Units", "Credit Units", "Subtotal", "Credit", "Total", "Payment", "Balance", handwritten dates, route numbers, page numbers, and any text outside the product table.
 3. If a quantity is blank, 0, or crossed out, SKIP that row entirely.
-4. Quantities are handwritten numbers. Common values: 0.5, 1, 1.5, 2, 3. Read them carefully.
+4. The CODE may have a letter suffix like "S" (e.g., 9226S). Include the suffix exactly as printed.
 5. If you cannot confidently read a quantity, set "confident" to false.
-6. The CODE may have a letter suffix like "S" (e.g., 9226S). Include the suffix.
+
+QUANTITY RULES — CRITICAL:
+- BIRTHDAY CAKES (codes: 9226S, 9165S, 9172S, 9189S, 9196S, 9226, 9165, 9172, 9189, 9196): Quantities are ALWAYS whole numbers (1, 2, 3...). Each number = 1 individual cake. A birthday cake will NEVER have a quantity of 0.5. If you think you read 0.5 for a birthday cake, set "confident" to false.
+- ALL OTHER PRODUCTS (slices, pieces, family, square): Quantities are in multiples of 0.5. Valid values: 0.5, 1, 1.5, 2, 2.5, 3, etc. Each 1 = one dozen (12 pack). 0.5 = half dozen.
+- Read the handwritten number EXACTLY as written. Do NOT convert, calculate, or multiply. Just read the number and return it.
 
 VALID PRODUCT CODES: ${VALID_CODES.join(', ')}
 
