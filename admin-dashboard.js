@@ -1476,7 +1476,6 @@ async function loadTodaySnapshot() {
 
     document.getElementById('today-order-count').textContent = totalOrders;
     document.getElementById('today-revenue').textContent = fmt(collectedToday);
-    document.getElementById('today-revenue-sub').textContent = (lang === 'es' ? 'Pedido: ' : 'Ordered: ') + fmt(totalRevenue);
     document.getElementById('today-drivers-active').textContent = `${activeToday} / ${totalDrivers}`;
   } catch (e) {
     console.warn('Today snapshot error:', e);

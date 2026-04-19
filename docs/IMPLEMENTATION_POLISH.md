@@ -138,3 +138,6 @@ Run through the complete flow:
 - [x] Final end-to-end flow tested
 - [x] Dark mode contrast check
 - [x] EN/ES completeness check
+- [x] Removed duplicate "Ordered: $0" sub-text from admin dashboard "Collected Today" stat block.
+- [x] Bump PWA Service Worker cache version to flush stale HTML from local testing.
+- [x] Restore hidden spacer in `admin-dashboard.html`'s 'Collected Today' block to keep the UI perfectly aligned and straight.
