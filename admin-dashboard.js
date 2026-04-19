@@ -1612,9 +1612,11 @@ window._openHistoryForDriver = _openHistoryForDriver;
   const NAV_HEIGHT = 64;
 
   function initPosition() {
-    const rect = fab.getBoundingClientRect();
-    fabX = rect.left;
-    fabY = rect.top;
+    const fabW = fab.offsetWidth || 52;
+    const fabH = fab.offsetHeight || 52;
+    // Default: bottom-right corner, above the bottom nav
+    fabX = window.innerWidth - fabW - EDGE_MARGIN;
+    fabY = window.innerHeight - fabH - NAV_HEIGHT - EDGE_MARGIN - 10;
     fab.style.position = 'fixed';
     fab.style.left = fabX + 'px';
     fab.style.top = fabY + 'px';
