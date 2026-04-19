@@ -55,14 +55,14 @@ The Overview tab shows abbreviated totals ($68.1k, $49.3k, $18.8k) for at-a-glan
 ### Phase 8 — Filterable "Total Ordered Value" Sheet
 - [x] Add inline time-period pills (Today / Week / Month / All) inside the sheet header, below the subtitle
 - [x] Decouple sheet data from `_channelBreakdown` cache — make `openOrderedSheet()` fetch its own data for the selected period
-- [x] Add `driver_id` to the `loadOverview` driver_orders query so per-driver breakdown data is available
-- [x] Make the "Driver Orders" channel row tappable — expands to show per-driver breakdown (name, invoiced, collected, owed)
-- [x] Per-driver rows sorted by highest invoiced first; use `getDriverName()` + initials avatar
-- [x] Animate the expand/collapse of per-driver rows
+- [x] ~~Add `driver_id` to the `loadOverview` driver_orders query so per-driver breakdown data is available~~ *Removed: redundant with FAB + Unpaid quick action*
+- [x] ~~Make the "Driver Orders" channel row tappable — expands to show per-driver breakdown~~ *Removed: same reason*
+- [x] ~~Per-driver rows sorted by highest invoiced first; use `getDriverName()` + initials avatar~~ *Removed: same reason*
+- [x] ~~Animate the expand/collapse of per-driver rows~~ *Removed: same reason*
 - [x] Switching time pills re-queries Supabase and re-renders the entire sheet content
 - [x] EN/ES support for all new labels
-- [x] CSS for time pills inside sheet, expandable driver rows
-- [x] Remove "WHAT HAPPENED TO THIS MONEY?" section (Collected/Still Owed bar + rows) — redundant with FAB queue and Unpaid quick action tile
+- [x] CSS for time pills inside sheet
+- [x] Remove per-driver expandable breakdown from ordered sheet (redundant with FAB + Unpaid quick action)
 
 ### Phase 7 — Ultra-Premium UI Pass (Design Overhaul)
 - [x] Fix: prevent $0 categories from rendering a dot due to `stroke-linecap="round"`
@@ -79,5 +79,3 @@ The Overview tab shows abbreviated totals ($68.1k, $49.3k, $18.8k) for at-a-glan
 - Desktop sidebar: Insights placed between Order History and Settings.
 - *2026-04-19:* Initial implementation complete. `driver_name` column doesn't exist in `driver_orders` table — using `driver_id` + `getDriverName()` from `driversCache` instead.
 - *2026-04-19:* Supabase client must be referenced as module-scoped `sb`, not `window.__supabase`.
-- *2026-04-19:* Phase 8 — "Total Ordered Value" sheet decoupled from `_channelBreakdown` cache. Sheet now fetches its own data so pill switching doesn't require a full Overview reload.
-- *2026-04-19:* Removed "WHAT HAPPENED TO THIS MONEY?" (Collected/Still Owed) section from sheet — info already accessible via FAB queue and Unpaid quick action tile. Keeps the sheet focused on invoiced values only.
