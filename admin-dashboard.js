@@ -4054,6 +4054,9 @@ window.shareWhatsApp = async function() {
   const origHTML = btn ? btn.innerHTML : '';
   if (btn) { btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="40" stroke-dashoffset="10"/></svg> ' + (lang === 'es' ? 'Generando...' : 'Generating...') + '</span>'; btn.disabled = true; }
 
+  // Let browser paint the spinner before heavy work
+  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 50)));
+
   // Build the print preview off-screen
   const content = buildPrintHTML(detailTotalsVisible);
   if (!content) { if (btn) { btn.innerHTML = origHTML; btn.disabled = false; } return; }
