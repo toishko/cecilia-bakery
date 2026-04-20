@@ -3134,6 +3134,103 @@ window.closeOrderSheet = function() {
   detailItems = [];
 };
 
+// ── iOS-style drag-to-dismiss for order detail sheet ──
+(function initOrderSheetDrag() {
+  const sheet = document.getElementById('order-sheet');
+  const overlay = document.getElementById('order-sheet-overlay');
+  if (!sheet || !overlay) return;
+
+  let startY = 0, currentY = 0;
+  let lastY = 0, lastTime = 0, velocity = 0;
+  let dragging = false, tracking = false;
+  const DISMISS_THRESHOLD = 60;
+  const VELOCITY_THRESHOLD = 0.5;
+
+  function onTouchStart(e) {
+    startY = e.touches[0].clientY;
+    lastY = startY;
+    lastTime = Date.now();
+    currentY = 0;
+    velocity = 0;
+    dragging = false;
+    tracking = true;
+    sheet.style.transition = 'none';
+  }
+
+  function onTouchMove(e) {
+    if (!tracking) return;
+    const touchY = e.touches[0].clientY;
+    const dy = touchY - startY;
+
+    const now = Date.now();
+    const dt = now - lastTime;
+    if (dt > 0) { velocity = (touchY - lastY) / dt; lastY = touchY; lastTime = now; }
+
+    if (!dragging) {
+      if (Math.abs(dy) < 4) return;
+
+      const content = document.getElementById('order-sheet-content');
+      const atTop = !content || content.scrollTop <= 0;
+      const isHandle = e.target.closest('.action-sheet-handle') || e.target.closest('.order-sheet-header');
+
+      if (dy > 0 && (atTop || isHandle)) {
+        dragging = true;
+        sheet.style.willChange = 'transform';
+      } else {
+        tracking = false;
+        sheet.style.transition = '';
+        return;
+      }
+    }
+
+    currentY = Math.max(0, dy);
+    if (currentY > 0) {
+      e.preventDefault();
+      const resist = currentY > DISMISS_THRESHOLD
+        ? DISMISS_THRESHOLD + (currentY - DISMISS_THRESHOLD) * 0.4
+        : currentY;
+      sheet.style.transform = `translate3d(0,${resist}px,0)`;
+      overlay.style.opacity = Math.max(0.3, 1 - (currentY / 400));
+    }
+  }
+
+  function onTouchEnd() {
+    tracking = false;
+    if (!dragging) return;
+    dragging = false;
+    sheet.style.willChange = '';
+
+    const shouldDismiss = currentY > DISMISS_THRESHOLD || velocity > VELOCITY_THRESHOLD;
+
+    if (shouldDismiss) {
+      sheet.style.transition = 'transform .2s cubic-bezier(.32,.72,0,1)';
+      overlay.style.transition = 'opacity .2s ease';
+      sheet.style.transform = 'translate3d(0,100%,0)';
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        closeOrderSheet();
+        sheet.style.transition = '';
+        sheet.style.transform = '';
+        overlay.style.transition = '';
+        overlay.style.opacity = '';
+      }, 200);
+    } else {
+      sheet.style.transition = 'transform .2s cubic-bezier(.32,.72,0,1)';
+      overlay.style.transition = 'opacity .2s ease';
+      sheet.style.transform = 'translate3d(0,0,0)';
+      overlay.style.opacity = '';
+      setTimeout(() => {
+        sheet.style.transition = '';
+        overlay.style.transition = '';
+      }, 200);
+    }
+  }
+
+  sheet.addEventListener('touchstart', onTouchStart, { passive: true });
+  sheet.addEventListener('touchmove', onTouchMove, { passive: false });
+  sheet.addEventListener('touchend', onTouchEnd, { passive: true });
+})();
+
 async function renderOrderSheet() {
   const order = detailOrder;
   if (!order) return;
