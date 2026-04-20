@@ -1634,8 +1634,8 @@ window.closePendingSheet = closePendingSheet;
       // First meaningful move — decide if this is a drag-dismiss gesture
       if (Math.abs(dy) < 4) return; // not enough movement yet
 
-      const items = document.getElementById('pending-sheet-items');
-      const atTop = !items || items.scrollTop === 0;
+      // The scroll container is the sheet itself (overflow-y:auto on .action-sheet)
+      const atTop = sheet.scrollTop === 0;
       const isHandle = e.target.closest('.action-sheet-handle') || e.target.closest('.action-sheet-title');
 
       if (dy > 0 && (atTop || isHandle)) {
