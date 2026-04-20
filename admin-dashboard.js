@@ -4784,6 +4784,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === e.currentTarget) _closeActionSheet();
   });
 
+  // ── Action Sheet: drag-to-dismiss ──
+  (function initActionSheetDrag() {
+    const sheet = document.getElementById('action-sheet');
+    const overlay = document.getElementById('action-sheet-overlay');
+    if (!sheet || !overlay) return;
+
+    let startY = 0, currentY = 0, dragging = false;
+    let lastY = 0, lastTime = 0, velocity = 0;
+    const DISMISS_THRESHOLD = 60;
+    const VELOCITY_THRESHOLD = 0.5;
+
+    sheet.addEventListener('touchstart', (e) => {
+      dragging = true;
+      startY = e.touches[0].clientY;
+      lastY = startY;
+      lastTime = Date.now();
+      currentY = 0;
+      velocity = 0;
+      sheet.style.transition = 'none';
+    }, { passive: true });
+
+    sheet.addEventListener('touchmove', (e) => {
+      if (!dragging) return;
+      const y = e.touches[0].clientY;
+      const dy = y - startY;
+      const now = Date.now();
+      velocity = (y - lastY) / (now - lastTime || 1);
+      lastY = y; lastTime = now;
+      if (dy < 0) return; // Don't allow pulling up
+      currentY = dy;
+      sheet.style.transform = `translate3d(0, ${dy}px, 0)`;
+    }, { passive: true });
+
+    sheet.addEventListener('touchend', () => {
+      if (!dragging) return;
+      dragging = false;
+      sheet.style.transition = '';
+      if (currentY > DISMISS_THRESHOLD || velocity > VELOCITY_THRESHOLD) {
+        _closeActionSheet();
+        sheet.style.transform = '';
+      } else {
+        sheet.style.transform = '';
+      }
+    });
+  })();
+
   // ── Overview ──
   document.getElementById('view-all-orders-btn')?.addEventListener('click', () => showSection('incoming'));
   document.getElementById('stat-outstanding-card').addEventListener('click', () => {

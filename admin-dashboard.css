@@ -999,7 +999,10 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   height: auto;
   padding-bottom: 8px;
 }
-/* Pending sheet: tight padding */
+/* Nav action sheet: tight bottom padding (bottom-nav hidden via scroll-lock) */
+#action-sheet-overlay .action-sheet {
+  padding-bottom: 8px;
+}
 #pending-sheet-overlay .action-sheet {
   padding-bottom: 8px;
 }
