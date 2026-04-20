@@ -448,7 +448,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .order-sheet-close:hover { background: var(--bg-hover); color: var(--tx); }
 
 .order-sheet-content {
-  flex: 1; overflow-y: auto; padding: 4px;
+  flex: 1; overflow-y: auto; padding: 4px 4px 0;
   /* subtle scrollbar */
   scrollbar-width: thin; scrollbar-color: var(--bd) transparent;
 }
@@ -2021,7 +2021,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 
 /* ── Financial Fate / Capture Section ── */
 .capture-section {
-  padding: 20px 16px 8px;
+  padding: 20px 16px 0;
   border-top: 1px solid var(--bd);
   margin-top: 4px;
 }
