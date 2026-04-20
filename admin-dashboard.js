@@ -3453,7 +3453,7 @@ async function renderOrderSheet() {
   html += '</div></div>';
 
   // Payment status — ALWAYS editable regardless of order age
-  html += `<div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.5px;color:var(--tx-faint);font-weight:500;margin-top:12px">${lang === 'es' ? 'Estado de Pago' : 'Payment Status'}</div>`;
+  html += `<div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.5px;color:var(--tx-faint);font-weight:500;margin-top:24px">${lang === 'es' ? 'Estado de Pago' : 'Payment Status'}</div>`;
   html += '<div class="payment-btns">';
   html += `<button class="payment-btn ${order.payment_status === 'not_paid' ? 'active-unpaid' : ''}" onclick="setPaymentStatus('not_paid')">${lang === 'es' ? 'Sin Pagar' : 'Not Paid'}</button>`;
   html += `<button class="payment-btn ${order.payment_status === 'paid' ? 'active-paid' : ''}" onclick="setPaymentStatus('paid')">${lang === 'es' ? 'Pagado' : 'Paid'}</button>`;
