@@ -163,3 +163,4 @@ Run through the complete flow:
 - [x] Fix pending sheet still closing on scroll — previous fix checked `items.scrollTop` but the scroll container is the `sheet` element itself; fixed to check `sheet.scrollTop`.
 - [x] Bump SW const CACHE_VERSION = 'v42'; — PWA discards stale cache and picks up all recent CSS/JS sheet padding + drag fixes.
 - [x] Fix PWA standalone sheet blank bottom space — in standalone mode `env(safe-area-inset-bottom)` is ~34px; removed extra 20px base padding inside `@media(display-mode:standalone)`, now uses `max(8px, env(safe-area-inset-bottom))`. Bumped cache to v42.
+- [ ] Fix PWA sheet max-height — `100vh` in black-translucent standalone = full screen (956px), not visible viewport (894px). Must subtract safe-area insets: `calc((100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 0.88)`. Add `box-sizing: border-box` so padding is inside max-height.

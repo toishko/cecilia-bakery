@@ -1482,7 +1482,9 @@ async function loadTodaySnapshot() {
 
     document.getElementById('today-order-count').textContent = totalOrders;
     document.getElementById('today-revenue').textContent = fmt(collectedToday);
-    document.getElementById('today-drivers-active').textContent = `${activeToday} / ${totalDrivers}`;
+    // 'today-drivers-active' element removed — guard to prevent null error
+    const driversEl = document.getElementById('today-drivers-active');
+    if (driversEl) driversEl.textContent = `${activeToday} / ${totalDrivers}`;
   } catch (e) {
     console.warn('Today snapshot error:', e);
   }
