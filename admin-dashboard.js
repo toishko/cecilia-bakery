@@ -3967,6 +3967,23 @@ function openPrintWindow(showTotals) {
   `;
   document.body.appendChild(overlay);
 
+  // Scale the page content to fit the viewport without scrolling
+  requestAnimationFrame(() => {
+    const pageEl = overlay.querySelector('.pp-page');
+    const scrollEl = overlay.querySelector('.pp-scroll');
+    const actionsH = overlay.querySelector('.pp-actions')?.offsetHeight || 70;
+    const availH = window.innerHeight - actionsH - 40; // 40px for scroll padding
+    const contentH = pageEl.scrollHeight;
+    if (contentH > availH) {
+      const scale = Math.floor((availH / contentH) * 100) / 100;
+      pageEl.style.transform = `scale(${scale})`;
+      pageEl.style.transformOrigin = 'top center';
+      // Shrink the container so there's no leftover scroll space
+      scrollEl.style.height = (contentH * scale + 40) + 'px';
+      scrollEl.style.overflow = 'hidden';
+    }
+  });
+
   // Unlock the body scroll so the overlay can scroll freely
   document.documentElement.classList.remove('scroll-locked');
 
