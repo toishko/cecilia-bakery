@@ -8492,6 +8492,20 @@ function _noAddOrder() {
 
 function _noRemoveOrder(idx) {
   if (adminNoOrders.length <= 1) return;
+
+  // Save current form state so we check the latest data
+  _noSaveFormToOrder(adminNoActiveOrderIdx);
+
+  // Check if order has any items filled
+  const order = adminNoOrders[idx];
+  const hasItems = order && Object.values(order.qty).some(v => v > 0);
+  if (hasItems) {
+    const msg = lang === 'es'
+      ? `¿Eliminar Orden ${idx + 1}? Tiene productos agregados.`
+      : `Delete Order ${idx + 1}? It has products added.`;
+    if (!confirm(msg)) return;
+  }
+
   adminNoOrders.splice(idx, 1);
   if (adminNoActiveOrderIdx >= adminNoOrders.length) adminNoActiveOrderIdx = adminNoOrders.length - 1;
   else if (adminNoActiveOrderIdx > idx) adminNoActiveOrderIdx--;
