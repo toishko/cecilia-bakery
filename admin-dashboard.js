@@ -3970,17 +3970,16 @@ function openPrintWindow(showTotals) {
   // Scale the page content to fit the viewport without scrolling
   requestAnimationFrame(() => {
     const pageEl = overlay.querySelector('.pp-page');
-    const scrollEl = overlay.querySelector('.pp-scroll');
     const actionsH = overlay.querySelector('.pp-actions')?.offsetHeight || 70;
-    const availH = window.innerHeight - actionsH - 40; // 40px for scroll padding
+    const availH = window.innerHeight - actionsH - 48; // 48px for padding
     const contentH = pageEl.scrollHeight;
     if (contentH > availH) {
       const scale = Math.floor((availH / contentH) * 100) / 100;
       pageEl.style.transform = `scale(${scale})`;
       pageEl.style.transformOrigin = 'top center';
-      // Shrink the container so there's no leftover scroll space
-      scrollEl.style.height = (contentH * scale + 40) + 'px';
-      scrollEl.style.overflow = 'hidden';
+      // Set the page element's height to its scaled size so flex layout adjusts
+      pageEl.style.height = (contentH * scale) + 'px';
+      pageEl.style.maxHeight = (contentH * scale) + 'px';
     }
   });
 
