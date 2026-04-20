@@ -122,20 +122,23 @@ QUANTITY VALUE RULES:
 - Rows 3–18 (all other products): Quantities are in multiples of 0.5. Valid values: 0.5, 1, 1.5, 2, 2.5, 3.
 - Read the number EXACTLY as written. Do NOT convert, calculate, or multiply.
 
-SELF-CHECK WITH TOTAL BOXES:
-After extracting all quantities, look at the bottom of the ticket for "Total Boxes:" followed by a printed number (e.g., "11.5").
-- Add up all your extracted quantities for rows 3–18 (everything EXCEPT the birthday cakes in rows 1–2).
-- If your sum does NOT match the printed "Total Boxes" number, you have a reading error. Go back and re-examine any quantities you were uncertain about.
-- The "Total Units:" number counts birthday cakes only (rows 1–2). Verify that your birthday cake quantities sum to this number.
+ALSO READ THESE TWO PRINTED VALUES FROM THE BOTTOM OF THE TICKET:
+- "Total Boxes:" — a printed number (e.g., 11.5). This is the sum of non-birthday-cake quantities (rows 3–18).
+- "Total Units:" — a printed number (e.g., 2). This is the count of birthday cakes (rows 1–2).
 
-Return ONLY a JSON array. No markdown, no code fences, no explanation. Format:
-[
-  { "code": "9226S", "qty": 1, "description": "Birthday Cake (Small) - Dulce de Leche", "confident": true },
-  { "code": "9776", "qty": 0.5, "description": "Cake Slice Pineapple - 12PK", "confident": true }
-]
+Return ONLY a JSON object (not an array). No markdown, no code fences, no explanation. Format:
+{
+  "items": [
+    { "code": "9226S", "qty": 1, "description": "Birthday Cake (Small) - Dulce de Leche", "confident": true },
+    { "code": "9776", "qty": 0.5, "description": "Cake Slice Pineapple - 12PK", "confident": true }
+  ],
+  "total_boxes": 11.5,
+  "total_units": 2
+}
 
 Only include rows where you can see a handwritten quantity. Set "confident" to false if the quantity is hard to read.
-If the image is not a bakery order ticket, return: []`;
+If you cannot read total_boxes or total_units, set them to null.
+If the image is not a bakery order ticket, return: { "items": [], "total_boxes": null, "total_units": null }`;
 
 
 export default async function handler(req, res) {
@@ -208,18 +211,26 @@ export default async function handler(req, res) {
     const rawContent = data.choices?.[0]?.message?.content || '[]';
 
     // Parse the JSON from the AI response (strip markdown fences if present)
-    let items;
+    let parsed;
     try {
       const cleaned = rawContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      items = JSON.parse(cleaned);
+      parsed = JSON.parse(cleaned);
     } catch (parseErr) {
       console.error('Failed to parse AI response:', rawContent);
       return res.status(500).json({ success: false, message: 'Could not parse scan results.' });
     }
 
+    // Handle both old array format and new object format
+    const items = Array.isArray(parsed) ? parsed : (parsed.items || []);
+    const ticketTotalBoxes = Array.isArray(parsed) ? null : (parsed.total_boxes ?? null);
+    const ticketTotalUnits = Array.isArray(parsed) ? null : (parsed.total_units ?? null);
+
     if (!Array.isArray(items)) {
       return res.status(500).json({ success: false, message: 'Invalid scan result format.' });
     }
+
+    // Birthday cake codes (rows 1–2)
+    const HB_CODES = new Set(['9226S','9165S','9226','9165','9196S','9196','9172S','9172','9189S','9189']);
 
     // Map ticket codes to system product keys
     const mapped = items.map(item => {
@@ -234,12 +245,49 @@ export default async function handler(req, res) {
       };
     });
 
+    // ── Server-side Total Boxes validation ──
+    let mismatch = null;
+    if (ticketTotalBoxes !== null) {
+      // Sum non-birthday-cake quantities
+      const computedBoxes = items
+        .filter(i => !HB_CODES.has(i.code))
+        .reduce((sum, i) => sum + (parseFloat(i.qty) || 0), 0);
+      // Round to avoid float precision issues
+      const roundedComputed = Math.round(computedBoxes * 10) / 10;
+      const roundedTicket = Math.round(ticketTotalBoxes * 10) / 10;
+
+      if (roundedComputed !== roundedTicket) {
+        mismatch = {
+          type: 'total_boxes',
+          expected: roundedTicket,
+          computed: roundedComputed,
+          diff: Math.round((roundedComputed - roundedTicket) * 10) / 10,
+        };
+      }
+    }
+    if (ticketTotalUnits !== null && !mismatch) {
+      const computedUnits = items
+        .filter(i => HB_CODES.has(i.code))
+        .reduce((sum, i) => sum + (parseFloat(i.qty) || 0), 0);
+      const roundedComputed = Math.round(computedUnits * 10) / 10;
+      const roundedTicket = Math.round(ticketTotalUnits * 10) / 10;
+      if (roundedComputed !== roundedTicket) {
+        mismatch = {
+          type: 'total_units',
+          expected: roundedTicket,
+          computed: roundedComputed,
+          diff: Math.round((roundedComputed - roundedTicket) * 10) / 10,
+        };
+      }
+    }
+
     return res.status(200).json({
       success: true,
       items: mapped,
       total: mapped.length,
       matched: mapped.filter(m => m.matched).length,
       unmatched: mapped.filter(m => !m.matched).length,
+      mismatch,
     });
 
   } catch (err) {

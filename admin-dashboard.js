@@ -8155,8 +8155,19 @@ async function _noScanTicketFile(file) {
         : `${filled} product(s) scanned`;
       if (uncertain > 0) msg += lang === 'es' ? `, ${uncertain} por revisar` : `, ${uncertain} to review`;
       if (unmatched > 0) msg += lang === 'es' ? `, ${unmatched} sin coincidencia` : `, ${unmatched} unmatched`;
+
+      // Server-side Total Boxes mismatch warning
+      const hasMismatch = data.mismatch && data.mismatch.expected !== undefined;
+      if (hasMismatch) {
+        const m = data.mismatch;
+        const label = m.type === 'total_boxes' ? 'Total Boxes' : 'Total Units';
+        msg += lang === 'es'
+          ? ` ⚠️ ${label}: ticket=${m.expected}, escaneo=${m.computed}`
+          : ` ⚠️ ${label}: ticket=${m.expected}, scan=${m.computed}`;
+      }
+
       bannerText.textContent = msg;
-      banner.className = (uncertain > 0 || unmatched > 0)
+      banner.className = (uncertain > 0 || unmatched > 0 || hasMismatch)
         ? 'scan-result-banner has-warnings'
         : 'scan-result-banner';
     }

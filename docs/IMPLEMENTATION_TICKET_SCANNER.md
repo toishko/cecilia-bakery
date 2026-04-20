@@ -97,3 +97,4 @@ The AI reads the number exactly as written — no conversion or multiplication.
   - (C) Total Boxes cross-check: GPT reads printed "Total Boxes" from footer, verifies its sum of non-HB quantities matches, re-examines if mismatch
   - (D) Noise zone warnings: ignore top header, bottom section (date, "4/16", "7AM", circled numbers), small black dots after descriptions
   - (E) QUANTITY column header anchoring: use the printed "QUANTITY" header to locate the correct horizontal position for all qty values
+- 2026-04-20: **Server-side Total Boxes validation** — GPT's self-check arithmetic was unreliable. Moved validation to API code: GPT returns `total_boxes` and `total_units` as extra fields, server sums quantities and compares. If mismatch → response includes `mismatch: true` with details → frontend shows a warning banner so admin knows to double-check.
