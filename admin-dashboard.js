@@ -1976,53 +1976,79 @@ window.closeOrderedSheet = closeOrderedSheet;
   if (!sheet || !overlay) return;
 
   let startY = 0, currentY = 0, dragging = false;
-  const DISMISS_THRESHOLD = 80; // px to drag before dismissing
+  let lastY = 0, lastTime = 0, velocity = 0;
+  const DISMISS_THRESHOLD = 60;
+  const VELOCITY_THRESHOLD = 0.5; // px/ms — fast flick dismisses even if < threshold
 
   function onTouchStart(e) {
-    // Only start drag from handle area or if content is scrolled to top
     const content = document.getElementById('ordered-sheet-content');
     const isHandle = e.target.closest('.action-sheet-handle') || e.target.closest('.order-sheet-header');
     if (!isHandle && content && content.scrollTop > 0) return;
 
     dragging = true;
     startY = e.touches[0].clientY;
+    lastY = startY;
+    lastTime = Date.now();
     currentY = 0;
+    velocity = 0;
+    sheet.style.willChange = 'transform';
     sheet.style.transition = 'none';
-    overlay.style.transition = 'none';
   }
 
   function onTouchMove(e) {
     if (!dragging) return;
-    const dy = e.touches[0].clientY - startY;
-    currentY = Math.max(0, dy); // only allow downward drag
+    const touchY = e.touches[0].clientY;
+    const dy = touchY - startY;
+    currentY = Math.max(0, dy);
+
+    // Track velocity
+    const now = Date.now();
+    const dt = now - lastTime;
+    if (dt > 0) {
+      velocity = (touchY - lastY) / dt;
+      lastY = touchY;
+      lastTime = now;
+    }
+
     if (currentY > 0) {
-      e.preventDefault(); // prevent background scroll
-      sheet.style.transform = `translateY(${currentY}px)`;
-      // Fade overlay proportionally
-      const progress = Math.min(currentY / 300, 1);
-      overlay.style.opacity = 1 - progress * 0.6;
+      e.preventDefault();
+      // Apply rubber-band resistance after threshold
+      const resist = currentY > DISMISS_THRESHOLD
+        ? DISMISS_THRESHOLD + (currentY - DISMISS_THRESHOLD) * 0.4
+        : currentY;
+      sheet.style.transform = `translate3d(0,${resist}px,0)`;
+      overlay.style.opacity = Math.max(0.3, 1 - (currentY / 400));
     }
   }
 
   function onTouchEnd() {
     if (!dragging) return;
     dragging = false;
-    sheet.style.transition = '';
-    overlay.style.transition = '';
+    sheet.style.willChange = '';
 
-    if (currentY > DISMISS_THRESHOLD) {
-      // Dismiss — animate out then close
-      sheet.style.transform = 'translateY(100%)';
+    const shouldDismiss = currentY > DISMISS_THRESHOLD || velocity > VELOCITY_THRESHOLD;
+
+    if (shouldDismiss) {
+      sheet.style.transition = 'transform .2s cubic-bezier(.32,.72,0,1)';
+      overlay.style.transition = 'opacity .2s ease';
+      sheet.style.transform = 'translate3d(0,100%,0)';
       overlay.style.opacity = '0';
       setTimeout(() => {
         closeOrderedSheet();
+        sheet.style.transition = '';
         sheet.style.transform = '';
+        overlay.style.transition = '';
         overlay.style.opacity = '';
-      }, 300);
+      }, 200);
     } else {
-      // Snap back
-      sheet.style.transform = 'translateY(0)';
+      sheet.style.transition = 'transform .2s cubic-bezier(.32,.72,0,1)';
+      overlay.style.transition = 'opacity .2s ease';
+      sheet.style.transform = 'translate3d(0,0,0)';
       overlay.style.opacity = '';
+      setTimeout(() => {
+        sheet.style.transition = '';
+        overlay.style.transition = '';
+      }, 200);
     }
     currentY = 0;
   }
