@@ -3175,7 +3175,7 @@ window.closeOrderSheet = function() {
 
   let startY = 0, currentY = 0;
   let lastY = 0, lastTime = 0, velocity = 0;
-  let dragging = false, tracking = false;
+  let dragging = false, decided = false;
   const DISMISS_THRESHOLD = 60;
   const VELOCITY_THRESHOLD = 0.5;
 
@@ -3186,33 +3186,34 @@ window.closeOrderSheet = function() {
     currentY = 0;
     velocity = 0;
     dragging = false;
-    tracking = true;
-    sheet.style.transition = 'none';
+    decided = false;
   }
 
   function onTouchMove(e) {
-    if (!tracking) return;
+    if (decided && !dragging) return; // already decided this is a scroll, bail
     const touchY = e.touches[0].clientY;
     const dy = touchY - startY;
 
+    // Track velocity
     const now = Date.now();
     const dt = now - lastTime;
     if (dt > 0) { velocity = (touchY - lastY) / dt; lastY = touchY; lastTime = now; }
 
-    if (!dragging) {
-      if (Math.abs(dy) < 4) return;
+    // Decide once: drag or scroll?
+    if (!decided) {
+      if (Math.abs(dy) < 5) return; // wait for clear intent
 
       const content = document.getElementById('order-sheet-content');
-      const atTop = !content || content.scrollTop <= 0;
+      const atTop = !content || content.scrollTop <= 1;
       const isHandle = e.target.closest('.action-sheet-handle') || e.target.closest('.order-sheet-header');
 
+      decided = true;
       if (dy > 0 && (atTop || isHandle)) {
         dragging = true;
         sheet.style.willChange = 'transform';
+        sheet.style.transition = 'none';
       } else {
-        tracking = false;
-        sheet.style.transition = '';
-        return;
+        return; // let the content scroll normally
       }
     }
 
@@ -3228,9 +3229,12 @@ window.closeOrderSheet = function() {
   }
 
   function onTouchEnd() {
-    tracking = false;
-    if (!dragging) return;
+    if (!dragging) {
+      decided = false;
+      return; // was a normal scroll, nothing to restore
+    }
     dragging = false;
+    decided = false;
     sheet.style.willChange = '';
 
     const shouldDismiss = currentY > DISMISS_THRESHOLD || velocity > VELOCITY_THRESHOLD;
@@ -3248,9 +3252,10 @@ window.closeOrderSheet = function() {
         overlay.style.opacity = '';
       }, 200);
     } else {
-      sheet.style.transition = 'transform .2s cubic-bezier(.32,.72,0,1)';
+      // Snap back — restore everything
+      sheet.style.transition = 'transform .2s cubic-bezier(.32,.72,0,1), opacity .2s ease';
       overlay.style.transition = 'opacity .2s ease';
-      sheet.style.transform = 'translate3d(0,0,0)';
+      sheet.style.transform = '';
       overlay.style.opacity = '';
       setTimeout(() => {
         sheet.style.transition = '';
