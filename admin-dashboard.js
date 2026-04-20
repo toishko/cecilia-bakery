@@ -345,7 +345,7 @@ async function showSection(name) {
     } catch (_) {}
   }
 
-  if (name === 'overview') loadOverview();
+  if (name === 'overview') { loadOverview(); window.scrollTo({ top: 0, behavior: 'instant' }); }
   if (name === 'insights') loadInsights();
   if (name === 'online-orders') { loadOnlineOrders(); markAllOnlineOrdersSeen(); }
   if (name === 'incoming') loadIncomingOrders();
