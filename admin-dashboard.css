@@ -399,6 +399,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 
 .order-card-avatar {
   display: flex;
+  position: relative;
   align-items: center;
   padding: 14px 4px;
   border-bottom: 1px solid var(--bd);
@@ -433,11 +434,13 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   font-size: 0.95rem;
   font-weight: 800;
   color: var(--red);
-  margin: 0 16px;
   background: var(--red-light, rgba(200, 16, 46, 0.1));
   padding: 4px 10px;
   border-radius: 8px;
-  flex-shrink: 0;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
 }
 .oca-pill.unpaid { color: var(--red); background: rgba(200,16,46,0.15); }
 
