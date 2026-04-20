@@ -151,3 +151,4 @@ Run through the complete flow:
 - [x] Polish drag-to-dismiss: GPU-accelerated `translate3d` + `will-change`, velocity-based fast-flick dismiss (0.5px/ms), rubber-band resistance past threshold, 200ms animations, reduced threshold to 60px.
 - [x] Fix jittery sheet open animation — apply `scroll-locked` (position:fixed reflow) before animation while sheet is off-screen, double `requestAnimationFrame` to let reflow settle, then trigger CSS slide-up. Also switched all `.action-sheet` transforms to `translate3d` with `will-change:transform` for GPU compositing.
 - [x] Add iOS-style drag-to-dismiss on the Pending Collection sheet — same pattern as ordered sheet (GPU accel, velocity, rubber-band, scroll-lock save/restore, smooth open with double rAF).
+- [x] Fix excessive bottom space in FAB queue sheet — reduced padding-bottom from 76px (for now-hidden bottom nav) to 20px + safe-area; queue sheet auto-sizes to content with 88vh cap.
