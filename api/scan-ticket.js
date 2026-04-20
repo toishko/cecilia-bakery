@@ -171,31 +171,31 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Model fallback chain (free tier can be overloaded)
+    // Model fallback chain — tries newest first, falls back to most stable
     const MODELS = [
-      'gemini-2.5-flash',
-      'gemini-2.5-flash-lite',
-      'gemini-2.0-flash',
+      { name: 'gemini-2.5-flash', api: 'v1beta' },
+      { name: 'gemini-2.0-flash', api: 'v1beta' },
+      { name: 'gemini-1.5-flash', api: 'v1beta' },
     ];
-
-    const requestBody = JSON.stringify({
-      contents: [{
-        parts: [
-          { text: SYSTEM_PROMPT + '\n\nRead this bakery order ticket and extract all product codes and quantities.' },
-          { inlineData: { mimeType, data: rawBase64 } },
-        ],
-      }],
-      generationConfig: {
-        temperature: 0,
-        maxOutputTokens: 2000,
-        thinkingConfig: { thinkingBudget: 0 },
-      },
-    });
 
     let response = null;
     let lastError = '';
     for (const model of MODELS) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const requestBody = JSON.stringify({
+        contents: [{
+          parts: [
+            { text: SYSTEM_PROMPT + '\n\nRead this bakery order ticket and extract all product codes and quantities.' },
+            { inlineData: { mimeType, data: rawBase64 } },
+          ],
+        }],
+        generationConfig: {
+          temperature: 0,
+          maxOutputTokens: 2000,
+          ...(model.name.startsWith('gemini-2') ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+        },
+      });
+
+      const url = `https://generativelanguage.googleapis.com/${model.api}/models/${model.name}:generateContent?key=${apiKey}`;
       response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -205,18 +205,20 @@ export default async function handler(req, res) {
       if (response.ok) break; // success — use this response
 
       const errText = await response.text();
-      console.error(`Gemini ${model} error:`, response.status, errText);
+      console.error(`Gemini ${model.name} error:`, response.status, errText);
       lastError = errText;
 
-      // Only retry on 503 (overload) or 429 (rate limit) — other errors won't help
-      if (response.status !== 503 && response.status !== 429) break;
-      console.log(`Model ${model} overloaded, trying next...`);
+      // Retry on 503 (overload), 429 (rate limit), or 400 (quota errors can return 400)
+      if (response.status !== 503 && response.status !== 429 && response.status !== 400) break;
+      console.log(`Model ${model.name} unavailable (${response.status}), trying next...`);
     }
 
     if (!response || !response.ok) {
-      let detail = 'AI service error.';
-      try { detail = JSON.parse(lastError)?.error?.message || detail; } catch {}
-      return res.status(502).json({ success: false, message: `${detail} (${response?.status || 'unknown'})` });
+      const isQuota = lastError.includes('quota') || lastError.includes('Quota') || lastError.includes('rate');
+      const detail = isQuota
+        ? 'Scanner limit reached. Please wait a few minutes and try again.'
+        : 'AI service temporarily unavailable. Please try again.';
+      return res.status(isQuota ? 429 : 502).json({ success: false, message: detail });
     }
 
     const data = await response.json();
