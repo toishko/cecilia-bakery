@@ -3046,16 +3046,22 @@ function renderOrderCards(orders, containerId, showLive = false) {
     const unseenClass = isDriverOrderSeen(order.id) ? '' : ' unseen';
     
     html += `
-      <div class="order-card-avatar${unseenClass}" data-order-id="${order.id}" onclick="openOrderSheet('${order.id}')">
-        <div class="oca-avatar">${initials}</div>
-        <div class="oca-body">
-          <div class="oca-name">${driverName}</div>
-          <div class="oca-time">${orderNum ? orderNum + ' • ' : ''}${time}</div>
-        </div>
-        <div class="oca-right">
-          ${order.driver_ref ? `<div style="font-size:0.65rem;font-weight:800;color:var(--tx-faint);text-transform:uppercase;text-align:right;margin-bottom:2px;letter-spacing:0.5px">Ref: ${_esc(order.driver_ref)}</div>` : ''}
-          <div class="oca-price">${formatCurrency(parseFloat(order.total_amount || 0))}</div>
-          <div class="oca-pill ${payClass}">${payText}</div>
+      <div class="order-card-wrapper${unseenClass}" data-order-id="${order.id}" onclick="openOrderSheet('${order.id}')">
+        ${order.driver_ref ? `
+        <div class="oca-ref-plate">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+          REF: ${_esc(order.driver_ref)}
+        </div>` : ''}
+        <div class="order-card-inner">
+          <div class="oca-avatar">${initials}</div>
+          <div class="oca-body">
+            <div class="oca-name">${driverName}</div>
+            <div class="oca-time">${orderNum ? orderNum + ' • ' : ''}${time}</div>
+          </div>
+          <div class="oca-right">
+            <div class="oca-price">${formatCurrency(parseFloat(order.total_amount || 0))}</div>
+            <div class="oca-pill ${payClass}">${payText}</div>
+          </div>
         </div>
       </div>`;
   });
