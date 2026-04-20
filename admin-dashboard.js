@@ -4054,58 +4054,255 @@ window.shareWhatsApp = async function() {
   const origHTML = btn ? btn.innerHTML : '';
   if (btn) { btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="40" stroke-dashoffset="10"/></svg> ' + (lang === 'es' ? 'Generando...' : 'Generating...') + '</span>'; btn.disabled = true; }
 
-  // Let browser paint the spinner before heavy work
-  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 50)));
-
-  // Build the print preview off-screen
-  const content = buildPrintHTML(detailTotalsVisible);
-  if (!content) { if (btn) { btn.innerHTML = origHTML; btn.disabled = false; } return; }
-
-  const tempDiv = document.createElement('div');
-  tempDiv.style.cssText = 'position:fixed;left:-9999px;top:0;width:500px;background:#fff;padding:16px;font-family:Outfit,Segoe UI,sans-serif;color:#1a1a1a';
-  tempDiv.innerHTML = `<div class="pp-page">${content}<div class="pp-footer" style="margin-top:24px;text-align:center;font-size:.75rem;color:#aaa;border-top:1px solid #eee;padding-top:12px">ceciliabakery.com</div></div>`;
-  document.body.appendChild(tempDiv);
+  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 30)));
 
   try {
-    const canvas = await html2canvas(tempDiv.querySelector('.pp-page'), {
-      backgroundColor: '#ffffff',
-      scale: 1.5,
-      useCORS: true,
-      logging: false,
-      windowWidth: 500
-    });
-    tempDiv.remove();
-
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+    const blob = _drawOrderCanvas(order, detailItems, detailTotalsVisible);
     const fileName = `cecilia-order-${order.order_number || ''}.jpg`;
     const file = new File([blob], fileName, { type: 'image/jpeg' });
 
-    // Try native share with file (works on mobile)
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({
-        title: `Cecilia Bakery Order ${orderNum}`,
-        files: [file]
-      });
+      await navigator.share({ title: `Cecilia Bakery Order ${orderNum}`, files: [file] });
     } else {
-      // Fallback: download the image so user can manually attach to WhatsApp
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
+      a.href = url; a.download = fileName; a.click();
       URL.revokeObjectURL(url);
-      showToast(lang === 'es' ? 'Imagen descargada — compártela en WhatsApp' : 'Image downloaded — share it on WhatsApp', 'success');
+      showToast(lang === 'es' ? 'Imagen descargada' : 'Image downloaded', 'success');
     }
   } catch (e) {
-    tempDiv.remove();
-    console.error('WhatsApp image share error:', e);
+    console.error('WhatsApp share error:', e);
     if (e.name !== 'AbortError') {
-      showToast(lang === 'es' ? 'Error al generar imagen' : 'Error generating image', 'error');
+      showToast(lang === 'es' ? 'Error al compartir' : 'Error sharing', 'error');
     }
   } finally {
     if (btn) { btn.innerHTML = origHTML; btn.disabled = false; requestAnimationFrame(() => lucide.createIcons()); }
   }
 };
+
+// ── Canvas 2D receipt drawing (replaces html2canvas) ──
+function _drawOrderCanvas(order, items, showTotals) {
+  const W = 500, PAD = 24;
+  const usable = W - PAD * 2;
+  const dpr = 2; // retina
+  const font = (w, s) => `${w} ${s}px -apple-system, "Segoe UI", sans-serif`;
+  const RED = '#C8102E', GRAY = '#888', DARK = '#1a1a1a', LIGHT_BG = '#fafafa';
+
+  // Pre-calculate height by doing a dry run
+  let h = 0;
+  h += 60;  // header
+  h += 24;  // divider spacing
+
+  // Meta
+  const driverName = getDriverName(order.driver_id);
+  let dateStr, dateLabel, timeStr, timeLabel;
+  if (order.pickup_date) { dateLabel = lang === 'es' ? 'Recogida' : 'Pickup'; dateStr = formatDate(order.pickup_date); }
+  else { dateLabel = lang === 'es' ? 'Pedido' : 'Ordered'; dateStr = formatDate(order.submitted_at); }
+  if (order.pickup_time) { timeLabel = lang === 'es' ? 'Hora' : 'Time'; timeStr = formatTimeValue(order.pickup_time); }
+  else { timeLabel = lang === 'es' ? 'Hora' : 'Time'; timeStr = formatTime(order.submitted_at); }
+
+  const metaLines = [];
+  metaLines.push({ label: lang === 'es' ? 'Conductor' : 'Driver', value: driverName });
+  if (order.business_name) metaLines.push({ label: lang === 'es' ? 'Negocio' : 'Business', value: order.business_name });
+  metaLines.push({ label: dateLabel, value: dateStr });
+  metaLines.push({ label: timeLabel, value: timeStr });
+  h += metaLines.length * 22 + 20;
+
+  // Table header
+  h += 36;
+
+  // Items
+  let lastCat = '';
+  let grandTotal = 0;
+  items.forEach(item => {
+    const cat = getCategoryLabel(item.product_key);
+    if (cat && cat !== lastCat) { h += 28; lastCat = cat; }
+    h += 28;
+    const eq = item.adjusted_quantity !== null ? item.adjusted_quantity : item.quantity;
+    grandTotal += eq * parseFloat(item.price_at_order || 0);
+  });
+
+  // Total + payment + notes + footer
+  if (showTotals) h += 44;
+  h += 40; // payment
+  if (order.notes) h += 40;
+  h += 40; // footer
+  h += PAD * 2; // top/bottom padding
+
+  // Create canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = W * dpr;
+  canvas.height = h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  // Background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, h);
+
+  let y = PAD;
+
+  // ── Header ──
+  ctx.textAlign = 'center';
+  ctx.fillStyle = RED;
+  ctx.font = font('700', 18);
+  ctx.fillText('CECILIA BAKERY', W / 2, y + 20);
+  ctx.fillStyle = DARK;
+  ctx.font = font('600', 13);
+  ctx.fillText(`${lang === 'es' ? 'Pedido' : 'Order'} ${order.order_number ? '#' + order.order_number : ''}`, W / 2, y + 40);
+  y += 52;
+
+  // Red divider
+  ctx.fillStyle = RED;
+  ctx.fillRect(PAD, y, usable, 2);
+  y += 16;
+
+  // ── Meta ──
+  ctx.textAlign = 'left';
+  metaLines.forEach(m => {
+    ctx.fillStyle = GRAY;
+    ctx.font = font('700', 11);
+    ctx.fillText(m.label + ':', PAD, y + 12);
+    ctx.fillStyle = DARK;
+    ctx.font = font('400', 11);
+    ctx.fillText(m.value, PAD + 85, y + 12);
+    y += 20;
+  });
+  y += 8;
+
+  // Gray divider
+  ctx.fillStyle = '#eee';
+  ctx.fillRect(PAD, y, usable, 1);
+  y += 12;
+
+  // ── Table header ──
+  ctx.fillStyle = RED;
+  ctx.font = font('700', 10);
+  ctx.fillText(lang === 'es' ? 'PRODUCTO' : 'PRODUCT', PAD, y + 12);
+  ctx.textAlign = 'right';
+  ctx.fillText(lang === 'es' ? 'CANT.' : 'QTY', PAD + usable * 0.65, y + 12);
+  if (showTotals) {
+    ctx.fillText(lang === 'es' ? 'PRECIO' : 'PRICE', PAD + usable * 0.82, y + 12);
+    ctx.fillText('TOTAL', PAD + usable, y + 12);
+  }
+  y += 18;
+  ctx.fillStyle = RED;
+  ctx.fillRect(PAD, y, usable, 1.5);
+  y += 8;
+
+  // ── Items ──
+  lastCat = '';
+  let rowIdx = 0;
+  items.forEach(item => {
+    const cat = getCategoryLabel(item.product_key);
+    if (cat && cat !== lastCat) {
+      // Category header
+      ctx.fillStyle = '#fff5f5';
+      ctx.fillRect(PAD, y, usable, 24);
+      ctx.fillStyle = RED;
+      ctx.font = font('700', 9);
+      ctx.textAlign = 'left';
+      ctx.fillText(cat.toUpperCase(), PAD + 8, y + 16);
+      y += 26;
+      lastCat = cat;
+      rowIdx = 0;
+    }
+
+    const eq = item.adjusted_quantity !== null ? item.adjusted_quantity : item.quantity;
+    const price = parseFloat(item.price_at_order || 0);
+    const lineTotal = eq * price;
+    const label = (item.product_label || item.product_key).replace(/\s*\(No Ticket\)/i, '');
+    const adjNote = (item.adjusted_quantity !== null && item.adjusted_quantity !== item.quantity)
+      ? ` (${item.quantity}→${eq})` : '';
+
+    // Alternating row bg
+    if (rowIdx % 2 === 1) {
+      ctx.fillStyle = LIGHT_BG;
+      ctx.fillRect(PAD, y, usable, 24);
+    }
+
+    ctx.fillStyle = DARK;
+    ctx.font = font('400', 11);
+    ctx.textAlign = 'left';
+    ctx.fillText(label + adjNote, PAD + 4, y + 16);
+    ctx.textAlign = 'right';
+    ctx.font = font('600', 11);
+    ctx.fillText(String(eq), PAD + usable * 0.65, y + 16);
+    if (showTotals) {
+      ctx.font = font('400', 11);
+      ctx.fillText(formatCurrency(price), PAD + usable * 0.82, y + 16);
+      ctx.font = font('600', 11);
+      ctx.fillText(formatCurrency(lineTotal), PAD + usable, y + 16);
+    }
+
+    // Bottom border
+    ctx.fillStyle = '#f0f0f0';
+    ctx.fillRect(PAD, y + 24, usable, 0.5);
+
+    y += 26;
+    rowIdx++;
+  });
+
+  y += 4;
+
+  // ── Grand Total ──
+  if (showTotals) {
+    ctx.fillStyle = RED;
+    ctx.fillRect(PAD, y, usable, 1.5);
+    y += 12;
+    ctx.textAlign = 'left';
+    ctx.font = font('700', 14);
+    ctx.fillStyle = DARK;
+    ctx.fillText(lang === 'es' ? 'Total General' : 'Grand Total', PAD, y + 14);
+    ctx.textAlign = 'right';
+    ctx.fillText(formatCurrency(grandTotal), PAD + usable, y + 14);
+    y += 28;
+  }
+
+  // ── Payment ──
+  const payLabels = { paid: lang === 'es' ? 'Pagado' : 'Paid', not_paid: lang === 'es' ? 'No Pagado' : 'Not Paid', partial: lang === 'es' ? 'Parcial' : 'Partial' };
+  let payStr = payLabels[order.payment_status] || order.payment_status;
+  if (order.payment_status === 'partial' && showTotals) {
+    payStr += ` — ${formatCurrency(order.payment_amount || 0)} / ${formatCurrency(grandTotal)}`;
+  }
+  const payColor = order.payment_status === 'paid' ? '#1b7a4a' : order.payment_status === 'partial' ? '#c89b2a' : RED;
+
+  ctx.fillStyle = '#f8f8f8';
+  ctx.fillRect(PAD, y, usable, 28);
+  ctx.textAlign = 'left';
+  ctx.font = font('600', 11);
+  ctx.fillStyle = DARK;
+  ctx.fillText(lang === 'es' ? 'Pago:' : 'Payment:', PAD + 8, y + 18);
+  ctx.fillStyle = payColor;
+  ctx.font = font('700', 11);
+  ctx.fillText(payStr, PAD + 65, y + 18);
+  y += 36;
+
+  // ── Notes ──
+  if (order.notes) {
+    ctx.textAlign = 'left';
+    ctx.fillStyle = GRAY;
+    ctx.font = font('italic 400', 10);
+    ctx.fillText((lang === 'es' ? 'Notas: ' : 'Notes: ') + order.notes.slice(0, 80), PAD, y + 10);
+    y += 24;
+  }
+
+  // ── Footer ──
+  ctx.fillStyle = '#eee';
+  ctx.fillRect(PAD, y, usable, 1);
+  y += 12;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#bbb';
+  ctx.font = font('400', 10);
+  ctx.fillText('ceciliabakery.com', W / 2, y + 10);
+
+  // Export as JPEG blob (synchronous via toBlob workaround)
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+  const bin = atob(dataUrl.split(',')[1]);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: 'image/jpeg' });
+}
 
 /* ═══════════════════════════════════
    PHASE 4 — DRIVER MANAGEMENT
