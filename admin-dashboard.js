@@ -1866,7 +1866,6 @@ async function _fetchAndRenderOrderedSheet() {
     const totalCollected = driverCollected + wholesaleCollected + onlineCollected;
     const totalOutstanding = driverOutstanding + wholesaleOutstanding;
 
-    const pct = (v) => total > 0 ? Math.round((v / total) * 100) : 0;
     const pctOf = (v, base) => base > 0 ? Math.round((v / base) * 100) : 0;
     const fc = (v) => formatCurrency(v);
 
@@ -1881,47 +1880,6 @@ async function _fetchAndRenderOrderedSheet() {
       `<button class="insights-pill${_orderedSheetTimeframe === p.key ? ' active' : ''}" data-value="${p.key}">${lang === 'es' ? p.es : p.en}</button>`
     ).join('')}</div>`;
 
-    // ── Channel rows ──
-    const channels = [
-      {
-        key: 'driver',
-        label: lang === 'es' ? 'Conductores' : 'Driver Orders',
-        sublabel: lang === 'es' ? 'Órdenes de campo' : 'Field deliveries',
-        amount: driverGross,
-        iconClass: 'icon-driver',
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 7v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
-      },
-      {
-        key: 'wholesale',
-        label: lang === 'es' ? 'Mayoreo' : 'Wholesale',
-        sublabel: lang === 'es' ? 'Órdenes mayoristas' : 'Bulk business orders',
-        amount: wholesaleGross,
-        iconClass: 'icon-wholesale',
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/><path d="M3 9l2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/><path d="M12 3v6"/></svg>`,
-      },
-      {
-        key: 'online',
-        label: lang === 'es' ? 'Pedidos en Línea' : 'Online Orders',
-        sublabel: lang === 'es' ? 'Ventas por internet' : 'Website & app orders',
-        amount: onlineGross,
-        iconClass: 'icon-online',
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>`,
-      }
-    ].filter(c => c.amount > 0);
-
-    const channelRowsHTML = channels.map(c => `
-      <div class="ordered-channel-row">
-        <div class="ordered-channel-icon ${c.iconClass}">${c.icon}</div>
-        <div class="ordered-channel-info">
-          <div class="ordered-channel-name">${c.label}</div>
-          <div class="ordered-channel-count">${c.sublabel}</div>
-        </div>
-        <div class="ordered-channel-right">
-          <div class="ordered-channel-amount">${fc(c.amount)}</div>
-          <div class="ordered-channel-pct">${pct(c.amount)}% ${lang === 'es' ? 'del total' : 'of total'}</div>
-        </div>
-      </div>
-    `).join('');
 
     // Capture bar
     const collectedPct = pctOf(totalCollected, total);
@@ -1971,7 +1929,6 @@ async function _fetchAndRenderOrderedSheet() {
         <div class="ordered-total-label">${lang === 'es' ? 'Total Facturado' : 'Total Invoiced'}</div>
         <div class="ordered-total-value">${fc(total)}</div>
       </div>
-      <div class="ordered-channels">${channelRowsHTML}</div>
       ${fateHTML}
     `;
 

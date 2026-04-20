@@ -63,6 +63,8 @@ The Overview tab shows abbreviated totals ($68.1k, $49.3k, $18.8k) for at-a-glan
 - [x] EN/ES support for all new labels
 - [x] CSS for time pills inside sheet
 - [x] Remove per-driver expandable breakdown from ordered sheet (redundant with FAB + Unpaid quick action)
+- [x] Remove non-interactive channel breakdown rows (Driver Orders, Wholesale, Online) from ordered sheet — they don't do anything on tap
+
 
 ### Phase 7 — Ultra-Premium UI Pass (Design Overhaul)
 - [x] Fix: prevent $0 categories from rendering a dot due to `stroke-linecap="round"`
