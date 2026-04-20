@@ -3983,17 +3983,15 @@ function openPrintWindow(showTotals) {
   document.getElementById('pp-print-btn').addEventListener('click', () => {
     overlay.classList.add('printing');
 
-    // Auto-scale content to fit one page
+    // Auto-scale content to fit one page using zoom (iOS Safari respects zoom, not transform)
     const pageEl = overlay.querySelector('.pp-page');
     const contentH = pageEl.scrollHeight;
-    // Printable height ≈ letter/A4 minus margins (roughly 247mm usable at 96dpi ≈ 940px)
-    const printableH = 940;
-    let scale = 1;
+    // Letter paper: 279mm - 20mm margins = 259mm ≈ 980px at 96dpi
+    const printableH = 980;
+    let zoomVal = 1;
     if (contentH > printableH) {
-      scale = printableH / contentH;
-      pageEl.style.transform = `scale(${scale})`;
-      pageEl.style.transformOrigin = 'top center';
-      pageEl.style.height = (contentH * scale) + 'px';
+      zoomVal = Math.floor((printableH / contentH) * 100) / 100; // e.g. 0.73
+      pageEl.style.zoom = zoomVal;
     }
 
     window.print();
@@ -4001,11 +3999,7 @@ function openPrintWindow(showTotals) {
     // Restore after print dialog closes
     const removePrinting = () => {
       overlay.classList.remove('printing');
-      if (scale < 1) {
-        pageEl.style.transform = '';
-        pageEl.style.transformOrigin = '';
-        pageEl.style.height = '';
-      }
+      pageEl.style.zoom = '';
       window.removeEventListener('focus', removePrinting);
     };
     window.addEventListener('focus', removePrinting);

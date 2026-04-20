@@ -1406,11 +1406,14 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   #print-preview-overlay .pp-actions{display:none!important}
   #print-preview-overlay .pp-scroll{padding:0;overflow:visible!important;height:auto!important}
   .pp-page{max-width:100%;page-break-inside:avoid;break-inside:avoid}
-  .pp-page .print-items th{border-bottom-color:#000}
+  .pp-page .print-items{font-size:.82rem}
+  .pp-page .print-items th{border-bottom-color:#000;padding:5px 6px}
+  .pp-page .print-items td{padding:4px 6px}
   .pp-page .print-total{border-top-color:#000;color:#000}
   .pp-page .print-header{border-bottom-color:#000}
+  .pp-page .print-meta{font-size:.82rem;gap:4px 16px;margin-bottom:14px}
   *{box-shadow:none!important}
-  @page{margin:10mm;size:auto}
+  @page{margin:8mm;size:auto}
 }
 
 /* ═══════════════════════════════════
