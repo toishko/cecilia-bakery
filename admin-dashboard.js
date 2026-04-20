@@ -8445,8 +8445,8 @@ function _noClearScanResults() {
   _noUpdateFooterCount();
 
   // Clear stored scan data from the current order
-  const order = adminNoOrders[adminNoActiveOrderIdx];
-  if (order) order.scanData = null;
+  const curOrder = adminNoOrders[adminNoActiveOrderIdx];
+  if (curOrder) curOrder.scanData = null;
 
   // Hide banner
   const banner = document.getElementById('scan-result-banner');
