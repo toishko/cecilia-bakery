@@ -8485,6 +8485,7 @@ function _noSwitchOrder(idx) {
   _noRenderOrderTabs();
   _noLoadOrderToForm(idx);
   _noUpdateFooterCount();
+  _noUpdateScanBanner();
 }
 
 function _noAddOrder() {
@@ -8494,6 +8495,31 @@ function _noAddOrder() {
   _noRenderOrderTabs();
   _noLoadOrderToForm(adminNoActiveOrderIdx);
   _noUpdateFooterCount();
+  _noUpdateScanBanner();
+}
+
+// Update the scan result banner to reflect the CURRENT order's scan state
+function _noUpdateScanBanner() {
+  const banner = document.getElementById('scan-result-banner');
+  if (!banner) return;
+  const order = adminNoOrders[adminNoActiveOrderIdx];
+  const hasScan = order && order.scanData && order.scanData.length > 0;
+  if (hasScan) {
+    const filled = order.scanData.filter(i => i.matched && i.rawQty > 0).length;
+    const uncertain = order.scanData.filter(i => !i.confident).length;
+    const bannerText = document.getElementById('scan-result-text');
+    if (bannerText) {
+      let msg = lang === 'es'
+        ? `${filled} producto(s) escaneado(s)`
+        : `${filled} product(s) scanned`;
+      if (uncertain > 0) msg += lang === 'es' ? `, ${uncertain} por revisar` : `, ${uncertain} to review`;
+      bannerText.textContent = msg;
+    }
+    banner.style.display = 'flex';
+    banner.className = uncertain > 0 ? 'scan-result-banner has-warnings' : 'scan-result-banner';
+  } else {
+    banner.style.display = 'none';
+  }
 }
 
 function _noRemoveOrder(idx) {
