@@ -90,3 +90,4 @@ The AI reads the number exactly as written — no conversion or multiplication.
 - Handwritten quantities are simple numbers (0.5, 1, 1.5, 2) — but camera angle/lighting affects accuracy
 - Multi-page tickets: user can scan each page separately, quantities accumulate
 - This is designed for one driver's workflow; scanner visibility is gated by the per-driver `scanner_enabled` flag
+- 2026-04-20: **Root cause identified** — Adjacent-row qty swap (e.g. 9776↔9970): GPT was column-scanning (all codes top-to-bottom, all qtys top-to-bottom, then zipping), causing off-by-one row shifts on tightly-spaced rows. Fix: Prompt now explicitly forces row-by-row LEFT-TO-RIGHT reading and bans column-scanning.

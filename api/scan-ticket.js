@@ -79,22 +79,37 @@ The ticket is a pre-printed form with a TABLE of product rows. Each row has thes
 - COLUMN 3: Handwritten QUANTITY — this is the number you need to extract. It is written by hand in pen/pencil in the blank space to the right of the description.
 - There may be additional columns for totals, credits, etc. — IGNORE those.
 
+HOW TO READ EACH ROW — CRITICAL READING METHOD:
+⚠️ DO NOT scan down the entire CODE column first and then scan down the entire QUANTITY column separately. This causes row misalignment where quantities get assigned to the wrong product.
+
+Instead, use this STRICT ROW-BY-ROW method:
+1. Find the FIRST printed CODE in the table (top-left of the product rows).
+2. From that code, scan HORIZONTALLY to the RIGHT along that SAME LINE to find the handwritten quantity for THAT code.
+3. Record the code and its quantity as a pair.
+4. Move DOWN to the NEXT printed code.
+5. Scan HORIZONTALLY RIGHT on THAT new line to find its quantity.
+6. Repeat until you have processed every row.
+
+Think of it as reading a sentence left-to-right: CODE → DESCRIPTION → QUANTITY. Never jump between rows when reading the quantity column.
+
 YOUR TASK:
-Scan EVERY row in the product table. For each row where you can see a handwritten quantity, extract the CODE, DESCRIPTION, and QUANTITY.
+Scan EVERY row in the product table using the row-by-row method above. For each row where you can see a handwritten quantity, extract the CODE, DESCRIPTION, and QUANTITY.
 
 RULES:
-1. Scan ALL product rows in the table, from top to bottom. Do not skip any row that has a handwritten number.
-2. The handwritten quantity is usually written in the rightmost blank area of each row. Look carefully — it may be small, faint, or in pencil.
+1. Scan ALL product rows from top to bottom. Do not skip any row that has a handwritten number.
+2. The handwritten quantity is in the rightmost blank area of THAT SPECIFIC ROW — always on the same horizontal line as the code.
 3. If a row has NO handwritten number (the quantity area is completely blank), skip that row.
 4. If a quantity looks like it was crossed out or scribbled over, skip that row.
 5. Read the CODE exactly as printed, including any letter suffix (e.g., "9226S" not "9226").
 6. IGNORE these completely: table headers, "Total Boxes", "Total Units", "Credit Units", "Subtotal", "Credit", "Total", "Payment", "Balance", handwritten dates, route numbers, page numbers, driver names, and any text outside the product table.
+7. The trailing dash or slash mark after a quantity (e.g., "1—" or "0.5—") is a checkmark made by the driver. It is NOT part of the number. Ignore it.
 
 QUANTITY RULES — CRITICAL:
 - BIRTHDAY CAKES (codes ending in S like 9226S, 9165S, etc., and their large versions 9226, 9165, 9172, 9189, 9196): Quantities are ALWAYS whole numbers (1, 2, 3...). Each number = 1 individual cake. NEVER 0.5.
 - ALL OTHER PRODUCTS: Quantities are in multiples of 0.5. Common values you will see: 0.5, 1, 1.5, 2, 2.5, 3.
-- Read the handwritten number EXACTLY as written. Do NOT convert, calculate, or multiply.
-- Common handwriting patterns: "1" may look like a vertical line, "0.5" may look like ".5" or "½", "2" is clearly two.
+- Read the handwritten number EXACTLY as written on THAT ROW. Do NOT convert, calculate, or multiply.
+- "0.5" may appear as ".5" or "½". A plain vertical mark with no dot before it is "1", not "0.5".
+- Double-check: after reading a quantity, verify it is on the same horizontal line as its code before recording it.
 
 KNOWN PRODUCT CODES (but extract ANY code you see, even if not in this list):
 ${VALID_CODES.join(', ')}
@@ -107,6 +122,7 @@ Return ONLY a JSON array. No markdown, no code fences, no explanation. Format:
 
 If you cannot confidently read a quantity, include the row but set "confident" to false.
 If the image is not a bakery order ticket or contains no product rows, return: []`;
+
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
