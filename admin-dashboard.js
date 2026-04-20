@@ -3979,27 +3979,12 @@ function openPrintWindow(showTotals) {
     }
   });
 
-  // Print button — auto-scale to fit single page then print
+  // Print button — sizing handled by @media print CSS
   document.getElementById('pp-print-btn').addEventListener('click', () => {
     overlay.classList.add('printing');
-
-    // Auto-scale content to fit one page using zoom (iOS Safari respects zoom, not transform)
-    const pageEl = overlay.querySelector('.pp-page');
-    const contentH = pageEl.scrollHeight;
-    // Letter paper: 279mm - 20mm margins = 259mm ≈ 980px at 96dpi
-    const printableH = 980;
-    let zoomVal = 1;
-    if (contentH > printableH) {
-      zoomVal = Math.floor((printableH / contentH) * 100) / 100; // e.g. 0.73
-      pageEl.style.zoom = zoomVal;
-    }
-
     window.print();
-
-    // Restore after print dialog closes
     const removePrinting = () => {
       overlay.classList.remove('printing');
-      pageEl.style.zoom = '';
       window.removeEventListener('focus', removePrinting);
     };
     window.addEventListener('focus', removePrinting);
