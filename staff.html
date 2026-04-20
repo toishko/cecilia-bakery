@@ -157,6 +157,60 @@
       --lang-text: #BFA0A8;
     }
 
+    /* ════════════════════════════════════════
+       BOTTOM NAV (MOBILE FIRST)
+       ════════════════════════════════════════ */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      display: flex;
+      background: var(--bg-nav);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid var(--bd);
+      padding: 6px 12px calc(6px + env(safe-area-inset-bottom));
+      justify-content: space-around;
+      align-items: center;
+      z-index: 1000;
+      box-shadow: 0 -4px 20px rgba(0,0,0,.03);
+    }
+    .bottom-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      flex: 1;
+      padding: 6px 0;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--tx-muted);
+      transition: color .2s, transform .1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .bottom-nav-item:active {
+      transform: scale(0.92);
+    }
+    .bottom-nav-item i, .bottom-nav-item svg {
+      width: 22px;
+      height: 22px;
+      stroke-width: 2px;
+      margin-bottom: 2px;
+      transition: transform .2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .bottom-nav-item span {
+      font-size: 0.65rem;
+      font-weight: 500;
+      font-family: inherit;
+    }
+    .bottom-nav-item.active {
+      color: var(--red);
+    }
+    .bottom-nav-item.active i, .bottom-nav-item.active svg {
+      transform: scale(1.15) translateY(-2px);
+    }
+
     /* ── Utilities ── */
     .hidden { display: none !important; }
 
@@ -328,7 +382,7 @@
 
     /* ── Staff Content ── */
     .staff-dash-content {
-      padding: 16px; max-width: 800px; margin: 0 auto; width: 100%;
+      padding: 16px 16px 100px 16px; max-width: 800px; margin: 0 auto; width: 100%;
     }
     .staff-section { display: none; }
     .staff-section.active { display: block; }
@@ -1017,117 +1071,6 @@
         src="assets/logo.png"
         alt="Cecilia Bakery" class="nav-logo-img" />
     </a>
-    <div class="nav-right-group">
-      <a href="/" class="nav-back">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-        <span data-en="Back to Home" data-es="Volver al Inicio">Back to Home</span>
-      </a>
-      <button id="lang-toggle" onclick="toggleStaffLang()" style="background:none;border:1px solid var(--bd);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.75rem;color:var(--tx-muted);font-weight:700;margin-right:4px">ES</button>
-      <div style="display:flex;align-items:center;gap:2px;margin-right:8px">
-        <button id="font-decrease" onclick="adjustFontSize(-1)" style="background:none;border:1px solid var(--bd);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:.75rem;color:var(--tx-muted);font-weight:700">A−</button>
-        <button id="font-increase" onclick="adjustFontSize(1)" style="background:none;border:1px solid var(--bd);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:.75rem;color:var(--tx-muted);font-weight:700">A+</button>
-      </div>
-      <button class="theme-btn" onclick="toggleTheme()" aria-label="Toggle theme">
-        <!-- Moon icon (shown in light mode) -->
-        <svg id="theme-icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-        </svg>
-        <!-- Sun icon (shown in dark mode) -->
-        <svg id="theme-icon-sun" class="hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="5"/>
-          <line x1="12" y1="1" x2="12" y2="3"/>
-          <line x1="12" y1="21" x2="12" y2="23"/>
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-          <line x1="1" y1="12" x2="3" y2="12"/>
-          <line x1="21" y1="12" x2="23" y2="12"/>
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-        </svg>
-      </button>
-    </div>
-    <!-- Hamburger (visible only in dashboard state via body class) -->
-    <button class="staff-menu-btn" id="staff-menu-btn" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
-  </nav>
-
-  <!-- ═══ DROPDOWN NAV (below main-nav, for dashboard) ═══ -->
-  <nav id="staff-dropdown-nav" class="staff-dropdown-nav">
-    <button class="staff-dropdown-nav-item active" data-section="orders" onclick="staffShowSection('orders')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      <span data-en="Orders" data-es="Pedidos">Orders</span>
-    </button>
-    <button class="staff-dropdown-nav-item" data-section="calculator" onclick="staffShowSection('calculator')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-      <span data-en="Calculator" data-es="Calculadora">Calculator</span>
-    </button>
-    <button class="staff-dropdown-nav-item" data-section="saved" onclick="staffShowSection('saved')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-      <span data-en="Saved" data-es="Guardados">Saved</span>
-    </button>
-
-    <div class="staff-nav-divider"></div>
-
-    <!-- Notifications Toggle -->
-    <div class="staff-nav-setting">
-      <div class="staff-nav-setting-label">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <span data-en="Notifications" data-es="Notificaciones">Notifications</span>
-      </div>
-      <label class="staff-toggle">
-        <input type="checkbox" id="staff-notif-toggle">
-        <span class="staff-toggle-track"></span>
-        <span class="staff-toggle-thumb"></span>
-      </label>
-    </div>
-
-    <!-- Dark Mode Toggle -->
-    <div class="staff-nav-setting">
-      <div class="staff-nav-setting-label">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        <span data-en="Dark Mode" data-es="Modo Oscuro">Dark Mode</span>
-      </div>
-      <label class="staff-toggle">
-        <input type="checkbox" id="staff-theme-toggle">
-        <span class="staff-toggle-track"></span>
-        <span class="staff-toggle-thumb"></span>
-      </label>
-    </div>
-
-    <!-- Language Toggle -->
-    <div class="staff-nav-setting">
-      <div class="staff-nav-setting-label">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-        <span data-en="Language" data-es="Idioma">Language</span>
-      </div>
-      <button onclick="toggleStaffLang()" id="staff-nav-lang-btn" style="padding:5px 14px;background:none;border:1px solid var(--bd);border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--tx);font-family:inherit">ES</button>
-    </div>
-
-    <!-- Text Size -->
-    <div class="staff-nav-setting">
-      <div class="staff-nav-setting-label">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-        <span data-en="Text Size" data-es="Tamaño de Texto">Text Size</span>
-      </div>
-      <div style="display:flex;gap:6px">
-        <button onclick="adjustFontSize(-1)" style="padding:4px 10px;background:none;border:1px solid var(--bd);border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:700;color:var(--tx);font-family:inherit">A−</button>
-        <button onclick="adjustFontSize(1)" style="padding:4px 10px;background:none;border:1px solid var(--bd);border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:700;color:var(--tx);font-family:inherit">A+</button>
-      </div>
-    </div>
-
-    <div class="staff-nav-divider"></div>
-
-    <!-- User Info -->
-    <div style="padding:6px 12px;font-size:.82rem;color:var(--tx-muted)">
-      <span id="staff-nav-greeting">Hi!</span>
-    </div>
-
-    <!-- Sign Out -->
-    <button class="staff-nav-signout" id="staff-signout-btn" data-en="Sign Out" data-es="Cerrar Sesión">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      <span data-en="Sign Out" data-es="Cerrar Sesión">Sign Out</span>
-    </button>
   </nav>
 
   <!-- ═══ MAIN CONTENT ═══ -->
@@ -1266,6 +1209,26 @@
                 </div>
               </div>
             </div>
+
+            <div class="settings-card">
+              <div class="settings-card-title" data-en="Account" data-es="Cuenta">Account</div>
+              <div class="settings-row">
+                <span class="settings-row-label" data-en="Notifications" data-es="Notificaciones">Notifications</span>
+                <div class="settings-row-actions">
+                  <label class="staff-toggle">
+                    <input type="checkbox" id="staff-notif-toggle">
+                    <span class="staff-toggle-track"></span>
+                    <span class="staff-toggle-thumb"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="settings-row">
+                <button id="staff-signout-btn" style="width:100%;padding:12px;background:none;border:1px solid var(--bd);border-radius:8px;cursor:pointer;font-size:.9rem;font-weight:600;color:var(--red);display:flex;align-items:center;justify-content:center;gap:8px;transition:background 0.2s">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  <span data-en="Sign Out" data-es="Cerrar Sesión">Sign Out</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1355,16 +1318,10 @@
 
     /* ── Sidebar Section Switcher ── */
     function staffShowSection(name) {
-      // Close hamburger dropdown
-      var nav = document.getElementById('staff-dropdown-nav');
-      var btn = document.getElementById('staff-menu-btn');
-      if (nav) nav.classList.remove('open');
-      if (btn) btn.classList.remove('open');
-
       document.querySelectorAll('.staff-section').forEach(function(el) {
         el.classList.toggle('active', el.id === 'section-' + name);
       });
-      document.querySelectorAll('.staff-dropdown-nav-item').forEach(function(navBtn) {
+      document.querySelectorAll('.bottom-nav-item').forEach(function(navBtn) {
         navBtn.classList.toggle('active', navBtn.dataset.section === name);
       });
       localStorage.setItem('cb-staff-section', name);
@@ -1869,16 +1826,11 @@
     function showState(stateName) {
       document.querySelectorAll('.state-panel').forEach(p => p.classList.remove('active'));
 
-      // Toggle body class for nav appearance (hamburger vs right-group)
+      // Toggle body class for nav appearance
       if (stateName === 'dashboard') {
         document.body.classList.add('staff-dashboard-active');
       } else {
         document.body.classList.remove('staff-dashboard-active');
-        // Close dropdown if open
-        var nav = document.getElementById('staff-dropdown-nav');
-        var btn = document.getElementById('staff-menu-btn');
-        if (nav) nav.classList.remove('open');
-        if (btn) btn.classList.remove('open');
       }
 
       if (stateName === 'signin') {
@@ -2680,13 +2632,6 @@
       }
     });
 
-    // ── Hamburger menu toggle ──
-    document.getElementById('staff-menu-btn')?.addEventListener('click', function() {
-      var nav = document.getElementById('staff-dropdown-nav');
-      var btn = document.getElementById('staff-menu-btn');
-      nav.classList.toggle('open');
-      btn.classList.toggle('open');
-    });
 
     // ── Dark mode toggle in dropdown ──
     var staffThemeToggle = document.getElementById('staff-theme-toggle');
