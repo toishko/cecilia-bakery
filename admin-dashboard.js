@@ -3471,9 +3471,12 @@ async function renderOrderSheet() {
   }
 
   const contentEl = document.getElementById('order-sheet-content');
+  const prevScroll = contentEl.scrollTop;
   contentEl.innerHTML = html;
-  // Reset scroll to top to prevent blank space after re-render
-  contentEl.scrollTop = 0;
+  // Preserve scroll on re-render (e.g. payment toggle); reset only on fresh open
+  const overlay = document.getElementById('order-sheet-overlay');
+  const isFreshOpen = !overlay || !overlay.classList.contains('open');
+  contentEl.scrollTop = isFreshOpen ? 0 : prevScroll;
 
   // Actions
   let actionsHtml = '';
