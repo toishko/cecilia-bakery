@@ -156,3 +156,4 @@ Run through the complete flow:
 - [x] Change Driver Orders default filter from "All" to "Today" — moved `active` class from "All" pill to "Today" pill.
 - [x] Change Overview revenue filter default from "This Month" to "Today" — moved `selected` attribute on the `#revenue-filter` dropdown.
 - [x] Remove "Drivers Active" stat from the today-snapshot strip on the overview.
+- [x] Fix pending sheet drag-dismiss intercepting upward scroll — defer drag lock to touchmove direction check; only commits to dismiss if first movement is downward at scrollTop=0.

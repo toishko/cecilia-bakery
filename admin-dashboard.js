@@ -1597,40 +1597,54 @@ window.closePendingSheet = closePendingSheet;
   const overlay = document.getElementById('pending-sheet-overlay');
   if (!sheet || !overlay) return;
 
-  let startY = 0, currentY = 0, dragging = false;
+  let startY = 0, currentY = 0;
   let lastY = 0, lastTime = 0, velocity = 0;
+  let dragging = false;   // confirmed drag-to-dismiss mode
+  let tracking = false;   // just watching — haven't committed direction yet
   const DISMISS_THRESHOLD = 60;
   const VELOCITY_THRESHOLD = 0.5;
 
   function onTouchStart(e) {
-    const items = document.getElementById('pending-sheet-items');
-    const isHandle = e.target.closest('.action-sheet-handle') || e.target.closest('.action-sheet-title');
-    if (!isHandle && items && items.scrollTop > 0) return;
-
-    dragging = true;
     startY = e.touches[0].clientY;
     lastY = startY;
     lastTime = Date.now();
     currentY = 0;
     velocity = 0;
-    sheet.style.willChange = 'transform';
+    dragging = false;
+    tracking = true; // watch this touch, decide in touchmove
     sheet.style.transition = 'none';
   }
 
   function onTouchMove(e) {
-    if (!dragging) return;
+    if (!tracking) return;
     const touchY = e.touches[0].clientY;
     const dy = touchY - startY;
-    currentY = Math.max(0, dy);
 
     const now = Date.now();
     const dt = now - lastTime;
-    if (dt > 0) {
-      velocity = (touchY - lastY) / dt;
-      lastY = touchY;
-      lastTime = now;
+    if (dt > 0) { velocity = (touchY - lastY) / dt; lastY = touchY; lastTime = now; }
+
+    if (!dragging) {
+      // First meaningful move — decide if this is a drag-dismiss gesture
+      if (Math.abs(dy) < 4) return; // not enough movement yet
+
+      const items = document.getElementById('pending-sheet-items');
+      const atTop = !items || items.scrollTop === 0;
+      const isHandle = e.target.closest('.action-sheet-handle') || e.target.closest('.action-sheet-title');
+
+      if (dy > 0 && (atTop || isHandle)) {
+        // Downward from top — lock into drag mode
+        dragging = true;
+        sheet.style.willChange = 'transform';
+      } else {
+        // Upward or scrolled content — let native scroll handle it
+        tracking = false;
+        sheet.style.transition = '';
+        return;
+      }
     }
 
+    currentY = Math.max(0, dy);
     if (currentY > 0) {
       e.preventDefault();
       const resist = currentY > DISMISS_THRESHOLD
@@ -1642,6 +1656,7 @@ window.closePendingSheet = closePendingSheet;
   }
 
   function onTouchEnd() {
+    tracking = false;
     if (!dragging) return;
     dragging = false;
     sheet.style.willChange = '';
