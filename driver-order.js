@@ -72,31 +72,33 @@ function showScreen(id) {
 }
 
 function showSection(name) {
-  // Close mobile nav dropdown
-  const mobileNav = document.getElementById('mobile-nav');
-  const mobileBtn = document.getElementById('mobile-menu-btn');
-  if (mobileNav) mobileNav.classList.remove('open');
-  if (mobileBtn) mobileBtn.classList.remove('open');
-
   // Hide all sections, show target
   document.querySelectorAll('.dash-section').forEach(s => s.style.display = 'none');
   const target = document.getElementById('section-' + name);
   if (target) target.style.display = 'block';
 
-  // Update active state on sidebar + mobile nav
-  document.querySelectorAll('.sidebar-nav-item, .mobile-nav-item').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.section === name);
-  });
+  // Determine which bottom nav tab should be active
+  // If the section is from the action sheet (clients, inventory, sales, settings), the settings/menu tab should be active
+  const isActionSheetSection = ['clients', 'inventory', 'sales', 'settings'].includes(name);
+  const bottomNavActiveTarget = isActionSheetSection ? 'settings' : name;
 
-  // Update mobile section name
+  // Update active state on sidebar, bottom nav, and action items
+  document.querySelectorAll('.sidebar-nav-item').forEach(btn => btn.classList.toggle('active', btn.dataset.section === name));
+  document.querySelectorAll('.bottom-nav-item').forEach(btn => btn.classList.toggle('active', btn.dataset.section === bottomNavActiveTarget));
+  document.querySelectorAll('.action-item').forEach(btn => btn.classList.toggle('active-section', btn.dataset.section === name));
+
+  // Update mobile section name dynamically based on what is active
   const sectionNameEl = document.getElementById('mobile-section-name');
-  const activeBtn = document.querySelector(`.sidebar-nav-item[data-section="${name}"]`);
-  if (sectionNameEl && activeBtn) {
-    const spanEl = activeBtn.querySelector('span[data-en]');
-    if (spanEl) {
-      sectionNameEl.textContent = spanEl.getAttribute('data-' + lang) || spanEl.textContent;
-      sectionNameEl.setAttribute('data-en', spanEl.getAttribute('data-en'));
-      sectionNameEl.setAttribute('data-es', spanEl.getAttribute('data-es'));
+  if (sectionNameEl) {
+    // Try to find the button representing this section to pull the translated string
+    const btn = document.querySelector(`.sidebar-nav-item[data-section="${name}"]`) || document.querySelector(`.bottom-nav-item[data-section="${name}"]`) || document.querySelector(`.action-item[data-section="${name}"]`);
+    if (btn) {
+      const spanEl = btn.querySelector('span[data-en]');
+      if (spanEl) {
+        sectionNameEl.textContent = spanEl.getAttribute('data-' + lang) || spanEl.textContent;
+        sectionNameEl.setAttribute('data-en', spanEl.getAttribute('data-en'));
+        sectionNameEl.setAttribute('data-es', spanEl.getAttribute('data-es'));
+      }
     }
   }
 
@@ -407,21 +409,39 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('login-theme-btn').addEventListener('click', toggleTheme);
 
   // ── Dashboard nav ──
-  // Mobile hamburger toggle
-  document.getElementById('mobile-menu-btn').addEventListener('click', () => {
-    const nav = document.getElementById('mobile-nav');
-    const btn = document.getElementById('mobile-menu-btn');
-    nav.classList.toggle('open');
-    btn.classList.toggle('open');
-  });
-  // Sidebar nav items
+  // Sidebar nav items (desktop fallback)
   document.querySelectorAll('.sidebar-nav-item').forEach(btn => {
     btn.addEventListener('click', () => showSection(btn.dataset.section));
   });
-  // Mobile nav items
-  document.querySelectorAll('.mobile-nav-item').forEach(btn => {
-    btn.addEventListener('click', () => showSection(btn.dataset.section));
+
+  // Bottom nav items
+  document.querySelectorAll('.bottom-nav-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const section = btn.dataset.section;
+      if (section === 'settings' && advancedFeaturesEnabled) {
+        // Open action sheet if advanced features are enabled
+        document.getElementById('action-sheet-overlay').classList.add('open');
+      } else {
+        showSection(section);
+      }
+    });
   });
+
+  // Action sheet items
+  document.querySelectorAll('.action-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('action-sheet-overlay').classList.remove('open');
+      showSection(btn.dataset.section);
+    });
+  });
+
+  // Action sheet close listeners
+  const sheetOverlay = document.getElementById('action-sheet-overlay');
+  const sheetBackdrop = document.getElementById('action-sheet-backdrop');
+  if (sheetBackdrop) sheetBackdrop.addEventListener('click', () => sheetOverlay.classList.remove('open'));
+  const sheetHandle = document.querySelector('.action-sheet-handle');
+  if (sheetHandle) sheetHandle.addEventListener('click', () => sheetOverlay.classList.remove('open'));
+
   document.getElementById('new-order-cta')?.addEventListener('click', () => showSection('new-order'));
 
   // ── Quick action cards (overview) ──
@@ -3994,6 +4014,20 @@ async function checkAdvancedFeatures() {
   document.querySelectorAll('.advanced-feature').forEach(el => {
     el.style.display = advancedFeaturesEnabled ? '' : 'none';
   });
+
+  // Switch Settings bottom nav icon to "Menu" if advanced features are on
+  const navSettingsIcon = document.getElementById('bottom-nav-settings-icon');
+  const navSettingsText = document.getElementById('bottom-nav-settings-text');
+  if (navSettingsIcon && navSettingsText) {
+    if (advancedFeaturesEnabled) {
+      navSettingsIcon.setAttribute('data-lucide', 'menu');
+      navSettingsText.textContent = lang === 'es' ? 'Más' : 'More';
+    } else {
+      navSettingsIcon.setAttribute('data-lucide', 'settings');
+      navSettingsText.textContent = lang === 'es' ? 'Config.' : 'Settings';
+    }
+    lucide.createIcons();
+  }
 
   // Show or hide scanner
   const scannerEnabled = !!currentDriver.scanner_enabled;

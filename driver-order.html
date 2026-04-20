@@ -93,44 +93,10 @@
 
   <!-- MOBILE HEADER -->
   <header class="mobile-header" id="mobile-header">
-    <img src="assets/logo.png" alt="Cecilia" class="mobile-logo" style="cursor:pointer" onclick="document.querySelector('.mobile-nav-item[data-section=overview]').click()">
+    <img src="assets/logo.png" alt="Cecilia" class="mobile-logo" style="cursor:pointer" onclick="document.querySelector('.bottom-nav-item[data-section=overview]').click()">
     <span class="mobile-section-name" id="mobile-section-name" data-en="Overview" data-es="Resumen">Overview</span>
-    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
   </header>
 
-  <!-- MOBILE NAV DROPDOWN -->
-  <nav id="mobile-nav" class="mobile-nav">
-    <button class="mobile-nav-item active" data-section="overview">
-      <i data-lucide="layout-dashboard"></i>
-      <span data-en="Overview" data-es="Resumen">Overview</span>
-    </button>
-    <button class="mobile-nav-item advanced-feature" data-section="clients" style="display:none">
-      <i data-lucide="building-2"></i>
-      <span data-en="Clients" data-es="Clientes">Clients</span>
-    </button>
-    <button class="mobile-nav-item" data-section="new-order">
-      <i data-lucide="plus-circle"></i>
-      <span data-en="New Order" data-es="Nuevo Pedido">New Order</span>
-    </button>
-    <button class="mobile-nav-item advanced-feature" data-section="inventory" style="display:none">
-      <i data-lucide="clipboard-list"></i>
-      <span data-en="Inventory" data-es="Inventario">Inventory</span>
-    </button>
-    <button class="mobile-nav-item" data-section="my-orders">
-      <i data-lucide="package"></i>
-      <span data-en="My Orders" data-es="Mis Pedidos">My Orders</span>
-    </button>
-    <button class="mobile-nav-item advanced-feature" data-section="sales" style="display:none">
-      <i data-lucide="receipt"></i>
-      <span data-en="Sales" data-es="Ventas">Sales</span>
-    </button>
-    <button class="mobile-nav-item" data-section="settings">
-      <i data-lucide="settings"></i>
-      <span data-en="Settings" data-es="Configuración">Settings</span>
-    </button>
-  </nav>
 
   <!-- MAIN CONTENT -->
   <main class="main-content" id="main-content">
@@ -424,6 +390,52 @@
       <div id="product-sections" style="padding-bottom:70px"></div>
     </div>
   </main>
+
+  <!-- BOTTOM TAB NAV (Mobile / PWA) -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="bottom-nav-item active" data-section="overview">
+      <i data-lucide="layout-dashboard"></i>
+      <span data-en="Overview" data-es="Resumen">Overview</span>
+    </button>
+    <button class="bottom-nav-item" data-section="new-order">
+      <i data-lucide="plus-circle"></i>
+      <span data-en="New Order" data-es="Nuevo Pedido">New Order</span>
+    </button>
+    <button class="bottom-nav-item" data-section="my-orders">
+      <i data-lucide="package"></i>
+      <span data-en="My Orders" data-es="Mis Pedidos">My Orders</span>
+    </button>
+    <button class="bottom-nav-item" id="bottom-nav-settings" data-section="settings">
+      <i data-lucide="settings" id="bottom-nav-settings-icon"></i>
+      <span data-en="Settings" data-es="Config." id="bottom-nav-settings-text">Settings</span>
+    </button>
+  </nav>
+
+  <!-- ACTION SHEET (slide-up sub-menu for Advanced Features) -->
+  <div class="action-sheet-overlay" id="action-sheet-overlay">
+    <div class="action-sheet-backdrop" id="action-sheet-backdrop"></div>
+    <div class="action-sheet" id="action-sheet">
+      <div class="action-sheet-handle"><span></span></div>
+      <div class="action-sheet-body">
+        <button class="action-item" data-section="clients">
+          <i data-lucide="building-2"></i>
+          <span data-en="Clients" data-es="Clientes">Clients</span>
+        </button>
+        <button class="action-item" data-section="inventory">
+          <i data-lucide="clipboard-list"></i>
+          <span data-en="Inventory" data-es="Inventario">Inventory</span>
+        </button>
+        <button class="action-item" data-section="sales">
+          <i data-lucide="receipt"></i>
+          <span data-en="Sales" data-es="Ventas">Sales</span>
+        </button>
+        <button class="action-item" data-section="settings">
+          <i data-lucide="settings"></i>
+          <span data-en="Settings" data-es="Configuración">Settings</span>
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- CUSTOM TIME PICKER MODAL -->

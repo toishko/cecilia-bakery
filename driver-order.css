@@ -141,34 +141,11 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 [data-theme="dark"] .mobile-logo{filter:brightness(0) invert(1) sepia(1) saturate(2) hue-rotate(310deg)}
 .mobile-section-name{font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:600;
   color:var(--tx);flex:1;text-align:center}
-.mobile-menu-btn{background:none;border:none;cursor:pointer;padding:6px;
-  display:flex;flex-direction:column;justify-content:center;gap:5px;width:36px;height:36px}
-.mobile-menu-btn span{display:block;height:2px;border-radius:2px;background:var(--tx);
-  transition:transform .3s,opacity .3s,width .3s}
-.mobile-menu-btn span:nth-child(1){width:22px}
-.mobile-menu-btn span:nth-child(2){width:16px}
-.mobile-menu-btn span:nth-child(3){width:22px}
-.mobile-menu-btn.open span:nth-child(1){transform:translateY(7px) rotate(45deg);width:22px}
-.mobile-menu-btn.open span:nth-child(2){opacity:0;width:0}
-.mobile-menu-btn.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);width:22px}
-
-.mobile-nav{display:none;background:var(--bg-card);border-bottom:1px solid var(--bd);
-  overflow:hidden;max-height:0;transition:max-height .3s ease,padding .3s ease;
-  padding:0 16px;position:sticky;top:57px;z-index:99}
-.mobile-nav.open{max-height:600px;padding:8px 16px 16px}
-.mobile-nav-item{display:flex;align-items:center;gap:12px;padding:14px 12px;
-  border-radius:10px;cursor:pointer;transition:background .15s;font-size:.95rem;
-  color:var(--tx-muted);border:none;background:none;width:100%;text-align:left;
-  font-family:inherit;position:relative}
-.mobile-nav-item:hover,.mobile-nav-item.active{background:var(--bg-surface);color:var(--tx)}
-.mobile-nav-item.active{font-weight:600;color:var(--red)}
-.mobile-nav-item svg{width:20px;height:20px;flex-shrink:0}
-
 /* ═══════════════════════════════════
    MAIN CONTENT AREA
    ═══════════════════════════════════ */
 .main-content{flex:1;margin-left:var(--sidebar-w);padding:28px 32px;max-width:960px;width:100%;
-  overflow-x:hidden;box-sizing:border-box}
+  overflow-x:hidden;box-sizing:border-box;padding-bottom:100px}
 
 .settings-website-link{display:flex;align-items:center;justify-content:center;gap:6px;
   padding:12px;border:1px solid var(--bd);border-radius:10px;background:none;
@@ -1404,5 +1381,80 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .scan-review-raw { font-size: 0.65rem; font-weight: 500; color: var(--tx-muted);
   display: block; text-align: right; }
 .scan-review-badge { font-size: 0.6rem; font-weight: 700; color: #eab308; margin-left: 4px; }
+/* ═══════════════════════════════════
+   BOTTOM TAB NAV (Mobile / PWA)
+   ═══════════════════════════════════ */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;
+  background:var(--bg-card);border-top:1px solid var(--bd);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  padding:6px 0;
+  padding-bottom:calc(6px + env(safe-area-inset-bottom));
+  justify-content:space-around;align-items:stretch;
+  box-shadow:0 -4px 20px rgba(0,0,0,.08);
+  transition:background .3s ease}
+[data-theme="dark"] .bottom-nav{box-shadow:0 -4px 20px rgba(0,0,0,.3)}
+
+.bottom-nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;flex:1;padding:6px 0;border:none;background:none;cursor:pointer;
+  color:var(--tx-muted);font-family:'Outfit',sans-serif;font-size:.65rem;
+  font-weight:500;letter-spacing:.02em;transition:color .2s;position:relative;
+  -webkit-tap-highlight-color:transparent}
+.bottom-nav-item svg{width:22px;height:22px;stroke-width:1.75;
+  transition:color .2s,transform .15s}
+.bottom-nav-item:active svg{transform:scale(.88)}
+.bottom-nav-item.active{color:var(--red);font-weight:600}
+.bottom-nav-item.active svg{color:var(--red)}
+
+/* Active indicator dot */
+.bottom-nav-item.active::after{content:'';position:absolute;bottom:0;left:50%;
+  transform:translateX(-50%);width:4px;height:4px;border-radius:50%;
+  background:var(--red)}
+
+.bottom-nav-badge{position:absolute;top:2px;right:calc(50% - 18px);
+  background:var(--red);color:#fff;font-size:.55rem;font-weight:700;
+  min-width:16px;height:16px;line-height:16px;text-align:center;
+  border-radius:8px;padding:0 4px;box-sizing:border-box}
+
+/* Always show bottom nav on mobile/PWA */
+@media(max-width:768px){ .bottom-nav{display:flex} }
+@media(display-mode:standalone){ .bottom-nav{display:flex} }
+
+
+/* ═══════════════════════════════════
+   ACTION SHEET (slide-up sub-menu)
+   ═══════════════════════════════════ */
+.action-sheet-overlay{position:fixed;inset:0;z-index:9000;
+  background:rgba(0,0,0,.45);opacity:0;pointer-events:none;
+  transition:opacity .25s ease;-webkit-tap-highlight-color:transparent}
+.action-sheet-overlay.open{opacity:1;pointer-events:auto;overscroll-behavior:contain}
+
+.action-sheet{position:fixed;bottom:0;left:0;right:0;z-index:9001;
+  background:var(--bg-card);border-top-left-radius:20px;border-top-right-radius:20px;
+  border:1px solid var(--bd);border-bottom:none;
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  box-sizing:border-box;
+  padding:12px 20px;padding-bottom:calc(20px + env(safe-area-inset-bottom));
+  transform:translate3d(0,100%,0);transition:transform .3s cubic-bezier(.32,.72,0,1);
+  will-change:transform;
+  box-shadow:0 -8px 40px rgba(0,0,0,.15);
+  max-height:calc((100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 0.6);
+  overflow-y:auto}
+.action-sheet-overlay.open .action-sheet{transform:translate3d(0,0,0)}
+[data-theme="dark"] .action-sheet{box-shadow:0 -8px 40px rgba(0,0,0,.4)}
+
+.action-sheet-handle{width:36px;height:4px;border-radius:2px;
+  background:var(--tx-faint);margin:0 auto 14px;opacity:.5}
+
+.action-sheet-body{display:flex;flex-direction:column;gap:4px}
+.action-item{display:flex;align-items:center;gap:14px;
+  padding:14px 16px;border-radius:14px;border:none;background:none;
+  color:var(--tx);font-family:'Outfit',sans-serif;font-size:.95rem;
+  font-weight:500;cursor:pointer;transition:background .15s;
+  -webkit-tap-highlight-color:transparent;width:100%;text-align:left}
+.action-item:hover{background:var(--bg-surface)}
+.action-item:active{background:var(--bg-surface);transform:scale(.98)}
+.action-item svg,.action-item i{width:22px;height:22px;
+  color:var(--tx-muted);flex-shrink:0}
+
 .scan-review-summary { font-size: 0.78rem; color: var(--tx-muted); font-family: 'Outfit', sans-serif;
   padding-top: 12px; font-weight: 500; text-align: center; }
