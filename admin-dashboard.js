@@ -8026,6 +8026,27 @@ async function initAdminOrderForm() {
   if (scanReviewBackdrop) {
     scanReviewBackdrop.onclick = () => _noCloseScanReview();
   }
+
+  // iOS scroll fix: prevent touch events from propagating to parent when
+  // the scan-review-body is at its scroll boundaries (top/bottom)
+  const scanReviewBody = document.getElementById('scan-review-body');
+  if (scanReviewBody) {
+    let startY = 0;
+    scanReviewBody.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+    }, { passive: true });
+
+    scanReviewBody.addEventListener('touchmove', (e) => {
+      const el = scanReviewBody;
+      const dy = e.touches[0].clientY - startY;
+      const atTop = el.scrollTop <= 0 && dy > 0;
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1 && dy < 0;
+
+      if (atTop || atBottom) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+  }
 }
 
 function _noShowFormContainer() {
