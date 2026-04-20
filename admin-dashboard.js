@@ -1761,16 +1761,18 @@ function openOrderedSheet(timeframe) {
     _orderedSheetTimeframe = document.getElementById('revenue-filter')?.value || 'this_month';
   }
 
-  // Show overlay first
-  overlay.classList.add('open');
-  // Delay scroll-lock until after animation to prevent layout reflow jitter
+  // Lock background scroll BEFORE animation (sheet is still off-screen)
   const scrollY = window.scrollY;
-  setTimeout(() => {
-    document.documentElement.classList.add('scroll-locked');
-    document.body.style.top = `-${scrollY}px`;
-    document.documentElement.dataset.scrollY = scrollY;
-  }, 320);
+  document.documentElement.classList.add('scroll-locked');
+  document.body.style.top = `-${scrollY}px`;
+  document.documentElement.dataset.scrollY = scrollY;
   content.innerHTML = `<div style="padding:40px;text-align:center;color:var(--tx-muted)">${lang === 'es' ? 'Cargando...' : 'Loading...'}</div>`;
+  // Wait one frame for reflow to settle, then trigger slide-up animation
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      overlay.classList.add('open');
+    });
+  });
 
   // Update subtitle
   const periodLabels = {
