@@ -985,15 +985,16 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 [data-theme="dark"] .action-sheet{box-shadow:0 -8px 40px rgba(0,0,0,.4)}
 
 /* Taller sheets for order detail and breakdown */
-#order-sheet-overlay .action-sheet,
-#ordered-sheet-overlay .action-sheet {
+#order-sheet-overlay .action-sheet {
   max-height: 88vh;
 }
-/* Queue sheet: auto-size to content, cap at 88vh */
+/* Ordered + Queue sheets: auto-size to content, cap at 88vh */
+#ordered-sheet-overlay .action-sheet,
 #queue-sheet-overlay .action-sheet {
   max-height: 88vh;
   height: auto;
 }
+#ordered-sheet-overlay .order-sheet-content,
 #queue-sheet-overlay .order-sheet-content {
   flex: none;
 }
