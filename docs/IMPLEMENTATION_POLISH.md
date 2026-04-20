@@ -141,3 +141,4 @@ Run through the complete flow:
 - [x] Removed duplicate "Ordered: $0" sub-text from admin dashboard "Collected Today" stat block.
 - [x] Bump PWA Service Worker cache version to flush stale HTML from local testing.
 - [x] Restore hidden spacer in `admin-dashboard.html`'s 'Collected Today' block to keep the UI perfectly aligned and straight.
+- [x] Fix "Overview" title off-center in mobile header — changed `.mobile-section-name` from `flex:1; text-align:center` to `position:absolute; left:0; right:0; text-align:center` so it centers across the full viewport regardless of logo/button widths.

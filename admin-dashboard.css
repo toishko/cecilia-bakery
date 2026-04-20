@@ -172,10 +172,10 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   align-items:center;justify-content:space-between;
   position:sticky;top:0;z-index:100;backdrop-filter:blur(12px);
   -webkit-backdrop-filter:blur(12px)}
-.mobile-logo{height:32px;width:auto;object-fit:contain}
+.mobile-logo{height:32px;width:auto;object-fit:contain;position:relative;z-index:2}
 [data-theme="dark"] .mobile-logo{filter:brightness(0) invert(1) sepia(1) saturate(2) hue-rotate(310deg)}
 .mobile-section-name{font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:600;
-  color:var(--tx);flex:1;text-align:center}
+  color:var(--tx);position:absolute;left:0;right:0;text-align:center;pointer-events:none}
 .mobile-menu-btn{background:none;border:none;cursor:pointer;padding:6px;
   display:flex;flex-direction:column;justify-content:center;gap:5px;width:36px;height:36px}
 .mobile-menu-btn span{display:block;height:2px;border-radius:2px;background:var(--tx);
