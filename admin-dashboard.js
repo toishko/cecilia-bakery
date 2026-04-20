@@ -242,6 +242,11 @@ function _openActionSheet(group) {
   if (typeof closeQueueSheet === 'function') closeQueueSheet();
   if (typeof closeOrderedSheet === 'function') closeOrderedSheet();
 
+  // Lock background scroll
+  document.documentElement.dataset.scrollY = window.scrollY;
+  document.body.style.top = `-${window.scrollY}px`;
+  document.documentElement.classList.add('scroll-locked');
+
   // Open with animation
   requestAnimationFrame(() => overlay.classList.add('open'));
 }
@@ -250,6 +255,11 @@ function _closeActionSheet() {
   const overlay = document.getElementById('action-sheet-overlay');
   if (overlay) overlay.classList.remove('open');
   _actionSheetOpenGroup = null;
+  // Restore background scroll
+  const scrollY = parseInt(document.documentElement.dataset.scrollY || '0');
+  document.documentElement.classList.remove('scroll-locked');
+  document.body.style.top = '';
+  window.scrollTo(0, scrollY);
 }
 
 function _toggleActionSheet(group) {
