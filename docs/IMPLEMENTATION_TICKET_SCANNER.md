@@ -91,3 +91,9 @@ The AI reads the number exactly as written — no conversion or multiplication.
 - Multi-page tickets: user can scan each page separately, quantities accumulate
 - This is designed for one driver's workflow; scanner visibility is gated by the per-driver `scanner_enabled` flag
 - 2026-04-20: **Root cause identified** — Adjacent-row qty swap (e.g. 9776↔9970): GPT was column-scanning (all codes top-to-bottom, all qtys top-to-bottom, then zipping), causing off-by-one row shifts on tightly-spaced rows. Fix: Prompt now explicitly forces row-by-row LEFT-TO-RIGHT reading and bans column-scanning.
+- 2026-04-20: **Major prompt overhaul v2** — Five improvements applied together:
+  - (A) Hardcoded the 18-code template order so GPT doesn't need to identify codes — just reads qty at each known row position
+  - (B) Explicit handwriting pattern descriptions: "1" = vertical stroke + trailing slash, "0.5" = zero-dot-five + trailing slash
+  - (C) Total Boxes cross-check: GPT reads printed "Total Boxes" from footer, verifies its sum of non-HB quantities matches, re-examines if mismatch
+  - (D) Noise zone warnings: ignore top header, bottom section (date, "4/16", "7AM", circled numbers), small black dots after descriptions
+  - (E) QUANTITY column header anchoring: use the printed "QUANTITY" header to locate the correct horizontal position for all qty values

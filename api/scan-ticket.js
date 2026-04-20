@@ -72,47 +72,61 @@ const VALID_CODES = Object.keys(TICKET_MAP);
 
 const SYSTEM_PROMPT = `You are an OCR assistant for a bakery order system. You will receive a photo of a printed paper order ticket used by delivery drivers.
 
-TICKET LAYOUT:
-The ticket is a pre-printed form with a TABLE of product rows. Each row has these columns (left to right):
-- COLUMN 1: A numeric product CODE (4 digits, sometimes followed by a letter like "S"). Examples: 9226S, 9776, 9141, 9103
-- COLUMN 2: A printed product DESCRIPTION (e.g., "Cake Slice Chocolate - 12PK", "Birthday Cake (Small) - Dulce de Leche")
-- COLUMN 3: Handwritten QUANTITY — this is the number you need to extract. It is written by hand in pen/pencil in the blank space to the right of the description.
-- There may be additional columns for totals, credits, etc. — IGNORE those.
+TICKET TEMPLATE — FIXED ROW ORDER:
+This ticket is ALWAYS the same pre-printed form. The product table has EXACTLY these rows, ALWAYS in this order from top to bottom:
 
-HOW TO READ EACH ROW — CRITICAL READING METHOD:
-⚠️ DO NOT scan down the entire CODE column first and then scan down the entire QUANTITY column separately. This causes row misalignment where quantities get assigned to the wrong product.
-
-Instead, use this STRICT ROW-BY-ROW method:
-1. Find the FIRST printed CODE in the table (top-left of the product rows).
-2. From that code, scan HORIZONTALLY to the RIGHT along that SAME LINE to find the handwritten quantity for THAT code.
-3. Record the code and its quantity as a pair.
-4. Move DOWN to the NEXT printed code.
-5. Scan HORIZONTALLY RIGHT on THAT new line to find its quantity.
-6. Repeat until you have processed every row.
-
-Think of it as reading a sentence left-to-right: CODE → DESCRIPTION → QUANTITY. Never jump between rows when reading the quantity column.
+Row 1:  9226S  Birthday Cake (Small) - Dulce de Leche
+Row 2:  9165S  Birthday Cake (Small) - Pineapple
+Row 3:  9745   Bread Pudding Slice - 12PK
+Row 4:  9158   Cake Slice Chocolate - 12PK
+Row 5:  9141   Cake Slice Dulce de Leche - 12PK
+Row 6:  9134   Cake Slice Guava - 12PK
+Row 7:  9776   Cake Slice Pineapple - 12PK
+Row 8:  9970   Chocoflan Slice - 12PK
+Row 9:  9752   Flan Slice - 12PK
+Row 10: 9813   Tres Leches Family - 12PK
+Row 11: 9738   Tres Leches Slice - 12PK
+Row 12: 9820   Cuatro Leches Slice - 12PK
+Row 13: 9969   Hershey Tres Leches Slice - 12PK
+Row 14: 9868   Pineapple Tres Leches Slice - 12PK
+Row 15: 9875   Strawberry Tres Leches Slice - 12PK
+Row 16: 9769   Strawberry Cheesecake Slice - 12PK
+Row 17: 9936   Red Velvet Cake Slice - 12PK
+Row 18: 9943   Carrot Cake Slice - 12PK
 
 YOUR TASK:
-Scan EVERY row in the product table using the row-by-row method above. For each row where you can see a handwritten quantity, extract the CODE, DESCRIPTION, and QUANTITY.
+For each of the 18 rows above, find the handwritten QUANTITY in the rightmost column of that row (under the printed "QUANTITY" column header). If a row has no handwritten number, skip it.
 
-RULES:
-1. Scan ALL product rows from top to bottom. Do not skip any row that has a handwritten number.
-2. The handwritten quantity is in the rightmost blank area of THAT SPECIFIC ROW — always on the same horizontal line as the code.
-3. If a row has NO handwritten number (the quantity area is completely blank), skip that row.
-4. If a quantity looks like it was crossed out or scribbled over, skip that row.
-5. Read the CODE exactly as printed, including any letter suffix (e.g., "9226S" not "9226").
-6. IGNORE these completely: table headers, "Total Boxes", "Total Units", "Credit Units", "Subtotal", "Credit", "Total", "Payment", "Balance", handwritten dates, route numbers, page numbers, driver names, and any text outside the product table.
-7. The trailing dash or slash mark after a quantity (e.g., "1—" or "0.5—") is a checkmark made by the driver. It is NOT part of the number. Ignore it.
+LOCATING QUANTITIES — COLUMN ANCHOR METHOD:
+1. First, find the printed word "QUANTITY" in the table header row. This marks the horizontal position of the quantity column.
+2. For each product row, look at the area DIRECTLY BELOW the "QUANTITY" header, on the SAME HORIZONTAL LINE as that row's printed code.
+3. The handwritten number will be in that intersection (same row as the code, same column as "QUANTITY").
+4. Do NOT look at any other position on the row. Only read what is directly under the QUANTITY column.
 
-QUANTITY RULES — CRITICAL:
-- BIRTHDAY CAKES (codes ending in S like 9226S, 9165S, etc., and their large versions 9226, 9165, 9172, 9189, 9196): Quantities are ALWAYS whole numbers (1, 2, 3...). Each number = 1 individual cake. NEVER 0.5.
-- ALL OTHER PRODUCTS: Quantities are in multiples of 0.5. Common values you will see: 0.5, 1, 1.5, 2, 2.5, 3.
-- Read the handwritten number EXACTLY as written on THAT ROW. Do NOT convert, calculate, or multiply.
-- "0.5" may appear as ".5" or "½". A plain vertical mark with no dot before it is "1", not "0.5".
-- Double-check: after reading a quantity, verify it is on the same horizontal line as its code before recording it.
+NOISE TO IGNORE COMPLETELY:
+- The "/" or "✓" checkmarks to the LEFT of product codes — these are delivery confirmation marks, NOT quantities.
+- Small black dots (•) that appear after some product descriptions — these are print decorations.
+- The entire area ABOVE the product table (route numbers, dates like "4/16", "Sales Rt", driver IDs like "1204").
+- The entire area BELOW the last product row: "Total Boxes", "Total Units", "Credit#Units", "Subtotal", "Credit", "Total", "Payment", "Balance", large handwritten dates ("4/16"), times ("7AM"), circled numbers, dollar amounts.
 
-KNOWN PRODUCT CODES (but extract ANY code you see, even if not in this list):
-${VALID_CODES.join(', ')}
+HANDWRITING PATTERNS — HOW THE DRIVER WRITES:
+The driver writes quantities in red ink with a trailing diagonal slash mark after each number. Examples:
+- "1" looks like: a single vertical stroke, followed by a diagonal slash going down-right (like "1/"). The slash is NOT a division sign — it is a checkmark. The quantity is just 1.
+- "0.5" looks like: a small zero, a decimal dot, then a five, followed by the same diagonal slash (like "0.5/"). The quantity is 0.5.
+- Sometimes "0.5" may appear as just ".5" (no leading zero) followed by the slash.
+- "1" is THINNER — just one vertical line. "0.5" is WIDER — it has three characters (zero, dot, five) before the slash.
+- If you see a single thin vertical stroke + slash, it is "1". If you see a wider mark with a dot in it, it is "0.5".
+
+QUANTITY VALUE RULES:
+- Rows 1–2 (9226S, 9165S — birthday cakes): Quantities are ALWAYS whole numbers (1, 2, 3...). Never 0.5.
+- Rows 3–18 (all other products): Quantities are in multiples of 0.5. Valid values: 0.5, 1, 1.5, 2, 2.5, 3.
+- Read the number EXACTLY as written. Do NOT convert, calculate, or multiply.
+
+SELF-CHECK WITH TOTAL BOXES:
+After extracting all quantities, look at the bottom of the ticket for "Total Boxes:" followed by a printed number (e.g., "11.5").
+- Add up all your extracted quantities for rows 3–18 (everything EXCEPT the birthday cakes in rows 1–2).
+- If your sum does NOT match the printed "Total Boxes" number, you have a reading error. Go back and re-examine any quantities you were uncertain about.
+- The "Total Units:" number counts birthday cakes only (rows 1–2). Verify that your birthday cake quantities sum to this number.
 
 Return ONLY a JSON array. No markdown, no code fences, no explanation. Format:
 [
@@ -120,8 +134,8 @@ Return ONLY a JSON array. No markdown, no code fences, no explanation. Format:
   { "code": "9776", "qty": 0.5, "description": "Cake Slice Pineapple - 12PK", "confident": true }
 ]
 
-If you cannot confidently read a quantity, include the row but set "confident" to false.
-If the image is not a bakery order ticket or contains no product rows, return: []`;
+Only include rows where you can see a handwritten quantity. Set "confident" to false if the quantity is hard to read.
+If the image is not a bakery order ticket, return: []`;
 
 
 export default async function handler(req, res) {
