@@ -2890,11 +2890,12 @@ function updateIncomingBadge() {
 
 /* Unified badge helper for the bottom nav "Orders" tab */
 function _updateOrdersBottomBadge() {
+  // Match the sidebar badge: all active driver orders (no "unseen" filter)
   const driverCount = incomingOrders.filter(o =>
-    (o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent') && !isDriverOrderSeen(o.id)
+    o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent'
   ).length;
   const onlineCount = typeof _cachedOnlineOrders !== 'undefined'
-    ? _cachedOnlineOrders.filter(o => !isOnlineOrderSeen(o.id)).length : 0;
+    ? _cachedOnlineOrders.filter(o => o.delivery_status === 'pending' || o.delivery_status === 'preparing' || o.delivery_status === 'ready').length : 0;
   const total = driverCount + onlineCount;
   const badge = document.getElementById('orders-bottom-badge');
   if (badge) {
