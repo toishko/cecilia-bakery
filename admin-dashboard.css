@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════
    DESIGN TOKENS
    ═══════════════════════════════════ */
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 :root {
   --red:#C8102E; --red-dk:#9B0B22; --red-lt:#E8213F;
   --blue:#002D62; --blue-lt:#1A4A8A;

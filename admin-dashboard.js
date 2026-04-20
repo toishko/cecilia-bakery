@@ -4049,28 +4049,33 @@ window.shareWhatsApp = async function() {
   const order = detailOrder;
   const orderNum = order.order_number ? `#${order.order_number}` : `#${order.id.replace(/-/g, '').slice(-5).toUpperCase()}`;
 
+  // Show loading state on button
+  const btn = document.querySelector('.export-btn.whatsapp');
+  const origHTML = btn ? btn.innerHTML : '';
+  if (btn) { btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="40" stroke-dashoffset="10"/></svg> ' + (lang === 'es' ? 'Generando...' : 'Generating...') + '</span>'; btn.disabled = true; }
+
   // Build the print preview off-screen
   const content = buildPrintHTML(detailTotalsVisible);
-  if (!content) return;
+  if (!content) { if (btn) { btn.innerHTML = origHTML; btn.disabled = false; } return; }
 
   const tempDiv = document.createElement('div');
-  tempDiv.style.cssText = 'position:fixed;left:-9999px;top:0;width:600px;background:#fff;padding:20px;font-family:Outfit,Segoe UI,sans-serif;color:#1a1a1a';
+  tempDiv.style.cssText = 'position:fixed;left:-9999px;top:0;width:500px;background:#fff;padding:16px;font-family:Outfit,Segoe UI,sans-serif;color:#1a1a1a';
   tempDiv.innerHTML = `<div class="pp-page">${content}<div class="pp-footer" style="margin-top:24px;text-align:center;font-size:.75rem;color:#aaa;border-top:1px solid #eee;padding-top:12px">ceciliabakery.com</div></div>`;
   document.body.appendChild(tempDiv);
 
   try {
-    // Copy print-preview CSS styles inline for html2canvas
     const canvas = await html2canvas(tempDiv.querySelector('.pp-page'), {
       backgroundColor: '#ffffff',
-      scale: 2,
+      scale: 1.5,
       useCORS: true,
-      logging: false
+      logging: false,
+      windowWidth: 500
     });
     tempDiv.remove();
 
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-    const fileName = `cecilia-order-${order.order_number || ''}.png`;
-    const file = new File([blob], fileName, { type: 'image/png' });
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+    const fileName = `cecilia-order-${order.order_number || ''}.jpg`;
+    const file = new File([blob], fileName, { type: 'image/jpeg' });
 
     // Try native share with file (works on mobile)
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -4091,7 +4096,11 @@ window.shareWhatsApp = async function() {
   } catch (e) {
     tempDiv.remove();
     console.error('WhatsApp image share error:', e);
-    showToast(lang === 'es' ? 'Error al generar imagen' : 'Error generating image', 'error');
+    if (e.name !== 'AbortError') {
+      showToast(lang === 'es' ? 'Error al generar imagen' : 'Error generating image', 'error');
+    }
+  } finally {
+    if (btn) { btn.innerHTML = origHTML; btn.disabled = false; requestAnimationFrame(() => lucide.createIcons()); }
   }
 };
 
