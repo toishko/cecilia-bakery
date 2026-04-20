@@ -1400,13 +1400,16 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 
 /* ── Print Stylesheet — fit-to-one-page via smaller sizes ── */
 @media print{
+  html,body{height:auto!important;min-height:0!important;margin:0!important;padding:0!important;overflow:visible!important}
   body>*{display:none!important}
   #print-preview-overlay{display:block!important;position:static!important;
-    height:auto!important;min-height:0!important;overflow:visible!important}
+    height:auto!important;min-height:0!important;overflow:visible!important;
+    margin:0!important;padding:0!important}
   #print-preview-overlay .pp-actions{display:none!important}
-  #print-preview-overlay .pp-scroll{padding:0;overflow:visible!important;height:auto!important}
+  #print-preview-overlay .pp-scroll{padding:0!important;margin:0!important;overflow:visible!important;height:auto!important}
   /* Shrink everything — 75% base font cascades to all children */
-  .pp-page{max-width:100%;font-size:75%;page-break-inside:avoid;break-inside:avoid}
+  .pp-page{max-width:100%;font-size:75%;page-break-inside:avoid;break-inside:avoid;
+    page-break-after:avoid;margin:0!important;padding:0!important}
   .pp-page .print-logo{max-width:90px;margin-bottom:4px}
   .pp-page .print-header{margin-bottom:10px;padding-bottom:8px}
   .pp-page .print-order-num{font-size:.9rem;margin-top:2px}
@@ -1417,7 +1420,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   .pp-page .print-total{border-top-color:#000;color:#000;font-size:1rem;margin-top:4px;padding-top:6px}
   .pp-page .print-payment{margin-top:8px;padding:6px 10px;font-size:.75rem}
   .pp-page .print-notes{margin-top:6px;padding:6px 10px;font-size:.72rem}
-  .pp-footer{margin-top:10px;padding-top:6px}
+  .pp-footer{margin-top:10px;padding-top:6px;margin-bottom:0!important;padding-bottom:0!important}
   *{box-shadow:none!important}
   @page{margin:6mm;size:auto}
 }
