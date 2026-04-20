@@ -653,21 +653,21 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .partial-amount-input:focus{border-color:var(--red);outline:none}
 .partial-remaining{font-size:.78rem;color:var(--yellow);font-weight:500;margin-left:4px}
 
-/* Confirm & Send — Premium Stacked Actions */
-.detail-actions{display:flex;flex-direction:column;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--bd)}
-.detail-actions button{padding:15px 16px;border-radius:14px;font-weight:600;
-  font-family:inherit;cursor:pointer;font-size:.9rem;transition:all .2s;white-space:nowrap;width:100%;text-align:center}
-.btn-confirm{background:var(--red);border:none;color:#fff}
+/* Confirm & Send — Premium Action Grid */
+.detail-actions,.order-sheet-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  margin-top:20px;padding:16px 4px 0;border-top:1px solid var(--bd)}
+.detail-actions button,.order-sheet-actions button{padding:14px 10px;border-radius:12px;font-weight:600;
+  font-family:inherit;cursor:pointer;font-size:.85rem;transition:all .2s;white-space:nowrap;
+  text-align:center;min-height:48px;display:flex;align-items:center;justify-content:center}
+.btn-confirm{background:var(--red);border:none;color:#fff;grid-column:1/-1}
 .btn-confirm:hover{background:var(--red-dk)}
 .btn-confirm:disabled{opacity:.4;cursor:not-allowed}
 .btn-save{background:var(--bg-surface);border:1.5px solid var(--bd);color:var(--tx);font-weight:600}
 .btn-save:hover{background:var(--bg-hover);border-color:var(--tx-muted)}
-.btn-save:active{transform:scale(.98)}
-.btn-pickup{background:linear-gradient(135deg,#1b7a4a,#22965a);border:none;color:#fff;font-weight:600;
-  letter-spacing:.3px;min-height:52px;font-size:.95rem;
-  box-shadow:0 3px 12px rgba(27,122,74,.25)}
+.btn-save:active{transform:scale(.97)}
+.btn-pickup{background:var(--green);border:none;color:#fff;font-weight:600;letter-spacing:.2px}
 .btn-pickup:hover{opacity:.92}
-.btn-pickup:active{transform:scale(.98);box-shadow:0 1px 6px rgba(27,122,74,.2)}
+.btn-pickup:active{transform:scale(.97)}
 
 /* Edit window timer */
 .edit-window-banner{display:flex;align-items:center;gap:8px;padding:10px 14px;
@@ -1258,7 +1258,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
    ═══════════════════════════════════ */
 
 /* Export action bar — subtle 50/50 pill grid */
-.export-bar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;width:100%}
+.export-bar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;width:100%;grid-column:1/-1}
 .export-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
   padding:11px 12px;border-radius:12px;font-size:.8rem;font-weight:600;cursor:pointer;
   transition:all .15s;border:1.5px solid var(--bd);
