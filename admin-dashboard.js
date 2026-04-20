@@ -4548,14 +4548,11 @@ function renderDriverTable() {
       ? (lang === 'es' ? 'Activo' : 'Active')
       : (lang === 'es' ? 'Desactivado' : 'Disabled');
     const balClass = d.balance > 0 ? 'has-balance' : 'no-balance';
-    const advBadge = d.advanced_features
-      ? `<span class="adv-badge" title="Advanced Features Enabled"><i data-lucide="zap" style="width:14px;height:14px;color:var(--yellow);margin-left:6px"></i></span>`
-      : '';
     const scanBadge = d.scanner_enabled
       ? `<span class="adv-badge" title="Scanner Enabled"><i data-lucide="camera" style="width:14px;height:14px;color:var(--red);margin-left:6px"></i></span>`
       : '';
     return `<tr onclick="showDriverProfile('${d.id}')">
-      <td class="driver-name" style="display:flex;align-items:center">${_esc(d.name)} ${advBadge}${scanBadge}</td>
+      <td class="driver-name" style="display:flex;align-items:center">${_esc(d.name)} ${scanBadge}</td>
       <td class="driver-code"><span class="code-masked" data-code="${_escAttr(d.code)}">••••••</span> <button class="code-eye-btn" onclick="event.stopPropagation();toggleCode(this)" title="Show code"><i data-lucide="eye"></i></button></td>
       <td class="driver-phone hide-mobile">${_esc(d.phone || '—')}</td>
       <td><span class="${statusClass}">${statusText}</span></td>
@@ -4622,9 +4619,7 @@ window.showEditDriver = async function(driverId) {
   document.getElementById('df-active').checked = driver.is_active;
   document.getElementById('df-active-label').textContent =
     driver.is_active ? (lang === 'es' ? 'Activo' : 'Active') : (lang === 'es' ? 'Desactivado' : 'Disabled');
-  // Advanced features toggle
-  document.getElementById('df-advanced-wrap').style.display = 'flex';
-  document.getElementById('df-advanced').checked = !!driver.advanced_features;
+  // (advanced_features toggle removed — now available to all drivers)
   // Scanner enabled toggle
   document.getElementById('df-scanner-wrap').style.display = 'flex';
   document.getElementById('df-scanner').checked = !!driver.scanner_enabled;
@@ -4807,16 +4802,14 @@ async function saveDriver() {
 
     if (editingDriverId) {
       // Update driver
-      const advFeatures = document.getElementById('df-advanced').checked;
       const scannerEnabled = document.getElementById('df-scanner').checked;
-      const { error } = await sb.from('drivers').update({ name, code, phone, is_active: isActive, advanced_features: advFeatures, scanner_enabled: scannerEnabled }).eq('id', editingDriverId);
+      const { error } = await sb.from('drivers').update({ name, code, phone, is_active: isActive, scanner_enabled: scannerEnabled }).eq('id', editingDriverId);
       if (error) throw error;
       driverId = editingDriverId;
     } else {
       // Insert new driver
-      const advFeatures = document.getElementById('df-advanced').checked;
       const scannerEnabled = document.getElementById('df-scanner').checked;
-      const { data: newDriver, error } = await sb.from('drivers').insert({ name, code, phone, is_active: isActive, advanced_features: advFeatures, scanner_enabled: scannerEnabled }).select('id').single();
+      const { data: newDriver, error } = await sb.from('drivers').insert({ name, code, phone, is_active: isActive, scanner_enabled: scannerEnabled }).select('id').single();
       if (error) throw error;
       driverId = newDriver.id;
     }

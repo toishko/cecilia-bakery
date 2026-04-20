@@ -52,7 +52,7 @@ let driverPriceMap = {}; // product_key → price, loaded on login
 let driverInventory = {};    // product_key → { loaded, sold, remaining }
 let inventoryLoaded = false;
 let inventorySource = '';    // 'order:#123' or 'manual'
-let advancedFeaturesEnabled = false; // controlled by admin Settings > Feature Flags
+
 
 // Session timeout: 24 hours
 const DRIVER_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -267,7 +267,10 @@ function enterDashboard() {
   // Frosted Pieces, Family Size, etc. that don't exist in the menu products table.
   // Load driver prices for summary display
   loadDriverPriceMap();
-  // Check if advanced features (Sales, Inventory, Clients) are enabled
+  // Load overview analytics for all drivers
+  loadDriverClients();
+  loadOverviewDashboard();
+  // Check scanner feature flag
   checkAdvancedFeatures();
 }
 
@@ -3722,7 +3725,7 @@ async function saveManualLoad() {
 let _driverRevenueChart = null;
 
 async function loadOverviewDashboard(timeframe) {
-  if (!sb || !currentDriver || !advancedFeaturesEnabled) return;
+  if (!sb || !currentDriver) return;
   if (!timeframe) timeframe = document.getElementById('overview-filter')?.value || 'this_month';
 
   const now = new Date();
