@@ -234,16 +234,27 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
-    const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+
+    // Gemini 2.5 Flash may return multiple parts (thought + text)
+    // Extract only the text parts, skip thought parts
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const textParts = parts.filter(p => p.text && !p.thought);
+    const rawContent = textParts.map(p => p.text).join('') || '{}';
+
+    console.log('Gemini raw response (first 500 chars):', rawContent.substring(0, 500));
 
     // Parse the JSON from the AI response (strip markdown fences if present)
     let parsed;
     try {
-      const cleaned = rawContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      // Strip markdown fences, backticks, and leading/trailing whitespace
+      let cleaned = rawContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      // Also try to extract JSON from between curly braces if there's extra text
+      const jsonMatch = cleaned.match(/(\{[\s\S]*\})/);
+      if (jsonMatch) cleaned = jsonMatch[1];
       parsed = JSON.parse(cleaned);
     } catch (parseErr) {
       console.error('Failed to parse AI response:', rawContent);
-      return res.status(500).json({ success: false, message: 'Could not parse scan results.' });
+      return res.status(500).json({ success: false, message: 'Could not parse scan results. Raw: ' + rawContent.substring(0, 200) });
     }
 
     // Handle both old array format and new object format
