@@ -3168,6 +3168,7 @@ window.closeOrderSheet = function() {
 };
 
 // ── iOS-style drag-to-dismiss for order detail sheet ──
+// Only from handle bar / header — content always scrolls normally
 (function initOrderSheetDrag() {
   const sheet = document.getElementById('order-sheet');
   const overlay = document.getElementById('order-sheet-overlay');
@@ -3175,10 +3176,13 @@ window.closeOrderSheet = function() {
 
   let startY = 0, currentY = 0;
   let lastY = 0, lastTime = 0, velocity = 0;
-  let dragging = false, decided = false;
-  let startedOnHandle = false;
+  let dragging = false;
   const DISMISS_THRESHOLD = 60;
   const VELOCITY_THRESHOLD = 0.5;
+
+  // Only attach listeners to handle + header (not the whole sheet)
+  const handle = sheet.querySelector('.action-sheet-handle');
+  const header = sheet.querySelector('.order-sheet-header');
 
   function onTouchStart(e) {
     startY = e.touches[0].clientY;
@@ -3187,13 +3191,9 @@ window.closeOrderSheet = function() {
     currentY = 0;
     velocity = 0;
     dragging = false;
-    decided = false;
-    // Check if touch started on handle/header (always allows drag)
-    startedOnHandle = !!(e.target.closest('.action-sheet-handle') || e.target.closest('.order-sheet-header'));
   }
 
   function onTouchMove(e) {
-    if (decided && !dragging) return;
     const touchY = e.touches[0].clientY;
     const dy = touchY - startY;
 
@@ -3201,46 +3201,25 @@ window.closeOrderSheet = function() {
     const dt = now - lastTime;
     if (dt > 0) { velocity = (touchY - lastY) / dt; lastY = touchY; lastTime = now; }
 
-    if (!decided) {
-      if (Math.abs(dy) < 5) return;
-
-      decided = true;
-
-      // Handle/header: always allow drag down
-      if (startedOnHandle && dy > 0) {
-        dragging = true;
-        sheet.style.willChange = 'transform';
-        sheet.style.transition = 'none';
-      }
-      // Content area: only allow drag if at very top of scroll
-      else if (!startedOnHandle && dy > 0) {
-        const content = document.getElementById('order-sheet-content');
-        if (content && content.scrollTop <= 1) {
-          dragging = true;
-          sheet.style.willChange = 'transform';
-          sheet.style.transition = 'none';
-        }
-        // else: content is scrolled — let native scroll handle it
-      }
-      // dy <= 0: scrolling content down, let it scroll
-      if (!dragging) return;
+    if (!dragging) {
+      if (dy < 5) return; // only drag downward
+      dragging = true;
+      sheet.style.willChange = 'transform';
+      sheet.style.transition = 'none';
     }
 
     currentY = Math.max(0, dy);
-    if (currentY > 0) {
-      e.preventDefault();
-      const resist = currentY > DISMISS_THRESHOLD
-        ? DISMISS_THRESHOLD + (currentY - DISMISS_THRESHOLD) * 0.4
-        : currentY;
-      sheet.style.transform = `translate3d(0,${resist}px,0)`;
-      overlay.style.opacity = Math.max(0.3, 1 - (currentY / 400));
-    }
+    e.preventDefault();
+    const resist = currentY > DISMISS_THRESHOLD
+      ? DISMISS_THRESHOLD + (currentY - DISMISS_THRESHOLD) * 0.4
+      : currentY;
+    sheet.style.transform = `translate3d(0,${resist}px,0)`;
+    overlay.style.opacity = Math.max(0.3, 1 - (currentY / 400));
   }
 
   function onTouchEnd() {
-    if (!dragging) { decided = false; return; }
+    if (!dragging) return;
     dragging = false;
-    decided = false;
     sheet.style.willChange = '';
 
     const shouldDismiss = currentY > DISMISS_THRESHOLD || velocity > VELOCITY_THRESHOLD;
@@ -3269,9 +3248,12 @@ window.closeOrderSheet = function() {
     }
   }
 
-  sheet.addEventListener('touchstart', onTouchStart, { passive: true });
-  sheet.addEventListener('touchmove', onTouchMove, { passive: false });
-  sheet.addEventListener('touchend', onTouchEnd, { passive: true });
+  [handle, header].forEach(el => {
+    if (!el) return;
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+  });
 })();
 
 async function renderOrderSheet() {
