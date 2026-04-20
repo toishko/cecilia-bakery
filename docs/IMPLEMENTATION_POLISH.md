@@ -149,3 +149,4 @@ Run through the complete flow:
 - [x] Fix FAB needs-attention pill showing green "Pending" — pill was styled with payment class but displayed order-status label; now shows payment label (Not Paid/Paid/Partial) so color matches text.
 - [x] Add iOS-style drag-to-dismiss on the Total Ordered Value sheet — swipe down on handle/header or when content is scrolled to top; 80px threshold; overlay fades proportionally.
 - [x] Polish drag-to-dismiss: GPU-accelerated `translate3d` + `will-change`, velocity-based fast-flick dismiss (0.5px/ms), rubber-band resistance past threshold, 200ms animations, reduced threshold to 60px.
+- [x] Fix jittery sheet open animation — apply `scroll-locked` (position:fixed reflow) before animation while sheet is off-screen, double `requestAnimationFrame` to let reflow settle, then trigger CSS slide-up. Also switched all `.action-sheet` transforms to `translate3d` with `will-change:transform` for GPU compositing.
