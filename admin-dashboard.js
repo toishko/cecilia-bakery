@@ -7832,7 +7832,7 @@ function _noCreateBlankOrder() {
       }
     });
   });
-  return { business: '', date: _noGetTodayStr(), time: '', ref: '', notes: '', qty };
+  return { business: '', date: _noGetTodayStr(), time: '', ref: '', notes: '', qty, scanData: null };
 }
 
 async function _noLoadProducts() {
@@ -8306,21 +8306,24 @@ async function _noScanTicketFile(file) {
     // Update footer count
     _noUpdateFooterCount();
 
-    // Store scan data for review sheet (in ticket order)
-    _lastScanData = data.items.map(item => {
-      const key = item.systemKey;
-      const rawQty = parseFloat(item.qty) || 0;
-      const isBirthdayCake = key && key.startsWith('hb_');
-      return {
-        code: item.code,
-        description: item.description,
-        rawQty: rawQty,
-        convertedQty: (key && rawQty > 0) ? (isBirthdayCake ? rawQty : Math.round(rawQty * 12)) : 0,
-        confident: item.confident,
-        matched: item.matched,
-        isBirthdayCake,
-      };
-    });
+    // Store scan data in the ORDER object (per-order, not global)
+    const currentOrder = adminNoOrders[adminNoActiveOrderIdx];
+    if (currentOrder) {
+      currentOrder.scanData = data.items.map(item => {
+        const key = item.systemKey;
+        const rawQty = parseFloat(item.qty) || 0;
+        const isBirthdayCake = key && key.startsWith('hb_');
+        return {
+          code: item.code,
+          description: item.description,
+          rawQty: rawQty,
+          convertedQty: (key && rawQty > 0) ? (isBirthdayCake ? rawQty : Math.round(rawQty * 12)) : 0,
+          confident: item.confident,
+          matched: item.matched,
+          isBirthdayCake,
+        };
+      });
+    }
 
     // Show result banner
     if (banner && bannerText) {
@@ -8364,19 +8367,21 @@ async function _noScanTicketFile(file) {
 }
 
 // ── Stored scan data for review ──
-let _lastScanData = null;
+// (scan data is now stored per-order in adminNoOrders[idx].scanData)
 
 function _noOpenScanReview() {
   const overlay = document.getElementById('scan-review-overlay');
   const body = document.getElementById('scan-review-body');
-  if (!overlay || !body || !_lastScanData || _lastScanData.length === 0) return;
+  const order = adminNoOrders[adminNoActiveOrderIdx];
+  const scanData = order && order.scanData;
+  if (!overlay || !body || !scanData || scanData.length === 0) return;
 
   // Build rows in ticket order
   let html = '';
   let totalItems = 0;
   let uncertainCount = 0;
 
-  _lastScanData.forEach(item => {
+  scanData.forEach(item => {
     if (item.rawQty <= 0 && item.matched) return; // skip zero-qty matched
     const isUncertain = !item.confident;
     if (isUncertain) uncertainCount++;
@@ -8439,8 +8444,9 @@ function _noClearScanResults() {
   _noLoadOrderToForm(adminNoActiveOrderIdx);
   _noUpdateFooterCount();
 
-  // Clear stored scan data
-  _lastScanData = null;
+  // Clear stored scan data from the current order
+  const order = adminNoOrders[adminNoActiveOrderIdx];
+  if (order) order.scanData = null;
 
   // Hide banner
   const banner = document.getElementById('scan-result-banner');
