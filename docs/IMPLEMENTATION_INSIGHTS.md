@@ -47,8 +47,9 @@ The Overview tab shows abbreviated totals ($68.1k, $49.3k, $18.8k) for at-a-glan
 - [x] 5-tab nav renders correctly
 - [x] Donut charts render with real Supabase data
 - [x] Driver leaderboard renders with 10+ drivers
-- [ ] Desktop sidebar link works
-- [ ] Time filter switching verified
+- [x] Desktop sidebar link works
+- [x] Time filter switching verified
+- [x] Insights page always resets to "All" on navigation (pills reset in `showSection`, `loadInsights('all_time')` called explicitly)
 - [ ] EN/ES language support
 - [ ] Pull-to-refresh works on Insights
 
@@ -81,3 +82,4 @@ The Overview tab shows abbreviated totals ($68.1k, $49.3k, $18.8k) for at-a-glan
 - Desktop sidebar: Insights placed between Order History and Settings.
 - *2026-04-19:* Initial implementation complete. `driver_name` column doesn't exist in `driver_orders` table — using `driver_id` + `getDriverName()` from `driversCache` instead.
 - *2026-04-19:* Supabase client must be referenced as module-scoped `sb`, not `window.__supabase`.
+- *2026-04-20:* Insights page default filter changed from "Week" to "All" — reset in `showSection` on every navigation so the page always starts fresh with the broadest data view.

@@ -81,6 +81,9 @@ slide-up menu that appears when tapping tabs with multiple sub-sections (Orders,
 - [x] Badges update in real-time inside sheet
 - [x] Desktop sidebar completely unaffected
 - [x] Sheet dismisses on backdrop tap
+- [x] Drag-to-dismiss: swipe sheet down to close (GPU translate3d, velocity-based, 60px threshold)
+- [x] Background scroll locked when sheet is open (scroll-locked class, position:fixed pattern, scroll position saved/restored)
+- [x] Tight bottom padding (8px) — base safe-area padding not needed as bottom nav is hidden via scroll-lock
 
 ---
 
