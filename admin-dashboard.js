@@ -8141,8 +8141,8 @@ async function _preprocessTicketImage(dataUrl) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
-      // Scale down if very large (phone cameras can be 4000px+)
-      const MAX_DIM = 2000;
+      // Scale down for speed (1200px is plenty for OCR, saves ~60% payload vs 2000px)
+      const MAX_DIM = 1200;
       let w = img.width, h = img.height;
       if (w > MAX_DIM || h > MAX_DIM) {
         const scale = MAX_DIM / Math.max(w, h);
@@ -8199,8 +8199,8 @@ async function _preprocessTicketImage(dataUrl) {
       // Actually, use a simpler approach: just use the contrast-boosted image
       // The contrast boost alone makes the biggest difference for OCR
 
-      // Export as high-quality JPEG
-      const result = canvas.toDataURL('image/jpeg', 0.92);
+      // Export as compressed JPEG (0.7 quality — fast upload, still clear for OCR)
+      const result = canvas.toDataURL('image/jpeg', 0.7);
       resolve(result);
     };
     img.onerror = () => {
