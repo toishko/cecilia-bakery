@@ -356,7 +356,13 @@ async function showSection(name) {
   }
 
   if (name === 'overview') { loadOverview(); window.scrollTo({ top: 0, behavior: 'instant' }); }
-  if (name === 'insights') loadInsights();
+  if (name === 'insights') {
+    // Always reset insights to All on navigation
+    document.querySelectorAll('#insights-pills .insights-pill').forEach(p => p.classList.remove('active'));
+    const allPill = document.querySelector('#insights-pills .insights-pill[data-value="all_time"]');
+    if (allPill) allPill.classList.add('active');
+    loadInsights('all_time');
+  }
   if (name === 'online-orders') { loadOnlineOrders(); markAllOnlineOrdersSeen(); }
   if (name === 'incoming') {
     // Always reset Driver Orders filter to Today on navigation
