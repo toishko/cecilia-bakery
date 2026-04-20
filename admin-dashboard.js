@@ -1549,12 +1549,20 @@ function openPendingSheet() {
     `).join('');
   }
 
-  overlay.classList.add('open');
-
-  // Lock body scroll
+  // Lock scroll BEFORE animation (sheet is off-screen), save scroll pos
+  const scrollY = window.scrollY;
   document.documentElement.classList.add('scroll-locked');
+  document.body.style.top = `-${scrollY}px`;
+  document.documentElement.dataset.scrollY = scrollY;
 
-  // Dismiss on tap outside the sheet panel (delay to avoid immediate self-dismiss)
+  // Wait for reflow, then animate open
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      overlay.classList.add('open');
+    });
+  });
+
+  // Dismiss on tap outside (delay to avoid immediate self-dismiss)
   setTimeout(() => {
     _pendingSheetListener = (e) => {
       const sheet = document.getElementById('pending-sheet');
@@ -1563,7 +1571,6 @@ function openPendingSheet() {
       }
     };
     document.addEventListener('click', _pendingSheetListener, true);
-    // Also dismiss on Escape key
     document.addEventListener('keydown', _pendingSheetEscHandler);
   }, 300);
 }
@@ -1577,9 +1584,99 @@ function closePendingSheet() {
   }
   document.removeEventListener('keydown', _pendingSheetEscHandler);
   // Restore body scroll
+  const scrollY = parseInt(document.documentElement.dataset.scrollY || '0', 10);
   document.documentElement.classList.remove('scroll-locked');
+  document.body.style.top = '';
+  window.scrollTo(0, scrollY);
 }
 window.closePendingSheet = closePendingSheet;
+
+// ── iOS-style drag-to-dismiss for pending sheet ──
+(function initPendingSheetDrag() {
+  const sheet = document.getElementById('pending-sheet');
+  const overlay = document.getElementById('pending-sheet-overlay');
+  if (!sheet || !overlay) return;
+
+  let startY = 0, currentY = 0, dragging = false;
+  let lastY = 0, lastTime = 0, velocity = 0;
+  const DISMISS_THRESHOLD = 60;
+  const VELOCITY_THRESHOLD = 0.5;
+
+  function onTouchStart(e) {
+    const items = document.getElementById('pending-sheet-items');
+    const isHandle = e.target.closest('.action-sheet-handle') || e.target.closest('.action-sheet-title');
+    if (!isHandle && items && items.scrollTop > 0) return;
+
+    dragging = true;
+    startY = e.touches[0].clientY;
+    lastY = startY;
+    lastTime = Date.now();
+    currentY = 0;
+    velocity = 0;
+    sheet.style.willChange = 'transform';
+    sheet.style.transition = 'none';
+  }
+
+  function onTouchMove(e) {
+    if (!dragging) return;
+    const touchY = e.touches[0].clientY;
+    const dy = touchY - startY;
+    currentY = Math.max(0, dy);
+
+    const now = Date.now();
+    const dt = now - lastTime;
+    if (dt > 0) {
+      velocity = (touchY - lastY) / dt;
+      lastY = touchY;
+      lastTime = now;
+    }
+
+    if (currentY > 0) {
+      e.preventDefault();
+      const resist = currentY > DISMISS_THRESHOLD
+        ? DISMISS_THRESHOLD + (currentY - DISMISS_THRESHOLD) * 0.4
+        : currentY;
+      sheet.style.transform = `translate3d(0,${resist}px,0)`;
+      overlay.style.opacity = Math.max(0.3, 1 - (currentY / 400));
+    }
+  }
+
+  function onTouchEnd() {
+    if (!dragging) return;
+    dragging = false;
+    sheet.style.willChange = '';
+
+    const shouldDismiss = currentY > DISMISS_THRESHOLD || velocity > VELOCITY_THRESHOLD;
+
+    if (shouldDismiss) {
+      sheet.style.transition = 'transform .2s cubic-bezier(.32,.72,0,1)';
+      overlay.style.transition = 'opacity .2s ease';
+      sheet.style.transform = 'translate3d(0,100%,0)';
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        closePendingSheet();
+        sheet.style.transition = '';
+        sheet.style.transform = '';
+        overlay.style.transition = '';
+        overlay.style.opacity = '';
+      }, 200);
+    } else {
+      sheet.style.transition = 'transform .2s cubic-bezier(.32,.72,0,1)';
+      overlay.style.transition = 'opacity .2s ease';
+      sheet.style.transform = 'translate3d(0,0,0)';
+      overlay.style.opacity = '';
+      setTimeout(() => {
+        sheet.style.transition = '';
+        overlay.style.transition = '';
+      }, 200);
+    }
+    currentY = 0;
+  }
+
+  sheet.addEventListener('touchstart', onTouchStart, { passive: true });
+  sheet.addEventListener('touchmove', onTouchMove, { passive: false });
+  sheet.addEventListener('touchend', onTouchEnd);
+})();
 
 /* Navigate to Order History pre-filtered to a specific driver's unpaid orders */
 function _openHistoryForDriver(driverId) {
