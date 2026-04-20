@@ -3470,7 +3470,10 @@ async function renderOrderSheet() {
     </div>`;
   }
 
-  document.getElementById('order-sheet-content').innerHTML = html;
+  const contentEl = document.getElementById('order-sheet-content');
+  contentEl.innerHTML = html;
+  // Reset scroll to top to prevent blank space after re-render
+  contentEl.scrollTop = 0;
 
   // Actions
   let actionsHtml = '';
@@ -3723,7 +3726,11 @@ window.saveOrderChanges = async function() {
 
     showToast(lang === 'es' ? 'Cambios guardados' : 'Changes saved', 'success');
 
-    // Refresh
+    // Re-render the sheet with updated data
+    detailOrder.total_amount = grandTotal;
+    await renderOrderSheet();
+
+    // Refresh background list
     if (currentSection === 'incoming') loadIncomingOrders();
     if (currentSection === 'overview') loadOverview();
   } catch (e) {
