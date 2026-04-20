@@ -146,3 +146,4 @@ Run through the complete flow:
 - [x] Fix background scroll-through when "Total Ordered Value" sheet is open — iOS ignores `overflow:hidden` on body; added `position:fixed` + `overscroll-behavior:none` to `scroll-locked`, save/restore scroll position on open/close.
 - [x] Fix bottom nav tabs showing on top of the Total Ordered Value sheet overlay — hide bottom nav when `scroll-locked` is active.
 - [x] Fix "Unpaid" quick action tile not filtering Orders — updated selector from stale `.filter-tab` to `#driver-orders-filter .insights-pill[data-filter=unpaid]`.
+- [x] Fix FAB needs-attention pill showing green "Pending" — pill was styled with payment class but displayed order-status label; now shows payment label (Not Paid/Paid/Partial) so color matches text.

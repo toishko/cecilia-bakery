@@ -2548,6 +2548,12 @@ function renderNeedsAttention() {
       const statusLabel = statusLabels[order.status] || order.status;
       const time = order.submitted_at ? new Date(order.submitted_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
       const payClass = order.payment_status === 'paid' ? 'paid' : order.payment_status === 'partial' ? 'partial' : 'unpaid';
+      const payLabels = {
+        paid:     lang === 'es' ? 'Pagado'    : 'Paid',
+        partial:  lang === 'es' ? 'Parcial'   : 'Partial',
+        not_paid: lang === 'es' ? 'Sin Pagar' : 'Not Paid'
+      };
+      const payLabel = payLabels[order.payment_status] || payLabels.not_paid;
 
       html += `
         <div class="order-card-avatar" onclick="closeQueueSheet(); showSection('incoming'); setTimeout(()=>openOrderSheet('${order.id}'),400)">
@@ -2558,7 +2564,7 @@ function renderNeedsAttention() {
           </div>
           <div class="oca-right">
             <div class="oca-price">${amount}</div>
-            <div class="oca-pill ${payClass}">${statusLabel}</div>
+            <div class="oca-pill ${payClass}">${payLabel}</div>
           </div>
         </div>`;
     });
