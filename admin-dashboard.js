@@ -3176,6 +3176,7 @@ window.closeOrderSheet = function() {
   let startY = 0, currentY = 0;
   let lastY = 0, lastTime = 0, velocity = 0;
   let dragging = false, decided = false;
+  let startedOnHandle = false;
   const DISMISS_THRESHOLD = 60;
   const VELOCITY_THRESHOLD = 0.5;
 
@@ -3187,34 +3188,42 @@ window.closeOrderSheet = function() {
     velocity = 0;
     dragging = false;
     decided = false;
+    // Check if touch started on handle/header (always allows drag)
+    startedOnHandle = !!(e.target.closest('.action-sheet-handle') || e.target.closest('.order-sheet-header'));
   }
 
   function onTouchMove(e) {
-    if (decided && !dragging) return; // already decided this is a scroll, bail
+    if (decided && !dragging) return;
     const touchY = e.touches[0].clientY;
     const dy = touchY - startY;
 
-    // Track velocity
     const now = Date.now();
     const dt = now - lastTime;
     if (dt > 0) { velocity = (touchY - lastY) / dt; lastY = touchY; lastTime = now; }
 
-    // Decide once: drag or scroll?
     if (!decided) {
-      if (Math.abs(dy) < 5) return; // wait for clear intent
-
-      const content = document.getElementById('order-sheet-content');
-      const atTop = !content || content.scrollTop <= 1;
-      const isHandle = e.target.closest('.action-sheet-handle') || e.target.closest('.order-sheet-header');
+      if (Math.abs(dy) < 5) return;
 
       decided = true;
-      if (dy > 0 && (atTop || isHandle)) {
+
+      // Handle/header: always allow drag down
+      if (startedOnHandle && dy > 0) {
         dragging = true;
         sheet.style.willChange = 'transform';
         sheet.style.transition = 'none';
-      } else {
-        return; // let the content scroll normally
       }
+      // Content area: only allow drag if at very top of scroll
+      else if (!startedOnHandle && dy > 0) {
+        const content = document.getElementById('order-sheet-content');
+        if (content && content.scrollTop <= 1) {
+          dragging = true;
+          sheet.style.willChange = 'transform';
+          sheet.style.transition = 'none';
+        }
+        // else: content is scrolled — let native scroll handle it
+      }
+      // dy <= 0: scrolling content down, let it scroll
+      if (!dragging) return;
     }
 
     currentY = Math.max(0, dy);
@@ -3229,10 +3238,7 @@ window.closeOrderSheet = function() {
   }
 
   function onTouchEnd() {
-    if (!dragging) {
-      decided = false;
-      return; // was a normal scroll, nothing to restore
-    }
+    if (!dragging) { decided = false; return; }
     dragging = false;
     decided = false;
     sheet.style.willChange = '';
@@ -3252,8 +3258,7 @@ window.closeOrderSheet = function() {
         overlay.style.opacity = '';
       }, 200);
     } else {
-      // Snap back — restore everything
-      sheet.style.transition = 'transform .2s cubic-bezier(.32,.72,0,1), opacity .2s ease';
+      sheet.style.transition = 'transform .2s cubic-bezier(.32,.72,0,1)';
       overlay.style.transition = 'opacity .2s ease';
       sheet.style.transform = '';
       overlay.style.opacity = '';
