@@ -1969,6 +1969,69 @@ function closeOrderedSheet() {
 window.openOrderedSheet = openOrderedSheet;
 window.closeOrderedSheet = closeOrderedSheet;
 
+// ── iOS-style drag-to-dismiss for ordered sheet ──
+(function initOrderedSheetDrag() {
+  const sheet = document.getElementById('ordered-sheet');
+  const overlay = document.getElementById('ordered-sheet-overlay');
+  if (!sheet || !overlay) return;
+
+  let startY = 0, currentY = 0, dragging = false;
+  const DISMISS_THRESHOLD = 80; // px to drag before dismissing
+
+  function onTouchStart(e) {
+    // Only start drag from handle area or if content is scrolled to top
+    const content = document.getElementById('ordered-sheet-content');
+    const isHandle = e.target.closest('.action-sheet-handle') || e.target.closest('.order-sheet-header');
+    if (!isHandle && content && content.scrollTop > 0) return;
+
+    dragging = true;
+    startY = e.touches[0].clientY;
+    currentY = 0;
+    sheet.style.transition = 'none';
+    overlay.style.transition = 'none';
+  }
+
+  function onTouchMove(e) {
+    if (!dragging) return;
+    const dy = e.touches[0].clientY - startY;
+    currentY = Math.max(0, dy); // only allow downward drag
+    if (currentY > 0) {
+      e.preventDefault(); // prevent background scroll
+      sheet.style.transform = `translateY(${currentY}px)`;
+      // Fade overlay proportionally
+      const progress = Math.min(currentY / 300, 1);
+      overlay.style.opacity = 1 - progress * 0.6;
+    }
+  }
+
+  function onTouchEnd() {
+    if (!dragging) return;
+    dragging = false;
+    sheet.style.transition = '';
+    overlay.style.transition = '';
+
+    if (currentY > DISMISS_THRESHOLD) {
+      // Dismiss — animate out then close
+      sheet.style.transform = 'translateY(100%)';
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        closeOrderedSheet();
+        sheet.style.transform = '';
+        overlay.style.opacity = '';
+      }, 300);
+    } else {
+      // Snap back
+      sheet.style.transform = 'translateY(0)';
+      overlay.style.opacity = '';
+    }
+    currentY = 0;
+  }
+
+  sheet.addEventListener('touchstart', onTouchStart, { passive: true });
+  sheet.addEventListener('touchmove', onTouchMove, { passive: false });
+  sheet.addEventListener('touchend', onTouchEnd);
+})();
+
 /* ── Insights Page — Premium ── */
 const _donutChannels = {
   driver: { id: 'driver', main: '#C8102E', grad1: '#F02849', grad2: '#9B0B22', shadow: 'rgba(200,16,46,0.35)' },
