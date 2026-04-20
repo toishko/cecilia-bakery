@@ -994,6 +994,9 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   max-height: 88vh;
   height: auto;
 }
+#queue-sheet-overlay .order-sheet-content {
+  flex: none;
+}
 
 .action-sheet-handle{width:36px;height:4px;border-radius:2px;
   background:var(--tx-faint);margin:0 auto 14px;opacity:.5}

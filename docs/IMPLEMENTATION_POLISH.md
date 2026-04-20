@@ -152,3 +152,5 @@ Run through the complete flow:
 - [x] Fix jittery sheet open animation — apply `scroll-locked` (position:fixed reflow) before animation while sheet is off-screen, double `requestAnimationFrame` to let reflow settle, then trigger CSS slide-up. Also switched all `.action-sheet` transforms to `translate3d` with `will-change:transform` for GPU compositing.
 - [x] Add iOS-style drag-to-dismiss on the Pending Collection sheet — same pattern as ordered sheet (GPU accel, velocity, rubber-band, scroll-lock save/restore, smooth open with double rAF).
 - [x] Fix excessive bottom space in FAB queue sheet — reduced padding-bottom from 76px (for now-hidden bottom nav) to 20px + safe-area; queue sheet auto-sizes to content with 88vh cap.
+- [x] Fix FAB queue sheet still too tall — override `flex:1` to `flex:none` on `#queue-sheet-overlay .order-sheet-content` so content doesn't stretch.
+- [x] Change Driver Orders default filter from "All" to "Today" — moved `active` class from "All" pill to "Today" pill.
