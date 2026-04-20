@@ -1761,13 +1761,15 @@ function openOrderedSheet(timeframe) {
     _orderedSheetTimeframe = document.getElementById('revenue-filter')?.value || 'this_month';
   }
 
-  // Show overlay + loading state
+  // Show overlay first
   overlay.classList.add('open');
-  // Lock background scroll (save position for iOS)
+  // Delay scroll-lock until after animation to prevent layout reflow jitter
   const scrollY = window.scrollY;
-  document.documentElement.classList.add('scroll-locked');
-  document.body.style.top = `-${scrollY}px`;
-  document.documentElement.dataset.scrollY = scrollY;
+  setTimeout(() => {
+    document.documentElement.classList.add('scroll-locked');
+    document.body.style.top = `-${scrollY}px`;
+    document.documentElement.dataset.scrollY = scrollY;
+  }, 320);
   content.innerHTML = `<div style="padding:40px;text-align:center;color:var(--tx-muted)">${lang === 'es' ? 'Cargando...' : 'Loading...'}</div>`;
 
   // Update subtitle
