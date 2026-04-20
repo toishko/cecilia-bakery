@@ -977,7 +977,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   border:1px solid var(--bd);border-bottom:none;
   backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
   box-sizing:border-box;
-  padding:12px 20px;padding-bottom:max(env(safe-area-inset-bottom),16px);
+  padding:12px 20px 8px;
   transform:translate3d(0,100%,0);transition:transform .3s cubic-bezier(.32,.72,0,1);
   will-change:transform;
   box-shadow:0 -8px 40px rgba(0,0,0,.15);
