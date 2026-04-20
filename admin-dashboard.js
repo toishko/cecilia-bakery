@@ -3979,61 +3979,66 @@ function openPrintWindow(showTotals) {
     }
   });
 
-  // Print button — calls window.print() from main page (no Safari blocking)
+  // Print button — auto-scale to fit single page then print
   document.getElementById('pp-print-btn').addEventListener('click', () => {
     overlay.classList.add('printing');
+
+    // Auto-scale content to fit one page
+    const pageEl = overlay.querySelector('.pp-page');
+    const contentH = pageEl.scrollHeight;
+    // Printable height ≈ letter/A4 minus margins (roughly 247mm usable at 96dpi ≈ 940px)
+    const printableH = 940;
+    let scale = 1;
+    if (contentH > printableH) {
+      scale = printableH / contentH;
+      pageEl.style.transform = `scale(${scale})`;
+      pageEl.style.transformOrigin = 'top center';
+      pageEl.style.height = (contentH * scale) + 'px';
+    }
+
     window.print();
-    // Remove printing class after dialog closes
+
+    // Restore after print dialog closes
     const removePrinting = () => {
       overlay.classList.remove('printing');
+      if (scale < 1) {
+        pageEl.style.transform = '';
+        pageEl.style.transformOrigin = '';
+        pageEl.style.height = '';
+      }
       window.removeEventListener('focus', removePrinting);
     };
     window.addEventListener('focus', removePrinting);
   });
 
-  // Share button — captures print preview as image
+  // Share button — uses Canvas 2D (no html2canvas)
   document.getElementById('pp-share-btn').addEventListener('click', async () => {
-    const pageEl = overlay.querySelector('.pp-page');
-    if (!pageEl) return;
+    if (!detailOrder) return;
+    const shareBtn = document.getElementById('pp-share-btn');
     try {
-      const shareBtn = document.getElementById('pp-share-btn');
       shareBtn.textContent = '⏳ ' + (lang === 'es' ? 'Generando...' : 'Generating...');
       shareBtn.disabled = true;
-      const canvas = await html2canvas(pageEl, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        useCORS: true,
-        logging: false
-      });
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      await new Promise(r => requestAnimationFrame(() => setTimeout(r, 30)));
+
+      const blob = _drawOrderCanvas(detailOrder, detailItems, detailTotalsVisible);
       const orderNum = detailOrder?.order_number || '';
-      const fileName = `cecilia-order-${orderNum}.png`;
-      const file = new File([blob], fileName, { type: 'image/png' });
+      const fileName = `cecilia-order-${orderNum}.jpg`;
+      const file = new File([blob], fileName, { type: 'image/jpeg' });
 
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: 'Cecilia Bakery Order',
-          files: [file]
-        });
+        await navigator.share({ title: 'Cecilia Bakery Order', files: [file] });
       } else {
-        // Fallback: download the image
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
+        a.href = url; a.download = fileName; a.click();
         URL.revokeObjectURL(url);
         showToast(lang === 'es' ? 'Imagen descargada' : 'Image downloaded', 'success');
       }
-      shareBtn.textContent = '📤 ' + (lang === 'es' ? 'Compartir' : 'Share');
-      shareBtn.disabled = false;
     } catch (e) {
       console.error('Share error:', e);
-      const shareBtn = document.getElementById('pp-share-btn');
-      if (shareBtn) {
-        shareBtn.textContent = '📤 ' + (lang === 'es' ? 'Compartir' : 'Share');
-        shareBtn.disabled = false;
-      }
+      if (e.name !== 'AbortError') showToast(lang === 'es' ? 'Error' : 'Error sharing', 'error');
+    } finally {
+      if (shareBtn) { shareBtn.textContent = '📤 ' + (lang === 'es' ? 'Compartir' : 'Share'); shareBtn.disabled = false; }
     }
   });
 }
