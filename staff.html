@@ -655,6 +655,27 @@
     .refresh-btn:hover { border-color: var(--red); color: var(--red); }
     .refresh-btn svg { width: 16px; height: 16px; }
 
+    /* ── Segmented Control (Apple Style) ── */
+    .segmented-control-wrapper {
+      display: flex; gap: 12px; margin-bottom: 20px; overflow-x: auto;
+      scrollbar-width: none; padding-bottom: 4px;
+    }
+    .segmented-control-wrapper::-webkit-scrollbar { display: none; }
+    .segmented-control {
+      display: inline-flex; background: rgba(0,0,0,.03); padding: 4px;
+      border-radius: 12px; align-items: center; white-space: nowrap; flex-shrink: 0;
+    }
+    [data-theme="dark"] .segmented-control { background: rgba(255,255,255,.05); }
+    .segment-btn {
+      padding: 6px 16px; background: transparent; border: none; font-size: .85rem;
+      font-weight: 500; color: var(--tx-muted); border-radius: 8px; cursor: pointer;
+      transition: all .2s cubic-bezier(0.25, 1, 0.5, 1); font-family: inherit;
+    }
+    .segment-btn.active {
+      background: var(--bg-card); color: var(--tx); font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+
     /* ── Date Separators ── */
     .staff-date-separator {
       display: flex; align-items: center; gap: 12px;
@@ -1120,26 +1141,18 @@
           <!-- SECTION: Orders -->
           <div class="staff-section active" id="section-orders">
             <!-- Action Bar -->
-            <div class="action-bar">
-              <select id="filter-status">
-                <option value="all" data-en="All Orders" data-es="Todos los Pedidos">All Orders</option>
-                <option value="pending" data-en="Pending" data-es="Pendiente">Pending</option>
-                <option value="picked_up" data-en="Picked Up" data-es="Recogido">Picked Up</option>
-              </select>
-              <select id="filter-date">
-                <option value="all" data-en="All Time" data-es="Todo el Tiempo">All Time</option>
-                <option value="yesterday" data-en="Yesterday" data-es="Ayer">Yesterday</option>
-                <option value="7days" data-en="Last 7 Days" data-es="Últimos 7 Días">Last 7 Days</option>
-                <option value="30days" data-en="Last 30 Days" data-es="Últimos 30 Días">Last 30 Days</option>
-              </select>
-              <button class="refresh-btn" id="refresh-orders-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="23 4 23 10 17 10"/>
-                  <polyline points="1 20 1 14 7 14"/>
-                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-                </svg>
-                <span data-en="Refresh" data-es="Actualizar">Refresh</span>
-              </button>
+            <!-- Action Bar -->
+            <div class="segmented-control-wrapper">
+              <div class="segmented-control">
+                <button class="segment-btn active" data-type="status" data-value="pending" onclick="setStaffFilter('status', 'pending')" data-en="Pending" data-es="Pendientes">Pending</button>
+                <button class="segment-btn" data-type="status" data-value="completed" onclick="setStaffFilter('status', 'completed')" data-en="Completed" data-es="Completados">Completed</button>
+              </div>
+              <div class="segmented-control">
+                <button class="segment-btn active" data-type="date" data-value="today" onclick="setStaffFilter('date', 'today')" data-en="Today" data-es="Hoy">Today</button>
+                <button class="segment-btn" data-type="date" data-value="yesterday" onclick="setStaffFilter('date', 'yesterday')" data-en="Yesterday" data-es="Ayer">Yesterday</button>
+                <button class="segment-btn" data-type="date" data-value="7days" onclick="setStaffFilter('date', '7days')" data-en="Last 7 Days" data-es="7 Días">Last 7 Days</button>
+                <button class="segment-btn" data-type="date" data-value="all" onclick="setStaffFilter('date', 'all')" data-en="All Time" data-es="Todo">All Time</button>
+              </div>
             </div>
 
             <!-- Orders List -->
@@ -2002,6 +2015,15 @@
         .subscribe();
     }
 
+    /* ── Set Segmented Filter ── */
+    function setStaffFilter(type, val) {
+      document.querySelectorAll(`.segment-btn[data-type="${type}"]`).forEach(function(b) {
+        b.classList.remove('active');
+      });
+      document.querySelector(`.segment-btn[data-type="${type}"][data-value="${val}"]`).classList.add('active');
+      loadOrders();
+    }
+
     /* ── Load driver orders ── */
     async function loadOrders() {
       const container = document.getElementById('orders-list');
@@ -2017,15 +2039,20 @@
         }
 
         // Build query based on filters
-        const statusFilter = document.getElementById('filter-status').value;
-        const dateFilter = document.getElementById('filter-date').value;
+        const activeStatusBtn = document.querySelector('.segment-btn[data-type="status"].active');
+        const statusFilter = activeStatusBtn ? activeStatusBtn.dataset.value : 'pending';
+
+        const activeDateBtn = document.querySelector('.segment-btn[data-type="date"].active');
+        const dateFilter = activeDateBtn ? activeDateBtn.dataset.value : 'today';
 
         let query = sb
           .from('driver_orders')
           .select('*, driver_order_items(*)');
 
-        if (statusFilter !== 'all') {
-          query = query.eq('status', statusFilter);
+        if (statusFilter === 'pending') {
+          query = query.eq('status', 'pending');
+        } else if (statusFilter === 'completed') {
+          query = query.eq('status', 'picked_up');
         }
 
         if (dateFilter && dateFilter !== 'all') {
@@ -2220,17 +2247,18 @@
                 const qty = item.quantity || 0;
                 const uid = `bc-${order.id}-${globalIdx++}`;
                 return `
-                  <div class="box-calc-item">
-                    <div class="box-calc-item-header">
-                      <span class="box-calc-item-name">${label}</span>
-                      <span class="box-calc-item-qty">${qty} pieces</span>
+                  <div class="box-calc-item" style="padding:16px 0;border-bottom:1px solid var(--bd);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                      <div>
+                        <div style="font-weight:600;font-size:1rem;color:var(--tx);">${label}</div>
+                        <div style="font-size:.85rem;color:var(--tx-muted);margin-top:2px;">${qty} pieces total</div>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:8px;">
+                        <input class="box-calc-input" type="number" min="1" id="${uid}" data-qty="${qty}" placeholder="Per box" style="width:70px;padding:8px;border-radius:10px;border:1px solid var(--bd);text-align:center;background:var(--bg-card);color:var(--tx);font-weight:600;font-size:.95rem;transition:all 0.2s;" oninput="calcBox(this); staffBoxAutoSave(${order.id})" />
+                      </div>
                     </div>
-                    <div class="box-calc-input-row">
-                      <span class="box-calc-input-label">Pieces per box:</span>
-                      <input class="box-calc-input" type="number" min="1" id="${uid}" data-qty="${qty}" placeholder="—" oninput="calcBox(this)" />
-                    </div>
-                    <div class="box-calc-result empty" id="${uid}-result">
-                      <span class="arrow">→</span> enter box size above
+                    <div class="box-calc-result empty" id="${uid}-result" style="margin-top:8px;padding:10px 14px;background:rgba(0,0,0,.02);border-radius:10px;font-size:.85rem;color:var(--tx-muted);display:flex;align-items:center;gap:8px;">
+                      <span class="arrow" style="color:var(--tx-faint);">↳</span> enter box size above
                     </div>
                   </div>`;
               }).join('');
@@ -2261,54 +2289,44 @@
           }
 
           html += `
-            <div class="order-card" id="staff-order-${oi}">
-              <div class="order-card-top" onclick="toggleStaffOrder(${oi})">
+            <div class="order-card" id="staff-order-${oi}" style="border-radius:16px;border:none;box-shadow:0 4px 16px rgba(0,0,0,.05);">
+              <div class="order-card-top" onclick="toggleStaffOrder(${oi})" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
                 <div>
-                  <div class="order-driver-name">${driverName}</div>
+                  <div class="order-driver-name" style="font-size:1.05rem;">${driverName}</div>
                   <div class="order-biz-name">${bizName}</div>
                 </div>
-                <div style="display:flex;align-items:center;gap:8px">
+                <div style="display:flex;align-items:center;gap:10px">
                   ${timeStr ? `<span style="font-size:.82rem;color:var(--tx-faint);font-weight:500">${timeStr}</span>` : ''}
-                  <span class="order-status-badge ${status}">${statusLabels[status] || status}</span>
-                  <button class="staff-edit-toggle" onclick="event.stopPropagation();staffToggleEdit(${oi})" style="padding:3px 10px;background:none;border:1px solid var(--bd);border-radius:6px;font-size:.72rem;cursor:pointer;color:var(--tx-muted);font-weight:600" data-en="Edit" data-es="Editar">Edit</button>
-                  <svg class="order-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .25s;color:var(--tx-faint);flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
+                  ${status === 'pending'
+                    ? `<span style="width:10px;height:10px;background:var(--yellow);border-radius:50%;display:inline-block;"></span>`
+                    : `<span style="width:10px;height:10px;background:#7c3aed;border-radius:50%;display:inline-block;"></span>`
+                  }
+                  <button class="staff-context-btn" onclick="event.stopPropagation();staffToggleEdit(${oi})" style="background:none;border:none;padding:6px;margin:-6px -6px -6px 0;cursor:pointer;color:var(--tx-muted);display:flex;align-items:center;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></svg>
+                  </button>
                 </div>
               </div>
-              <div class="order-expand-hint" id="staff-hint-${oi}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> Tap to view items</div>
-              <div class="order-items-summary" id="staff-items-${oi}">${itemsSummary}</div>
               <div class="order-meta-row" id="staff-meta-${oi}" style="display:none">
-                ${order.notes ? `<span title="${_esc(order.notes)}">
+                ${order.notes ? `<span title="${_esc(order.notes)}" style="padding-top:8px;">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                   ${_esc(order.notes)}
                 </span>` : ''}
               </div>
-              <div class="order-edit-bar" id="staff-edit-bar-${oi}" style="display:none;padding:12px 0;border-top:1px solid var(--bd)">
+              <div class="order-edit-bar" id="staff-edit-bar-${oi}" style="display:none;padding:16px 0;border-top:1px solid var(--bd);margin-top:12px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-                  <button class="staff-edit-btn" onclick="staffAddProducts(${oi})" style="padding:6px 14px;background:none;border:1px solid var(--bd);border-radius:8px;font-size:.82rem;cursor:pointer;color:var(--tx)" data-en="+ Add Products" data-es="+ Agregar Productos">+ Add Products</button>
+                  <button class="staff-edit-btn" onclick="staffAddProducts(${oi})" style="padding:8px 16px;background:rgba(0,0,0,.04);border:none;border-radius:10px;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--tx)" data-en="Edit Products" data-es="Editar Productos">Edit Products</button>
                   <div style="display:flex;gap:8px">
-                    <button onclick="staffCancelEdit(${oi})" style="padding:6px 14px;background:none;border:1px solid var(--bd);border-radius:8px;font-size:.82rem;cursor:pointer;color:var(--tx-muted)" data-en="Cancel" data-es="Cancelar">Cancel</button>
-                    <button class="staff-update-btn" onclick="staffUpdateOrder(${oi})" style="padding:6px 14px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer" data-en="Update Order" data-es="Actualizar Pedido">Update Order</button>
+                    <button onclick="staffCancelEdit(${oi})" style="padding:8px 16px;background:none;border:none;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--tx-muted)" data-en="Discard" data-es="Descartar">Discard</button>
+                    <button class="staff-update-btn" onclick="staffUpdateOrder(${oi})" style="padding:8px 16px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:.85rem;font-weight:600;cursor:pointer" data-en="Update" data-es="Actualizar">Update</button>
                   </div>
                 </div>
               </div>
               ${items.length > 0 ? `
-              <div class="box-calc-section" id="staff-boxcalc-${oi}" style="display:none">
-                <button class="box-calc-toggle" onclick="toggleBoxCalc(this, event)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-                  Box Calculator
-                  <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                </button>
-                <div class="box-calc-body">
-                  ${boxCalcItems}
-                  ${frostPackerHtml}
-                </div>
+              <div class="box-calc-section" id="staff-boxcalc-${oi}" style="display:none;margin-top:16px;padding-top:8px;border-top:1px solid var(--bd);">
+                ${boxCalcItems}
+                ${frostPackerHtml}
               </div>` : ''}
-              <div class="order-save-bar" id="staff-save-bar-${oi}" style="display:none;padding:12px 0;text-align:center;border-top:1px solid var(--bd)">
-                <button onclick="staffSaveOrder(${oi})" style="padding:8px 22px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                  <span data-en="Save" data-es="Guardar">Save</span>
-                </button>
-              </div>
+
             </div>`;
         });
       });
@@ -2351,21 +2369,20 @@
     }
 
     function toggleStaffOrder(idx) {
-      const items = document.getElementById('staff-items-' + idx);
       const meta = document.getElementById('staff-meta-' + idx);
       const boxcalc = document.getElementById('staff-boxcalc-' + idx);
-      const hint = document.getElementById('staff-hint-' + idx);
-      const card = document.getElementById('staff-order-' + idx);
-      const saveBar = document.getElementById('staff-save-bar-' + idx);
-      const chevron = card ? card.querySelector('.order-chevron') : null;
-      const isExpanded = items && items.classList.contains('expanded');
+      const isExpanded = boxcalc && boxcalc.style.display !== 'none';
 
-      if (items) items.classList.toggle('expanded');
       if (meta) meta.style.display = isExpanded ? 'none' : 'flex';
-      if (boxcalc) boxcalc.style.display = isExpanded ? 'none' : '';
-      if (saveBar) saveBar.style.display = isExpanded ? 'none' : '';
-      if (hint) hint.classList.toggle('hidden');
-      if (chevron) chevron.style.transform = isExpanded ? '' : 'rotate(180deg)';
+      if (boxcalc) boxcalc.style.display = isExpanded ? 'none' : 'block';
+    }
+
+    function staffBoxAutoSave(orderId) {
+      // Find the index of the order from staffOrders
+      const idx = staffOrders.findIndex(o => o.id === orderId);
+      if (idx !== -1) {
+        staffSaveOrder(idx);
+      }
     }
 
     /* ════════════════════════════════════════
