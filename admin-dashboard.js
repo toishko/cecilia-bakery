@@ -686,7 +686,7 @@ function changeSize(delta) {
    ═══════════════════════════════════ */
 async function loadDriversCache() {
   try {
-    const { data } = await sb.from('drivers').select('id, name, code').order('name');
+    const { data } = await sb.from('drivers').select('id, name, code, scanner_enabled').order('name');
     driversCache = data || [];
     // Populate driver filter dropdown
     const select = document.getElementById('filter-driver');
@@ -3996,8 +3996,11 @@ function renderDriverTable() {
     const advBadge = d.advanced_features
       ? `<span class="adv-badge" title="Advanced Features Enabled"><i data-lucide="zap" style="width:14px;height:14px;color:var(--yellow);margin-left:6px"></i></span>`
       : '';
+    const scanBadge = d.scanner_enabled
+      ? `<span class="adv-badge" title="Scanner Enabled"><i data-lucide="camera" style="width:14px;height:14px;color:var(--red);margin-left:6px"></i></span>`
+      : '';
     return `<tr onclick="showDriverProfile('${d.id}')">
-      <td class="driver-name" style="display:flex;align-items:center">${_esc(d.name)} ${advBadge}</td>
+      <td class="driver-name" style="display:flex;align-items:center">${_esc(d.name)} ${advBadge}${scanBadge}</td>
       <td class="driver-code"><span class="code-masked" data-code="${_escAttr(d.code)}">••••••</span> <button class="code-eye-btn" onclick="event.stopPropagation();toggleCode(this)" title="Show code"><i data-lucide="eye"></i></button></td>
       <td class="driver-phone hide-mobile">${_esc(d.phone || '—')}</td>
       <td><span class="${statusClass}">${statusText}</span></td>
@@ -4067,6 +4070,9 @@ window.showEditDriver = async function(driverId) {
   // Advanced features toggle
   document.getElementById('df-advanced-wrap').style.display = 'flex';
   document.getElementById('df-advanced').checked = !!driver.advanced_features;
+  // Scanner enabled toggle
+  document.getElementById('df-scanner-wrap').style.display = 'flex';
+  document.getElementById('df-scanner').checked = !!driver.scanner_enabled;
 
   // Fetch prices
   const { data: prices } = await sb.from('driver_prices').select('product_key, price, credit_value').eq('driver_id', driverId);
@@ -4247,13 +4253,15 @@ async function saveDriver() {
     if (editingDriverId) {
       // Update driver
       const advFeatures = document.getElementById('df-advanced').checked;
-      const { error } = await sb.from('drivers').update({ name, code, phone, is_active: isActive, advanced_features: advFeatures }).eq('id', editingDriverId);
+      const scannerEnabled = document.getElementById('df-scanner').checked;
+      const { error } = await sb.from('drivers').update({ name, code, phone, is_active: isActive, advanced_features: advFeatures, scanner_enabled: scannerEnabled }).eq('id', editingDriverId);
       if (error) throw error;
       driverId = editingDriverId;
     } else {
       // Insert new driver
       const advFeatures = document.getElementById('df-advanced').checked;
-      const { data: newDriver, error } = await sb.from('drivers').insert({ name, code, phone, is_active: isActive, advanced_features: advFeatures }).select('id').single();
+      const scannerEnabled = document.getElementById('df-scanner').checked;
+      const { data: newDriver, error } = await sb.from('drivers').insert({ name, code, phone, is_active: isActive, advanced_features: advFeatures, scanner_enabled: scannerEnabled }).select('id').single();
       if (error) throw error;
       driverId = newDriver.id;
     }
@@ -7678,10 +7686,19 @@ async function initAdminOrderForm() {
   if (adminNoSelectedDriverId) {
     select.value = adminNoSelectedDriverId;
     _noShowFormContainer();
+    // Restore scanner visibility
+    const restoredDriver = driversCache.find(d => d.id === adminNoSelectedDriverId);
+    const scanWrap = document.getElementById('scan-ticket-wrap');
+    if (scanWrap) scanWrap.style.display = (restoredDriver && restoredDriver.scanner_enabled) ? '' : 'none';
   }
 
   select.onchange = async () => {
     adminNoSelectedDriverId = select.value || null;
+    // Toggle scanner button based on selected driver
+    const selectedDriver = driversCache.find(d => d.id === adminNoSelectedDriverId);
+    const scanWrap = document.getElementById('scan-ticket-wrap');
+    if (scanWrap) scanWrap.style.display = (selectedDriver && selectedDriver.scanner_enabled) ? '' : 'none';
+
     if (adminNoSelectedDriverId) {
       await _noLoadDriverPrices(adminNoSelectedDriverId);
       // Reset orders when changing driver

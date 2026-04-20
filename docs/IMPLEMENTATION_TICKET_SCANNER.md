@@ -56,6 +56,14 @@ No new database tables needed. No n8n. One Vercel serverless function.
 - [ ] Success/error toast notifications
 - [ ] Optional: attach the ticket image to the order record (Supabase Storage)
 
+### Phase 5: Per-Driver Scanner Access
+- [x] Add `scanner_enabled` boolean column to `drivers` table (separate from `advanced_features`)
+- [x] Enable for Topal only via migration
+- [x] Show 📷 badge in Manage → Drivers list for drivers with `scanner_enabled = true`
+- [x] Add "Scanner Enabled" toggle in driver profile edit form
+- [x] Hide Scan Ticket button in New Order when selected driver has `scanner_enabled = false`
+- [x] Include `scanner_enabled` in driver select query and `driversCache`
+
 ## Quantity Rules (confirmed 2026-04-19)
 
 | Product Type | What qty means | Valid values |
@@ -81,4 +89,4 @@ The AI reads the number exactly as written — no conversion or multiplication.
 - The ticket codes (9226S, 9745, etc.) are printed — very OCR-friendly
 - Handwritten quantities are simple numbers (0.5, 1, 1.5, 2) — but camera angle/lighting affects accuracy
 - Multi-page tickets: user can scan each page separately, quantities accumulate
-- This is designed for one driver's workflow but the button is available whenever any driver is selected
+- This is designed for one driver's workflow; scanner visibility is gated by the per-driver `scanner_enabled` flag
