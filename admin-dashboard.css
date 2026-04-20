@@ -397,35 +397,19 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 }
 .airy-date-header:first-child { margin-top: 4px; }
 
-.order-card-wrapper {
-  display: flex; flex-direction: column;
+.order-card-avatar {
+  display: flex;
+  align-items: center;
+  padding: 14px 4px;
   border-bottom: 1px solid var(--bd);
-  padding: 12px 0; cursor: pointer;
+  cursor: pointer;
   transition: background 0.15s;
 }
-.order-card-wrapper:hover { background: var(--bg-hover); }
-.order-card-wrapper:last-child { border-bottom: none; }
-.order-card-wrapper.unseen .oca-name { font-weight: 800; color: var(--tx); }
-.order-card-wrapper.unseen .oca-avatar { border: 2px solid var(--red); box-shadow: 0 0 8px rgba(200, 16, 46, 0.4); }
+.order-card-avatar:hover { background: var(--bg-hover); }
+.order-card-avatar:last-child { border-bottom: none; }
+.order-card-avatar.unseen .oca-name { font-weight: 800; color: var(--tx); }
+.order-card-avatar.unseen .oca-avatar { border: 2px solid var(--red); box-shadow: 0 0 8px rgba(200, 16, 46, 0.4); }
 
-.oca-ref-plate {
-  background: rgba(0,0,0,0.04);
-  margin: 0 4px 6px 4px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 1.15rem; font-weight: 900;
-  color: var(--tx); letter-spacing: 1px;
-  text-transform: uppercase;
-  display: flex; align-items: center; gap: 8px;
-}
-
-[data-theme="dark"] .oca-ref-plate { background: rgba(255,255,255,0.06); }
-
-/* The inner flex row containing avatar/body/price */
-.order-card-inner {
-  display: flex; align-items: center;
-  padding: 4px;
-}
 .oca-avatar {
   width: 40px; height: 40px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -444,6 +428,17 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .oca-pill { font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 12px; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
 .oca-pill.paid { color: var(--green); background: rgba(27,122,74,0.15); }
 .oca-pill.partial { color: var(--yellow); background: rgba(200,155,42,0.15); }
+
+.oca-ref {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--red);
+  margin: 0 16px;
+  background: var(--red-light, rgba(200, 16, 46, 0.1));
+  padding: 4px 10px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
 .oca-pill.unpaid { color: var(--red); background: rgba(200,16,46,0.15); }
 
 /* ═══════════════════════════════════
