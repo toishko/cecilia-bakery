@@ -348,7 +348,13 @@ async function showSection(name) {
   if (name === 'overview') { loadOverview(); window.scrollTo({ top: 0, behavior: 'instant' }); }
   if (name === 'insights') loadInsights();
   if (name === 'online-orders') { loadOnlineOrders(); markAllOnlineOrdersSeen(); }
-  if (name === 'incoming') loadIncomingOrders();
+  if (name === 'incoming') {
+    // Always reset Driver Orders filter to Today on navigation
+    document.querySelectorAll('#driver-orders-filter .insights-pill').forEach(p => p.classList.remove('active'));
+    const todayPill = document.querySelector('#driver-orders-filter .insights-pill[data-filter="today"]');
+    if (todayPill) todayPill.classList.add('active');
+    loadIncomingOrders();
+  }
   if (name === 'new-order') initAdminOrderForm();
   if (name === 'history') loadHistoryOrders(true);
   if (name === 'drivers') {

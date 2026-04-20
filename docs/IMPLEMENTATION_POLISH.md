@@ -158,3 +158,4 @@ Run through the complete flow:
 - [x] Remove "Drivers Active" stat from the today-snapshot strip on the overview.
 - [x] Fix pending sheet drag-dismiss intercepting upward scroll — defer drag lock to touchmove direction check; only commits to dismiss if first movement is downward at scrollTop=0.
 - [x] Dashboard tab click scrolls to top of page — added `window.scrollTo` on `overview` section switch.
+- [x] Driver Orders filter always resets to "Today" on navigation — reset pill state in `showSection` before `loadIncomingOrders`.
