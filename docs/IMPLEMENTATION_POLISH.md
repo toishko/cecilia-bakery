@@ -155,3 +155,4 @@ Run through the complete flow:
 - [x] Fix FAB queue sheet still too tall — override `flex:1` to `flex:none` on `#queue-sheet-overlay .order-sheet-content` so content doesn't stretch.
 - [x] Change Driver Orders default filter from "All" to "Today" — moved `active` class from "All" pill to "Today" pill.
 - [x] Change Overview revenue filter default from "This Month" to "Today" — moved `selected` attribute on the `#revenue-filter` dropdown.
+- [x] Remove "Drivers Active" stat from the today-snapshot strip on the overview.
