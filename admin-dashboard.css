@@ -2251,7 +2251,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 
 /* ── Review Scan Sheet Overlay ── */
 .scan-review-overlay {
-  position: fixed; inset: 0; z-index: 9999;
+  position: fixed; inset: 0; z-index: 10000;
   display: flex; align-items: flex-end; justify-content: center;
   pointer-events: none; opacity: 0;
   transition: opacity 0.25s;

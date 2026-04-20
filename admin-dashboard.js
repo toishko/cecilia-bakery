@@ -8027,25 +8027,99 @@ async function initAdminOrderForm() {
     scanReviewBackdrop.onclick = () => _noCloseScanReview();
   }
 
-  // iOS scroll fix: prevent touch events from propagating to parent when
-  // the scan-review-body is at its scroll boundaries (top/bottom)
-  const scanReviewBody = document.getElementById('scan-review-body');
-  if (scanReviewBody) {
-    let startY = 0;
-    scanReviewBody.addEventListener('touchstart', (e) => {
+  // ── iOS-style drag-to-dismiss for scan review sheet ──
+  const reviewSheet = document.getElementById('scan-review-sheet');
+  const reviewOverlay = document.getElementById('scan-review-overlay');
+  const reviewBody = document.getElementById('scan-review-body');
+  if (reviewSheet && reviewOverlay) {
+    let startY = 0, currentY = 0;
+    let lastY = 0, lastTime = 0, velocity = 0;
+    let dragging = false, tracking = false;
+    const DISMISS_THRESHOLD = 60;
+    const VELOCITY_THRESHOLD = 0.5;
+
+    function onReviewTouchStart(e) {
       startY = e.touches[0].clientY;
-    }, { passive: true });
+      lastY = startY;
+      lastTime = Date.now();
+      currentY = 0;
+      velocity = 0;
+      dragging = false;
+      tracking = true;
+      reviewSheet.style.transition = 'none';
+    }
 
-    scanReviewBody.addEventListener('touchmove', (e) => {
-      const el = scanReviewBody;
-      const dy = e.touches[0].clientY - startY;
-      const atTop = el.scrollTop <= 0 && dy > 0;
-      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1 && dy < 0;
+    function onReviewTouchMove(e) {
+      if (!tracking) return;
+      const touchY = e.touches[0].clientY;
+      const dy = touchY - startY;
 
-      if (atTop || atBottom) {
-        e.preventDefault();
+      const now = Date.now();
+      const dt = now - lastTime;
+      if (dt > 0) { velocity = (touchY - lastY) / dt; lastY = touchY; lastTime = now; }
+
+      if (!dragging) {
+        if (Math.abs(dy) < 4) return;
+
+        const bodyAtTop = !reviewBody || reviewBody.scrollTop <= 0;
+        const isHandle = e.target.closest('.scan-review-handle') || e.target.closest('.scan-review-header');
+
+        if (dy > 0 && (bodyAtTop || isHandle)) {
+          dragging = true;
+          reviewSheet.style.willChange = 'transform';
+        } else {
+          tracking = false;
+          reviewSheet.style.transition = '';
+          return;
+        }
       }
-    }, { passive: false });
+
+      currentY = Math.max(0, dy);
+      if (currentY > 0) {
+        e.preventDefault();
+        const resist = currentY > DISMISS_THRESHOLD
+          ? DISMISS_THRESHOLD + (currentY - DISMISS_THRESHOLD) * 0.4
+          : currentY;
+        reviewSheet.style.transform = `translate3d(0,${resist}px,0)`;
+        reviewOverlay.style.opacity = Math.max(0.3, 1 - (currentY / 400));
+      }
+    }
+
+    function onReviewTouchEnd() {
+      tracking = false;
+      if (!dragging) return;
+      dragging = false;
+      reviewSheet.style.willChange = '';
+
+      const shouldDismiss = currentY > DISMISS_THRESHOLD || velocity > VELOCITY_THRESHOLD;
+
+      if (shouldDismiss) {
+        reviewSheet.style.transition = 'transform .2s cubic-bezier(.32,.72,0,1)';
+        reviewOverlay.style.transition = 'opacity .2s ease';
+        reviewSheet.style.transform = 'translate3d(0,100%,0)';
+        reviewOverlay.style.opacity = '0';
+        setTimeout(() => {
+          _noCloseScanReview();
+          reviewSheet.style.transition = '';
+          reviewSheet.style.transform = '';
+          reviewOverlay.style.transition = '';
+          reviewOverlay.style.opacity = '';
+        }, 200);
+      } else {
+        reviewSheet.style.transition = 'transform .2s cubic-bezier(.32,.72,0,1)';
+        reviewOverlay.style.transition = 'opacity .2s ease';
+        reviewSheet.style.transform = 'translate3d(0,0,0)';
+        reviewOverlay.style.opacity = '';
+        setTimeout(() => {
+          reviewSheet.style.transition = '';
+          reviewOverlay.style.transition = '';
+        }, 200);
+      }
+    }
+
+    reviewSheet.addEventListener('touchstart', onReviewTouchStart, { passive: true });
+    reviewSheet.addEventListener('touchmove', onReviewTouchMove, { passive: false });
+    reviewSheet.addEventListener('touchend', onReviewTouchEnd, { passive: true });
   }
 }
 
