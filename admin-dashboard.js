@@ -8736,6 +8736,8 @@ function _noOpenScanReview() {
 
   body.innerHTML = html;
   overlay.classList.add('open');
+  body.scrollTop = 0; // Ensure the review list starts at the very top
+  
   // Lock background scroll (save position like all other sheets)
   document.documentElement.dataset.scrollY = window.scrollY;
   document.body.style.top = `-${window.scrollY}px`;
