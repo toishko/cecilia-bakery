@@ -3967,22 +3967,6 @@ function openPrintWindow(showTotals) {
   `;
   document.body.appendChild(overlay);
 
-  // Scale the page content to fit the viewport without scrolling
-  requestAnimationFrame(() => {
-    const pageEl = overlay.querySelector('.pp-page');
-    const actionsH = overlay.querySelector('.pp-actions')?.offsetHeight || 70;
-    const availH = window.innerHeight - actionsH - 48; // 48px for padding
-    const contentH = pageEl.scrollHeight;
-    if (contentH > availH) {
-      const scale = Math.floor((availH / contentH) * 100) / 100;
-      pageEl.style.transform = `scale(${scale})`;
-      pageEl.style.transformOrigin = 'top center';
-      // Set the page element's height to its scaled size so flex layout adjusts
-      pageEl.style.height = (contentH * scale) + 'px';
-      pageEl.style.maxHeight = (contentH * scale) + 'px';
-    }
-  });
-
   // Unlock the body scroll so the overlay can scroll freely
   document.documentElement.classList.remove('scroll-locked');
 
