@@ -8714,8 +8714,58 @@ function _noCloseSummary() {
 function _noNavigateSummary(dir) {
   const notesEl = document.getElementById('summary-notes');
   if (notesEl) adminNoOrders[adminNoSummaryIdx].notes = notesEl.value;
-  adminNoSummaryIdx = Math.max(0, Math.min(adminNoOrders.length - 1, adminNoSummaryIdx + dir));
-  _noRenderSummaryOrder(adminNoSummaryIdx);
+  const newIdx = Math.max(0, Math.min(adminNoOrders.length - 1, adminNoSummaryIdx + dir));
+  if (newIdx === adminNoSummaryIdx) return; // already at boundary
+
+  const contentEl = document.getElementById('summary-content');
+  const titleEl = document.getElementById('summary-title');
+  const notesContainer = document.getElementById('summary-notes');
+
+  // Smooth crossfade: slide out → swap → slide in
+  const slideOut = dir > 0 ? '-12px' : '12px';
+  const slideIn = dir > 0 ? '12px' : '-12px';
+
+  // Fade + slide out
+  if (contentEl) {
+    contentEl.style.transition = 'opacity 0.15s ease, transform 0.15s ease';
+    contentEl.style.opacity = '0';
+    contentEl.style.transform = `translateX(${slideOut})`;
+  }
+  if (titleEl) {
+    titleEl.style.transition = 'opacity 0.15s ease';
+    titleEl.style.opacity = '0';
+  }
+
+  setTimeout(() => {
+    adminNoSummaryIdx = newIdx;
+    _noRenderSummaryOrder(adminNoSummaryIdx);
+
+    // Set starting position for slide in
+    if (contentEl) {
+      contentEl.style.transition = 'none';
+      contentEl.style.transform = `translateX(${slideIn})`;
+      contentEl.style.opacity = '0';
+    }
+    if (titleEl) {
+      titleEl.style.transition = 'none';
+      titleEl.style.opacity = '0';
+    }
+
+    // Force reflow then animate in
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (contentEl) {
+          contentEl.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+          contentEl.style.opacity = '1';
+          contentEl.style.transform = 'translateX(0)';
+        }
+        if (titleEl) {
+          titleEl.style.transition = 'opacity 0.2s ease';
+          titleEl.style.opacity = '1';
+        }
+      });
+    });
+  }, 150);
 }
 
 function _noRenderSummaryOrder(idx) {
