@@ -41,6 +41,9 @@ html.scroll-locked,
 html.scroll-locked body {
   overflow: hidden !important;
   touch-action: none;
+  overscroll-behavior: none;
+  position: fixed;
+  width: 100%;
 }
 h1,h2,h3{font-family:'Cormorant Garamond',serif;font-weight:600}
 :focus-visible{outline:2px solid var(--red);outline-offset:2px;border-radius:var(--r)}
@@ -966,7 +969,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .action-sheet-overlay{position:fixed;inset:0;z-index:199;
   background:rgba(0,0,0,.45);opacity:0;pointer-events:none;
   transition:opacity .25s ease;-webkit-tap-highlight-color:transparent}
-.action-sheet-overlay.open{opacity:1;pointer-events:auto}
+.action-sheet-overlay.open{opacity:1;pointer-events:auto;overscroll-behavior:contain}
 
 .action-sheet{position:fixed;bottom:0;left:0;right:0;z-index:200;
   background:var(--bg-card);border-top-left-radius:20px;border-top-right-radius:20px;

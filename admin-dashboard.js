@@ -1763,7 +1763,11 @@ function openOrderedSheet(timeframe) {
 
   // Show overlay + loading state
   overlay.classList.add('open');
+  // Lock background scroll (save position for iOS)
+  const scrollY = window.scrollY;
   document.documentElement.classList.add('scroll-locked');
+  document.body.style.top = `-${scrollY}px`;
+  document.documentElement.dataset.scrollY = scrollY;
   content.innerHTML = `<div style="padding:40px;text-align:center;color:var(--tx-muted)">${lang === 'es' ? 'Cargando...' : 'Loading...'}</div>`;
 
   // Update subtitle
@@ -1999,7 +2003,11 @@ async function _fetchAndRenderOrderedSheet() {
 function closeOrderedSheet() {
   const overlay = document.getElementById('ordered-sheet-overlay');
   if (overlay) overlay.classList.remove('open');
+  // Restore background scroll position
+  const scrollY = parseInt(document.documentElement.dataset.scrollY || '0');
   document.documentElement.classList.remove('scroll-locked');
+  document.body.style.top = '';
+  window.scrollTo(0, scrollY);
 }
 window.openOrderedSheet = openOrderedSheet;
 window.closeOrderedSheet = closeOrderedSheet;

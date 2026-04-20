@@ -143,3 +143,4 @@ Run through the complete flow:
 - [x] Restore hidden spacer in `admin-dashboard.html`'s 'Collected Today' block to keep the UI perfectly aligned and straight.
 - [x] Fix "Overview" title off-center in mobile header — changed `.mobile-section-name` from `flex:1; text-align:center` to `position:absolute; left:0; right:0; text-align:center` so it centers across the full viewport regardless of logo/button widths.
 - [x] Sync local `sw.js` back to `v39` (stale local had `v38`) and commit `version.json` timestamp update.
+- [x] Fix background scroll-through when "Total Ordered Value" sheet is open — iOS ignores `overflow:hidden` on body; added `position:fixed` + `overscroll-behavior:none` to `scroll-locked`, save/restore scroll position on open/close.
