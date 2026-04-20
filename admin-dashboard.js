@@ -8225,13 +8225,20 @@ function _noOpenScanReview() {
 
   body.innerHTML = html;
   overlay.classList.add('open');
+  // Lock background scroll (save position like all other sheets)
+  document.documentElement.dataset.scrollY = window.scrollY;
+  document.body.style.top = `-${window.scrollY}px`;
   document.documentElement.classList.add('scroll-locked');
 }
 
 function _noCloseScanReview() {
   const overlay = document.getElementById('scan-review-overlay');
   if (overlay) overlay.classList.remove('open');
+  // Restore background scroll
+  const scrollY = parseInt(document.documentElement.dataset.scrollY || '0');
   document.documentElement.classList.remove('scroll-locked');
+  document.body.style.top = '';
+  window.scrollTo(0, scrollY);
 }
 
 function _noClearScanResults() {

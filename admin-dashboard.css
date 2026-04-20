@@ -2309,8 +2309,12 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 }
 .scan-review-close:hover { background: var(--bd); }
 .scan-review-body {
-  overflow-y: auto; padding: 16px 20px 24px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 16px 20px 32px;
 }
 
 /* Review table rows */
