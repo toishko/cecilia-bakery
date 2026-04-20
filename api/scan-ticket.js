@@ -186,33 +186,51 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Gemini 2.5 Flash API call
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    // Model fallback chain (free tier can be overloaded)
+    const MODELS = [
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
+      'gemini-2.0-flash',
+    ];
 
-    const response = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: SYSTEM_PROMPT + '\n\nRead this bakery order ticket and extract all product codes and quantities.' },
-            { inlineData: { mimeType, data: rawBase64 } },
-          ],
-        }],
-        generationConfig: {
-          temperature: 0,
-          maxOutputTokens: 3000,
-        },
-      }),
+    const requestBody = JSON.stringify({
+      contents: [{
+        parts: [
+          { text: SYSTEM_PROMPT + '\n\nRead this bakery order ticket and extract all product codes and quantities.' },
+          { inlineData: { mimeType, data: rawBase64 } },
+        ],
+      }],
+      generationConfig: {
+        temperature: 0,
+        maxOutputTokens: 3000,
+      },
     });
 
-    if (!response.ok) {
+    let response = null;
+    let lastError = '';
+    for (const model of MODELS) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: requestBody,
+      });
+
+      if (response.ok) break; // success — use this response
+
       const errText = await response.text();
-      console.error('Gemini API error:', response.status, errText);
-      // Surface actual error for debugging
+      console.error(`Gemini ${model} error:`, response.status, errText);
+      lastError = errText;
+
+      // Only retry on 503 (overload) or 429 (rate limit) — other errors won't help
+      if (response.status !== 503 && response.status !== 429) break;
+      console.log(`Model ${model} overloaded, trying next...`);
+    }
+
+    if (!response || !response.ok) {
       let detail = 'AI service error.';
-      try { detail = JSON.parse(errText)?.error?.message || detail; } catch {}
-      return res.status(502).json({ success: false, message: `${detail} (${response.status})` });
+      try { detail = JSON.parse(lastError)?.error?.message || detail; } catch {}
+      return res.status(502).json({ success: false, message: `${detail} (${response?.status || 'unknown'})` });
     }
 
     const data = await response.json();
