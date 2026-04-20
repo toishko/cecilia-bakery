@@ -161,4 +161,5 @@ Run through the complete flow:
 - [x] Driver Orders filter always resets to "Today" on navigation — reset pill state in `showSection` before `loadIncomingOrders`.
 - [x] Fix ordered sheet bottom blank space — added `height:auto` + `flex:none` override on content, same as queue sheet fix.
 - [x] Fix pending sheet still closing on scroll — previous fix checked `items.scrollTop` but the scroll container is the `sheet` element itself; fixed to check `sheet.scrollTop`.
-- [x] Bump SW CACHE_VERSION v39→v40 so PWA discards stale cache and picks up all recent CSS/JS sheet padding + drag fixes.
+- [x] Bump SW const CACHE_VERSION = 'v42'; — PWA discards stale cache and picks up all recent CSS/JS sheet padding + drag fixes.
+- [x] Fix PWA standalone sheet blank bottom space — in standalone mode `env(safe-area-inset-bottom)` is ~34px; removed extra 20px base padding inside `@media(display-mode:standalone)`, now uses `max(8px, env(safe-area-inset-bottom))`. Bumped cache to v42.
