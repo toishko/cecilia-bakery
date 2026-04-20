@@ -401,6 +401,25 @@
         <button class="form-search-clear" id="search-clear">✕</button>
       </div>
 
+      <!-- Scan Ticket (only visible when scanner_enabled) -->
+      <div class="scan-ticket-wrap scanner-feature" id="scan-ticket-wrap" style="display:none">
+        <button class="scan-ticket-btn" id="scan-ticket-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span data-en="Attach Ticket" data-es="Adjuntar Ticket">Attach Ticket</span>
+        </button>
+        <input type="file" id="scan-ticket-input" accept="image/*" style="display:none">
+      </div>
+
+      <!-- Scan Result Banner -->
+      <div class="scan-result-banner" id="scan-result-banner" style="display:none">
+        <div class="scan-result-info">
+          <span class="scan-result-icon">✓</span>
+          <span class="scan-result-text" id="scan-result-text"></span>
+        </div>
+        <button class="scan-review-btn" id="scan-review-btn" type="button" data-en="Review" data-es="Revisar">Review</button>
+        <button class="scan-result-clear" id="scan-result-clear" type="button" data-en="Clear" data-es="Limpiar">Clear</button>
+      </div>
+
       <!-- Product Sections (dynamically built by JS) -->
       <div id="product-sections" style="padding-bottom:70px"></div>
     </div>
@@ -602,6 +621,19 @@
   </div>
 </div>
 
+
+<!-- Scan Review Sheet -->
+<div class="scan-review-overlay" id="scan-review-overlay">
+  <div class="scan-review-backdrop" id="scan-review-backdrop"></div>
+  <div class="scan-review-sheet" id="scan-review-sheet">
+    <div class="scan-review-handle"><span></span></div>
+    <div class="scan-review-header">
+      <h3 data-en="Review Scan" data-es="Revisar Escaneo">Review Scan</h3>
+      <button class="scan-review-close" id="scan-review-close" type="button">✕</button>
+    </div>
+    <div class="scan-review-body" id="scan-review-body"></div>
+  </div>
+</div>
 
 <script src="/pull-to-refresh.js"></script>
 <script src="/swipe-dismiss.js"></script>

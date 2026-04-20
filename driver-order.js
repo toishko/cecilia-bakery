@@ -3965,18 +3965,20 @@ async function checkAdvancedFeatures() {
     if (sb) {
       const { data, error } = await sb
         .from('drivers')
-        .select('advanced_features')
+        .select('advanced_features, scanner_enabled')
         .eq('id', currentDriver.id)
         .single();
       
       if (!error && data) {
         currentDriver.advanced_features = data.advanced_features;
-        // Optionally update the local storage session so it persists
+        currentDriver.scanner_enabled = data.scanner_enabled;
+        // Update local storage session so it persists
         const saved = localStorage.getItem('cecilia_driver');
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
             parsed.advanced_features = data.advanced_features;
+            parsed.scanner_enabled = data.scanner_enabled;
             localStorage.setItem('cecilia_driver', JSON.stringify(parsed));
           } catch(e) {}
         }
@@ -3993,9 +3995,300 @@ async function checkAdvancedFeatures() {
     el.style.display = advancedFeaturesEnabled ? '' : 'none';
   });
 
-  // Load analytics dashboardif advanced features are on
+  // Show or hide scanner
+  const scannerEnabled = !!currentDriver.scanner_enabled;
+  document.querySelectorAll('.scanner-feature').forEach(el => {
+    el.style.display = scannerEnabled ? '' : 'none';
+  });
+
+  // Load analytics dashboard if advanced features are on
   if (advancedFeaturesEnabled) {
     loadDriverClients(); // pre-load client names for leaderboard
     loadOverviewDashboard();
   }
+
+  // Wire up scanner events if scanner is enabled
+  if (scannerEnabled) {
+    _initDriverScanner();
+  }
 }
+
+/* ═══════════════════════════════════
+   TICKET SCANNER (DRIVER)
+   ═══════════════════════════════════ */
+let _driverScannerInited = false;
+
+function _initDriverScanner() {
+  if (_driverScannerInited) return;
+  _driverScannerInited = true;
+
+  const scanBtn = document.getElementById('scan-ticket-btn');
+  const scanInput = document.getElementById('scan-ticket-input');
+  const scanClear = document.getElementById('scan-result-clear');
+  const scanReviewBtn = document.getElementById('scan-review-btn');
+  const scanReviewClose = document.getElementById('scan-review-close');
+  const scanReviewBackdrop = document.getElementById('scan-review-backdrop');
+
+  if (scanBtn && scanInput) {
+    scanBtn.onclick = () => scanInput.click();
+    scanInput.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      await _driverScanTicketFile(file);
+      scanInput.value = '';
+    };
+  }
+  if (scanClear) {
+    scanClear.onclick = () => _driverClearScanResults();
+  }
+  if (scanReviewBtn) {
+    scanReviewBtn.onclick = () => _driverOpenScanReview();
+  }
+  if (scanReviewClose) {
+    scanReviewClose.onclick = () => _driverCloseScanReview();
+  }
+  if (scanReviewBackdrop) {
+    scanReviewBackdrop.onclick = () => _driverCloseScanReview();
+  }
+}
+
+/* ── Image preprocessing (sharpen + contrast for OCR) ── */
+async function _preprocessTicketImage(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX_DIM = 1200;
+      let w = img.width, h = img.height;
+      if (w > MAX_DIM || h > MAX_DIM) {
+        const scale = MAX_DIM / Math.max(w, h);
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const imageData = ctx.getImageData(0, 0, w, h);
+      const d = imageData.data;
+      const factor = 1.8;
+      for (let i = 0; i < d.length; i += 4) {
+        const gray = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+        let val = ((gray / 255 - 0.5) * factor + 0.5) * 255;
+        val = Math.max(0, Math.min(255, val));
+        d[i] = d[i+1] = d[i+2] = val;
+      }
+      ctx.putImageData(imageData, 0, 0);
+      resolve(canvas.toDataURL('image/jpeg', 0.7));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+/* ── Scan a ticket file ── */
+async function _driverScanTicketFile(file) {
+  const btn = document.getElementById('scan-ticket-btn');
+  const banner = document.getElementById('scan-result-banner');
+  const bannerText = document.getElementById('scan-result-text');
+
+  if (btn) { btn.classList.add('scanning'); btn.querySelector('span').textContent = lang === 'es' ? 'Procesando...' : 'Processing...'; }
+
+  try {
+    const rawBase64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const base64 = await _preprocessTicketImage(rawBase64);
+
+    const resp = await fetch('/api/scan-ticket', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64 }),
+    });
+
+    const data = await resp.json();
+    if (!resp.ok || !data.success) throw new Error(data.message || 'Scan failed');
+
+    if (data.items.length === 0) {
+      if (banner && bannerText) {
+        banner.style.display = 'flex';
+        banner.className = 'scan-result-banner has-warnings';
+        bannerText.textContent = lang === 'es' ? 'No se encontraron productos en la imagen.' : 'No products found in image.';
+      }
+      return;
+    }
+
+    // Save current form state first
+    saveFormToOrder(activeOrderIdx);
+    const order = orders[activeOrderIdx];
+    let filled = 0, uncertain = 0, unmatched = 0;
+
+    data.items.forEach(item => {
+      if (!item.matched || !item.systemKey) { unmatched++; return; }
+      const key = item.systemKey;
+      const rawQty = parseFloat(item.qty) || 0;
+      if (rawQty <= 0) return;
+
+      const isBirthdayCake = key.startsWith('hb_');
+      const qty = isBirthdayCake ? rawQty : Math.round(rawQty * 12);
+
+      if (key in order.qty) {
+        order.qty[key] = qty;
+        filled++;
+      } else if ((key + '_inside') in order.qty) {
+        order.qty[key + '_inside'] = qty;
+        filled++;
+      } else {
+        unmatched++;
+        return;
+      }
+      if (!item.confident) uncertain++;
+    });
+
+    // Reload form from data
+    loadOrderToForm(activeOrderIdx);
+
+    // Re-apply scan highlights
+    data.items.forEach(item => {
+      if (!item.matched || !item.systemKey) return;
+      const key = item.systemKey;
+      const input = document.querySelector(`.qty-input[data-key="${key}"], .qty-input[data-key="${key}_inside"]`);
+      if (input && (parseFloat(item.qty) || 0) > 0) {
+        input.classList.add(item.confident !== false ? 'scan-filled' : 'scan-uncertain');
+      }
+    });
+
+    updateFooterCount();
+
+    // Store scan data in the order object
+    const currentOrder = orders[activeOrderIdx];
+    if (currentOrder) {
+      currentOrder.scanData = data.items.map(item => {
+        const key = item.systemKey;
+        const rawQty = parseFloat(item.qty) || 0;
+        const isBirthdayCake = key && key.startsWith('hb_');
+        return {
+          code: item.code,
+          description: item.description,
+          rawQty,
+          convertedQty: (key && rawQty > 0) ? (isBirthdayCake ? rawQty : Math.round(rawQty * 12)) : 0,
+          confident: item.confident,
+          matched: item.matched,
+          isBirthdayCake,
+        };
+      });
+    }
+
+    // Show result banner
+    if (banner && bannerText) {
+      banner.style.display = 'flex';
+      let msg = lang === 'es'
+        ? `${filled} producto(s) escaneado(s)`
+        : `${filled} product(s) scanned`;
+      if (uncertain > 0) msg += lang === 'es' ? `, ${uncertain} por revisar` : `, ${uncertain} to review`;
+      if (unmatched > 0) msg += lang === 'es' ? `, ${unmatched} sin coincidencia` : `, ${unmatched} unmatched`;
+
+      const hasMismatch = data.mismatch && data.mismatch.expected !== undefined;
+      if (hasMismatch) {
+        const m = data.mismatch;
+        const label = m.type === 'total_boxes' ? 'Total Boxes' : 'Total Units';
+        msg += lang === 'es'
+          ? ` ⚠️ ${label}: ticket=${m.expected}, escaneo=${m.computed}`
+          : ` ⚠️ ${label}: ticket=${m.expected}, scan=${m.computed}`;
+      }
+
+      bannerText.textContent = msg;
+      banner.className = (uncertain > 0 || unmatched > 0 || hasMismatch)
+        ? 'scan-result-banner has-warnings'
+        : 'scan-result-banner';
+    }
+
+  } catch (err) {
+    console.error('Ticket scan error:', err);
+    if (banner && bannerText) {
+      banner.style.display = 'flex';
+      banner.className = 'scan-result-banner has-warnings';
+      bannerText.textContent = err.message || (lang === 'es' ? 'Error al escanear' : 'Scan failed');
+    }
+  } finally {
+    if (btn) {
+      btn.classList.remove('scanning');
+      btn.querySelector('span').textContent = lang === 'es' ? 'Adjuntar Ticket' : 'Attach Ticket';
+    }
+  }
+}
+
+/* ── Clear scan results ── */
+function _driverClearScanResults() {
+  const banner = document.getElementById('scan-result-banner');
+  if (banner) banner.style.display = 'none';
+  // Remove scan highlights
+  document.querySelectorAll('.scan-filled, .scan-uncertain').forEach(el => {
+    el.classList.remove('scan-filled', 'scan-uncertain');
+  });
+  // Clear scan data from current order
+  const order = orders[activeOrderIdx];
+  if (order) order.scanData = null;
+}
+
+/* ── Open scan review sheet ── */
+function _driverOpenScanReview() {
+  const overlay = document.getElementById('scan-review-overlay');
+  const body = document.getElementById('scan-review-body');
+  const order = orders[activeOrderIdx];
+  const scanData = order && order.scanData;
+  if (!overlay || !body || !scanData || scanData.length === 0) return;
+
+  let html = '';
+  let totalItems = 0, uncertainCount = 0;
+
+  scanData.forEach(item => {
+    if (item.rawQty <= 0 && item.matched) return;
+    const isUncertain = !item.confident;
+    if (isUncertain) uncertainCount++;
+    if (item.matched && item.rawQty > 0) totalItems++;
+
+    const rowClass = isUncertain ? 'scan-review-row uncertain' : 'scan-review-row';
+    const badge = isUncertain ? '<span class="scan-review-badge">⚠</span>' : '';
+    const rawLabel = item.isBirthdayCake
+      ? ''
+      : `<span class="scan-review-raw">(${item.rawQty} on ticket)</span>`;
+
+    html += `<div class="${rowClass}">
+      <span class="scan-review-code">${item.code}</span>
+      <span class="scan-review-desc">${item.description}${badge}</span>
+      <span class="scan-review-qty">${item.convertedQty}${rawLabel}</span>
+    </div>`;
+  });
+
+  let summary = lang === 'es'
+    ? `${totalItems} producto(s)`
+    : `${totalItems} item(s)`;
+  if (uncertainCount > 0) {
+    summary += lang === 'es'
+      ? ` · ${uncertainCount} incierto(s)`
+      : ` · ${uncertainCount} uncertain`;
+  }
+  html += `<div class="scan-review-summary">${summary}</div>`;
+
+  body.innerHTML = html;
+  overlay.classList.add('open');
+  body.scrollTop = 0;
+  document.documentElement.dataset.scrollY = window.scrollY;
+  document.body.style.top = `-${window.scrollY}px`;
+  document.documentElement.classList.add('scroll-locked');
+}
+
+/* ── Close scan review sheet ── */
+function _driverCloseScanReview() {
+  const overlay = document.getElementById('scan-review-overlay');
+  if (overlay) overlay.classList.remove('open');
+  document.documentElement.classList.remove('scroll-locked');
+  const scrollY = document.documentElement.dataset.scrollY || '0';
+  document.body.style.top = '';
+  window.scrollTo(0, parseInt(scrollY));
+}
+
