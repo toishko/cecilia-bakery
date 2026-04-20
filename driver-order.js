@@ -125,6 +125,7 @@ function showSection(name) {
   if (name === 'overview') {
     loadDriverBalance();
     loadRecentOrders();
+    loadDriverClients();
     loadOverviewDashboard();
   }
   if (name === 'clients') {
@@ -418,8 +419,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.bottom-nav-item').forEach(btn => {
     btn.addEventListener('click', () => {
       const section = btn.dataset.section;
-      if (section === 'settings' && advancedFeaturesEnabled) {
-        // Open action sheet if advanced features are enabled
+      if (section === 'settings') {
+        // Always open action sheet since all advanced features are now available
         document.getElementById('action-sheet-overlay').classList.add('open');
       } else {
         showSection(section);
@@ -3985,19 +3986,17 @@ async function checkAdvancedFeatures() {
     if (sb) {
       const { data, error } = await sb
         .from('drivers')
-        .select('advanced_features, scanner_enabled')
+        .select('scanner_enabled')
         .eq('id', currentDriver.id)
         .single();
       
       if (!error && data) {
-        currentDriver.advanced_features = data.advanced_features;
         currentDriver.scanner_enabled = data.scanner_enabled;
         // Update local storage session so it persists
         const saved = localStorage.getItem('cecilia_driver');
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
-            parsed.advanced_features = data.advanced_features;
             parsed.scanner_enabled = data.scanner_enabled;
             localStorage.setItem('cecilia_driver', JSON.stringify(parsed));
           } catch(e) {}
@@ -4005,28 +4004,7 @@ async function checkAdvancedFeatures() {
       }
     }
   } catch (e) {
-    _log('Error checking advanced features:', e);
-  }
-  
-  advancedFeaturesEnabled = !!currentDriver.advanced_features;
-
-  // Show or hide advanced tabs
-  document.querySelectorAll('.advanced-feature').forEach(el => {
-    el.style.display = advancedFeaturesEnabled ? '' : 'none';
-  });
-
-  // Switch Settings bottom nav icon to "Menu" if advanced features are on
-  const navSettingsIcon = document.getElementById('bottom-nav-settings-icon');
-  const navSettingsText = document.getElementById('bottom-nav-settings-text');
-  if (navSettingsIcon && navSettingsText) {
-    if (advancedFeaturesEnabled) {
-      navSettingsIcon.setAttribute('data-lucide', 'menu');
-      navSettingsText.textContent = lang === 'es' ? 'Más' : 'More';
-    } else {
-      navSettingsIcon.setAttribute('data-lucide', 'settings');
-      navSettingsText.textContent = lang === 'es' ? 'Config.' : 'Settings';
-    }
-    lucide.createIcons();
+    _log('Error checking scanner features:', e);
   }
 
   // Show or hide scanner
@@ -4034,12 +4012,6 @@ async function checkAdvancedFeatures() {
   document.querySelectorAll('.scanner-feature').forEach(el => {
     el.style.display = scannerEnabled ? '' : 'none';
   });
-
-  // Load analytics dashboard if advanced features are on
-  if (advancedFeaturesEnabled) {
-    loadDriverClients(); // pre-load client names for leaderboard
-    loadOverviewDashboard();
-  }
 
   // Wire up scanner events if scanner is enabled
   if (scannerEnabled) {

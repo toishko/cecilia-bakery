@@ -64,7 +64,7 @@
         <i data-lucide="layout-dashboard"></i>
         <span data-en="Overview" data-es="Resumen">Overview</span>
       </button>
-      <button class="sidebar-nav-item advanced-feature" data-section="clients" style="display:none">
+      <button class="sidebar-nav-item" data-section="clients">
         <i data-lucide="building-2"></i>
         <span data-en="Clients" data-es="Clientes">Clients</span>
       </button>
@@ -72,7 +72,7 @@
         <i data-lucide="plus-circle"></i>
         <span data-en="New Order" data-es="Nuevo Pedido">New Order</span>
       </button>
-      <button class="sidebar-nav-item advanced-feature" data-section="inventory" style="display:none">
+      <button class="sidebar-nav-item" data-section="inventory">
         <i data-lucide="clipboard-list"></i>
         <span data-en="Inventory" data-es="Inventario">Inventory</span>
       </button>
@@ -80,7 +80,7 @@
         <i data-lucide="package"></i>
         <span data-en="My Orders" data-es="Mis Pedidos">My Orders</span>
       </button>
-      <button class="sidebar-nav-item advanced-feature" data-section="sales" style="display:none">
+      <button class="sidebar-nav-item" data-section="sales">
         <i data-lucide="receipt"></i>
         <span data-en="Sales" data-es="Ventas">Sales</span>
       </button>
@@ -106,7 +106,7 @@
       <!-- Welcome + Date Filter row -->
       <div class="overview-header">
         <h2 class="welcome-name" id="welcome-name">Welcome</h2>
-        <select id="overview-filter" class="overview-filter advanced-feature" style="display:none">
+        <select id="overview-filter" class="overview-filter">
           <option value="today" data-en="Today" data-es="Hoy">Today</option>
           <option value="this_week" data-en="This Week" data-es="Esta Semana">This Week</option>
           <option value="this_month" selected data-en="This Month" data-es="Este Mes">This Month</option>
@@ -121,15 +121,15 @@
           <div class="qa-icon"><i data-lucide="plus-circle"></i></div>
           <span data-en="New Order" data-es="Nuevo Pedido">New Order</span>
         </button>
-        <button class="quick-action-card advanced-feature" style="display:none" id="qa-log-sale">
+        <button class="quick-action-card" id="qa-log-sale">
           <div class="qa-icon qa-sales"><i data-lucide="receipt"></i></div>
           <span data-en="Log Sale" data-es="Registrar Venta">Log Sale</span>
         </button>
-        <button class="quick-action-card advanced-feature" style="display:none" id="qa-inventory">
+        <button class="quick-action-card" id="qa-inventory">
           <div class="qa-icon qa-inventory"><i data-lucide="clipboard-list"></i></div>
           <span data-en="Inventory" data-es="Inventario">Inventory</span>
         </button>
-        <button class="quick-action-card advanced-feature" style="display:none" id="qa-clients">
+        <button class="quick-action-card" id="qa-clients">
           <div class="qa-icon qa-clients"><i data-lucide="building-2"></i></div>
           <span data-en="Add Client" data-es="Agregar Cliente">Add Client</span>
         </button>
@@ -143,7 +143,7 @@
       </div>
 
       <!-- Stats Cards (Advanced) -->
-      <div class="ov-stats-grid advanced-feature" style="display:none" id="ov-stats-grid">
+      <div class="ov-stats-grid" id="ov-stats-grid">
         <div class="ov-stat-card">
           <div class="ov-stat-icon"><i data-lucide="trending-up"></i></div>
           <div class="ov-stat-info">
@@ -168,7 +168,7 @@
       </div>
 
       <!-- Revenue Over Time Chart (Advanced) -->
-      <div class="ov-chart-wrap advanced-feature" style="display:none">
+      <div class="ov-chart-wrap">
         <h3 class="ov-chart-title" data-en="Revenue Over Time" data-es="Ingresos en el Tiempo">Revenue Over Time</h3>
         <div class="ov-chart-container">
           <canvas id="driverRevenueChart"></canvas>
@@ -176,7 +176,7 @@
       </div>
 
       <!-- Best Sellers (Advanced) -->
-      <div class="ov-leaderboard-wrap advanced-feature" style="display:none">
+      <div class="ov-leaderboard-wrap">
         <h3 class="ov-leaderboard-title" data-en="Best Sellers" data-es="Más Vendidos">Best Sellers</h3>
         <div id="ov-best-sellers">
           <div class="empty-state" data-en="No sales data yet" data-es="Sin datos de ventas">No sales data yet</div>
@@ -184,7 +184,7 @@
       </div>
 
       <!-- Top Clients (Advanced) -->
-      <div class="ov-leaderboard-wrap advanced-feature" style="display:none">
+      <div class="ov-leaderboard-wrap">
         <h3 class="ov-leaderboard-title" data-en="Top Clients" data-es="Mejores Clientes">Top Clients</h3>
         <div id="ov-top-clients">
           <div class="empty-state" data-en="No sales data yet" data-es="Sin datos de ventas">No sales data yet</div>
@@ -406,8 +406,8 @@
       <span data-en="My Orders" data-es="Mis Pedidos">My Orders</span>
     </button>
     <button class="bottom-nav-item" id="bottom-nav-settings" data-section="settings">
-      <i data-lucide="settings" id="bottom-nav-settings-icon"></i>
-      <span data-en="Settings" data-es="Config." id="bottom-nav-settings-text">Settings</span>
+      <i data-lucide="menu" id="bottom-nav-settings-icon"></i>
+      <span data-en="More" data-es="Más" id="bottom-nav-settings-text">More</span>
     </button>
   </nav>
 
