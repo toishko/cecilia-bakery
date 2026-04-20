@@ -1684,11 +1684,15 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 #no-driver-select:focus{border-color:var(--red);outline:none}
 
 /* Order tabs */
-.order-tabs{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px}
-.order-tab{padding:8px 16px;border:1px solid var(--bd);border-radius:8px;background:none;color:var(--tx-muted);cursor:pointer;font-family:inherit;font-size:.85rem;white-space:nowrap;transition:all .15s}
-.order-tab.active{background:var(--red);color:#fff;border-color:var(--red)}
-.order-tab-add{padding:8px 12px;border:1px dashed var(--bd);border-radius:8px;background:none;color:var(--tx-muted);cursor:pointer;font-family:inherit;font-size:.85rem;transition:all .15s}
-.order-tab-add:hover{border-color:var(--red);color:var(--red)}
+.order-tabs{display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;scroll-behavior:smooth}
+.order-tab{padding:8px 16px;border:1px solid var(--bd);border-radius:12px;background:var(--bg-card);color:var(--tx-muted);cursor:pointer;font-family:inherit;font-size:.85rem;font-weight:600;white-space:nowrap;transition:all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);box-shadow:0 1px 2px rgba(0,0,0,0.02)}
+.order-tab:active{transform:scale(0.95)}
+.order-tab.active{background:var(--red);color:#fff;border-color:var(--red);box-shadow:inset 0 2px 4px rgba(0,0,0,0.2), 0 2px 8px rgba(200,16,46,0.3)}
+.order-tab-add{display:inline-flex;align-items:center;gap:6px;position:sticky;right:0;padding:8px 16px;border:1px solid var(--bd);border-radius:12px;background:rgba(250,250,248,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--tx);font-weight:600;cursor:pointer;font-family:inherit;font-size:.9rem;box-shadow:-4px 0 12px rgba(0,0,0,0.06);z-index:10;transition:all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)}
+[data-theme="dark"] .order-tab-add{background:rgba(14,5,7,0.85);box-shadow:-4px 0 12px rgba(0,0,0,0.4);border-color:var(--bd-hover)}
+.order-tab-add:hover{background:var(--bg-card);border-color:var(--red);color:var(--red)}
+.order-tab-add:active{transform:scale(0.95)}
+.tab-count-badge{background:var(--tx);color:var(--bg);font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:2px}
 .order-tab-delete{display:inline-flex;align-items:center;justify-content:center;margin-left:10px;width:22px;height:22px;border-radius:50%;font-size:11px;color:rgba(255,255,255,.5);transition:all .15s;line-height:1;vertical-align:middle;flex-shrink:0;background:rgba(255,255,255,.15)}
 .order-tab-delete:hover{background:rgba(255,255,255,.2);color:#fff}
 

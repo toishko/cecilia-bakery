@@ -8777,13 +8777,39 @@ function _noRenderOrderTabs() {
   const container = document.getElementById('order-tabs');
   if (!container) return;
   let html = '';
+  const total = adminNoOrders.length;
+  const isEs = document.documentElement.lang === 'es';
+  
   adminNoOrders.forEach((_, i) => {
     html += `<button class="order-tab${i === adminNoActiveOrderIdx ? ' active' : ''}" data-idx="${i}">Order ${i + 1}`;
-    if (adminNoOrders.length > 1) html += `<span class="order-tab-delete" data-delidx="${i}" title="Remove">✕</span>`;
+    if (total > 1) html += `<span class="order-tab-delete" data-delidx="${i}" title="Remove">✕</span>`;
     html += `</button>`;
   });
-  html += `<button class="order-tab-add" id="no-add-order-btn">+</button>`;
+  
+  html += `<button class="order-tab-add" id="no-add-order-btn">`;
+  html += `+ <span class="tab-count-badge">${total} ${isEs ? 'Total' : 'Total'}</span>`;
+  html += `</button>`;
   container.innerHTML = html;
+
+  // Fluid slide-in animation if a new tab was just added
+  if (container._lastTabCount !== undefined && total > container._lastTabCount) {
+    const tabs = container.querySelectorAll('.order-tab');
+    if (tabs.length > 0) {
+      const newTab = tabs[tabs.length - 1];
+      newTab.style.transform = 'translateY(8px)';
+      newTab.style.opacity = '0';
+      requestAnimationFrame(() => {
+        newTab.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        newTab.style.transform = 'translateY(0)';
+        newTab.style.opacity = '1';
+      });
+      // Smoothly scroll container to the right edge to show the new tab
+      setTimeout(() => {
+        container.scrollTo({ left: container.scrollWidth, behavior: 'smooth' });
+      }, 50);
+    }
+  }
+  container._lastTabCount = total;
 
   container.querySelectorAll('.order-tab').forEach(btn => {
     btn.addEventListener('click', (e) => {
