@@ -649,16 +649,18 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .partial-remaining{font-size:.78rem;color:var(--yellow);font-weight:500;margin-left:4px}
 
 /* Confirm & Send */
-.detail-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)}
-.detail-actions button{padding:10px 16px;border-radius:10px;font-weight:600;
-  font-family:inherit;cursor:pointer;font-size:.85rem;transition:background .2s;white-space:nowrap}
-.btn-confirm{background:var(--red);border:none;color:#fff;flex:1;min-width:120px}
+.detail-actions{display:flex;flex-direction:column;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)}
+.detail-actions button{padding:14px 16px;border-radius:12px;font-weight:600;
+  font-family:inherit;cursor:pointer;font-size:.9rem;transition:all .2s;white-space:nowrap;width:100%;text-align:center}
+.btn-confirm{background:var(--red);border:none;color:#fff}
 .btn-confirm:hover{background:var(--red-dk)}
 .btn-confirm:disabled{opacity:.4;cursor:not-allowed}
-.btn-save{background:none;border:1px solid var(--bd);color:var(--tx)}
-.btn-save:hover{background:var(--bg-surface)}
-.btn-pickup{background:var(--green);border:none;color:#fff;flex:1;min-width:120px}
+.btn-save{background:var(--bg-surface);border:1.5px solid var(--bd);color:var(--tx);font-weight:600}
+.btn-save:hover{background:var(--bg-hover);border-color:var(--tx-muted)}
+.btn-save:active{transform:scale(.98)}
+.btn-pickup{background:var(--green);border:none;color:#fff;font-weight:600;letter-spacing:.3px}
 .btn-pickup:hover{opacity:.9}
+.btn-pickup:active{transform:scale(.98)}
 
 /* Edit window timer */
 .edit-window-banner{display:flex;align-items:center;gap:8px;padding:10px 14px;
