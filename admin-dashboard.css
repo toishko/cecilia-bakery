@@ -45,6 +45,7 @@ html.scroll-locked body {
   position: fixed;
   width: 100%;
 }
+html.scroll-locked .bottom-nav{display:none !important}
 h1,h2,h3{font-family:'Cormorant Garamond',serif;font-weight:600}
 :focus-visible{outline:2px solid var(--red);outline-offset:2px;border-radius:var(--r)}
 i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height:1.1em;
