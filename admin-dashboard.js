@@ -2701,32 +2701,65 @@ window.openQueueSheet = openQueueSheet;
 window.closeQueueSheet = closeQueueSheet;
 
 /* ── Needs Attention (reads from global incomingOrders + _cachedOnlineOrders) ── */
+let _queueFilter = 'unpaid'; // default filter
+
+window.setQueueFilter = function(filter) {
+  _queueFilter = filter;
+  document.querySelectorAll('#queue-filter-tabs .queue-filter-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.filter === filter);
+  });
+  renderNeedsAttention();
+};
+
 function renderNeedsAttention() {
   const container = document.getElementById('queue-sheet-content');
   const badge = document.getElementById('action-queue-badge');
   const fab = document.getElementById('action-queue-fab');
 
-  // Active driver orders (not completed/cancelled) + active online orders
-  const activeDriver = incomingOrders.filter(o => o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent');
-  const activeOnline = _cachedOnlineOrders.filter(o => o.delivery_status === 'pending' || o.delivery_status === 'preparing' || o.delivery_status === 'ready');
-  const totalItems = activeDriver.length + activeOnline.length;
+  // Active driver orders (not completed/cancelled)
+  const allActiveDriver = incomingOrders.filter(o => o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent');
+  const allActiveOnline = _cachedOnlineOrders.filter(o => o.delivery_status === 'pending' || o.delivery_status === 'preparing' || o.delivery_status === 'ready');
 
-  // Update badge count
-  if (badge) badge.innerText = totalItems;
+  // Badge always shows UNPAID count (the most urgent)
+  const unpaidDriverCount = allActiveDriver.filter(o => o.payment_status !== 'paid').length;
+  const unpaidOnlineCount = allActiveOnline.filter(o => o.payment_status !== 'paid').length;
+  const badgeCount = unpaidDriverCount + unpaidOnlineCount;
+
+  if (badge) badge.innerText = badgeCount;
   if (fab) {
     fab.style.display = 'flex';
-    if (badge) badge.style.display = totalItems > 0 ? 'flex' : 'none';
+    if (badge) badge.style.display = badgeCount > 0 ? 'flex' : 'none';
   }
 
   if (!container) return;
 
+  // Apply filter
+  let activeDriver, activeOnline;
+  if (_queueFilter === 'unpaid') {
+    activeDriver = allActiveDriver.filter(o => o.payment_status !== 'paid');
+    activeOnline = allActiveOnline.filter(o => o.payment_status !== 'paid');
+  } else if (_queueFilter === 'not-picked-up') {
+    activeDriver = allActiveDriver.filter(o => o.status !== 'picked_up' && o.status !== 'sent');
+    activeOnline = allActiveOnline.filter(o => o.delivery_status !== 'delivered');
+  } else {
+    activeDriver = allActiveDriver;
+    activeOnline = allActiveOnline;
+  }
+
+  const totalItems = activeDriver.length + activeOnline.length;
+
   // ── Empty state ──
   if (totalItems === 0) {
+    const emptyMsg = _queueFilter === 'unpaid'
+      ? (lang === 'es' ? 'No hay pedidos sin pagar.' : 'No unpaid orders.')
+      : _queueFilter === 'not-picked-up'
+        ? (lang === 'es' ? 'Todos los pedidos han sido recogidos.' : 'All orders have been picked up.')
+        : (lang === 'es' ? 'No hay pedidos pendientes.' : 'No orders need your attention right now.');
     container.innerHTML = `
       <div class="queue-empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-        <h4 class="queue-empty-title" data-en="All Caught Up" data-es="Todo al día">${lang === 'es' ? 'Todo al día' : 'All Caught Up'}</h4>
-        <p class="queue-empty-desc" data-en="No orders need your attention right now." data-es="No hay pedidos pendientes.">${lang === 'es' ? 'No hay pedidos pendientes.' : 'No orders need your attention right now.'}</p>
+        <h4 class="queue-empty-title">${lang === 'es' ? 'Todo al día' : 'All Caught Up'}</h4>
+        <p class="queue-empty-desc">${emptyMsg}</p>
       </div>`;
     return;
   }

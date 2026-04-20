@@ -1855,6 +1855,34 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Queue Filter Tabs */
+.queue-filter-tabs {
+  display: flex; gap: 6px;
+  padding: 8px 16px 12px;
+  border-bottom: 1px solid var(--bd, #eee);
+}
+.queue-filter-pill {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--bd, #ddd);
+  background: transparent;
+  color: var(--tx-muted);
+  font-size: 0.8rem;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.queue-filter-pill.active {
+  background: var(--red, #a02020);
+  color: #fff;
+  border-color: var(--red, #a02020);
+}
+.queue-filter-pill:not(.active):hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
 /* Empty Queue State */
 .queue-empty-state {
   display: flex;

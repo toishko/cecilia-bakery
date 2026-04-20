@@ -1090,6 +1090,11 @@ initUpdateBanner();
       <h3 class="order-sheet-title" id="queue-sheet-title" data-en="Needs Attention" data-es="Requiere Atención">Needs Attention</h3>
       <button class="order-sheet-close" onclick="closeQueueSheet()">✕</button>
     </div>
+    <div class="queue-filter-tabs" id="queue-filter-tabs">
+      <button class="queue-filter-pill active" data-filter="unpaid" onclick="setQueueFilter('unpaid')">Unpaid</button>
+      <button class="queue-filter-pill" data-filter="not-picked-up" onclick="setQueueFilter('not-picked-up')">Not Picked Up</button>
+      <button class="queue-filter-pill" data-filter="all" onclick="setQueueFilter('all')">All</button>
+    </div>
     <div id="queue-sheet-content" class="order-sheet-content"></div>
   </div>
 </div>
