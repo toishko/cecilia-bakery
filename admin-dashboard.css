@@ -2186,30 +2186,32 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .scan-ticket-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  padding: 14px 18px;
-  border: 2px dashed var(--bd);
+  padding: 16px 20px;
+  border: 1px solid var(--bd);
   border-radius: 14px;
-  background: transparent;
-  color: var(--tx-muted);
+  background: var(--bg-card);
+  color: var(--tx);
   font-family: 'Outfit', sans-serif;
   font-size: 0.92rem;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.06);
+  letter-spacing: 0.02em;
 }
 .scan-ticket-btn svg {
-  width: 20px; height: 20px; flex-shrink: 0;
+  width: 20px; height: 20px; flex-shrink: 0; color: var(--red);
 }
 .scan-ticket-btn:hover {
   border-color: var(--red);
-  color: var(--red);
   background: rgba(200,16,46,0.04);
+  box-shadow: 0 4px 16px rgba(200,16,46,0.1), inset 0 1px 0 rgba(255,255,255,0.06);
 }
 .scan-ticket-btn:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 .scan-ticket-btn.scanning {
   pointer-events: none;

@@ -8537,7 +8537,7 @@ async function _noScanTicketFile(file) {
   const bannerText = document.getElementById('scan-result-text');
 
   // Show scanning state
-  if (btn) { btn.classList.add('scanning'); btn.querySelector('span').textContent = lang === 'es' ? 'Escaneando...' : 'Scanning...'; }
+  if (btn) { btn.classList.add('scanning'); btn.querySelector('span').textContent = lang === 'es' ? 'Procesando...' : 'Processing...'; }
 
   try {
     // Convert file to base64
@@ -8681,7 +8681,7 @@ async function _noScanTicketFile(file) {
     // Reset button
     if (btn) {
       btn.classList.remove('scanning');
-      btn.querySelector('span').textContent = lang === 'es' ? 'Escanear Ticket' : 'Scan Ticket';
+      btn.querySelector('span').textContent = lang === 'es' ? 'Adjuntar Ticket' : 'Attach Ticket';
     }
   }
 }
