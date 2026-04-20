@@ -187,7 +187,7 @@ export default async function handler(req, res) {
 
   try {
     // Gemini 2.5 Flash API call
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=${apiKey}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(geminiUrl, {
       method: 'POST',
@@ -209,7 +209,10 @@ export default async function handler(req, res) {
     if (!response.ok) {
       const errText = await response.text();
       console.error('Gemini API error:', response.status, errText);
-      return res.status(502).json({ success: false, message: 'AI service error. Please try again.' });
+      // Surface actual error for debugging
+      let detail = 'AI service error.';
+      try { detail = JSON.parse(errText)?.error?.message || detail; } catch {}
+      return res.status(502).json({ success: false, message: `${detail} (${response.status})` });
     }
 
     const data = await response.json();
