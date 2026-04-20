@@ -154,3 +154,4 @@ Run through the complete flow:
 - [x] Fix excessive bottom space in FAB queue sheet — reduced padding-bottom from 76px (for now-hidden bottom nav) to 20px + safe-area; queue sheet auto-sizes to content with 88vh cap.
 - [x] Fix FAB queue sheet still too tall — override `flex:1` to `flex:none` on `#queue-sheet-overlay .order-sheet-content` so content doesn't stretch.
 - [x] Change Driver Orders default filter from "All" to "Today" — moved `active` class from "All" pill to "Today" pill.
+- [x] Change Overview revenue filter default from "This Month" to "Today" — moved `selected` attribute on the `#revenue-filter` dropdown.
