@@ -3053,6 +3053,7 @@ function renderOrderCards(orders, containerId, showLive = false) {
           <div class="oca-time">${orderNum ? orderNum + ' • ' : ''}${time}</div>
         </div>
         <div class="oca-right">
+          ${order.driver_ref ? `<div style="font-size:0.65rem;font-weight:800;color:var(--tx-faint);text-transform:uppercase;text-align:right;margin-bottom:2px;letter-spacing:0.5px">Ref: ${_esc(order.driver_ref)}</div>` : ''}
           <div class="oca-price">${formatCurrency(parseFloat(order.total_amount || 0))}</div>
           <div class="oca-pill ${payClass}">${payText}</div>
         </div>
