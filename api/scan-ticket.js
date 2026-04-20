@@ -1,5 +1,5 @@
 // Vercel Serverless Function — OCR Ticket Scanner
-// Accepts a base64 image of a printed order ticket, sends it to OpenAI GPT-4o vision,
+// Accepts a base64 image of a printed order ticket, sends it to Google Gemini 1.5 Pro vision,
 // and returns structured JSON of product keys + quantities.
 
 // ── Rate limiter ──
@@ -161,9 +161,9 @@ export default async function handler(req, res) {
   }
 
   // Validate API key
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
-    console.error('OPENAI_API_KEY not set');
+    console.error('GOOGLE_AI_API_KEY not set');
     return res.status(500).json({ success: false, message: 'Scanner not configured.' });
   }
 
@@ -173,42 +173,47 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, message: 'No image provided.' });
   }
 
-  // Ensure it's a valid base64 data URL or raw base64
+  // Extract raw base64 and mime type
   const isDataUrl = image.startsWith('data:image/');
-  const imageContent = isDataUrl ? image : `data:image/jpeg;base64,${image}`;
+  let mimeType = 'image/jpeg';
+  let rawBase64 = image;
+  if (isDataUrl) {
+    const match = image.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (match) {
+      mimeType = match[1];
+      rawBase64 = match[2];
+    }
+  }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Gemini 2.5 Flash API call
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=${apiKey}`;
+
+    const response = await fetch(geminiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: 'Read this bakery order ticket and extract all product codes and quantities.' },
-              { type: 'image_url', image_url: { url: imageContent, detail: 'high' } },
-            ],
-          },
-        ],
-        max_tokens: 3000,
-        temperature: 0,
+        contents: [{
+          parts: [
+            { text: SYSTEM_PROMPT + '\n\nRead this bakery order ticket and extract all product codes and quantities.' },
+            { inlineData: { mimeType, data: rawBase64 } },
+          ],
+        }],
+        generationConfig: {
+          temperature: 0,
+          maxOutputTokens: 3000,
+        },
       }),
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('OpenAI API error:', response.status, errText);
+      console.error('Gemini API error:', response.status, errText);
       return res.status(502).json({ success: false, message: 'AI service error. Please try again.' });
     }
 
     const data = await response.json();
-    const rawContent = data.choices?.[0]?.message?.content || '[]';
+    const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
 
     // Parse the JSON from the AI response (strip markdown fences if present)
     let parsed;
