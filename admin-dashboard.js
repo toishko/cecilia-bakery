@@ -3547,21 +3547,21 @@ window._calcReturnCredit = function() {
    Editable until fully paid
    ═══════════════════════════════════ */
 function canEditOrder(order) {
-  // Editable as long as not fully paid
-  if (order.payment_status === 'paid') return false;
-  return true;
+  // Editable for pending and sent orders regardless of payment status
+  if (order.status === 'pending' || order.status === 'sent') return true;
+  return false;
 }
 
 function getEditWindowStatus(order) {
   if (order.status === 'pending') return { show: false };
 
-  if (order.payment_status === 'paid') {
+  if (order.status === 'picked_up' || order.status === 'confirmed') {
     return {
       show: true,
       expired: true,
       text: lang === 'es'
-        ? 'Este pedido está pagado — no se puede editar'
-        : 'This order is paid — editing is locked'
+        ? 'Este pedido ya fue procesado — no se puede editar'
+        : 'This order has been processed — editing is locked'
     };
   }
 
@@ -3569,8 +3569,8 @@ function getEditWindowStatus(order) {
     show: true,
     expired: false,
     text: lang === 'es'
-      ? 'Puedes editar cantidades hasta que se marque como pagado'
-      : 'You can edit quantities until marked as paid'
+      ? 'Puedes editar cantidades de este pedido'
+      : 'You can edit quantities for this order'
   };
 }
 
