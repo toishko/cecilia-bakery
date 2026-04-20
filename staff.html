@@ -1293,9 +1293,8 @@
     function toggleStaffLang() {
       staffLang = staffLang === 'en' ? 'es' : 'en';
       localStorage.setItem('cb-staff-lang', staffLang);
-      document.getElementById('lang-toggle').textContent = staffLang === 'en' ? 'ES' : 'EN';
-      var navLangBtn = document.getElementById('staff-nav-lang-btn');
-      if (navLangBtn) navLangBtn.textContent = staffLang === 'en' ? 'ES' : 'EN';
+      var langBtn = document.getElementById('settings-lang-btn');
+      if (langBtn) langBtn.textContent = staffLang === 'en' ? 'Español' : 'English';
       applyStaffLang();
     }
 
@@ -1309,10 +1308,9 @@
     }
 
     // Apply language on load
-    document.getElementById('lang-toggle').textContent = staffLang === 'en' ? 'ES' : 'EN';
     (function() {
-      var navLangBtn = document.getElementById('staff-nav-lang-btn');
-      if (navLangBtn) navLangBtn.textContent = staffLang === 'en' ? 'ES' : 'EN';
+      var langBtn = document.getElementById('settings-lang-btn');
+      if (langBtn) langBtn.textContent = staffLang === 'en' ? 'Español' : 'English';
     })();
     applyStaffLang();
 
