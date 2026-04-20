@@ -3967,16 +3967,9 @@ function openPrintWindow(showTotals) {
   `;
   document.body.appendChild(overlay);
 
-  // Unlock the body scroll so the overlay can scroll freely
-  document.documentElement.classList.remove('scroll-locked');
-
-  // Close button — re-lock body if modal is still open
+  // Close button
   document.getElementById('pp-close-btn').addEventListener('click', () => {
     overlay.remove();
-    const detailOverlay = document.getElementById('order-sheet-overlay');
-    if (detailOverlay && detailOverlay.classList.contains('open')) {
-      document.documentElement.classList.add('scroll-locked');
-    }
   });
 
   // Print button — sizing handled by @media print CSS
