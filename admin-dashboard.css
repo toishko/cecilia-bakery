@@ -1401,7 +1401,8 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 
 /* ── Print Stylesheet — fit-to-one-page via smaller sizes ── */
 @media print{
-  html,body{height:auto!important;min-height:0!important;margin:0!important;padding:0!important;overflow:visible!important}
+  html,body{height:auto!important;min-height:0!important;margin:0!important;padding:0!important;
+    overflow:visible!important;position:static!important;width:auto!important;touch-action:auto!important}
   body>*{display:none!important}
   #print-preview-overlay{display:block!important;position:static!important;
     height:auto!important;min-height:0!important;overflow:visible!important;
