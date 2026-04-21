@@ -103,6 +103,7 @@ After every task I complete, I must:
 | `docs/IMPLEMENTATION_TICKET_SCANNER.md` | OCR ticket scanner: photo-to-order auto-fill via AI vision | 🔄 In Progress |
 | `docs/IMPLEMENTATION_futureplans.md` | Future features: analytics dashboard, wholesale portal, production tracking | 🔄 Analytics In Progress |
 | `docs/NOTES_PRODUCT_CATALOG.md` | Definitive product key reference + printed ticket code mappings | ✅ Active |
+| `docs/IMPLEMENTATION_STAFF_FROST_PACKER.md` | Staff Portal frosted box packer: Live Grid visualization redesign | 🔄 In Progress |
 
 ---
 

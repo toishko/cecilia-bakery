@@ -1000,32 +1000,132 @@
     }
 
     /* ── Frosted Box Packer ── */
-    .frost-packer { margin-top:16px; padding-top:16px; border-top:2px solid rgba(200,16,46,.15); }
-    .frost-packer-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-    .frost-packer-summary { font-size:.78rem; color:var(--tx-faint); }
-    .frost-remaining { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
-    .frost-flavor-row { display:flex; align-items:center; gap:8px; padding:6px 10px; background:var(--bg-surface); border-radius:8px; font-size:.82rem; }
-    .frost-flavor-name { font-weight:600; color:var(--tx); }
-    .frost-flavor-ordered { color:var(--tx-faint); font-size:.75rem; }
-    .frost-flavor-left { font-weight:600; font-size:.78rem; }
-    .frost-box { background:var(--bg-card); border:1px solid var(--bd); border-radius:10px; padding:14px; margin-bottom:10px; }
-    .frost-box-full { border-color:#0a7a0a; background:rgba(0,160,0,.02); }
-    .frost-box-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-    .frost-box-title { font-weight:700; font-size:.88rem; }
-    .frost-box-lines-used { font-size:.78rem; font-weight:600; }
-    .frost-box-visual { display:flex; gap:3px; margin-bottom:12px; height:28px; border-radius:6px; overflow:hidden; background:var(--bg-surface); }
-    .frost-line-slot { flex:1; border-radius:3px; transition:background .2s; }
-    .frost-line-empty { background:var(--bg-surface); border:1px dashed var(--bd); }
-    .frost-line-slot.frost-line-partial { opacity:0.4; position:relative; }
-    .frost-box-flavor-row { display:flex; align-items:center; gap:8px; padding:4px 0; }
-    .frost-box-flavor-name { flex:1; font-size:.82rem; font-weight:500; color:var(--tx); }
-    .frost-line-input { width:58px; padding:4px 6px; border-radius:6px; border:1px solid var(--bd); text-align:center; font-size:.85rem; background:var(--bg-input); color:var(--tx); font-family:'Outfit',sans-serif; -moz-appearance:textfield; appearance:textfield; }
+    /* ══ Frosted Box Packer — Live Grid ══ */
+    .frost-container {
+      margin-top:16px; padding:16px; background:var(--bg-panel);
+      border-radius:14px; border:1px solid rgba(200,16,46,.12);
+    }
+    .frost-header {
+      display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;
+    }
+    .frost-header-title {
+      font-size:.82rem; font-weight:700; color:var(--red);
+      text-transform:uppercase; letter-spacing:.5px;
+    }
+    .frost-header-summary {
+      font-size:.75rem; color:var(--tx-faint); font-weight:500;
+    }
+    /* ── Pill Dock ── */
+    .frost-pill-dock {
+      display:flex; flex-wrap:wrap; gap:6px;
+      margin:10px 0 14px 0;
+    }
+    .frost-pill {
+      display:flex; align-items:center; gap:5px;
+      padding:4px 10px; border-radius:20px;
+      font-size:.72rem; font-weight:600;
+      background:var(--bg-surface); border:1px solid var(--bd);
+      color:var(--tx); transition:all .25s;
+    }
+    .frost-pill .fp-dot {
+      width:8px; height:8px; border-radius:50%; flex-shrink:0;
+    }
+    .frost-pill.done {
+      background:rgba(10,122,10,.08); border-color:rgba(10,122,10,.25);
+      color:#0a7a0a;
+    }
+    /* ── Box Card ── */
+    .frost-box-card {
+      background:var(--bg-card); border:1.5px solid var(--bd);
+      border-radius:12px; padding:14px; margin-bottom:10px;
+      transition:border-color .3s, box-shadow .3s;
+    }
+    .frost-box-card.secured {
+      border-color:#0a7a0a;
+      box-shadow:0 0 0 3px rgba(10,122,10,.08);
+    }
+    .frost-box-head {
+      display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;
+    }
+    .frost-box-label { font-weight:700; font-size:.88rem; color:var(--tx); }
+    .frost-box-count { font-size:.78rem; font-weight:600; }
+    .frost-box-secured-badge {
+      display:none; font-size:.7rem; font-weight:700; color:#0a7a0a;
+      background:rgba(10,122,10,.08); padding:2px 8px; border-radius:6px;
+      animation:frostBadgePop .3s ease-out;
+    }
+    .frost-box-card.secured .frost-box-secured-badge { display:inline-block; }
+    @keyframes frostBadgePop {
+      0% { transform:scale(0.5); opacity:0; }
+      60% { transform:scale(1.1); }
+      100% { transform:scale(1); opacity:1; }
+    }
+    /* ── The Live Grid (8 rows × 7 cols) ── */
+    .frost-grid {
+      display:grid; grid-template-columns:repeat(7,1fr);
+      gap:3px; margin-bottom:12px;
+      background:rgba(255,255,255,.6); border-radius:8px; padding:6px;
+      border:1px solid var(--bd);
+    }
+    .frost-grid-cell {
+      aspect-ratio:1; border-radius:4px;
+      border:1.5px dashed rgba(0,0,0,.1);
+      background:rgba(0,0,0,.03);
+      transition:background .15s, border-color .15s, box-shadow .15s, transform .15s;
+    }
+    .frost-grid-cell.filled {
+      border:1.5px solid rgba(255,255,255,.3);
+      animation:frostCellPop .2s ease-out;
+    }
+    @keyframes frostCellPop {
+      0% { transform:scale(0.3); opacity:0; }
+      60% { transform:scale(1.08); }
+      100% { transform:scale(1); opacity:1; }
+    }
+    .frost-box-card.secured .frost-grid {
+      animation:frostGridPulse .4s ease-out;
+    }
+    @keyframes frostGridPulse {
+      0% { box-shadow:0 0 0 0 rgba(10,122,10,.2); }
+      50% { box-shadow:0 0 0 6px rgba(10,122,10,.1); }
+      100% { box-shadow:0 0 0 0 rgba(10,122,10,0); }
+    }
+    /* ── Flavor Input Rows ── */
+    .frost-flavor-row {
+      display:flex; align-items:center; gap:8px; padding:6px 0;
+      border-bottom:1px solid var(--bd);
+    }
+    .frost-flavor-row:last-child { border-bottom:none; }
+    .frost-flavor-dot {
+      width:10px; height:10px; border-radius:50%; flex-shrink:0;
+    }
+    .frost-flavor-name {
+      flex:1; font-size:.82rem; font-weight:600; color:var(--tx);
+      min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .frost-line-input {
+      width:54px; padding:4px 6px; border-radius:6px;
+      border:1px solid var(--bd); text-align:center;
+      font-size:16px; background:var(--bg-input); color:var(--tx);
+      font-family:'Outfit',sans-serif;
+      -moz-appearance:textfield; appearance:textfield;
+    }
     .frost-line-input:focus { border-color:var(--red); outline:none; }
     .frost-line-input::-webkit-outer-spin-button,
     .frost-line-input::-webkit-inner-spin-button { -webkit-appearance:none; appearance:none; margin:0; }
-    .frost-box-flavor-calc { font-size:.78rem; color:var(--tx-faint); min-width:80px; text-align:right; }
-    .frost-box-total { text-align:center; font-weight:700; font-size:.85rem; margin-top:8px; padding-top:8px; border-top:1px solid var(--bd); }
-    .frost-add-box-btn { width:100%; padding:10px; background:none; border:1px dashed var(--bd); border-radius:8px; cursor:pointer; font-size:.85rem; color:var(--tx-muted); font-weight:600; transition:all .2s; }
+    .frost-flavor-calc {
+      font-size:.72rem; color:var(--tx-faint); min-width:70px; text-align:right; font-weight:500;
+    }
+    .frost-box-total {
+      text-align:center; font-weight:700; font-size:.85rem;
+      margin-top:10px; padding-top:10px; border-top:1px solid var(--bd);
+    }
+    .frost-add-box-btn {
+      width:100%; padding:10px; background:none;
+      border:1px dashed var(--bd); border-radius:8px;
+      cursor:pointer; font-size:.85rem; color:var(--tx-muted);
+      font-weight:600; transition:all .2s; margin-top:4px;
+    }
     .frost-add-box-btn:hover { border-color:var(--red); color:var(--red); }
 
     /* ── Quick Calculator Card ── */
@@ -2338,11 +2438,14 @@
           let frostPackerHtml = '';
           if (frostedItems_oi.length > 0) {
               frostPackerHtml = `
-                <div class="frost-packer-container" id="fp-${order.id}" style="margin-top:16px;padding:12px;background:var(--bg-panel);border-radius:12px;border:1px solid rgba(200,16,46,.15);">
-                <span class="box-calc-cat-header" style="border-bottom:none;margin:0;padding:0">🧊 Frosted Box Packer</span>
-                <div id="fp-items-${order.id}" style="margin:12px 0;display:flex;flex-wrap:wrap;gap:6px;"></div>
-                <div id="fp-boxes-${order.id}" style="display:flex;flex-direction:column;gap:8px;"></div>
-                <button onclick="frostAddBox('${order.id}')" style="margin-top:12px;width:100%;padding:10px;background:none;border:1px dashed var(--bd);border-radius:8px;font-weight:600;color:var(--tx-muted);cursor:pointer;">+ Add Box</button>
+                <div class="frost-container" id="frost-container-${order.id}">
+                  <div class="frost-header">
+                    <span class="frost-header-title">🧊 Frosted Box Packer</span>
+                    <span class="frost-header-summary" id="frost-summary-${order.id}"></span>
+                  </div>
+                  <div class="frost-pill-dock" id="frost-pills-${order.id}"></div>
+                  <div id="frost-boxes-${order.id}" style="display:flex;flex-direction:column;gap:8px;"></div>
+                  <button class="frost-add-box-btn" onclick="frostAddBox('${order.id}')">+ Add Box</button>
                 </div>`;
           }
 
@@ -2664,10 +2767,10 @@
     var frostState = {};
 
     var FROST_COLORS = {
-      'fr_guava': '#e74c3c',
-      'fr_pina': '#f39c12',
-      'fr_dulce': '#8e6f47',
-      'fr_choco': '#5c3317'
+      'fr_guava': { fill: '#e74c3c', glow: 'rgba(231,76,60,.3)' },
+      'fr_pina':  { fill: '#f39c12', glow: 'rgba(243,156,18,.3)' },
+      'fr_dulce': { fill: '#8e6f47', glow: 'rgba(142,111,71,.3)' },
+      'fr_choco': { fill: '#5c3317', glow: 'rgba(92,51,23,.3)' }
     };
 
     function frostInit(orderId, items) {
@@ -2715,54 +2818,55 @@
       state.boxes.forEach(function(box) {
         var totalPieces = 0;
         state.flavors.forEach(function(f) { totalPieces += (box.pieces[f.key] || 0); });
-        var isFull = totalPieces === 56;
+        var isSecured = totalPieces === 56;
 
-        html += '<div class="frost-box' + (isFull ? ' frost-box-full' : '') + '">';
-        html += '<div class="frost-box-header">';
-        html += '<span class="frost-box-title">Box ' + box.num + '</span>';
-        html += '<span class="frost-box-lines-used" style="color:' + (isFull ? '#0a7a0a' : totalPieces > 56 ? 'var(--red)' : 'var(--tx-muted)') + '">' + totalPieces + '/56 pieces' + (isFull ? ' ✓' : '') + '</span>';
+        html += '<div class="frost-box-card' + (isSecured ? ' secured' : '') + '">';
+
+        // Header
+        html += '<div class="frost-box-head">';
+        html += '<span class="frost-box-label">Box ' + box.num + '</span>';
+        html += '<div style="display:flex;align-items:center;gap:8px;">';
+        html += '<span class="frost-box-secured-badge">✓ SECURED</span>';
+        html += '<span class="frost-box-count" style="color:' + (isSecured ? '#0a7a0a' : totalPieces > 56 ? 'var(--red)' : 'var(--tx-muted)') + '">' + totalPieces + '/56</span>';
         if (state.boxes.length > 1) {
-          html += '<button onclick="frostRemoveBox(\'' + orderId + '\',' + box.num + ')" style="background:none;border:none;color:var(--tx-faint);cursor:pointer;font-size:.9rem">✕</button>';
+          html += '<button onclick="frostRemoveBox(\'' + orderId + '\',' + box.num + ')" style="background:none;border:none;color:var(--tx-faint);cursor:pointer;font-size:.85rem;padding:0 2px">✕</button>';
         }
-        html += '</div>';
+        html += '</div></div>';
 
-        // Visual bar showing 8 line slots
-        html += '<div class="frost-box-visual">';
-        var slotIdx = 0;
+        // Live Grid — 56 cells (8 rows × 7 cols)
+        html += '<div class="frost-grid">';
+        var cellIdx = 0;
         state.flavors.forEach(function(f) {
           var pcs = box.pieces[f.key] || 0;
-          var fullLines = Math.floor(pcs / 7);
-          var extraPcs = pcs % 7;
-          var color = FROST_COLORS[f.key] || 'var(--red)';
-          for (var i = 0; i < fullLines && slotIdx < 8; i++) {
-            html += '<div class="frost-line-slot" style="background:' + color + '" title="' + _esc(f.name) + ' (7 pcs)"></div>';
-            slotIdx++;
-          }
-          if (extraPcs > 0 && slotIdx < 8) {
-            html += '<div class="frost-line-slot frost-line-partial" style="background:' + color + '" title="' + _esc(f.name) + ' (' + extraPcs + ' pcs)"></div>';
-            slotIdx++;
+          var colorObj = FROST_COLORS[f.key] || { fill: 'var(--red)', glow: 'rgba(200,16,46,.3)' };
+          for (var i = 0; i < pcs && cellIdx < 56; i++) {
+            html += '<div class="frost-grid-cell filled" style="background:' + colorObj.fill + ';box-shadow:0 0 4px ' + colorObj.glow + '" title="' + _esc(f.name) + '"></div>';
+            cellIdx++;
           }
         });
-        for (var e = slotIdx; e < 8; e++) {
-          html += '<div class="frost-line-slot frost-line-empty"></div>';
+        // Fill remaining empty cells
+        for (var e = cellIdx; e < 56; e++) {
+          html += '<div class="frost-grid-cell"></div>';
         }
         html += '</div>';
 
-        // Flavor inputs
+        // Flavor input rows
         state.flavors.forEach(function(f) {
           var val = box.pieces[f.key] || 0;
           var displayVal = val > 0 ? val : '';
-          var dotColor = FROST_COLORS[f.key] || 'var(--red)';
-          html += '<div class="frost-box-flavor-row">';
-          html += '<span class="frost-box-flavor-name"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + dotColor + ';margin-right:6px;vertical-align:middle"></span>' + _esc(f.name) + '</span>';
-          html += '<input type="number" class="frost-line-input" min="0" max="56" value="' + displayVal + '" data-order="' + orderId + '" data-box="' + box.num + '" data-flavor="' + f.key + '" onchange="frostUpdatePieces(this)" onfocus="this.select()" placeholder="pcs">';
-          html += '<span class="frost-box-flavor-calc">' + frostPcsBreakdown(val) + '</span>';
+          var colorObj = FROST_COLORS[f.key] || { fill: 'var(--red)', glow: '' };
+          html += '<div class="frost-flavor-row">';
+          html += '<span class="frost-flavor-dot" style="background:' + colorObj.fill + '"></span>';
+          html += '<span class="frost-flavor-name">' + _esc(f.name) + '</span>';
+          html += '<input type="number" class="frost-line-input" min="0" max="56" value="' + displayVal + '" data-order="' + orderId + '" data-box="' + box.num + '" data-flavor="' + f.key + '" oninput="frostUpdatePieces(this)" onfocus="this.select()" placeholder="0">';
+          html += '<span class="frost-flavor-calc">' + frostPcsBreakdown(val) + '</span>';
           html += '</div>';
         });
 
-        html += '<div class="frost-box-total" style="color:' + (isFull ? '#0a7a0a' : 'var(--tx-muted)') + '">' + totalPieces + '/56 pieces</div>';
+        // Box total
+        html += '<div class="frost-box-total" style="color:' + (isSecured ? '#0a7a0a' : 'var(--tx-muted)') + '">' + totalPieces + '/56 pieces' + (isSecured ? ' ✓' : '') + '</div>';
         if (totalPieces > 56) {
-          html += '<div style="font-size:.75rem;color:var(--red);font-weight:600">⚠ Too many pieces! Max 56 per box.</div>';
+          html += '<div style="font-size:.75rem;color:var(--red);font-weight:600;text-align:center;margin-top:4px">⚠ Over capacity! Max 56 per box.</div>';
         }
         html += '</div>';
       });
@@ -2817,26 +2921,37 @@
       if (!state) return;
 
       var totalPacked = 0;
+      var totalOrdered = 0;
       var totalBoxes = state.boxes.length;
 
+      // Build pill dock HTML
+      var pillsHtml = '';
       state.flavors.forEach(function(f) {
         var packed = 0;
         state.boxes.forEach(function(box) { packed += (box.pieces[f.key] || 0); });
         var left = f.qty - packed;
         totalPacked += packed;
-        var el = document.getElementById('frost-left-' + orderId + '-' + f.key);
-        if (el) {
-          el.textContent = 'Left: ' + left;
-          el.style.color = left === 0 ? '#0a7a0a' : left < 0 ? 'var(--red)' : 'var(--tx-muted)';
-          if (left < 0) el.textContent = 'Over by ' + Math.abs(left) + '!';
-          if (left === 0) el.textContent = 'Done ✓';
+        totalOrdered += f.qty;
+        var colorObj = FROST_COLORS[f.key] || { fill: 'var(--red)' };
+        var isDone = left <= 0;
+
+        pillsHtml += '<div class="frost-pill' + (isDone ? ' done' : '') + '">';
+        pillsHtml += '<span class="fp-dot" style="background:' + colorObj.fill + '"></span>';
+        if (isDone) {
+          pillsHtml += _esc(f.name) + ' ✓';
+        } else {
+          pillsHtml += _esc(f.name) + ': ' + left;
         }
+        pillsHtml += '</div>';
       });
 
+      var pillsDock = document.getElementById('frost-pills-' + orderId);
+      if (pillsDock) pillsDock.innerHTML = pillsHtml;
+
+      // Update summary
       var summaryEl = document.getElementById('frost-summary-' + orderId);
-      var totalOrdered = state.flavors.reduce(function(s, f) { return s + f.qty; }, 0);
       if (summaryEl) {
-        summaryEl.textContent = totalPacked + '/' + totalOrdered + ' pieces across ' + totalBoxes + ' box' + (totalBoxes !== 1 ? 'es' : '');
+        summaryEl.textContent = totalPacked + '/' + totalOrdered + ' pcs · ' + totalBoxes + ' box' + (totalBoxes !== 1 ? 'es' : '');
       }
     }
 
