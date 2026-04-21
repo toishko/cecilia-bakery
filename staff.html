@@ -1000,26 +1000,84 @@
     }
 
     /* ── Frosted Box Packer ── */
-    /* ══ Frosted Box Packer — Live Grid ══ */
-    .frost-container {
-      margin-top:16px; padding:16px; background:var(--bg-panel);
-      border-radius:14px; border:1px solid rgba(200,16,46,.12);
+    /* ══ Frosted Box Packer — Modal ══ */
+    /* ── Inline Bar (inside order card) ── */
+    .frost-bar {
+      display:flex; align-items:center; gap:10px;
+      margin-top:12px; padding:10px 14px;
+      background:var(--bg-surface); border-radius:10px;
+      border:1px solid rgba(200,16,46,.1);
+      cursor:pointer; transition:all .2s;
     }
-    .frost-header {
-      display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;
+    .frost-bar:active { transform:scale(.98); }
+    .frost-bar-icon { font-size:.9rem; flex-shrink:0; }
+    .frost-bar-info { flex:1; min-width:0; }
+    .frost-bar-label {
+      font-size:.72rem; font-weight:700; color:var(--red);
+      text-transform:uppercase; letter-spacing:.4px;
     }
-    .frost-header-title {
-      font-size:.82rem; font-weight:700; color:var(--red);
-      text-transform:uppercase; letter-spacing:.5px;
+    .frost-bar-progress-track {
+      height:6px; background:rgba(0,0,0,.06); border-radius:3px;
+      margin-top:4px; overflow:hidden;
     }
-    .frost-header-summary {
-      font-size:.75rem; color:var(--tx-faint); font-weight:500;
+    .frost-bar-progress-fill {
+      height:100%; border-radius:3px;
+      background:linear-gradient(90deg, var(--red), #e74c3c);
+      transition:width .3s ease;
     }
+    .frost-bar-progress-fill.complete {
+      background:linear-gradient(90deg, #0a7a0a, #27ae60);
+    }
+    .frost-bar-stat {
+      font-size:.75rem; font-weight:600; color:var(--tx-muted);
+      white-space:nowrap;
+    }
+    .frost-bar-chevron {
+      color:var(--tx-faint); flex-shrink:0;
+      transition:transform .2s;
+    }
+    /* ── Modal Overlay + Sheet ── */
+    .frost-modal-overlay {
+      position:fixed; inset:0; z-index:9999;
+      background:rgba(0,0,0,.45);
+      backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+      opacity:0; pointer-events:none;
+      transition:opacity .25s ease;
+    }
+    .frost-modal-overlay.open { opacity:1; pointer-events:auto; }
+    .frost-modal-sheet {
+      position:fixed; bottom:0; left:0; right:0; z-index:10000;
+      background:var(--bg-panel);
+      border-radius:20px 20px 0 0;
+      max-height:88vh; overflow-y:auto;
+      -webkit-overflow-scrolling:touch;
+      transform:translateY(100%);
+      transition:transform .3s cubic-bezier(.32,.72,0,1);
+      padding:0 0 env(safe-area-inset-bottom);
+    }
+    .frost-modal-sheet.open { transform:translateY(0); }
+    .frost-modal-handle {
+      width:36px; height:4px; background:rgba(0,0,0,.15);
+      border-radius:2px; margin:10px auto 0;
+    }
+    .frost-modal-header {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:14px 20px 10px;
+      border-bottom:1px solid var(--bd);
+      position:sticky; top:0; background:var(--bg-panel);
+      z-index:1; border-radius:20px 20px 0 0;
+    }
+    .frost-modal-title { font-size:1rem; font-weight:700; color:var(--tx); }
+    .frost-modal-subtitle { font-size:.75rem; color:var(--tx-faint); font-weight:500; }
+    .frost-modal-close {
+      background:var(--bg-surface); border:none; border-radius:50%;
+      width:30px; height:30px; display:flex; align-items:center; justify-content:center;
+      cursor:pointer; color:var(--tx-muted); font-size:.9rem;
+    }
+    .frost-modal-close:hover { background:var(--bd); }
+    .frost-modal-body { padding:16px 20px 24px; }
     /* ── Pill Dock ── */
-    .frost-pill-dock {
-      display:flex; flex-wrap:wrap; gap:6px;
-      margin:10px 0 14px 0;
-    }
+    .frost-pill-dock { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 14px 0; }
     .frost-pill {
       display:flex; align-items:center; gap:5px;
       padding:4px 10px; border-radius:20px;
@@ -1027,12 +1085,9 @@
       background:var(--bg-surface); border:1px solid var(--bd);
       color:var(--tx); transition:all .25s;
     }
-    .frost-pill .fp-dot {
-      width:8px; height:8px; border-radius:50%; flex-shrink:0;
-    }
+    .frost-pill .fp-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
     .frost-pill.done {
-      background:rgba(10,122,10,.08); border-color:rgba(10,122,10,.25);
-      color:#0a7a0a;
+      background:rgba(10,122,10,.08); border-color:rgba(10,122,10,.25); color:#0a7a0a;
     }
     /* ── Box Card ── */
     .frost-box-card {
@@ -1041,12 +1096,9 @@
       transition:border-color .3s, box-shadow .3s;
     }
     .frost-box-card.secured {
-      border-color:#0a7a0a;
-      box-shadow:0 0 0 3px rgba(10,122,10,.08);
+      border-color:#0a7a0a; box-shadow:0 0 0 3px rgba(10,122,10,.08);
     }
-    .frost-box-head {
-      display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;
-    }
+    .frost-box-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
     .frost-box-label { font-weight:700; font-size:.88rem; color:var(--tx); }
     .frost-box-count { font-size:.78rem; font-weight:600; }
     .frost-box-secured-badge {
@@ -1060,7 +1112,7 @@
       60% { transform:scale(1.1); }
       100% { transform:scale(1); opacity:1; }
     }
-    /* ── The Live Grid (8 rows × 7 cols) ── */
+    /* ── Live Grid ── */
     .frost-grid {
       display:grid; grid-template-columns:repeat(7,1fr);
       gap:3px; margin-bottom:12px;
@@ -1069,9 +1121,8 @@
     }
     .frost-grid-cell {
       aspect-ratio:1; border-radius:4px;
-      border:1.5px dashed rgba(0,0,0,.1);
-      background:rgba(0,0,0,.03);
-      transition:background .15s, border-color .15s, box-shadow .15s, transform .15s;
+      border:1.5px dashed rgba(0,0,0,.1); background:rgba(0,0,0,.03);
+      transition:all .15s;
     }
     .frost-grid-cell.filled {
       border:1.5px solid rgba(255,255,255,.3);
@@ -1082,23 +1133,19 @@
       60% { transform:scale(1.08); }
       100% { transform:scale(1); opacity:1; }
     }
-    .frost-box-card.secured .frost-grid {
-      animation:frostGridPulse .4s ease-out;
-    }
+    .frost-box-card.secured .frost-grid { animation:frostGridPulse .4s ease-out; }
     @keyframes frostGridPulse {
       0% { box-shadow:0 0 0 0 rgba(10,122,10,.2); }
       50% { box-shadow:0 0 0 6px rgba(10,122,10,.1); }
       100% { box-shadow:0 0 0 0 rgba(10,122,10,0); }
     }
-    /* ── Flavor Input Rows ── */
+    /* ── Flavor Rows ── */
     .frost-flavor-row {
       display:flex; align-items:center; gap:8px; padding:6px 0;
       border-bottom:1px solid var(--bd);
     }
     .frost-flavor-row:last-child { border-bottom:none; }
-    .frost-flavor-dot {
-      width:10px; height:10px; border-radius:50%; flex-shrink:0;
-    }
+    .frost-flavor-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
     .frost-flavor-name {
       flex:1; font-size:.82rem; font-weight:600; color:var(--tx);
       min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -1113,9 +1160,7 @@
     .frost-line-input:focus { border-color:var(--red); outline:none; }
     .frost-line-input::-webkit-outer-spin-button,
     .frost-line-input::-webkit-inner-spin-button { -webkit-appearance:none; appearance:none; margin:0; }
-    .frost-flavor-calc {
-      font-size:.72rem; color:var(--tx-faint); min-width:70px; text-align:right; font-weight:500;
-    }
+    .frost-flavor-calc { font-size:.72rem; color:var(--tx-faint); min-width:70px; text-align:right; font-weight:500; }
     .frost-box-total {
       text-align:center; font-weight:700; font-size:.85rem;
       margin-top:10px; padding-top:10px; border-top:1px solid var(--bd);
@@ -2438,14 +2483,16 @@
           let frostPackerHtml = '';
           if (frostedItems_oi.length > 0) {
               frostPackerHtml = `
-                <div class="frost-container" id="frost-container-${order.id}">
-                  <div class="frost-header">
-                    <span class="frost-header-title">🧊 Frosted Box Packer</span>
-                    <span class="frost-header-summary" id="frost-summary-${order.id}"></span>
+                <div class="frost-bar" id="frost-bar-${order.id}" onclick="frostOpenModal('${order.id}')" data-order-id="${order.id}">
+                  <span class="frost-bar-icon">🧊</span>
+                  <div class="frost-bar-info">
+                    <div class="frost-bar-label">Frosted Box Packer</div>
+                    <div class="frost-bar-progress-track">
+                      <div class="frost-bar-progress-fill" id="frost-bar-fill-${order.id}" style="width:0%"></div>
+                    </div>
                   </div>
-                  <div class="frost-pill-dock" id="frost-pills-${order.id}"></div>
-                  <div id="frost-boxes-${order.id}" style="display:flex;flex-direction:column;gap:8px;"></div>
-                  <button class="frost-add-box-btn" onclick="frostAddBox('${order.id}')">+ Add Box</button>
+                  <span class="frost-bar-stat" id="frost-bar-stat-${order.id}">0 pcs</span>
+                  <svg class="frost-bar-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                 </div>`;
           }
 
@@ -2772,6 +2819,7 @@
       'fr_dulce': { fill: '#8e6f47', glow: 'rgba(142,111,71,.3)' },
       'fr_choco': { fill: '#5c3317', glow: 'rgba(92,51,23,.3)' }
     };
+    var frostModalOrderId = null;
 
     function frostInit(orderId, items) {
       frostState[orderId] = {
@@ -2779,6 +2827,66 @@
         boxes: []
       };
       frostAddBox(orderId);
+      frostUpdateBar(orderId);
+    }
+
+    function frostOpenModal(orderId) {
+      var state = frostState[orderId];
+      if (!state) return;
+      frostModalOrderId = orderId;
+
+      // Find driver name for subtitle
+      var order = staffOrders.find(function(o) { return o.id === orderId; });
+      var driverName = order ? getDriverName(order.driver_id) : '';
+      document.getElementById('frost-modal-subtitle').textContent = driverName;
+
+      // Wire the Add Box button
+      document.getElementById('frost-modal-add-btn').onclick = function() { frostAddBox(orderId); };
+
+      // Render boxes into modal
+      frostRenderBoxes(orderId);
+
+      // Open modal
+      document.getElementById('frost-modal-overlay').classList.add('open');
+      document.getElementById('frost-modal-sheet').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function frostCloseModal() {
+      document.getElementById('frost-modal-overlay').classList.remove('open');
+      document.getElementById('frost-modal-sheet').classList.remove('open');
+      document.body.style.overflow = '';
+
+      // Update the inline bar for this order
+      if (frostModalOrderId) {
+        frostUpdateBar(frostModalOrderId);
+        staffBoxAutoSave(frostModalOrderId);
+      }
+      frostModalOrderId = null;
+    }
+
+    function frostUpdateBar(orderId) {
+      var state = frostState[orderId];
+      if (!state) return;
+      var totalPacked = 0;
+      var totalOrdered = 0;
+      state.flavors.forEach(function(f) {
+        totalOrdered += f.qty;
+        state.boxes.forEach(function(box) { totalPacked += (box.pieces[f.key] || 0); });
+      });
+
+      var pct = totalOrdered > 0 ? Math.round((totalPacked / totalOrdered) * 100) : 0;
+      var fill = document.getElementById('frost-bar-fill-' + orderId);
+      var stat = document.getElementById('frost-bar-stat-' + orderId);
+      if (fill) {
+        fill.style.width = pct + '%';
+        fill.className = 'frost-bar-progress-fill' + (pct >= 100 ? ' complete' : '');
+      }
+      if (stat) {
+        stat.textContent = totalPacked + '/' + totalOrdered + ' pcs';
+        if (pct >= 100) stat.style.color = '#0a7a0a';
+        else stat.style.color = '';
+      }
     }
 
     function frostAddBox(orderId) {
@@ -2811,7 +2919,7 @@
 
     function frostRenderBoxes(orderId) {
       var state = frostState[orderId];
-      var container = document.getElementById('frost-boxes-' + orderId);
+      var container = document.getElementById('frost-boxes-modal');
       if (!container || !state) return;
 
       var html = '';
@@ -2945,14 +3053,20 @@
         pillsHtml += '</div>';
       });
 
-      var pillsDock = document.getElementById('frost-pills-' + orderId);
+      // Update modal pill dock
+      var pillsDock = document.getElementById('frost-pills-modal');
       if (pillsDock) pillsDock.innerHTML = pillsHtml;
 
-      // Update summary
-      var summaryEl = document.getElementById('frost-summary-' + orderId);
-      if (summaryEl) {
-        summaryEl.textContent = totalPacked + '/' + totalOrdered + ' pcs · ' + totalBoxes + ' box' + (totalBoxes !== 1 ? 'es' : '');
+      // Update modal subtitle
+      var subtitle = document.getElementById('frost-modal-subtitle');
+      if (subtitle) {
+        var order = staffOrders.find(function(o) { return o.id === orderId; });
+        var driverName = order ? getDriverName(order.driver_id) : '';
+        subtitle.textContent = driverName + ' · ' + totalPacked + '/' + totalOrdered + ' pcs · ' + totalBoxes + ' box' + (totalBoxes !== 1 ? 'es' : '');
       }
+
+      // Also update inline bar
+      frostUpdateBar(orderId);
     }
 
     /* ════════════════════════════════════════
@@ -3506,6 +3620,23 @@
       }
     });
   </script>
+  <!-- Frost Packer Modal -->
+  <div class="frost-modal-overlay" id="frost-modal-overlay" onclick="frostCloseModal()"></div>
+  <div class="frost-modal-sheet" id="frost-modal-sheet">
+    <div class="frost-modal-handle"></div>
+    <div class="frost-modal-header">
+      <div>
+        <div class="frost-modal-title" id="frost-modal-title">🧊 Frosted Box Packer</div>
+        <div class="frost-modal-subtitle" id="frost-modal-subtitle"></div>
+      </div>
+      <button class="frost-modal-close" onclick="frostCloseModal()">✕</button>
+    </div>
+    <div class="frost-modal-body">
+      <div class="frost-pill-dock" id="frost-pills-modal"></div>
+      <div id="frost-boxes-modal" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <button class="frost-add-box-btn" id="frost-modal-add-btn">+ Add Box</button>
+    </div>
+  </div>
 </body>
 
 </html>
