@@ -736,19 +736,14 @@
       color: #7c3aed;
     }
     .staff-oca-ref {
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       font-weight: 800;
-      color: #fff;
-      background: var(--red);
+      color: var(--red);
+      background: rgba(200, 16, 46, 0.1);
       padding: 3px 10px;
-      border-radius: 12px;
-      position: absolute;
-      left: 50%;
-      top: 0;
-      transform: translate(-50%, -50%);
-      z-index: 10;
-      box-shadow: 0 2px 6px rgba(200,16,46,0.3);
-      letter-spacing: 0.5px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      text-align: center;
     }
     .order-items-summary {
       font-size: .85rem; color: var(--tx-muted);
@@ -2295,19 +2290,19 @@
 
           html += `
             <div class="order-card" id="staff-order-${oi}" style="border-radius:16px;border:none;box-shadow:0 4px 16px rgba(0,0,0,.05);">
-              ${order.driver_ref ? `<div class="staff-oca-ref">#${_esc(order.driver_ref)}</div>` : ''}
               <div class="order-card-top" onclick="toggleStaffOrder(${oi})" style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:36px;">
-                <div style="display:flex;flex-direction:column;justify-content:center;">
-                  <div class="order-driver-name" style="font-size:1.05rem;line-height:1.2;">${driverName}</div>
+                <div style="display:flex;flex-direction:column;justify-content:center;flex:1;min-width:0;">
+                  <div class="order-driver-name" style="font-size:1.05rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${driverName}</div>
                   ${bizName ? `<div class="order-biz-name" style="margin-top:2px;">${bizName}</div>` : ''}
                 </div>
-                <div style="display:flex;align-items:center;gap:10px">
+                ${order.driver_ref ? `<div class="staff-oca-ref">#${_esc(order.driver_ref)}</div>` : ''}
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:1;min-width:0;">
                   ${timeStr ? `<span style="font-size:.82rem;color:var(--tx-faint);font-weight:500">${timeStr}</span>` : ''}
                   ${status === 'pending'
-                    ? `<span style="width:10px;height:10px;background:var(--yellow);border-radius:50%;display:inline-block;"></span>`
-                    : `<span style="width:10px;height:10px;background:#7c3aed;border-radius:50%;display:inline-block;"></span>`
+                    ? `<span style="width:10px;height:10px;background:var(--yellow);border-radius:50%;display:inline-block;flex-shrink:0;"></span>`
+                    : `<span style="width:10px;height:10px;background:#7c3aed;border-radius:50%;display:inline-block;flex-shrink:0;"></span>`
                   }
-                  <button class="staff-context-btn" onclick="event.stopPropagation();staffToggleEdit(${oi})" style="background:none;border:none;padding:6px;margin:-6px -6px -6px 0;cursor:pointer;color:var(--tx-muted);display:flex;align-items:center;">
+                  <button class="staff-context-btn" onclick="event.stopPropagation();staffToggleEdit(${oi})" style="background:none;border:none;padding:6px;margin:-6px -6px -6px 0;cursor:pointer;color:var(--tx-muted);display:flex;align-items:center;flex-shrink:0;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></svg>
                   </button>
                 </div>
