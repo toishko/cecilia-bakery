@@ -1003,30 +1003,20 @@
     /* ══ Frosted Box Packer — Modal ══ */
     /* ── Inline Bar (inside order card) ── */
     .frost-bar {
-      display:flex; align-items:center; gap:10px;
-      margin-top:12px; padding:10px 14px;
+      display:flex; align-items:center; gap:12px;
+      margin-top:12px; padding:8px 12px;
       background:var(--bg-surface); border-radius:10px;
       border:1px solid rgba(200,16,46,.1);
       cursor:pointer; transition:all .2s;
     }
     .frost-bar:active { transform:scale(.98); }
-    .frost-bar-icon { font-size:.9rem; flex-shrink:0; }
     .frost-bar-info { flex:1; min-width:0; }
     .frost-bar-label {
       font-size:.72rem; font-weight:700; color:var(--red);
       text-transform:uppercase; letter-spacing:.4px;
     }
-    .frost-bar-progress-track {
-      height:6px; background:rgba(0,0,0,.06); border-radius:3px;
-      margin-top:4px; overflow:hidden;
-    }
-    .frost-bar-progress-fill {
-      height:100%; border-radius:3px;
-      background:linear-gradient(90deg, var(--red), #e74c3c);
-      transition:width .3s ease;
-    }
-    .frost-bar-progress-fill.complete {
-      background:linear-gradient(90deg, #0a7a0a, #27ae60);
+    .frost-bar-sub {
+      font-size:.7rem; color:var(--tx-faint); margin-top:2px; font-weight:500;
     }
     .frost-bar-stat {
       font-size:.75rem; font-weight:600; color:var(--tx-muted);
@@ -1034,8 +1024,52 @@
     }
     .frost-bar-chevron {
       color:var(--tx-faint); flex-shrink:0;
-      transition:transform .2s;
     }
+    /* ── 3D Box Model ── */
+    .frost-3d-wrap {
+      width:52px; height:44px;
+      position:relative; flex-shrink:0;
+    }
+    .frost-3d-front {
+      position:absolute; bottom:4px; left:0;
+      width:38px; height:30px;
+      background:rgba(255,255,255,.5);
+      border:1.5px solid rgba(100,40,20,.2);
+      border-radius:2px; overflow:hidden;
+    }
+    .frost-3d-fill {
+      position:absolute; bottom:0; left:0; right:0;
+      transition:height .35s ease;
+      border-radius:0 0 1px 1px;
+    }
+    .frost-3d-top {
+      position:absolute; left:4px; top:0;
+      width:38px; height:12px;
+      background:rgba(255,255,255,.35);
+      border:1.5px solid rgba(100,40,20,.15);
+      transform: skewX(-35deg);
+      border-radius:1px;
+    }
+    .frost-3d-right {
+      position:absolute; right:0; bottom:4px;
+      width:14px; height:30px;
+      background:rgba(0,0,0,.04);
+      border:1.5px solid rgba(100,40,20,.15);
+      transform: skewY(-35deg);
+      transform-origin:bottom left;
+      border-radius:1px; overflow:hidden;
+    }
+    .frost-3d-right-fill {
+      position:absolute; bottom:0; left:0; right:0;
+      transition:height .35s ease;
+      opacity:.7;
+    }
+    .frost-3d-wrap.secured .frost-3d-front {
+      border-color:rgba(10,122,10,.4);
+      box-shadow:0 0 8px rgba(10,122,10,.15);
+    }
+    .frost-3d-wrap.secured .frost-3d-top { border-color:rgba(10,122,10,.3); }
+    .frost-3d-wrap.secured .frost-3d-right { border-color:rgba(10,122,10,.3); }
     /* ── Modal Overlay + Sheet ── */
     .frost-modal-overlay {
       position:fixed; inset:0; z-index:9999;
@@ -2484,14 +2518,20 @@
           if (frostedItems_oi.length > 0) {
               frostPackerHtml = `
                 <div class="frost-bar" id="frost-bar-${order.id}" onclick="frostOpenModal('${order.id}')" data-order-id="${order.id}">
-                  <span class="frost-bar-icon">🧊</span>
-                  <div class="frost-bar-info">
-                    <div class="frost-bar-label">Frosted Box Packer</div>
-                    <div class="frost-bar-progress-track">
-                      <div class="frost-bar-progress-fill" id="frost-bar-fill-${order.id}" style="width:0%"></div>
+                  <div class="frost-3d-wrap" id="frost-3d-${order.id}">
+                    <div class="frost-3d-top"></div>
+                    <div class="frost-3d-front">
+                      <div class="frost-3d-fill" id="frost-3d-fill-${order.id}" style="height:0%"></div>
+                    </div>
+                    <div class="frost-3d-right">
+                      <div class="frost-3d-right-fill" id="frost-3d-rfill-${order.id}" style="height:0%"></div>
                     </div>
                   </div>
-                  <span class="frost-bar-stat" id="frost-bar-stat-${order.id}">0 pcs</span>
+                  <div class="frost-bar-info">
+                    <div class="frost-bar-label">Frosted Box Packer</div>
+                    <div class="frost-bar-sub" id="frost-bar-sub-${order.id}">0 pcs · 1 box</div>
+                  </div>
+                  <span class="frost-bar-stat" id="frost-bar-stat-${order.id}">Tap to pack</span>
                   <svg class="frost-bar-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                 </div>`;
           }
@@ -2868,24 +2908,72 @@
     function frostUpdateBar(orderId) {
       var state = frostState[orderId];
       if (!state) return;
+
+      // Calculate totals per flavor for gradient
       var totalPacked = 0;
       var totalOrdered = 0;
+      var totalBoxCapacity = state.boxes.length * 56;
+      var flavorPacked = [];
       state.flavors.forEach(function(f) {
+        var packed = 0;
         totalOrdered += f.qty;
-        state.boxes.forEach(function(box) { totalPacked += (box.pieces[f.key] || 0); });
+        state.boxes.forEach(function(box) { packed += (box.pieces[f.key] || 0); });
+        totalPacked += packed;
+        if (packed > 0) {
+          var colorObj = FROST_COLORS[f.key] || { fill: 'var(--red)' };
+          flavorPacked.push({ color: colorObj.fill, pcs: packed });
+        }
       });
 
-      var pct = totalOrdered > 0 ? Math.round((totalPacked / totalOrdered) * 100) : 0;
-      var fill = document.getElementById('frost-bar-fill-' + orderId);
+      // Calculate fill percentage (based on total box capacity)
+      var pct = totalBoxCapacity > 0 ? Math.min(Math.round((totalPacked / totalBoxCapacity) * 100), 100) : 0;
+
+      // Build gradient from bottom to top with flavor colors
+      var gradient = '';
+      if (flavorPacked.length > 0) {
+        var stops = [];
+        var cumPct = 0;
+        flavorPacked.forEach(function(fp) {
+          var segPct = totalPacked > 0 ? (fp.pcs / totalPacked) * 100 : 0;
+          stops.push(fp.color + ' ' + cumPct + '%');
+          cumPct += segPct;
+          stops.push(fp.color + ' ' + cumPct + '%');
+        });
+        gradient = 'linear-gradient(to top, ' + stops.join(', ') + ')';
+      }
+
+      // Update 3D box front fill
+      var frontFill = document.getElementById('frost-3d-fill-' + orderId);
+      if (frontFill) {
+        frontFill.style.height = pct + '%';
+        if (gradient) frontFill.style.background = gradient;
+      }
+
+      // Update 3D box right fill
+      var rightFill = document.getElementById('frost-3d-rfill-' + orderId);
+      if (rightFill) {
+        rightFill.style.height = pct + '%';
+        if (gradient) rightFill.style.background = gradient;
+      }
+
+      // Toggle secured state
+      var wrap = document.getElementById('frost-3d-' + orderId);
+      if (wrap) {
+        if (pct >= 100) wrap.classList.add('secured');
+        else wrap.classList.remove('secured');
+      }
+
+      // Update text
+      var sub = document.getElementById('frost-bar-sub-' + orderId);
       var stat = document.getElementById('frost-bar-stat-' + orderId);
-      if (fill) {
-        fill.style.width = pct + '%';
-        fill.className = 'frost-bar-progress-fill' + (pct >= 100 ? ' complete' : '');
+      var numBoxes = state.boxes.length;
+      if (sub) {
+        sub.textContent = totalPacked + '/' + totalOrdered + ' pcs · ' + numBoxes + ' box' + (numBoxes !== 1 ? 'es' : '');
       }
       if (stat) {
-        stat.textContent = totalPacked + '/' + totalOrdered + ' pcs';
-        if (pct >= 100) stat.style.color = '#0a7a0a';
-        else stat.style.color = '';
+        if (totalPacked === 0) stat.textContent = 'Tap to pack';
+        else if (pct >= 100) { stat.textContent = '✓ Done'; stat.style.color = '#0a7a0a'; }
+        else { stat.textContent = pct + '%'; stat.style.color = ''; }
       }
     }
 
