@@ -694,6 +694,7 @@
       display: flex; flex-direction: column; gap: 14px;
     }
     .order-card {
+      position: relative;
       background: var(--bg-card);
       border: 1px solid var(--bd);
       border-radius: 14px;
@@ -733,6 +734,19 @@
     .order-status-badge.picked_up {
       background: rgba(109, 40, 217, .1);
       color: #7c3aed;
+    }
+    .staff-oca-ref {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--red);
+      background: rgba(200, 16, 46, 0.1);
+      padding: 4px 10px;
+      border-radius: 8px;
+      position: absolute;
+      left: 50%;
+      top: 20px;
+      transform: translateX(-50%);
+      z-index: 1;
     }
     .order-items-summary {
       font-size: .85rem; color: var(--tx-muted);
@@ -2292,6 +2306,7 @@
 
           html += `
             <div class="order-card" id="staff-order-${oi}" style="border-radius:16px;border:none;box-shadow:0 4px 16px rgba(0,0,0,.05);">
+              ${order.driver_ref ? `<div class="staff-oca-ref">#${_esc(order.driver_ref)}</div>` : ''}
               <div class="order-card-top" onclick="toggleStaffOrder(${oi})" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
                 <div>
                   <div class="order-driver-name" style="font-size:1.05rem;">${driverName}</div>
