@@ -2057,8 +2057,11 @@
 
         if (dateFilter && dateFilter !== 'all') {
           const today = new Date();
-          
-          if (dateFilter === 'yesterday') {
+
+          if (dateFilter === 'today') {
+            const str = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+            query = query.eq('pickup_date', str);
+          } else if (dateFilter === 'yesterday') {
             const y = new Date(today);
             y.setDate(y.getDate() - 1);
             const str = y.getFullYear() + '-' + String(y.getMonth()+1).padStart(2,'0') + '-' + String(y.getDate()).padStart(2,'0');
@@ -2641,9 +2644,7 @@
     /* ════════════════════════════════════════
        EVENT LISTENERS
        ════════════════════════════════════════ */
-    document.getElementById('refresh-orders-btn').addEventListener('click', loadOrders);
-    document.getElementById('filter-status').addEventListener('change', loadOrders);
-    document.getElementById('filter-date').addEventListener('change', loadOrders);
+
     document.getElementById('qc-pieces').addEventListener('input', calcQuick);
     document.getElementById('qc-box-size').addEventListener('input', calcQuick);
 
