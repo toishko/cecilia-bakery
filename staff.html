@@ -1184,8 +1184,8 @@
             <!-- Action Bar -->
             <div class="segmented-control-wrapper">
               <div class="segmented-control">
-                <button class="segment-btn active" data-type="status" data-value="pending" onclick="setStaffFilter('status', 'pending')" data-en="Pending" data-es="Pendientes">Pending</button>
-                <button class="segment-btn" data-type="status" data-value="completed" onclick="setStaffFilter('status', 'completed')" data-en="Completed" data-es="Completados">Completed</button>
+                <button class="segment-btn active" data-type="status" data-value="pending" onclick="setStaffFilter('status', 'pending')" data-en="Active" data-es="Activos">Active</button>
+                <button class="segment-btn" data-type="status" data-value="completed" onclick="setStaffFilter('status', 'completed')" data-en="Archived" data-es="Archivados">Archived</button>
               </div>
               <div class="segmented-control">
                 <button class="segment-btn active" data-type="date" data-value="today" onclick="setStaffFilter('date', 'today')" data-en="Today" data-es="Hoy">Today</button>
@@ -2126,7 +2126,7 @@
           .select('*, driver_order_items(*)');
 
         if (statusFilter === 'pending') {
-          query = query.eq('status', 'pending');
+          query = query.in('status', ['pending', 'confirmed', 'sent']);
         } else if (statusFilter === 'completed') {
           query = query.eq('status', 'picked_up');
         }
