@@ -2318,24 +2318,35 @@
 
           return `
             <div class="order-card" id="staff-order-${oi}">
-              <div class="order-card-top" onclick="toggleStaffOrder(${oi})" style="min-height:36px;">
-                <div style="display:flex;flex-direction:column;justify-content:center;flex:1;min-width:0;">
-                  <div class="order-driver-name" style="font-size:1.05rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${driverName}</div>
-                  ${bizName ? `<div class="order-biz-name" style="margin-top:2px;">${bizName}</div>` : ''}
+              <div class="order-card-top" style="min-height:36px;">
+                <div onclick="toggleStaffOrder(${oi})" style="display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;">
+                  <div style="display:flex;flex-direction:column;justify-content:center;flex:1;min-width:0;">
+                    <div class="order-driver-name" style="font-size:1.05rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${driverName}</div>
+                    ${bizName ? `<div class="order-biz-name" style="margin-top:2px;">${bizName}</div>` : ''}
+                  </div>
+                  ${order.driver_ref ? `<div class="staff-oca-ref">#${_esc(order.driver_ref)}</div>` : ''}
+                  <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;flex:1;min-width:0;">
+                    ${timeStr ? `<span style="font-size:.82rem;color:var(--tx-faint);font-weight:500">${timeStr}</span>` : ''}
+                    ${status === 'pending'
+                      ? `<span style="width:10px;height:10px;background:var(--yellow);border-radius:50%;display:inline-block;flex-shrink:0;"></span>`
+                      : `<span style="width:10px;height:10px;background:#7c3aed;border-radius:50%;display:inline-block;flex-shrink:0;"></span>`
+                    }
+                    <button class="staff-pin-btn${isPinned(order.id) ? ' pinned' : ''}" id="staff-pin-${oi}" onclick="event.stopPropagation();staffTogglePin(${oi}, event)" title="Pin to Saved">
+                      <svg viewBox="0 0 24 24" fill="${isPinned(order.id) ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                    </button>
+                    <button class="staff-context-btn" onclick="event.stopPropagation();staffToggleEdit(${oi})" style="background:none;border:none;padding:6px;margin:-6px -6px -6px 0;cursor:pointer;color:var(--tx-muted);display:flex;align-items:center;flex-shrink:0;">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></svg>
+                    </button>
+                  </div>
                 </div>
-                ${order.driver_ref ? `<div class="staff-oca-ref">#${_esc(order.driver_ref)}</div>` : ''}
-                <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;flex:1;min-width:0;">
-                  ${timeStr ? `<span style="font-size:.82rem;color:var(--tx-faint);font-weight:500">${timeStr}</span>` : ''}
-                  ${status === 'pending'
-                    ? `<span style="width:10px;height:10px;background:var(--yellow);border-radius:50%;display:inline-block;flex-shrink:0;"></span>`
-                    : `<span style="width:10px;height:10px;background:#7c3aed;border-radius:50%;display:inline-block;flex-shrink:0;"></span>`
-                  }
-                  <button class="staff-pin-btn${isPinned(order.id) ? ' pinned' : ''}" id="staff-pin-${oi}" onclick="staffTogglePin(${oi}, event)" title="Pin to Saved">
-                    <svg viewBox="0 0 24 24" fill="${isPinned(order.id) ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-                  </button>
-                  <button class="staff-context-btn" onclick="event.stopPropagation();staffToggleEdit(${oi})" style="background:none;border:none;padding:6px;margin:-6px -6px -6px 0;cursor:pointer;color:var(--tx-muted);display:flex;align-items:center;flex-shrink:0;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></svg>
-                  </button>
+                <div class="order-edit-bar" id="staff-edit-bar-${oi}" style="display:none;padding:10px 0 0 0;margin-top:10px;border-top:1px solid var(--bd);">
+                  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                    <button class="staff-edit-btn" onclick="event.stopPropagation();staffAddProducts(${oi})" style="padding:8px 16px;background:rgba(0,0,0,.04);border:none;border-radius:10px;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--tx)" data-en="Edit Products" data-es="Editar Productos">Edit Products</button>
+                    <div style="display:flex;gap:8px">
+                      <button onclick="event.stopPropagation();staffCancelEdit(${oi})" style="padding:8px 16px;background:none;border:none;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--tx-muted)" data-en="Discard" data-es="Descartar">Discard</button>
+                      <button class="staff-update-btn" onclick="event.stopPropagation();staffUpdateOrder(${oi})" style="padding:8px 16px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:.85rem;font-weight:600;cursor:pointer" data-en="Update" data-es="Actualizar">Update</button>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div class="order-meta-row" id="staff-meta-${oi}" style="display:none">
@@ -2343,15 +2354,6 @@
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                   ${_esc(order.notes)}
                 </span>` : ''}
-              </div>
-              <div class="order-edit-bar" id="staff-edit-bar-${oi}" style="display:none;padding:16px 0;border-top:1px solid var(--bd);margin-top:12px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-                  <button class="staff-edit-btn" onclick="staffAddProducts(${oi})" style="padding:8px 16px;background:rgba(0,0,0,.04);border:none;border-radius:10px;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--tx)" data-en="Edit Products" data-es="Editar Productos">Edit Products</button>
-                  <div style="display:flex;gap:8px">
-                    <button onclick="staffCancelEdit(${oi})" style="padding:8px 16px;background:none;border:none;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--tx-muted)" data-en="Discard" data-es="Descartar">Discard</button>
-                    <button class="staff-update-btn" onclick="staffUpdateOrder(${oi})" style="padding:8px 16px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:.85rem;font-weight:600;cursor:pointer" data-en="Update" data-es="Actualizar">Update</button>
-                  </div>
-                </div>
               </div>
               ${items.length > 0 ? `
               <div class="box-calc-section" id="staff-boxcalc-${oi}" style="display:none;margin-top:16px;padding-top:8px;border-top:1px solid var(--bd);">
