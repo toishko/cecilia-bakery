@@ -3005,10 +3005,13 @@
       }
       overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px';
 
-      var html = '<div style="background:var(--bg-card);border-radius:16px;padding:24px;max-width:440px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">';
+      // Lock body scroll while modal is open
+      document.body.style.overflow = 'hidden';
+
+      var html = '<div style="background:var(--bg-card);border-radius:16px;padding:24px;max-width:440px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);-webkit-overflow-scrolling:touch">';
       html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
       html += '<h3 style="margin:0;font-size:1rem;font-weight:700">Add Products</h3>';
-      html += '<button onclick="document.getElementById(\'staff-add-overlay\').remove()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--tx-muted)">✕</button></div>';
+      html += '<button onclick="document.getElementById(\'staff-add-overlay\').remove();document.body.style.overflow=\'\'" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--tx-muted)">✕</button></div>';
 
       html += '<input type="text" id="staff-add-search" placeholder="Search..." oninput="staffFilterAddProducts()" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);font-size:.85rem;margin-bottom:12px;box-sizing:border-box">';
 
@@ -3050,7 +3053,7 @@
       html += '</div>';
 
       overlay.innerHTML = html;
-      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) { overlay.remove(); document.body.style.overflow = ''; } });
     }
 
     function staffFilterAddProducts() {
@@ -3127,6 +3130,7 @@
       });
 
       document.getElementById('staff-add-overlay').remove();
+      document.body.style.overflow = '';
     }
 
     async function staffUpdateOrder(idx) {
