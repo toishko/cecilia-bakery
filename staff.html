@@ -1734,8 +1734,8 @@
       // Switch to orders, expand the card, then restore state
       staffShowSection('orders');
       var card = document.getElementById('staff-order-' + foundIdx);
-      var items = document.getElementById('staff-items-' + foundIdx);
-      if (items && !items.classList.contains('expanded')) {
+      var boxcalc = document.getElementById('staff-boxcalc-' + foundIdx);
+      if (boxcalc && boxcalc.style.display === 'none') {
         toggleStaffOrder(foundIdx);
       }
 
@@ -2402,7 +2402,7 @@
       // Find the index of the order from staffOrders
       const idx = staffOrders.findIndex(o => o.id === orderId);
       if (idx !== -1) {
-        staffSaveOrder(idx);
+        staffSaveOrder(idx, true);
       }
     }
 
@@ -2749,8 +2749,8 @@
       if (!card) return;
 
       // Expand the card first if not expanded
-      var items = document.getElementById('staff-items-' + idx);
-      if (items && !items.classList.contains('expanded')) {
+      var boxcalc = document.getElementById('staff-boxcalc-' + idx);
+      if (boxcalc && boxcalc.style.display === 'none') {
         toggleStaffOrder(idx);
       }
 
@@ -2777,8 +2777,8 @@
       if (editBar) editBar.style.display = 'block';
 
       // Change edit button text
-      var editBtn = card.querySelector('.staff-edit-toggle');
-      if (editBtn) { editBtn.textContent = 'Cancel'; editBtn.style.borderColor = 'var(--red)'; editBtn.style.color = 'var(--red)'; }
+      var editBtn = card.querySelector('.staff-context-btn');
+      if (editBtn) { editBtn.style.color = 'var(--red)'; }
     }
 
     function staffCancelEdit(idx) {
@@ -2809,8 +2809,8 @@
       if (editBar) editBar.style.display = 'none';
 
       // Reset edit button
-      var editBtn = card.querySelector('.staff-edit-toggle');
-      if (editBtn) { editBtn.textContent = 'Edit'; editBtn.style.borderColor = ''; editBtn.style.color = ''; }
+      var editBtn = card.querySelector('.staff-context-btn');
+      if (editBtn) { editBtn.style.color = ''; }
     }
 
     /* ── Product Key → Label Map (for Add Products modal) ── */
@@ -2895,7 +2895,7 @@
     function staffConfirmAdd(idx) {
       var inputs = document.querySelectorAll('.staff-add-qty');
       var card = document.getElementById('staff-order-' + idx);
-      var itemsSummary = document.getElementById('staff-items-' + idx);
+      var itemsSummary = document.getElementById('staff-boxcalc-' + idx);
       if (!card || !itemsSummary) return;
 
       inputs.forEach(function(inp) {
