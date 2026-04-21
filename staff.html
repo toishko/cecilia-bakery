@@ -853,52 +853,51 @@
     .box-calc-body.open { display: block; }
 
     .box-calc-cat-header {
-      font-size: .72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .5px;
+      font-size: .68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .6px;
       color: var(--red);
-      padding: 10px 0 4px;
-      border-bottom: 1px solid var(--bd);
-      margin-top: 8px;
+      padding: 8px 0 4px;
+      margin-top: 4px;
     }
     .box-calc-cat-header:first-child { margin-top: 0; }
     .box-calc-item {
-      padding: 14px 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 0;
       border-bottom: 1px solid var(--bd);
+      gap: 8px;
+      flex-wrap: wrap;
     }
     .box-calc-item:last-child { border-bottom: none; }
 
-    .box-calc-item-header {
-      display: flex; align-items: baseline; justify-content: space-between;
-      margin-bottom: 8px;
+    .box-calc-item-left {
+      display: flex; align-items: center; gap: 6px;
+      flex: 1; min-width: 0;
     }
     .box-calc-item-name {
-      font-weight: 600; font-size: .95rem; color: var(--tx);
+      font-weight: 600; font-size: .88rem; color: var(--tx);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .box-calc-item-qty {
-      font-size: .85rem; font-weight: 500; color: var(--tx-muted);
-      white-space: nowrap;
+    .box-calc-item-qty-badge {
+      font-size: .72rem; font-weight: 600; color: var(--tx-muted);
+      background: rgba(0,0,0,.04); padding: 1px 7px; border-radius: 10px;
+      white-space: nowrap; flex-shrink: 0;
     }
 
-    .box-calc-input-row {
-      display: flex; align-items: center; gap: 10px;
-      margin-bottom: 8px;
-    }
-    .box-calc-input-label {
-      font-size: .82rem; color: var(--tx-muted); white-space: nowrap;
-    }
     .box-calc-input {
-      width: 100%; max-width: 120px;
-      padding: 12px 14px;
-      border: 1px solid var(--bd-input);
-      border-radius: 10px;
-      background: var(--bg-input);
+      width: 56px;
+      padding: 5px 0;
+      border: none;
+      border-bottom: 1.5px solid var(--bd);
+      border-radius: 0;
+      background: transparent;
       color: var(--tx);
       font-family: 'Outfit', sans-serif;
-      font-size: 1.1rem; font-weight: 600;
+      font-size: .92rem; font-weight: 600;
       text-align: center;
       transition: border-color .2s;
       -moz-appearance: textfield;
       appearance: textfield;
+      flex-shrink: 0;
     }
     .box-calc-input::-webkit-outer-spin-button,
     .box-calc-input::-webkit-inner-spin-button {
@@ -906,38 +905,30 @@
     }
     .box-calc-input:focus {
       outline: none;
-      border-color: var(--red);
+      border-bottom-color: var(--red);
+    }
+    .box-calc-input::placeholder {
+      color: var(--tx-faint); font-weight: 400; font-size: .8rem;
     }
 
     .box-calc-result {
-      display: flex; align-items: center; gap: 6px;
-      font-size: .88rem; font-weight: 500;
-      padding: 6px 0;
-      min-height: 28px;
+      display: none; /* hidden until calculated */
+      width: 100%;
+      font-size: .75rem; font-weight: 600;
+      padding: 2px 0 0;
+      text-align: right;
     }
-    .box-calc-result .arrow { color: var(--tx-faint); font-size: 1rem; }
     .box-calc-result.exact {
-      color: var(--green);
+      display: block; color: var(--green);
     }
     .box-calc-result.has-extra {
-      color: var(--yellow);
+      display: block; color: var(--yellow);
     }
     .box-calc-result.empty {
-      color: var(--tx-faint);
-      font-style: italic;
-      font-weight: 400;
+      display: none; /* keep hidden when empty */
     }
     .box-calc-result .result-tag {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 2px 10px;
-      border-radius: 16px;
-      font-size: .82rem; font-weight: 600;
-    }
-    .box-calc-result.exact .result-tag {
-      background: rgba(27, 122, 74, .1);
-    }
-    .box-calc-result.has-extra .result-tag {
-      background: rgba(217, 119, 6, .1);
+      font-size: .72rem; font-weight: 600;
     }
 
     /* ── Frosted Box Packer ── */
@@ -2265,21 +2256,13 @@
                 const uid = `bc-${order.id}-${globalIdx++}`;
                 const it_id = item.id || '';
                 return `
-                  <div class="box-calc-item order-items-line" data-item-id="${it_id}" data-product-key="${item.product_key}" style="padding:16px 0;border-bottom:1px solid var(--bd);">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                      <div>
-                        <div style="font-weight:600;font-size:1rem;color:var(--tx);">${label}</div>
-                        <div style="font-size:.85rem;color:var(--tx-muted);margin-top:2px;">
-                          <span class="item-qty-display">${qty}</span><input type="number" class="item-qty-edit" value="${qty}" min="0" data-original="${qty}" style="display:none;width:50px;padding:2px;border-radius:4px;border:1px solid var(--bd);text-align:center;font-size:.85rem;margin-right:6px;"> pieces total
-                        </div>
-                      </div>
-                      <div style="display:flex;align-items:center;gap:8px;">
-                        <input class="box-calc-input" type="number" min="1" id="${uid}" data-qty="${qty}" placeholder="Per box" style="width:70px;padding:8px;border-radius:10px;border:1px solid var(--bd);text-align:center;background:var(--bg-card);color:var(--tx);font-weight:600;font-size:.95rem;transition:all 0.2s;" oninput="calcBox(this); staffBoxAutoSave('${order.id}')" />
-                      </div>
+                  <div class="box-calc-item order-items-line" data-item-id="${it_id}" data-product-key="${item.product_key}">
+                    <div class="box-calc-item-left">
+                      <span class="box-calc-item-name">${label}</span>
+                      <span class="box-calc-item-qty-badge"><span class="item-qty-display">${qty}</span><input type="number" class="item-qty-edit" value="${qty}" min="0" data-original="${qty}" style="display:none;width:40px;padding:1px;border-radius:4px;border:1px solid var(--bd);text-align:center;font-size:.75rem;">×</span>
                     </div>
-                    <div class="box-calc-result empty" id="${uid}-result" style="margin-top:8px;padding:10px 14px;background:rgba(0,0,0,.02);border-radius:10px;font-size:.85rem;color:var(--tx-muted);display:flex;align-items:center;gap:8px;">
-                      <span class="arrow" style="color:var(--tx-faint);">↳</span> enter box size above
-                    </div>
+                    <input class="box-calc-input" type="number" min="1" id="${uid}" data-qty="${qty}" placeholder="#" oninput="calcBox(this); staffBoxAutoSave('${order.id}')" />
+                    <div class="box-calc-result empty" id="${uid}-result"></div>
                   </div>`;
               }).join('');
               return catHtml;
@@ -2424,7 +2407,7 @@
 
       if (!boxSize || boxSize < 1) {
         resultEl.className = 'box-calc-result empty';
-        resultEl.innerHTML = '<span class="arrow">→</span> enter box size above';
+        resultEl.innerHTML = '';
         return;
       }
 
@@ -2434,14 +2417,10 @@
 
       if (exact) {
         resultEl.className = 'box-calc-result exact';
-        resultEl.innerHTML = `<span class="arrow">→</span>
-          <span class="result-tag">${boxes} box${boxes !== 1 ? 'es' : ''}</span>
-          <span class="result-tag">Exact fit! ✓</span>`;
+        resultEl.innerHTML = `<span class="result-tag">${boxes} box${boxes !== 1 ? 'es' : ''} · Exact ✓</span>`;
       } else {
         resultEl.className = 'box-calc-result has-extra';
-        resultEl.innerHTML = `<span class="arrow">→</span>
-          <span class="result-tag">${boxes} box${boxes !== 1 ? 'es' : ''}</span>
-          <span class="result-tag">${leftover} leftover</span>`;
+        resultEl.innerHTML = `<span class="result-tag">${boxes} box${boxes !== 1 ? 'es' : ''} + ${leftover} left</span>`;
       }
       saveBoxCalcState();
     }
