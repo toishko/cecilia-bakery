@@ -657,23 +657,22 @@
 
     /* ── Segmented Control (Apple Style) ── */
     .segmented-control-wrapper {
-      display: flex; gap: 12px; margin-bottom: 20px; overflow-x: auto;
-      scrollbar-width: none; padding-bottom: 4px;
+      display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;
     }
-    .segmented-control-wrapper::-webkit-scrollbar { display: none; }
     .segmented-control {
-      display: inline-flex; background: rgba(0,0,0,.03); padding: 4px;
-      border-radius: 12px; align-items: center; white-space: nowrap; flex-shrink: 0;
+      display: flex; background: rgba(0,0,0,.03); padding: 3px;
+      border-radius: 10px; align-items: center;
     }
     [data-theme="dark"] .segmented-control { background: rgba(255,255,255,.05); }
     .segment-btn {
-      padding: 6px 16px; background: transparent; border: none; font-size: .85rem;
-      font-weight: 500; color: var(--tx-muted); border-radius: 8px; cursor: pointer;
+      flex: 1; padding: 7px 4px; background: transparent; border: none; font-size: .82rem;
+      font-weight: 500; color: var(--tx-muted); border-radius: 7px; cursor: pointer;
       transition: all .2s cubic-bezier(0.25, 1, 0.5, 1); font-family: inherit;
+      text-align: center; white-space: nowrap;
     }
     .segment-btn.active {
       background: var(--bg-card); color: var(--tx); font-weight: 600;
-      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+      box-shadow: 0 1px 4px rgba(0,0,0,.1);
     }
 
     /* ── Date Separators ── */
