@@ -5671,6 +5671,7 @@ function _pmModalHTML() {
       <button class="pm-tab active" data-tab="info">Basic Info</button>
       <button class="pm-tab" data-tab="pricing">Pricing</button>
       <button class="pm-tab" data-tab="images">Images</button>
+      <button class="pm-tab" data-tab="b2b">B2B</button>
     </div>
     <div class="pm-modal-body">
       <div class="pm-panel active" id="pm-panel-info">
@@ -5797,6 +5798,46 @@ function _pmModalHTML() {
           <div class="pm-drag-hint">Drag the image to reposition</div>
         </div>
       </div>
+      <div class="pm-panel" id="pm-panel-b2b">
+        <p style="font-size:.78rem;color:var(--tx-muted);margin-bottom:14px">
+          Enable this to make the product available in driver order forms and admin New Order.
+        </p>
+        <div class="pm-form-field full" style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <label class="pm-form-label" style="margin-bottom:0">Show in Driver Forms</label>
+            <label class="toggle" style="width:44px;height:26px">
+              <input type="checkbox" id="pm-f-b2b-enabled">
+              <span class="toggle-track"></span>
+              <span class="toggle-thumb"></span>
+            </label>
+          </div>
+        </div>
+        <div id="pm-b2b-options" style="display:none">
+          <div class="pm-form-field full" style="margin-bottom:14px">
+            <label class="pm-form-label">Driver Category <span class="req">*</span></label>
+            <select class="pm-input" id="pm-f-b2b-cat" style="height:44px">
+              <option value="">Select category…</option>
+              <option value="redondo">Round (Redondo)</option>
+              <option value="plain">Plain</option>
+              <option value="tresleche">Tres Leche</option>
+              <option value="piezas">Pieces (Piezas)</option>
+              <option value="frostin">Frosted Pieces (Frostin)</option>
+              <option value="hb_big">Happy Birthday — BIG</option>
+              <option value="hb_small">Happy Birthday — SMALL</option>
+              <option value="cuadrao">Square (Cuadrao)</option>
+              <option value="basos">Cups (Basos)</option>
+              <option value="familiar">Family Size (Familiar)</option>
+            </select>
+          </div>
+          <div class="pm-form-field full">
+            <label class="pm-form-label">Driver Key (auto-generated)</label>
+            <input class="pm-input" id="pm-f-b2b-key" type="text" readonly style="opacity:.6;cursor:default">
+          </div>
+          <p style="font-size:.72rem;color:var(--tx-faint);margin-top:8px">
+            A default price matching the category average will be set for all drivers.
+          </p>
+        </div>
+      </div>
     </div>
     <div class="pm-modal-footer">
       <button class="btn-cancel" id="pm-btn-cancel" style="padding:10px 18px;font-size:.85rem">Cancel</button>
@@ -5866,6 +5907,32 @@ function _pmBindModal() {
   window._pmAddUrl       = _pmAddUrl;
   window._pmRemoveImg    = _pmRemoveImg;
   window._pmSelectIcon   = _pmSelectIcon;
+
+  // ── B2B toggle: show/hide options ──
+  const b2bToggle = document.getElementById('pm-f-b2b-enabled');
+  if (b2bToggle) {
+    b2bToggle.addEventListener('change', () => {
+      const opts = document.getElementById('pm-b2b-options');
+      if (opts) opts.style.display = b2bToggle.checked ? 'block' : 'none';
+      _pmUpdateB2BKey();
+    });
+  }
+  // Auto-generate b2b_key when name changes
+  const nameEnInput = document.getElementById('pm-f-en');
+  if (nameEnInput) {
+    nameEnInput.addEventListener('input', _pmUpdateB2BKey);
+  }
+}
+
+function _pmUpdateB2BKey() {
+  const nameEn = document.getElementById('pm-f-en')?.value || '';
+  const b2bKeyEl = document.getElementById('pm-f-b2b-key');
+  const enabled = document.getElementById('pm-f-b2b-enabled')?.checked;
+  if (b2bKeyEl) {
+    b2bKeyEl.value = enabled && nameEn
+      ? 'b2b_' + nameEn.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
+      : '';
+  }
 }
 
 function _pmSwitchTab(name) {
@@ -6045,6 +6112,16 @@ function _pmOpenModal(product) {
   // Set icon picker selection
   window._pmSelectIcon(product?.icon_name || 'cake');
 
+  // ── B2B fields ──
+  const b2bToggle = document.getElementById('pm-f-b2b-enabled');
+  const b2bCat = document.getElementById('pm-f-b2b-cat');
+  const b2bKey = document.getElementById('pm-f-b2b-key');
+  const b2bOpts = document.getElementById('pm-b2b-options');
+  if (b2bToggle) b2bToggle.checked = product?.b2b_enabled || false;
+  if (b2bCat) b2bCat.value = product?.b2b_category || '';
+  if (b2bKey) b2bKey.value = product?.b2b_key || '';
+  if (b2bOpts) b2bOpts.style.display = product?.b2b_enabled ? 'block' : 'none';
+
   if (_pmPriceMode === 'sized' && product && product.prices) {
     document.getElementById('pm-f-sm').value = product.prices.Small  ? product.prices.Small.replace('$','')  : '';
     document.getElementById('pm-f-md').value = product.prices.Medium ? product.prices.Medium.replace('$','') : '';
@@ -6088,6 +6165,19 @@ async function _pmSave() {
     return;
   }
 
+  // ── B2B fields ──
+  const b2bEnabled = document.getElementById('pm-f-b2b-enabled')?.checked || false;
+  const b2bCat = document.getElementById('pm-f-b2b-cat')?.value || null;
+  if (b2bEnabled && !b2bCat) {
+    showToast('Select a driver category for B2B', 'error');
+    _pmSwitchTab('b2b');
+    return;
+  }
+  // Auto-generate b2b_key from name_en (slug)
+  const b2bKey = b2bEnabled
+    ? 'b2b_' + nameEn.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
+    : null;
+
   let price = null, prices = null;
   if (_pmPriceMode === 'single') {
     const v = document.getElementById('pm-f-price').value;
@@ -6109,6 +6199,9 @@ async function _pmSave() {
     description_es: document.getElementById('pm-f-desc-es').value.trim() || null,
     icon_name: (document.querySelector('#pm-icon-grid .pm-icon-opt.selected')?.dataset.icon) || 'package',
     price, prices, images: _pmImages, image_zoom: _pmZoom, image_position: _pmPosition,
+    b2b_enabled: b2bEnabled,
+    b2b_category: b2bEnabled ? b2bCat : null,
+    b2b_key: b2bKey,
     updated_at: new Date().toISOString(),
   };
 
@@ -6129,20 +6222,68 @@ async function _pmSave() {
 
   if (error) { showToast(error.message || 'Save failed', 'error'); return; }
 
+  // ── Auto-insert driver_prices for all drivers if B2B enabled ──
+  if (b2bEnabled && b2bKey) {
+    try { await _pmInsertB2BPrices(b2bKey, nameEn, b2bCat); } catch (e) { console.warn('B2B pricing insert:', e); }
+  }
+
   if (_pmEditId) {
-    // ── Existing product: surgical card update (no full reload) ──
     const p = _pmProducts.find(x => x.id === _pmEditId);
     if (p) Object.assign(p, payload);
     showToast('Product updated ✓', 'success');
     _pmCloseModal();
     _pmUpdateCard(_pmEditId, payload);
   } else {
-    // ── New product: full reload to render the new card ──
     showToast('Product added ✓', 'success');
     const scrollY = window.scrollY;
     _pmCloseModal();
     await _pmFetch();
     requestAnimationFrame(() => window.scrollTo(0, scrollY));
+  }
+}
+
+/* ── Auto-insert driver_prices for a new B2B product ── */
+async function _pmInsertB2BPrices(b2bKey, label, category) {
+  // 1. Get all active drivers
+  const { data: drivers } = await sb.from('drivers').select('id').eq('is_active', true);
+  if (!drivers || !drivers.length) return;
+
+  // 2. Map category → existing product key prefixes for price lookup
+  const catPrefixMap = {
+    redondo: ['pina_inside','guava_inside','dulce_inside'],
+    plain: ['plain','raisin','pudin'],
+    tresleche: ['tl','tl_hershey','cuatro_leche'],
+    piezas: ['pz_rv','pz_carrot','pz_cheese'],
+    frostin: ['fr_guava','fr_pina','fr_dulce','fr_choco'],
+    hb_big: ['hb_b_pina','hb_b_guava','hb_b_dulce'],
+    hb_small: ['hb_s_pina','hb_s_guava','hb_s_dulce'],
+    cuadrao: ['cdr_pudin','cdr_pound','cdr_raisin'],
+    basos: ['bas_tl','bas_cl','bas_hershey'],
+    familiar: ['fam_tl','fam_cl'],
+  };
+  const sampleKeys = catPrefixMap[category] || [];
+
+  // 3. For each driver, find the avg price of that category and insert
+  for (const drv of drivers) {
+    let defaultPrice = 0;
+    if (sampleKeys.length) {
+      const { data: existingPrices } = await sb.from('driver_prices')
+        .select('price')
+        .eq('driver_id', drv.id)
+        .in('product_key', sampleKeys);
+      if (existingPrices && existingPrices.length) {
+        const sum = existingPrices.reduce((a, p) => a + parseFloat(p.price), 0);
+        defaultPrice = Math.round((sum / existingPrices.length) * 100) / 100;
+      }
+    }
+    // Insert (upsert to avoid duplicate errors)
+    await sb.from('driver_prices').upsert({
+      driver_id: drv.id,
+      product_key: b2bKey,
+      product_label: label,
+      price: defaultPrice,
+      credit_value: 0,
+    }, { onConflict: 'driver_id,product_key' });
   }
 }
 
@@ -8253,6 +8394,23 @@ async function _noLoadProducts() {
       ]
     },
   };
+
+  // ── Merge B2B products from Supabase ──
+  try {
+    const { data: b2bItems } = await sb.from('products')
+      .select('b2b_key, name_en, name_es, b2b_category')
+      .eq('b2b_enabled', true);
+    if (b2bItems && b2bItems.length) {
+      b2bItems.forEach(p => {
+        if (!p.b2b_key || !p.b2b_category) return;
+        const sec = adminNoProducts[p.b2b_category];
+        if (!sec) return;
+        if (sec.items.some(item => item.key === p.b2b_key)) return;
+        sec.items.push({ key: p.b2b_key, en: p.name_en, es: p.name_es });
+      });
+    }
+  } catch (e) { console.warn('B2B products merge:', e); }
+
   adminNoProductsLoaded = true;
 }
 

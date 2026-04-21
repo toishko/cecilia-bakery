@@ -104,9 +104,11 @@ function showSection(name) {
   const footer = document.getElementById('form-footer');
   const saleFooter = document.getElementById('sale-footer');
   if (name === 'new-order') {
-    initOrderForm();
-    footer.style.display = 'flex';
-    saleFooter.style.display = 'none';
+    loadDriverProducts().then(() => {
+      initOrderForm();
+      footer.style.display = 'flex';
+      saleFooter.style.display = 'none';
+    });
   } else if (name === 'sales') {
     footer.style.display = 'none';
     saleFooter.style.display = 'flex';
@@ -1073,12 +1075,26 @@ function buildProductSections() {
    LOAD PRODUCTS FROM SUPABASE
    ═══════════════════════════════════ */
 async function loadDriverProducts() {
-  // The hardcoded PRODUCTS catalog above uses canonical keys (e.g. hb_s_pina,
-  // pz_pina, fr_pina) that match driver_prices exactly. Loading from
-  // b2b_products would generate naive keys from name_en (e.g. "piña" for ALL
-  // Piña variants), breaking price lookups and causing duplicate items.
-  // Keep using the hardcoded catalog until b2b_products stores proper keys.
-  _log('Driver: using hardcoded product catalog (canonical keys)');
+  // The hardcoded PRODUCTS catalog uses canonical keys that match driver_prices.
+  // B2B products from the admin's Manage > Products (b2b_enabled=true) are
+  // fetched and MERGED into the appropriate section dynamically.
+  try {
+    if (!sb) return;
+    const { data, error } = await sb.from('products')
+      .select('b2b_key, name_en, name_es, b2b_category')
+      .eq('b2b_enabled', true);
+    if (error || !data || !data.length) return;
+
+    data.forEach(function(p) {
+      if (!p.b2b_key || !p.b2b_category) return;
+      const sec = PRODUCTS[p.b2b_category];
+      if (!sec) return;
+      // Skip if already in the catalog (avoid duplicates on re-load)
+      if (sec.items.some(function(item) { return item.key === p.b2b_key; })) return;
+      sec.items.push({ key: p.b2b_key, en: p.name_en, es: p.name_es });
+    });
+    _log('B2B products merged:', data.length, 'items');
+  } catch (e) { console.warn('loadDriverProducts B2B:', e); }
 }
 
 // ── Load driver prices into global map (for summary display) ──
