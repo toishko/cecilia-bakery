@@ -2320,7 +2320,7 @@
                       <span class="box-calc-item-name">${label}</span>
                       <span class="box-calc-item-qty-badge"><span class="item-qty-display">${qty}</span><input type="number" class="item-qty-edit" value="${qty}" min="0" data-original="${qty}" style="display:none;width:40px;padding:1px;border-radius:4px;border:1px solid var(--bd);text-align:center;font-size:16px;">×</span>
                     </div>
-                    <input class="box-calc-input" type="number" min="1" id="${uid}" data-qty="${qty}" placeholder="#" oninput="calcBox(this); staffBoxAutoSave('${order.id}')" />
+                    <input class="box-calc-input" type="number" min="1" max="${qty}" id="${uid}" data-qty="${qty}" placeholder="#" oninput="calcBox(this); staffBoxAutoSave('${order.id}')" />
                     <div class="box-calc-result empty" id="${uid}-result"></div>
                   </div>`;
               }).join('');
@@ -2588,6 +2588,15 @@
       if (!boxSize || boxSize < 1) {
         resultEl.className = 'box-calc-result empty';
         resultEl.innerHTML = '';
+        return;
+      }
+
+      // Clamp box size to qty — can't have a box bigger than the order
+      if (boxSize > qty) {
+        input.value = qty;
+        resultEl.className = 'box-calc-result exact';
+        resultEl.innerHTML = `<span class="result-tag">1 box · Exact ✓</span>`;
+        saveBoxCalcState();
         return;
       }
 
