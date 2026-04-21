@@ -961,8 +961,15 @@
       flex-shrink: 0;
     }
     .box-calc-input::-webkit-outer-spin-button,
-    .box-calc-input::-webkit-inner-spin-button {
+    .box-calc-input::-webkit-inner-spin-button,
+    .item-qty-edit::-webkit-outer-spin-button,
+    .item-qty-edit::-webkit-inner-spin-button,
+    .staff-add-qty::-webkit-outer-spin-button,
+    .staff-add-qty::-webkit-inner-spin-button {
       -webkit-appearance: none; appearance: none; margin: 0;
+    }
+    .item-qty-edit, .staff-add-qty {
+      -moz-appearance: textfield; appearance: textfield;
     }
     .box-calc-input:focus {
       outline: none;
