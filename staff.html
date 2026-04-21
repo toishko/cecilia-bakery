@@ -744,7 +744,7 @@
       border-radius: 8px;
       position: absolute;
       left: 50%;
-      top: 14px;
+      top: 26px;
       transform: translateX(-50%);
       z-index: 1;
     }
@@ -2294,7 +2294,7 @@
           html += `
             <div class="order-card" id="staff-order-${oi}" style="border-radius:16px;border:none;box-shadow:0 4px 16px rgba(0,0,0,.05);">
               ${order.driver_ref ? `<div class="staff-oca-ref">#${_esc(order.driver_ref)}</div>` : ''}
-              <div class="order-card-top" onclick="toggleStaffOrder(${oi})" style="display:flex;justify-content:space-between;align-items:center;gap:12px;${order.driver_ref ? ' padding-top:20px;' : ' min-height:36px;'}">
+              <div class="order-card-top" onclick="toggleStaffOrder(${oi})" style="display:flex;justify-content:space-between;align-items:center;gap:12px;${order.driver_ref ? ' padding-top:28px;' : ' min-height:40px;'}">
                 <div style="display:flex;flex-direction:column;justify-content:center;">
                   <div class="order-driver-name" style="font-size:1.05rem;line-height:1.2;">${driverName}</div>
                   ${bizName ? `<div class="order-biz-name" style="margin-top:2px;">${bizName}</div>` : ''}
