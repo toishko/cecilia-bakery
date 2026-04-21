@@ -920,11 +920,10 @@
     }
     .box-calc-cat-header:first-child { margin-top: 0; }
     .box-calc-item {
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex; align-items: center;
       padding: 9px 0;
       border-bottom: 1px solid var(--bd);
       gap: 8px;
-      flex-wrap: wrap;
     }
     .box-calc-item:last-child { border-bottom: none; }
 
@@ -935,11 +934,13 @@
     .box-calc-item-name {
       font-weight: 600; font-size: .88rem; color: var(--tx);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      flex: 1; min-width: 0;
     }
     .box-calc-item-qty-badge {
       font-size: .72rem; font-weight: 600; color: var(--tx-muted);
       background: rgba(0,0,0,.04); padding: 1px 7px; border-radius: 10px;
       white-space: nowrap; flex-shrink: 0;
+      min-width: 36px; text-align: center;
     }
 
     .box-calc-input {
