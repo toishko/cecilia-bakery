@@ -856,48 +856,73 @@
       font-size: .68rem; font-weight: 700;
       text-transform: uppercase; letter-spacing: .6px;
       color: var(--red);
-      padding: 8px 0 4px;
-      margin-top: 4px;
+      padding: 10px 0 6px;
+      margin-top: 2px;
     }
     .box-calc-cat-header:first-child { margin-top: 0; }
-    .box-calc-item {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 9px 0;
-      border-bottom: 1px solid var(--bd);
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .box-calc-item:last-child { border-bottom: none; }
 
-    .box-calc-item-left {
-      display: flex; align-items: center; gap: 6px;
-      flex: 1; min-width: 0;
+    /* ── Grid Table ── */
+    .bc-table {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 0;
+      width: 100%;
     }
+    .bc-table-head {
+      display: contents;
+    }
+    .bc-table-head span {
+      font-size: .65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .5px; color: var(--tx-faint);
+      padding: 0 0 6px; border-bottom: 1.5px solid var(--bd);
+    }
+    .bc-table-head span:nth-child(2),
+    .bc-table-head span:nth-child(3) { text-align: center; }
+
+    .box-calc-item {
+      display: contents;
+    }
+    .box-calc-item .bc-cell {
+      display: flex; align-items: center;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--bd);
+      min-height: 36px;
+    }
+    .bc-cell-product {
+      gap: 5px; overflow: hidden;
+    }
+    .bc-cell-input {
+      justify-content: center;
+    }
+    .bc-cell-result {
+      justify-content: center;
+      min-width: 80px;
+    }
+
     .box-calc-item-name {
-      font-weight: 600; font-size: .88rem; color: var(--tx);
+      font-weight: 600; font-size: .84rem; color: var(--tx);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .box-calc-item-qty-badge {
-      font-size: .72rem; font-weight: 600; color: var(--tx-muted);
-      background: rgba(0,0,0,.04); padding: 1px 7px; border-radius: 10px;
+      font-size: .7rem; font-weight: 600; color: var(--tx-muted);
+      background: rgba(0,0,0,.04); padding: 1px 6px; border-radius: 10px;
       white-space: nowrap; flex-shrink: 0;
     }
 
     .box-calc-input {
-      width: 56px;
-      padding: 5px 0;
+      width: 48px;
+      padding: 4px 0;
       border: none;
       border-bottom: 1.5px solid var(--bd);
       border-radius: 0;
       background: transparent;
       color: var(--tx);
       font-family: 'Outfit', sans-serif;
-      font-size: .92rem; font-weight: 600;
+      font-size: .88rem; font-weight: 600;
       text-align: center;
       transition: border-color .2s;
       -moz-appearance: textfield;
       appearance: textfield;
-      flex-shrink: 0;
     }
     .box-calc-input::-webkit-outer-spin-button,
     .box-calc-input::-webkit-inner-spin-button {
@@ -908,28 +933,17 @@
       border-bottom-color: var(--red);
     }
     .box-calc-input::placeholder {
-      color: var(--tx-faint); font-weight: 400; font-size: .8rem;
+      color: var(--tx-faint); font-weight: 400; font-size: .78rem;
     }
 
     .box-calc-result {
-      display: none; /* hidden until calculated */
-      width: 100%;
-      font-size: .75rem; font-weight: 600;
-      padding: 2px 0 0;
-      text-align: right;
-    }
-    .box-calc-result.exact {
-      display: block; color: var(--green);
-    }
-    .box-calc-result.has-extra {
-      display: block; color: var(--yellow);
-    }
-    .box-calc-result.empty {
-      display: none; /* keep hidden when empty */
-    }
-    .box-calc-result .result-tag {
       font-size: .72rem; font-weight: 600;
+      white-space: nowrap;
     }
+    .box-calc-result.exact { color: var(--green); }
+    .box-calc-result.has-extra { color: var(--yellow); }
+    .box-calc-result.empty { color: var(--tx-faint); font-weight: 400; font-style: italic; }
+    .box-calc-result .result-tag { font-size: .72rem; }
 
     /* ── Frosted Box Packer ── */
     .frost-packer { margin-top:16px; padding-top:16px; border-top:2px solid rgba(200,16,46,.15); }
@@ -2249,7 +2263,9 @@
                 });
                 return ''; // skip standard rendering for frosted
               }
-              let catHtml = `<div class="box-calc-cat-header">${_esc(cat)}</div>`;
+              let catHtml = `<div class="box-calc-cat-header">${_esc(cat)}</div>
+                <div class="bc-table">
+                  <div class="bc-table-head"><span>Product</span><span>Per Box</span><span>Result</span></div>`;
               catHtml += bcGrouped[cat].map(item => {
                 const label = _esc(item.product_label || item.product_key);
                 const qty = item.quantity || 0;
@@ -2257,14 +2273,19 @@
                 const it_id = item.id || '';
                 return `
                   <div class="box-calc-item order-items-line" data-item-id="${it_id}" data-product-key="${item.product_key}">
-                    <div class="box-calc-item-left">
+                    <div class="bc-cell bc-cell-product">
                       <span class="box-calc-item-name">${label}</span>
-                      <span class="box-calc-item-qty-badge"><span class="item-qty-display">${qty}</span><input type="number" class="item-qty-edit" value="${qty}" min="0" data-original="${qty}" style="display:none;width:40px;padding:1px;border-radius:4px;border:1px solid var(--bd);text-align:center;font-size:.75rem;">×</span>
+                      <span class="box-calc-item-qty-badge"><span class="item-qty-display">${qty}</span><input type="number" class="item-qty-edit" value="${qty}" min="0" data-original="${qty}" style="display:none;width:36px;padding:1px;border-radius:4px;border:1px solid var(--bd);text-align:center;font-size:.7rem;">×</span>
                     </div>
-                    <input class="box-calc-input" type="number" min="1" id="${uid}" data-qty="${qty}" placeholder="#" oninput="calcBox(this); staffBoxAutoSave('${order.id}')" />
-                    <div class="box-calc-result empty" id="${uid}-result"></div>
+                    <div class="bc-cell bc-cell-input">
+                      <input class="box-calc-input" type="number" min="1" id="${uid}" data-qty="${qty}" placeholder="—" oninput="calcBox(this); staffBoxAutoSave('${order.id}')" />
+                    </div>
+                    <div class="bc-cell bc-cell-result">
+                      <div class="box-calc-result empty" id="${uid}-result">—</div>
+                    </div>
                   </div>`;
               }).join('');
+              catHtml += `</div>`; // close bc-table
               return catHtml;
             }).join('');
           }
@@ -2407,7 +2428,7 @@
 
       if (!boxSize || boxSize < 1) {
         resultEl.className = 'box-calc-result empty';
-        resultEl.innerHTML = '';
+        resultEl.innerHTML = '—';
         return;
       }
 
