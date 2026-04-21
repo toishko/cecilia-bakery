@@ -1032,9 +1032,9 @@
     }
     .frost-3d-front {
       position:absolute; bottom:4px; left:0;
-      width:38px; height:30px;
-      background:rgba(255,255,255,.5);
-      border:1.5px solid rgba(100,40,20,.2);
+      width:38px; height:28px;
+      background:#deb887;
+      border:1.5px solid #a07a50;
       border-radius:2px; overflow:hidden;
     }
     .frost-3d-fill {
@@ -1043,18 +1043,18 @@
       border-radius:0 0 1px 1px;
     }
     .frost-3d-top {
-      position:absolute; left:4px; top:0;
-      width:38px; height:12px;
-      background:rgba(255,255,255,.35);
-      border:1.5px solid rgba(100,40,20,.15);
+      position:absolute; left:4px; top:2px;
+      width:38px; height:11px;
+      background:#e8cfa8;
+      border:1.5px solid #b8925a;
       transform: skewX(-35deg);
       border-radius:1px;
     }
     .frost-3d-right {
       position:absolute; right:0; bottom:4px;
-      width:14px; height:30px;
-      background:rgba(0,0,0,.04);
-      border:1.5px solid rgba(100,40,20,.15);
+      width:14px; height:28px;
+      background:#c49a6c;
+      border:1.5px solid #a07a50;
       transform: skewY(-35deg);
       transform-origin:bottom left;
       border-radius:1px; overflow:hidden;
@@ -1065,11 +1065,11 @@
       opacity:.7;
     }
     .frost-3d-wrap.secured .frost-3d-front {
-      border-color:rgba(10,122,10,.4);
-      box-shadow:0 0 8px rgba(10,122,10,.15);
+      border-color:rgba(10,122,10,.5);
+      box-shadow:0 0 8px rgba(10,122,10,.2);
     }
-    .frost-3d-wrap.secured .frost-3d-top { border-color:rgba(10,122,10,.3); }
-    .frost-3d-wrap.secured .frost-3d-right { border-color:rgba(10,122,10,.3); }
+    .frost-3d-wrap.secured .frost-3d-top { border-color:rgba(10,122,10,.4); }
+    .frost-3d-wrap.secured .frost-3d-right { border-color:rgba(10,122,10,.4); }
     /* ── Modal Overlay + Sheet ── */
     .frost-modal-overlay {
       position:fixed; inset:0; z-index:9999;
@@ -1146,20 +1146,49 @@
       60% { transform:scale(1.1); }
       100% { transform:scale(1); opacity:1; }
     }
-    /* ── Live Grid ── */
+    /* ── Open Box View ── */
+    .frost-openbox {
+      perspective:600px;
+      margin:0 auto 14px;
+      max-width:340px;
+    }
+    .frost-openbox-scene {
+      transform:rotateX(16deg);
+      transform-style:preserve-3d;
+      position:relative;
+    }
+    .frost-openbox-box {
+      position:relative;
+      border:10px solid;
+      border-color:#b8925a #a07a50 #c49a6c #a07a50;
+      border-radius:3px;
+      background:#deb887;
+      padding:4px;
+      box-shadow:
+        0 6px 16px rgba(0,0,0,.12),
+        inset 0 1px 3px rgba(0,0,0,.06);
+    }
+    .frost-openbox-box::before {
+      content:''; position:absolute;
+      top:-10px; left:-10px; right:-10px;
+      height:10px;
+      background:linear-gradient(to top, rgba(0,0,0,.04), transparent);
+    }
+    /* ── Grid inside the box ── */
     .frost-grid {
       display:grid; grid-template-columns:repeat(7,1fr);
-      gap:3px; margin-bottom:12px;
-      background:rgba(255,255,255,.6); border-radius:8px; padding:6px;
-      border:1px solid var(--bd);
+      gap:2px;
+      background:#d4a574;
+      border-radius:2px; padding:2px;
     }
     .frost-grid-cell {
-      aspect-ratio:1; border-radius:4px;
-      border:1.5px dashed rgba(0,0,0,.1); background:rgba(0,0,0,.03);
+      aspect-ratio:1; border-radius:3px;
+      border:1px solid rgba(160,122,80,.3);
+      background:#e8cfa8;
       transition:all .15s;
     }
     .frost-grid-cell.filled {
-      border:1.5px solid rgba(255,255,255,.3);
+      border:1px solid rgba(255,255,255,.25);
       animation:frostCellPop .2s ease-out;
     }
     @keyframes frostCellPop {
@@ -1167,11 +1196,9 @@
       60% { transform:scale(1.08); }
       100% { transform:scale(1); opacity:1; }
     }
-    .frost-box-card.secured .frost-grid { animation:frostGridPulse .4s ease-out; }
-    @keyframes frostGridPulse {
-      0% { box-shadow:0 0 0 0 rgba(10,122,10,.2); }
-      50% { box-shadow:0 0 0 6px rgba(10,122,10,.1); }
-      100% { box-shadow:0 0 0 0 rgba(10,122,10,0); }
+    .frost-box-card.secured .frost-openbox-box {
+      border-color:rgba(10,122,10,.5) rgba(10,122,10,.4) rgba(10,122,10,.6) rgba(10,122,10,.4);
+      box-shadow:0 0 12px rgba(10,122,10,.15), 0 6px 16px rgba(0,0,0,.12);
     }
     /* ── Flavor Rows ── */
     .frost-flavor-row {
@@ -3029,7 +3056,8 @@
         }
         html += '</div></div>';
 
-        // Live Grid — 56 cells (8 rows × 7 cols)
+        // Open Box View — grid inside a 3D cardboard box
+        html += '<div class="frost-openbox"><div class="frost-openbox-scene"><div class="frost-openbox-box">';
         html += '<div class="frost-grid">';
         var cellIdx = 0;
         state.flavors.forEach(function(f) {
@@ -3045,6 +3073,7 @@
           html += '<div class="frost-grid-cell"></div>';
         }
         html += '</div>';
+        html += '</div></div></div>';
 
         // Flavor input rows
         state.flavors.forEach(function(f) {
