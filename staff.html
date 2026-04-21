@@ -2593,7 +2593,11 @@
       const leftover = qty - (boxes * boxSize);
       const exact = leftover === 0;
 
-      if (exact) {
+      if (qty <= boxSize) {
+        // Everything fits in one box
+        resultEl.className = 'box-calc-result exact';
+        resultEl.innerHTML = `<span class="result-tag">1 box · Exact ✓</span>`;
+      } else if (exact) {
         resultEl.className = 'box-calc-result exact';
         resultEl.innerHTML = `<span class="result-tag">${boxes} box${boxes !== 1 ? 'es' : ''} · Exact ✓</span>`;
       } else {
