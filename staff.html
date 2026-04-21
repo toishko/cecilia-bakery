@@ -1104,10 +1104,8 @@
     }
 
     /* ── Overflow fixes ── */
-    body { overflow-x: hidden; }
     .order-driver-name, .order-biz-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
-    /* Removed .order-card { overflow: hidden; } to allow position: sticky */
-    .staff-container { overflow-x: hidden; }
+    /* Removed overflow: hidden from body and .staff-container to allow position: sticky to work properly in iOS Safari */
 
     /* ── In-app Toast ── */
     .staff-toast {
@@ -2475,13 +2473,13 @@
         // Smooth scroll snap-to-focus
         setTimeout(function() {
           if (!card) return;
-          var navOffset = 60 + parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)') || 0);
+          var navHeight = document.getElementById('main-nav') ? document.getElementById('main-nav').offsetHeight : 60;
           var cardTop = card.getBoundingClientRect().top + window.pageYOffset;
           window.scrollTo({
-            top: cardTop - navOffset - 16, // 16px breathing room
+            top: cardTop - navHeight - 16, // 16px breathing room
             behavior: 'smooth'
           });
-        }, 50);
+        }, 100);
       } else {
         if (card) card.classList.remove('expanded');
       }
