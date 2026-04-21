@@ -756,6 +756,21 @@
       flex-shrink: 0;
       text-align: center;
     }
+
+    /* ── Pin / Bookmark Button ── */
+    .staff-pin-btn {
+      background: none; border: none; padding: 6px; margin: -6px 0;
+      cursor: pointer; display: flex; align-items: center;
+      color: var(--tx-faint); flex-shrink: 0;
+      transition: color .2s, transform .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .staff-pin-btn:active { transform: scale(0.85); }
+    .staff-pin-btn.pinned {
+      color: var(--red);
+      filter: drop-shadow(0 0 4px rgba(200,16,46,.35));
+    }
+    .staff-pin-btn svg { width: 18px; height: 18px; }
     .order-items-summary {
       font-size: .85rem; color: var(--tx-muted);
       line-height: 1.5;
@@ -1267,7 +1282,7 @@
       <span data-en="Orders" data-es="Pedidos">Orders</span>
     </button>
     <button class="bottom-nav-item" data-section="saved" onclick="staffShowSection('saved')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
       <span data-en="Saved" data-es="Guardadas">Saved</span>
     </button>
     <button class="bottom-nav-item" data-section="calculator" onclick="staffShowSection('calculator')">
@@ -1372,7 +1387,7 @@
     /* ── Per-Order Save (explicit button inside each order card) ── */
     function staffSaveOrder(idx, silent = false) {
       var order = staffOrders[idx];
-      if (!order) { staffToast('Order not found', 'error'); return; }
+      if (!order) { if(!silent) staffToast('Order not found', 'error'); return; }
       var card = document.getElementById('staff-order-' + idx);
       if (!card) return;
 
@@ -1413,16 +1428,51 @@
       if (!silent) staffToast('Order saved!', 'success');
     }
 
+    /* ── Pin / Bookmark helpers ── */
+    function getPinnedOrders() {
+      try {
+        var raw = localStorage.getItem('cb-staff-pinned');
+        return raw ? JSON.parse(raw) : [];
+      } catch(e) { return []; }
+    }
+    function isPinned(orderId) {
+      return getPinnedOrders().indexOf(orderId) !== -1;
+    }
+    function staffTogglePin(idx, ev) {
+      ev.stopPropagation();
+      var order = staffOrders[idx];
+      if (!order) return;
+      var pins = getPinnedOrders();
+      var pos = pins.indexOf(order.id);
+      var btn = document.getElementById('staff-pin-' + idx);
+      if (pos !== -1) {
+        // Unpin
+        pins.splice(pos, 1);
+        if (btn) btn.classList.remove('pinned');
+        staffToast('Unpinned', 'info', 1500);
+      } else {
+        // Pin — also auto-save the current calc state
+        pins.push(order.id);
+        staffSaveOrder(idx, true);
+        if (btn) btn.classList.add('pinned');
+        staffToast('Pinned to Saved', 'success', 1500);
+      }
+      localStorage.setItem('cb-staff-pinned', JSON.stringify(pins));
+    }
+
     /* ── Render Saved Calculations List (per-order, expandable) ── */
     function renderSavedCalcs() {
       var container = document.getElementById('saved-calcs-list');
       if (!container) return;
 
+      var pinnedIds = getPinnedOrders();
       var entries = [];
       for (var i = 0; i < localStorage.length; i++) {
         var key = localStorage.key(i);
         if (key && key.startsWith('cb-staff-ordercalc-')) {
           var orderId = key.replace('cb-staff-ordercalc-', '');
+          // Only show pinned orders
+          if (pinnedIds.indexOf(orderId) === -1) continue;
           try {
             var data = JSON.parse(localStorage.getItem(key));
             entries.push({ orderId: orderId, key: key, data: data });
@@ -1432,9 +1482,9 @@
 
       if (entries.length === 0) {
         container.innerHTML = '<div class="saved-empty">' +
-          '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;opacity:.4"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>' +
-          '<div data-en="No saved orders yet" data-es="A\u00fan no hay pedidos guardados">No saved orders yet</div>' +
-          '<div style="font-size:.78rem;margin-top:4px" data-en="Expand an order and click Save to keep your box calculations" data-es="Expanda un pedido y haga clic en Guardar para conservar sus c\u00e1lculos">Expand an order and click Save to keep your box calculations</div>' +
+          '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;opacity:.4"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' +
+          '<div data-en="No pinned orders" data-es="No hay pedidos fijados">No pinned orders</div>' +
+          '<div style="font-size:.78rem;margin-top:4px" data-en="Tap the bookmark icon on any order to pin it here" data-es="Toque el icono de marcador en cualquier pedido para fijarlo aqui">Tap the bookmark icon on any order to pin it here</div>' +
           '</div>';
         applyStaffLang();
         return;
@@ -1899,6 +1949,7 @@
     let cachedDrivers = {};
     let currentUser = null;
     var staffOrders = [];
+    var currentOpenOrder = -1;
 
     function populateUserInfo(user) {
       const firstName = user.firstName || user.username || 'Staff';
@@ -2307,12 +2358,15 @@
                   ${bizName ? `<div class="order-biz-name" style="margin-top:2px;">${bizName}</div>` : ''}
                 </div>
                 ${order.driver_ref ? `<div class="staff-oca-ref">#${_esc(order.driver_ref)}</div>` : ''}
-                <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;flex:1;min-width:0;">
                   ${timeStr ? `<span style="font-size:.82rem;color:var(--tx-faint);font-weight:500">${timeStr}</span>` : ''}
                   ${status === 'pending'
                     ? `<span style="width:10px;height:10px;background:var(--yellow);border-radius:50%;display:inline-block;flex-shrink:0;"></span>`
                     : `<span style="width:10px;height:10px;background:#7c3aed;border-radius:50%;display:inline-block;flex-shrink:0;"></span>`
                   }
+                  <button class="staff-pin-btn${isPinned(order.id) ? ' pinned' : ''}" id="staff-pin-${oi}" onclick="staffTogglePin(${oi}, event)" title="Pin to Saved">
+                    <svg viewBox="0 0 24 24" fill="${isPinned(order.id) ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                  </button>
                   <button class="staff-context-btn" onclick="event.stopPropagation();staffToggleEdit(${oi})" style="background:none;border:none;padding:6px;margin:-6px -6px -6px 0;cursor:pointer;color:var(--tx-muted);display:flex;align-items:center;flex-shrink:0;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></svg>
                   </button>
@@ -2385,8 +2439,20 @@
       const boxcalc = document.getElementById('staff-boxcalc-' + idx);
       const isExpanded = boxcalc && boxcalc.style.display !== 'none';
 
+      // ── Accordion: close the previously open order first ──
+      if (!isExpanded && currentOpenOrder !== -1 && currentOpenOrder !== idx) {
+        var prevMeta = document.getElementById('staff-meta-' + currentOpenOrder);
+        var prevBox = document.getElementById('staff-boxcalc-' + currentOpenOrder);
+        if (prevMeta) prevMeta.style.display = 'none';
+        if (prevBox) prevBox.style.display = 'none';
+        // Silently save the old order's calc state
+        staffSaveOrder(currentOpenOrder, true);
+      }
+
       if (meta) meta.style.display = isExpanded ? 'none' : 'flex';
       if (boxcalc) boxcalc.style.display = isExpanded ? 'none' : 'block';
+
+      currentOpenOrder = isExpanded ? -1 : idx;
     }
 
     function staffBoxAutoSave(orderId) {
