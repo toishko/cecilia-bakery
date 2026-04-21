@@ -1371,7 +1371,7 @@
     }
 
     /* ── Per-Order Save (explicit button inside each order card) ── */
-    function staffSaveOrder(idx) {
+    function staffSaveOrder(idx, silent = false) {
       var order = staffOrders[idx];
       if (!order) { staffToast('Order not found', 'error'); return; }
       var card = document.getElementById('staff-order-' + idx);
@@ -1411,7 +1411,7 @@
       state.itemCount = state.items.reduce(function(s, i) { return s + i.qty; }, 0);
 
       localStorage.setItem('cb-staff-ordercalc-' + order.id, JSON.stringify(state));
-      staffToast('Order saved!', 'success');
+      if (!silent) staffToast('Order saved!', 'success');
     }
 
     /* ── Render Saved Calculations List (per-order, expandable) ── */
@@ -2250,6 +2250,7 @@
                 // Collect frosted items instead of rendering standard calc
                 bcGrouped[cat].forEach(item => {
                   frostedItems_oi.push({
+                    id: item.id || '',
                     key: item.product_key,
                     name: item.product_label || item.product_key,
                     qty: item.quantity || 0
@@ -2262,15 +2263,18 @@
                 const label = _esc(item.product_label || item.product_key);
                 const qty = item.quantity || 0;
                 const uid = `bc-${order.id}-${globalIdx++}`;
+                const it_id = item.id || '';
                 return `
-                  <div class="box-calc-item" style="padding:16px 0;border-bottom:1px solid var(--bd);">
+                  <div class="box-calc-item order-items-line" data-item-id="${it_id}" data-product-key="${item.product_key}" style="padding:16px 0;border-bottom:1px solid var(--bd);">
                     <div style="display:flex;justify-content:space-between;align-items:center;">
                       <div>
                         <div style="font-weight:600;font-size:1rem;color:var(--tx);">${label}</div>
-                        <div style="font-size:.85rem;color:var(--tx-muted);margin-top:2px;">${qty} pieces total</div>
+                        <div style="font-size:.85rem;color:var(--tx-muted);margin-top:2px;">
+                          <span class="item-qty-display">${qty}</span><input type="number" class="item-qty-edit" value="${qty}" min="0" data-original="${qty}" style="display:none;width:50px;padding:2px;border-radius:4px;border:1px solid var(--bd);text-align:center;font-size:.85rem;margin-right:6px;"> pieces total
+                        </div>
                       </div>
                       <div style="display:flex;align-items:center;gap:8px;">
-                        <input class="box-calc-input" type="number" min="1" id="${uid}" data-qty="${qty}" placeholder="Per box" style="width:70px;padding:8px;border-radius:10px;border:1px solid var(--bd);text-align:center;background:var(--bg-card);color:var(--tx);font-weight:600;font-size:.95rem;transition:all 0.2s;" oninput="calcBox(this); staffBoxAutoSave(${order.id})" />
+                        <input class="box-calc-input" type="number" min="1" id="${uid}" data-qty="${qty}" placeholder="Per box" style="width:70px;padding:8px;border-radius:10px;border:1px solid var(--bd);text-align:center;background:var(--bg-card);color:var(--tx);font-weight:600;font-size:.95rem;transition:all 0.2s;" oninput="calcBox(this); staffBoxAutoSave('${order.id}')" />
                       </div>
                     </div>
                     <div class="box-calc-result empty" id="${uid}-result" style="margin-top:8px;padding:10px 14px;background:rgba(0,0,0,.02);border-radius:10px;font-size:.85rem;color:var(--tx-muted);display:flex;align-items:center;gap:8px;">
@@ -2286,9 +2290,9 @@
           var frostPackerHtml = '';
           if (frostedItems_oi.length > 0) {
             var frostRemainingHtml = frostedItems_oi.map(function(f) {
-              return '<div class="frost-flavor-row">' +
+              return '<div class="frost-flavor-row order-items-line" data-item-id="' + f.id + '" data-product-key="' + f.key + '">' +
                 '<span class="frost-flavor-name">' + _esc(f.name) + '</span>' +
-                '<span class="frost-flavor-ordered">Ordered: ' + f.qty + '</span>' +
+                '<span class="frost-flavor-ordered">Ordered: <span class="item-qty-display">' + f.qty + '</span><input type="number" class="item-qty-edit" value="'+f.qty+'" min="0" data-original="'+f.qty+'" style="display:none;width:40px;margin-left:4px;border:1px solid var(--bd);border-radius:4px;padding:2px;text-align:center;font-size:0.8rem;"></span>' +
                 '<span class="frost-flavor-left" id="frost-left-' + order.id + '-' + f.key + '">Left: ' + f.qty + '</span>' +
               '</div>';
             }).join('');
@@ -2503,6 +2507,7 @@
       state.flavors.forEach(function(f) { pieces[f.key] = 0; });
       state.boxes.push({ num: boxNum, pieces: pieces });
       frostRenderBoxes(orderId);
+      staffBoxAutoSave(orderId);
     }
 
     function frostRemoveBox(orderId, boxNum) {
@@ -2510,6 +2515,7 @@
       if (!state) return;
       state.boxes = state.boxes.filter(function(b) { return b.num !== boxNum; });
       frostRenderBoxes(orderId);
+      staffBoxAutoSave(orderId);
     }
 
     function frostPcsBreakdown(pcs) {
@@ -2624,7 +2630,7 @@
       }
 
       frostRenderBoxes(orderId);
-      saveBoxCalcState();
+      staffBoxAutoSave(orderId);
     }
 
     function frostUpdateRemaining(orderId) {
