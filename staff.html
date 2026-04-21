@@ -2193,48 +2193,15 @@
     function renderOrders(orders) {
       const container = document.getElementById('orders-list');
       staffOrders = orders;
-
-      // Group orders by pickup_date
-      const dateGroups = {};
-      const dateOrder = [];
-      orders.forEach(order => {
-        const dateKey = order.pickup_date || 'no-date';
-        if (!dateGroups[dateKey]) { dateGroups[dateKey] = []; dateOrder.push(dateKey); }
-        dateGroups[dateKey].push(order);
-      });
-
-      // Sort date groups (newest first)
-      dateOrder.sort((a, b) => {
-        if (a === 'no-date') return 1;
-        if (b === 'no-date') return -1;
-        return b.localeCompare(a);
-      });
+      
+      const activeStatusBtn = document.querySelector('.segment-btn[data-type="status"].active');
+      const isArchive = activeStatusBtn && activeStatusBtn.dataset.value === 'completed';
 
       let globalOi = 0;
       let html = '';
 
-      dateOrder.forEach(dateKey => {
-        // Date separator
-        let dateLabel = 'No Date';
-        if (dateKey !== 'no-date') {
-          const d = new Date(dateKey + 'T00:00:00');
-          const today = new Date();
-          today.setHours(0,0,0,0);
-          const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-          const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-          if (d.getTime() === today.getTime()) dateLabel = 'Today';
-          else if (d.getTime() === tomorrow.getTime()) dateLabel = 'Tomorrow';
-          else if (d.getTime() === yesterday.getTime()) dateLabel = 'Yesterday';
-          else dateLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        }
-        html += `<div class="staff-date-separator">
-          <div class="staff-date-separator-line"></div>
-          <span class="staff-date-separator-label">${dateLabel}</span>
-          <div class="staff-date-separator-line"></div>
-        </div>`;
-
-        dateGroups[dateKey].forEach(order => {
-          const oi = globalOi++;
+      // --- Helper to render a single order card ---
+      function getCardHtml(order, oi) {
           const driverName = _esc(getDriverName(order.driver_id));
           const bizName = order.business_name ? _esc(order.business_name) : '';
           const status = order.status || 'pending';
@@ -2254,7 +2221,6 @@
               grouped[cat].push(it);
               itemCount += it.quantity || 0;
             });
-            // Sort categories by fixed order
             const sortedCats = Object.keys(grouped).sort(function(a, b) {
               var ai = CAT_ORDER.indexOf(a); if (ai === -1) ai = 999;
               var bi = CAT_ORDER.indexOf(b); if (bi === -1) bi = 999;
@@ -2264,7 +2230,7 @@
               const lines = grouped[cat].map(it =>
                 `<span class="order-items-line" data-item-id="${it.id || ''}" data-product-key="${it.product_key}">
                   <span class="item-qty-display">${it.quantity}×</span>
-                  <input type="number" class="item-qty-edit" value="${it.quantity}" min="0" data-original="${it.quantity}" style="display:none;width:50px;padding:2px 4px;border-radius:4px;border:1px solid var(--bd);text-align:center;font-size:.85rem">
+                  <input type="number" class="item-qty-edit" value="${it.quantity}" min="0" data-original="${it.quantity}" style="display:none;width:50px;padding:2px 4px;border-radius:4px;border:1px solid var(--bd);text-align:center;font-size:16px">
                   ${_esc(it.product_label || it.product_key)}</span>`
               ).join('');
               return `<span class="order-items-cat">${_esc(cat)}</span>${lines}`;
@@ -2291,7 +2257,7 @@
 
           // Build inline box calculator items
           let boxCalcItems = '';
-          var frostedItems_oi = []; // collect frosted items for this order
+          var frostedItems_oi = [];
           if (items.length > 0) {
             const bcGrouped = {};
             const bcCatOrder = [];
@@ -2307,10 +2273,8 @@
               return ai - bi;
             });
             boxCalcItems = bcSortedCats.map(cat => {
-              // Check if this category is frosted pieces
               var isFrosted = /frosted|frostin/i.test(cat);
               if (isFrosted) {
-                // Collect frosted items instead of rendering standard calc
                 bcGrouped[cat].forEach(item => {
                   frostedItems_oi.push({
                     id: item.id || '',
@@ -2319,7 +2283,7 @@
                     qty: item.quantity || 0
                   });
                 });
-                return ''; // skip standard rendering for frosted
+                return '';
               }
               let catHtml = `<div class="box-calc-cat-header">${_esc(cat)}</div>`;
               catHtml += bcGrouped[cat].map(item => {
@@ -2341,31 +2305,20 @@
             }).join('');
           }
 
-          // Build frosted box packer HTML if this order has frosted items
-          var frostPackerHtml = '';
+          let frostPackerHtml = '';
           if (frostedItems_oi.length > 0) {
-            var frostRemainingHtml = frostedItems_oi.map(function(f) {
-              return '<div class="frost-flavor-row order-items-line" data-item-id="' + f.id + '" data-product-key="' + f.key + '">' +
-                '<span class="frost-flavor-name">' + _esc(f.name) + '</span>' +
-                '<span class="frost-flavor-ordered">Ordered: <span class="item-qty-display">' + f.qty + '</span><input type="number" class="item-qty-edit" value="'+f.qty+'" min="0" data-original="'+f.qty+'" style="display:none;width:40px;margin-left:4px;border:1px solid var(--bd);border-radius:4px;padding:2px;text-align:center;font-size:0.8rem;"></span>' +
-                '<span class="frost-flavor-left" id="frost-left-' + order.id + '-' + f.key + '">Left: ' + f.qty + '</span>' +
-              '</div>';
-            }).join('');
-
-            frostPackerHtml = '<div class="frost-packer" id="frost-packer-' + order.id + '">' +
-              '<div class="frost-packer-header">' +
-                '<span class="box-calc-cat-header" style="border-bottom:none;margin:0;padding:0">🧊 Frosted Box Packer</span>' +
-                '<span class="frost-packer-summary" id="frost-summary-' + order.id + '">0 pieces across 0 boxes</span>' +
-              '</div>' +
-              '<div class="frost-remaining" id="frost-remaining-' + order.id + '">' + frostRemainingHtml + '</div>' +
-              '<div class="frost-boxes" id="frost-boxes-' + order.id + '"></div>' +
-              '<button class="frost-add-box-btn" onclick="frostAddBox(\'' + order.id + '\')">+ Add Box</button>' +
-            '</div>';
+              frostPackerHtml = `
+                <div class="frost-packer-container" id="fp-${order.id}" style="margin-top:16px;padding:12px;background:var(--bg-panel);border-radius:12px;border:1px solid rgba(200,16,46,.15);">
+                <span class="box-calc-cat-header" style="border-bottom:none;margin:0;padding:0">🧊 Frosted Box Packer</span>
+                <div id="fp-items-${order.id}" style="margin:12px 0;display:flex;flex-wrap:wrap;gap:6px;"></div>
+                <div id="fp-boxes-${order.id}" style="display:flex;flex-direction:column;gap:8px;"></div>
+                <button onclick="frostAddBox('${order.id}')" style="margin-top:12px;width:100%;padding:10px;background:none;border:1px dashed var(--bd);border-radius:8px;font-weight:600;color:var(--tx-muted);cursor:pointer;">+ Add Box</button>
+                </div>`;
           }
 
-          html += `
-            <div class="order-card" id="staff-order-${oi}" style="border-radius:16px;border:none;box-shadow:0 4px 16px rgba(0,0,0,.05);">
-              <div class="order-card-top" onclick="toggleStaffOrder(${oi})" style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:36px;">
+          return `
+            <div class="order-card" id="staff-order-${oi}">
+              <div class="order-card-top" onclick="toggleStaffOrder(${oi})" style="min-height:36px;">
                 <div style="display:flex;flex-direction:column;justify-content:center;flex:1;min-width:0;">
                   <div class="order-driver-name" style="font-size:1.05rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${driverName}</div>
                   ${bizName ? `<div class="order-biz-name" style="margin-top:2px;">${bizName}</div>` : ''}
@@ -2405,10 +2358,119 @@
                 ${boxCalcItems}
                 ${frostPackerHtml}
               </div>` : ''}
-
             </div>`;
-        });
-      });
+      }
+      // --- End Helper ---
+
+      function getDateLabel(dateKey) {
+        if (dateKey === 'no-date') return 'No Date';
+        const d = new Date(dateKey + 'T00:00:00');
+        const today = new Date(); today.setHours(0,0,0,0);
+        const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+        const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+        if (d.getTime() === today.getTime()) return 'Today';
+        if (d.getTime() === tomorrow.getTime()) return 'Tomorrow';
+        if (d.getTime() === yesterday.getTime()) return 'Yesterday';
+        return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      }
+
+      if (isArchive) {
+         // FOLDER VIEW BY DRIVER
+         const driverGroups = {};
+         const driverOrder = [];
+         
+         orders.forEach(order => {
+           const did = order.driver_id || 'unknown';
+           if (!driverGroups[did]) { driverGroups[did] = []; driverOrder.push(did); }
+           driverGroups[did].push(order);
+         });
+
+         driverOrder.sort((a, b) => getDriverName(a).localeCompare(getDriverName(b)));
+
+         driverOrder.forEach(did => {
+           const folderName = _esc(getDriverName(did));
+           const fileCount = driverGroups[did].length;
+           const folderId = `archive-folder-${did}`;
+           
+           html += `
+           <div class="archive-folder-card" onclick="document.getElementById('${folderId}').style.display = document.getElementById('${folderId}').style.display === 'none' ? 'block' : 'none'; document.getElementById('chev-${folderId}').style.transform = document.getElementById('${folderId}').style.display === 'none' ? 'rotate(0)' : 'rotate(90deg)';" style="background:var(--bg-card);border:1px solid var(--bd);border-radius:16px;padding:16px 20px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.02)">
+             <div style="display:flex;align-items:center;gap:16px;">
+               <div style="width:40px;height:40px;border-radius:12px;background:rgba(200,16,46,.08);color:var(--red);display:flex;align-items:center;justify-content:center;">
+                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+               </div>
+               <div>
+                 <div style="font-weight:700;font-size:1.1rem;color:var(--tx)">${folderName}</div>
+                 <div style="font-size:.85rem;color:var(--tx-muted)">${fileCount} order${fileCount > 1 ? 's' : ''}</div>
+               </div>
+             </div>
+             <div id="chev-${folderId}" style="color:var(--tx-muted);transition:transform .2s;">
+               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+             </div>
+           </div>
+           <div class="folder-contents" id="${folderId}" style="display:none;padding-left:16px;border-left:2px solid var(--bd);margin-left:20px;margin-bottom:24px;">
+           `;
+
+           const dDateGroups = {};
+           const dDateOrder = [];
+           driverGroups[did].forEach(order => {
+              const dateKey = order.pickup_date || 'no-date';
+              if (!dDateGroups[dateKey]) { dDateGroups[dateKey] = []; dDateOrder.push(dateKey); }
+              dDateGroups[dateKey].push(order);
+           });
+           dDateOrder.sort((a,b) => {
+              if (a === 'no-date') return 1;
+              if (b === 'no-date') return -1;
+              return b.localeCompare(a);
+           });
+
+           dDateOrder.forEach(dateKey => {
+             const dateLabel = getDateLabel(dateKey);
+             html += `<div style="font-size:.85rem;font-weight:700;color:var(--tx-faint);text-transform:uppercase;margin:16px 0 12px 0;letter-spacing:.5px;">${dateLabel}</div>`;
+             
+             dDateGroups[dateKey].forEach(order => {
+                html += getCardHtml(order, globalOi++);
+             });
+           });
+
+           html += `</div>`;
+         });
+
+      } else {
+         // NORMAL ACTIVE VIEW BY DATE
+         const dateGroups = {};
+         const dateOrder = [];
+         
+         orders.forEach(order => {
+           const dateKey = order.pickup_date || 'no-date';
+           if (!dateGroups[dateKey]) { dateGroups[dateKey] = []; dateOrder.push(dateKey); }
+           dateGroups[dateKey].push(order);
+         });
+
+         dateOrder.sort((a, b) => {
+           if (a === 'no-date') return 1;
+           if (b === 'no-date') return -1;
+           return a.localeCompare(b); // Active orders: oldest first? Wait, existing logic:
+         });
+         // The original sort was: return b.localeCompare(a); // Newest first
+         dateOrder.sort((a, b) => {
+           if (a === 'no-date') return 1;
+           if (b === 'no-date') return -1;
+           return b.localeCompare(a);
+         });
+
+         dateOrder.forEach(dateKey => {
+           const dateLabel = getDateLabel(dateKey);
+           html += `<div class="staff-date-separator">
+             <div class="staff-date-separator-line"></div>
+             <span class="staff-date-separator-label">${dateLabel}</span>
+             <div class="staff-date-separator-line"></div>
+           </div>`;
+
+           dateGroups[dateKey].forEach(order => {
+             html += getCardHtml(order, globalOi++);
+           });
+         });
+      }
 
       // Save existing box calc state before destroying the DOM (only if cards exist)
       if (document.getElementById('staff-order-0')) {
