@@ -723,6 +723,21 @@
       display: flex; align-items: flex-start; justify-content: space-between;
       gap: 12px; margin-bottom: 10px;
     }
+    
+    /* ── Sticky Header (Apple Glassmorphism) ── */
+    .order-card.expanded .order-card-top {
+      position: sticky;
+      top: calc(60px + env(safe-area-inset-top)); /* Below the .staff-dash-header */
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.85); /* fallback */
+      background: var(--bg-nav);
+      backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6);
+      margin: -20px -20px 10px -20px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--bd);
+      border-radius: 18px 18px 0 0;
+      box-shadow: 0 4px 16px rgba(0,0,0,.03);
+    }
     .order-driver-name {
       font-weight: 800; font-size: 1rem; color: var(--tx);
       letter-spacing: -0.01em;
@@ -1091,7 +1106,7 @@
     /* ── Overflow fixes ── */
     body { overflow-x: hidden; }
     .order-driver-name, .order-biz-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
-    .order-card { overflow: hidden; }
+    /* Removed .order-card { overflow: hidden; } to allow position: sticky */
     .staff-container { overflow-x: hidden; }
 
     /* ── In-app Toast ── */
@@ -2435,14 +2450,17 @@
     }
 
     function toggleStaffOrder(idx) {
+      const card = document.getElementById('staff-order-' + idx);
       const meta = document.getElementById('staff-meta-' + idx);
       const boxcalc = document.getElementById('staff-boxcalc-' + idx);
       const isExpanded = boxcalc && boxcalc.style.display !== 'none';
 
       // ── Accordion: close the previously open order first ──
       if (!isExpanded && currentOpenOrder !== -1 && currentOpenOrder !== idx) {
+        var prevCard = document.getElementById('staff-order-' + currentOpenOrder);
         var prevMeta = document.getElementById('staff-meta-' + currentOpenOrder);
         var prevBox = document.getElementById('staff-boxcalc-' + currentOpenOrder);
+        if (prevCard) prevCard.classList.remove('expanded');
         if (prevMeta) prevMeta.style.display = 'none';
         if (prevBox) prevBox.style.display = 'none';
         // Silently save the old order's calc state
@@ -2451,6 +2469,22 @@
 
       if (meta) meta.style.display = isExpanded ? 'none' : 'flex';
       if (boxcalc) boxcalc.style.display = isExpanded ? 'none' : 'block';
+      
+      if (!isExpanded) {
+        if (card) card.classList.add('expanded');
+        // Smooth scroll snap-to-focus
+        setTimeout(function() {
+          if (!card) return;
+          var navOffset = 60 + parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)') || 0);
+          var cardTop = card.getBoundingClientRect().top + window.pageYOffset;
+          window.scrollTo({
+            top: cardTop - navOffset - 16, // 16px breathing room
+            behavior: 'smooth'
+          });
+        }, 50);
+      } else {
+        if (card) card.classList.remove('expanded');
+      }
 
       currentOpenOrder = isExpanded ? -1 : idx;
     }
