@@ -861,46 +861,23 @@
     }
     .box-calc-cat-header:first-child { margin-top: 0; }
 
-    /* ── Grid Table ── */
-    .bc-table {
-      display: grid;
-      grid-template-columns: 1fr auto auto;
-      gap: 0;
-      width: 100%;
-    }
-    .bc-table-head {
-      display: contents;
-    }
-    .bc-table-head span {
-      font-size: .65rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .5px; color: var(--tx-faint);
-      padding: 0 0 6px; border-bottom: 1.5px solid var(--bd);
-    }
-    .bc-table-head span:nth-child(2),
-    .bc-table-head span:nth-child(3) { text-align: center; }
-
+    /* ── Stepper Row ── */
     .box-calc-item {
-      display: contents;
-    }
-    .box-calc-item .bc-cell {
-      display: flex; align-items: center;
-      padding: 7px 0;
+      padding: 10px 0;
       border-bottom: 1px solid var(--bd);
-      min-height: 36px;
     }
-    .bc-cell-product {
-      gap: 5px; overflow: hidden;
-    }
-    .bc-cell-input {
-      justify-content: center;
-    }
-    .bc-cell-result {
-      justify-content: center;
-      min-width: 80px;
-    }
+    .box-calc-item:last-child { border-bottom: none; }
 
+    .bc-row-top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px;
+    }
+    .bc-row-left {
+      display: flex; align-items: center; gap: 6px;
+      min-width: 0; flex: 1;
+    }
     .box-calc-item-name {
-      font-weight: 600; font-size: .84rem; color: var(--tx);
+      font-weight: 600; font-size: .88rem; color: var(--tx);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .box-calc-item-qty-badge {
@@ -908,42 +885,68 @@
       background: rgba(0,0,0,.04); padding: 1px 6px; border-radius: 10px;
       white-space: nowrap; flex-shrink: 0;
     }
+    .bc-row-result {
+      font-size: .75rem; font-weight: 600;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .bc-row-result.exact { color: var(--green); }
+    .bc-row-result.has-extra { color: var(--yellow); }
+    .bc-row-result.empty { color: var(--tx-faint); font-weight: 400; }
 
-    .box-calc-input {
-      width: 48px;
-      padding: 4px 0;
-      border: none;
-      border-bottom: 1.5px solid var(--bd);
-      border-radius: 0;
-      background: transparent;
+    /* ── Preset Pills ── */
+    .bc-pills {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .bc-pill {
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1.5px solid var(--bd);
+      background: var(--bg-surface);
+      color: var(--tx-muted);
+      font-family: 'Outfit', sans-serif;
+      font-size: .78rem; font-weight: 600;
+      cursor: pointer;
+      transition: all .2s ease;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .bc-pill:active { transform: scale(.94); }
+    .bc-pill.active {
+      background: var(--red);
+      color: #fff;
+      border-color: var(--red);
+    }
+    .bc-pill-custom {
+      padding: 4px 8px;
+      border-radius: 20px;
+      border: 1.5px solid var(--bd);
+      background: var(--bg-surface);
       color: var(--tx);
       font-family: 'Outfit', sans-serif;
-      font-size: .88rem; font-weight: 600;
+      font-size: .78rem; font-weight: 600;
       text-align: center;
-      transition: border-color .2s;
+      width: 44px;
       -moz-appearance: textfield;
       appearance: textfield;
+      transition: border-color .2s;
     }
-    .box-calc-input::-webkit-outer-spin-button,
-    .box-calc-input::-webkit-inner-spin-button {
+    .bc-pill-custom::-webkit-outer-spin-button,
+    .bc-pill-custom::-webkit-inner-spin-button {
       -webkit-appearance: none; appearance: none; margin: 0;
     }
-    .box-calc-input:focus {
+    .bc-pill-custom:focus {
       outline: none;
-      border-bottom-color: var(--red);
+      border-color: var(--red);
     }
-    .box-calc-input::placeholder {
-      color: var(--tx-faint); font-weight: 400; font-size: .78rem;
+    .bc-pill-custom.active {
+      border-color: var(--red);
+      background: rgba(200,16,46,.08);
     }
 
-    .box-calc-result {
-      font-size: .72rem; font-weight: 600;
-      white-space: nowrap;
-    }
-    .box-calc-result.exact { color: var(--green); }
-    .box-calc-result.has-extra { color: var(--yellow); }
-    .box-calc-result.empty { color: var(--tx-faint); font-weight: 400; font-style: italic; }
-    .box-calc-result .result-tag { font-size: .72rem; }
+    /* Hidden backing input for save/restore */
+    .box-calc-input { display: none; }
 
     /* ── Frosted Box Packer ── */
     .frost-packer { margin-top:16px; padding-top:16px; border-top:2px solid rgba(200,16,46,.15); }
@@ -1826,6 +1829,25 @@
               if (inp) {
                 inp.value = state.boxCalc[inputId];
                 calcBox(inp);
+                // Activate the matching pill visually
+                var pillsContainer = document.querySelector('.bc-pills[data-uid="' + inputId + '"]');
+                if (pillsContainer) {
+                  var savedVal = state.boxCalc[inputId];
+                  var matchedPreset = false;
+                  pillsContainer.querySelectorAll('.bc-pill').forEach(function(p) {
+                    if (p.dataset.val === savedVal) {
+                      p.classList.add('active');
+                      matchedPreset = true;
+                    }
+                  });
+                  if (!matchedPreset && savedVal) {
+                    var customInp = pillsContainer.querySelector('.bc-pill-custom');
+                    if (customInp) {
+                      customInp.value = savedVal;
+                      customInp.classList.add('active');
+                    }
+                  }
+                }
               }
             });
           }
@@ -2263,9 +2285,7 @@
                 });
                 return ''; // skip standard rendering for frosted
               }
-              let catHtml = `<div class="box-calc-cat-header">${_esc(cat)}</div>
-                <div class="bc-table">
-                  <div class="bc-table-head"><span>Product</span><span>Per Box</span><span>Result</span></div>`;
+              let catHtml = `<div class="box-calc-cat-header">${_esc(cat)}</div>`;
               catHtml += bcGrouped[cat].map(item => {
                 const label = _esc(item.product_label || item.product_key);
                 const qty = item.quantity || 0;
@@ -2273,19 +2293,23 @@
                 const it_id = item.id || '';
                 return `
                   <div class="box-calc-item order-items-line" data-item-id="${it_id}" data-product-key="${item.product_key}">
-                    <div class="bc-cell bc-cell-product">
-                      <span class="box-calc-item-name">${label}</span>
-                      <span class="box-calc-item-qty-badge"><span class="item-qty-display">${qty}</span><input type="number" class="item-qty-edit" value="${qty}" min="0" data-original="${qty}" style="display:none;width:36px;padding:1px;border-radius:4px;border:1px solid var(--bd);text-align:center;font-size:.7rem;">×</span>
+                    <div class="bc-row-top">
+                      <div class="bc-row-left">
+                        <span class="box-calc-item-name">${label}</span>
+                        <span class="box-calc-item-qty-badge"><span class="item-qty-display">${qty}</span><input type="number" class="item-qty-edit" value="${qty}" min="0" data-original="${qty}" style="display:none;width:36px;padding:1px;border-radius:4px;border:1px solid var(--bd);text-align:center;font-size:.7rem;">×</span>
+                      </div>
+                      <span class="bc-row-result empty" id="${uid}-result">—</span>
                     </div>
-                    <div class="bc-cell bc-cell-input">
-                      <input class="box-calc-input" type="number" min="1" id="${uid}" data-qty="${qty}" placeholder="—" oninput="calcBox(this); staffBoxAutoSave('${order.id}')" />
-                    </div>
-                    <div class="bc-cell bc-cell-result">
-                      <div class="box-calc-result empty" id="${uid}-result">—</div>
+                    <input class="box-calc-input" type="number" id="${uid}" data-qty="${qty}" value="" />
+                    <div class="bc-pills" data-uid="${uid}" data-order-id="${order.id}">
+                      <span class="bc-pill" data-val="6" onclick="calcBoxPill(this)">6</span>
+                      <span class="bc-pill" data-val="12" onclick="calcBoxPill(this)">12</span>
+                      <span class="bc-pill" data-val="24" onclick="calcBoxPill(this)">24</span>
+                      <span class="bc-pill" data-val="30" onclick="calcBoxPill(this)">30</span>
+                      <input type="number" class="bc-pill-custom" min="1" placeholder="#" data-uid="${uid}" data-order-id="${order.id}" oninput="calcBoxCustom(this)" />
                     </div>
                   </div>`;
               }).join('');
-              catHtml += `</div>`; // close bc-table
               return catHtml;
             }).join('');
           }
@@ -2427,8 +2451,8 @@
       if (!resultEl) return;
 
       if (!boxSize || boxSize < 1) {
-        resultEl.className = 'box-calc-result empty';
-        resultEl.innerHTML = '—';
+        resultEl.className = 'bc-row-result empty';
+        resultEl.textContent = '—';
         return;
       }
 
@@ -2437,13 +2461,63 @@
       const exact = leftover === 0;
 
       if (exact) {
-        resultEl.className = 'box-calc-result exact';
-        resultEl.innerHTML = `<span class="result-tag">${boxes} box${boxes !== 1 ? 'es' : ''} · Exact ✓</span>`;
+        resultEl.className = 'bc-row-result exact';
+        resultEl.textContent = `${boxes} box${boxes !== 1 ? 'es' : ''} ✓`;
       } else {
-        resultEl.className = 'box-calc-result has-extra';
-        resultEl.innerHTML = `<span class="result-tag">${boxes} box${boxes !== 1 ? 'es' : ''} + ${leftover} left</span>`;
+        resultEl.className = 'bc-row-result has-extra';
+        resultEl.textContent = `${boxes}b + ${leftover} left`;
       }
       saveBoxCalcState();
+    }
+
+    function calcBoxPill(pill) {
+      const pills = pill.parentElement;
+      const uid = pills.dataset.uid;
+      const orderId = pills.dataset.orderId;
+      const val = parseInt(pill.dataset.val);
+      const hiddenInput = document.getElementById(uid);
+      if (!hiddenInput) return;
+
+      // Toggle: if already active, deselect
+      const wasActive = pill.classList.contains('active');
+
+      // Clear all pills in this row
+      pills.querySelectorAll('.bc-pill').forEach(p => p.classList.remove('active'));
+      const customInput = pills.querySelector('.bc-pill-custom');
+      if (customInput) { customInput.classList.remove('active'); customInput.value = ''; }
+
+      if (wasActive) {
+        hiddenInput.value = '';
+      } else {
+        pill.classList.add('active');
+        hiddenInput.value = val;
+      }
+
+      calcBox(hiddenInput);
+      staffBoxAutoSave(orderId);
+    }
+
+    function calcBoxCustom(customInput) {
+      const uid = customInput.dataset.uid;
+      const orderId = customInput.dataset.orderId;
+      const val = parseInt(customInput.value);
+      const hiddenInput = document.getElementById(uid);
+      if (!hiddenInput) return;
+
+      // Clear preset pills
+      const pills = customInput.parentElement;
+      pills.querySelectorAll('.bc-pill').forEach(p => p.classList.remove('active'));
+
+      if (val && val > 0) {
+        customInput.classList.add('active');
+        hiddenInput.value = val;
+      } else {
+        customInput.classList.remove('active');
+        hiddenInput.value = '';
+      }
+
+      calcBox(hiddenInput);
+      staffBoxAutoSave(orderId);
     }
 
     /* ── Quick Calculator ── */
