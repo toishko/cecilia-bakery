@@ -6248,7 +6248,22 @@ async function _pmInsertB2BPrices(b2bKey, label, category) {
   const { data: drivers } = await sb.from('drivers').select('id').eq('is_active', true);
   if (!drivers || !drivers.length) return;
 
-  // 2. Map category → existing product key prefixes for price lookup
+  // Resolve human-readable tag_en to section key if needed
+  const tagToSection = {
+    'Round': 'redondo', 'Redondo': 'redondo',
+    'Plain': 'plain',
+    'Tres Leche': 'tresleche',
+    'Pieces': 'piezas', 'Piezas': 'piezas',
+    'Frosted Pieces': 'frostin', 'Piezas Frostin': 'frostin', 'Frostin': 'frostin',
+    'Happy Birthday — BIG': 'hb_big', 'HB Big': 'hb_big',
+    'Happy Birthday — SMALL': 'hb_small', 'HB Small': 'hb_small',
+    'Square': 'cuadrao', 'Cuadrao': 'cuadrao',
+    'Cups': 'basos', 'Basos': 'basos',
+    'Family Size': 'familiar', 'Familiar': 'familiar',
+  };
+  const sectionKey = tagToSection[category] || category;
+
+  // 2. Map section key → existing product key prefixes for price lookup
   const catPrefixMap = {
     redondo: ['pina_inside','guava_inside','dulce_inside'],
     plain: ['plain','raisin','pudin'],
@@ -6261,7 +6276,7 @@ async function _pmInsertB2BPrices(b2bKey, label, category) {
     basos: ['bas_tl','bas_cl','bas_hershey'],
     familiar: ['fam_tl','fam_cl'],
   };
-  const sampleKeys = catPrefixMap[category] || [];
+  const sampleKeys = catPrefixMap[sectionKey] || [];
 
   // 3. For each driver, find the avg price of that category and insert
   for (const drv of drivers) {
@@ -8250,7 +8265,14 @@ function _b2bOpenModal(product) {
     }
 
     if (error) { showToast('Error: ' + error.message, 'error'); return; }
-    showToast(isEdit ? 'Product updated' : 'Product added', 'success');
+
+    // Auto-insert driver_prices for all drivers when adding a new B2B product
+    if (!isEdit) {
+      var driverKey = 'b2b_' + nameEn.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      try { await _pmInsertB2BPrices(driverKey, nameEn, tagEn); } catch (e) { console.warn('B2B auto-pricing:', e); }
+    }
+
+    showToast(isEdit ? 'Product updated' : 'Product added ✓ — drivers can now order this', 'success');
     document.getElementById('b2b-modal-overlay').remove();
     await _b2bLoadProducts();
   });
@@ -8395,18 +8417,32 @@ async function _noLoadProducts() {
     },
   };
 
-  // ── Merge B2B products from Supabase ──
+  // ── Merge B2B products from b2b_products table ──
   try {
-    const { data: b2bItems } = await sb.from('products')
-      .select('b2b_key, name_en, name_es, b2b_category')
-      .eq('b2b_enabled', true);
+    const { data: b2bItems } = await sb.from('b2b_products')
+      .select('id, name_en, name_es, tag_en, type, sold_out')
+      .order('sort_order', { ascending: true });
     if (b2bItems && b2bItems.length) {
+      const tagToSection = {
+        'Round': 'redondo', 'Redondo': 'redondo',
+        'Plain': 'plain',
+        'Tres Leche': 'tresleche',
+        'Pieces': 'piezas', 'Piezas': 'piezas',
+        'Frosted Pieces': 'frostin', 'Piezas Frostin': 'frostin', 'Frostin': 'frostin',
+        'Happy Birthday — BIG': 'hb_big', 'HB Big': 'hb_big',
+        'Happy Birthday — SMALL': 'hb_small', 'HB Small': 'hb_small',
+        'Square': 'cuadrao', 'Cuadrao': 'cuadrao',
+        'Cups': 'basos', 'Basos': 'basos',
+        'Family Size': 'familiar', 'Familiar': 'familiar',
+      };
       b2bItems.forEach(p => {
-        if (!p.b2b_key || !p.b2b_category) return;
-        const sec = adminNoProducts[p.b2b_category];
+        if (p.sold_out) return;
+        const secKey = tagToSection[p.tag_en] || p.tag_en;
+        const sec = adminNoProducts[secKey];
         if (!sec) return;
-        if (sec.items.some(item => item.key === p.b2b_key)) return;
-        sec.items.push({ key: p.b2b_key, en: p.name_en, es: p.name_es });
+        const driverKey = 'b2b_' + p.name_en.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+        if (sec.items.some(item => item.key === driverKey)) return;
+        sec.items.push({ key: driverKey, en: p.name_en, es: p.name_es || p.name_en });
       });
     }
   } catch (e) { console.warn('B2B products merge:', e); }

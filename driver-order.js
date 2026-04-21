@@ -1076,22 +1076,39 @@ function buildProductSections() {
    ═══════════════════════════════════ */
 async function loadDriverProducts() {
   // The hardcoded PRODUCTS catalog uses canonical keys that match driver_prices.
-  // B2B products from the admin's Manage > Products (b2b_enabled=true) are
-  // fetched and MERGED into the appropriate section dynamically.
+  // B2B products added by the owner in the B2B Catalog tab are fetched from
+  // the b2b_products table and MERGED into the appropriate section.
   try {
     if (!sb) return;
-    const { data, error } = await sb.from('products')
-      .select('b2b_key, name_en, name_es, b2b_category')
-      .eq('b2b_enabled', true);
+    const { data, error } = await sb.from('b2b_products')
+      .select('id, name_en, name_es, tag_en, type, sold_out')
+      .order('sort_order', { ascending: true });
     if (error || !data || !data.length) return;
 
+    // Map human-readable tag_en → hardcoded section key
+    var tagToSection = {
+      'Round': 'redondo', 'Redondo': 'redondo',
+      'Plain': 'plain',
+      'Tres Leche': 'tresleche',
+      'Pieces': 'piezas', 'Piezas': 'piezas',
+      'Frosted Pieces': 'frostin', 'Piezas Frostin': 'frostin', 'Frostin': 'frostin',
+      'Happy Birthday — BIG': 'hb_big', 'HB Big': 'hb_big',
+      'Happy Birthday — SMALL': 'hb_small', 'HB Small': 'hb_small',
+      'Square': 'cuadrao', 'Cuadrao': 'cuadrao',
+      'Cups': 'basos', 'Basos': 'basos',
+      'Family Size': 'familiar', 'Familiar': 'familiar',
+    };
+
     data.forEach(function(p) {
-      if (!p.b2b_key || !p.b2b_category) return;
-      const sec = PRODUCTS[p.b2b_category];
+      if (p.sold_out) return; // skip sold out items
+      var secKey = tagToSection[p.tag_en] || p.tag_en;
+      var sec = PRODUCTS[secKey];
       if (!sec) return;
-      // Skip if already in the catalog (avoid duplicates on re-load)
-      if (sec.items.some(function(item) { return item.key === p.b2b_key; })) return;
-      sec.items.push({ key: p.b2b_key, en: p.name_en, es: p.name_es });
+      // Generate a stable key from the b2b product id
+      var driverKey = 'b2b_' + p.name_en.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      // Skip if already in the catalog
+      if (sec.items.some(function(item) { return item.key === driverKey; })) return;
+      sec.items.push({ key: driverKey, en: p.name_en, es: p.name_es || p.name_en });
     });
     _log('B2B products merged:', data.length, 'items');
   } catch (e) { console.warn('loadDriverProducts B2B:', e); }
