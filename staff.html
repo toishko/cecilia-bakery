@@ -2479,27 +2479,22 @@
       container.innerHTML = html || '<div class="empty-state">No orders found</div>';
 
       // Initialize frost packers for orders that have frosted items
-      // We need to re-detect frosted items per order and call frostInit
-      globalOi = 0;
-      dateOrder.forEach(function(dateKey) {
-        dateGroups[dateKey].forEach(function(order) {
-          var oi2 = globalOi++;
-          var orderItems = order.driver_order_items || [];
-          var frosted = [];
-          orderItems.forEach(function(item) {
-            var cat = getCategory(item.product_key) || 'Other';
-            if (/frosted|frostin/i.test(cat)) {
-              frosted.push({
-                key: item.product_key,
-                name: item.product_label || item.product_key,
-                qty: item.quantity || 0
-              });
-            }
-          });
-          if (frosted.length > 0) {
-            frostInit(order.id, frosted);
+      orders.forEach(function(order) {
+        var orderItems = order.driver_order_items || [];
+        var frosted = [];
+        orderItems.forEach(function(item) {
+          var cat = getCategory(item.product_key) || 'Other';
+          if (/frosted|frostin/i.test(cat)) {
+            frosted.push({
+              key: item.product_key,
+              name: item.product_label || item.product_key,
+              qty: item.quantity || 0
+            });
           }
         });
+        if (frosted.length > 0) {
+          frostInit(order.id, frosted);
+        }
       });
 
       const qcCard = document.getElementById('quick-calc-card');
