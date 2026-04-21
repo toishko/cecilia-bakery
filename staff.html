@@ -3025,19 +3025,26 @@
         familiar: { label:'Family Size', keys:['fam_tl','fam_cl'] }
       };
 
-      Object.keys(cats).forEach(function(catKey) {
+      Object.keys(cats).forEach(function(catKey, ci) {
         var cat = cats[catKey];
-        html += '<div class="staff-add-cat" style="margin-bottom:8px">';
-        html += '<div style="font-size:.72rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;padding:4px 0;border-bottom:1px solid rgba(200,16,46,.15)">' + cat.label + '</div>';
+        html += '<div class="staff-add-cat" data-cat="' + catKey + '" style="margin-bottom:4px">';
+        html += '<div onclick="this.parentElement.classList.toggle(\'open\');this.querySelector(\'.sac-chev\').style.transform=this.parentElement.classList.contains(\'open\')?\'rotate(90deg)\':\'rotate(0)\'" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;cursor:pointer;border-bottom:1px solid rgba(200,16,46,.15)">';
+        html += '<span style="font-size:.78rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px">' + cat.label + '</span>';
+        html += '<span class="sac-chev" style="color:var(--tx-muted);transition:transform .15s;transform:rotate(0);display:flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>';
+        html += '</div>';
+        html += '<div class="staff-add-cat-items" style="display:none;padding-left:4px">';
         cat.keys.forEach(function(key) {
           var label = STAFF_PRODUCT_LABELS[key] || key;
           html += '<div class="staff-add-row" data-key="' + key + '" data-name="' + _esc(label.toLowerCase()) + '" style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)">';
           html += '<span style="font-size:.85rem">' + _esc(label) + '</span>';
-          html += '<input type="number" class="staff-add-qty" data-key="' + key + '" data-label="' + _esc(label) + '" min="0" value="0" style="width:55px;padding:4px 6px;border-radius:6px;border:1px solid var(--bd);text-align:center;font-size:.85rem">';
+          html += '<input type="number" class="staff-add-qty" data-key="' + key + '" data-label="' + _esc(label) + '" min="0" value="0" style="width:55px;padding:4px 6px;border-radius:6px;border:1px solid var(--bd);text-align:center;font-size:16px">';
           html += '</div>';
         });
-        html += '</div>';
+        html += '</div></div>';
       });
+
+      // Add CSS for the collapsible toggle
+      html += '<style>.staff-add-cat.open .staff-add-cat-items{display:block!important}</style>';
 
       html += '<button onclick="staffConfirmAdd(' + idx + ')" style="width:100%;padding:12px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:.9rem;font-weight:700;cursor:pointer;margin-top:12px">Add Selected</button>';
       html += '</div>';
@@ -3048,16 +3055,25 @@
 
     function staffFilterAddProducts() {
       var q = document.getElementById('staff-add-search').value.toLowerCase().trim();
-      document.querySelectorAll('.staff-add-row').forEach(function(row) {
-        var match = !q || (row.dataset.name || '').indexOf(q) >= 0;
-        row.style.display = match ? 'flex' : 'none';
-      });
       document.querySelectorAll('.staff-add-cat').forEach(function(cat) {
         var hasVisible = false;
         cat.querySelectorAll('.staff-add-row').forEach(function(row) {
-          if (row.style.display !== 'none') hasVisible = true;
+          var match = !q || (row.dataset.name || '').indexOf(q) >= 0;
+          row.style.display = match ? 'flex' : 'none';
+          if (match) hasVisible = true;
         });
-        cat.style.display = hasVisible ? 'block' : 'none';
+        cat.style.display = hasVisible ? '' : 'none';
+        // Auto-expand categories that have search matches, collapse others
+        if (q) {
+          if (hasVisible) cat.classList.add('open');
+          else cat.classList.remove('open');
+          var chev = cat.querySelector('.sac-chev');
+          if (chev) chev.style.transform = hasVisible ? 'rotate(90deg)' : 'rotate(0)';
+        } else {
+          cat.classList.remove('open');
+          var chev = cat.querySelector('.sac-chev');
+          if (chev) chev.style.transform = 'rotate(0)';
+        }
       });
     }
 
