@@ -3077,8 +3077,9 @@
       var orderId = input.dataset.order;
       var boxNum = parseInt(input.dataset.box);
       var flavorKey = input.dataset.flavor;
-      var val = parseInt(input.value) || 0;
-      if (val < 0) val = 0;
+      var rawVal = input.value;
+      var val = parseInt(rawVal);
+      if (isNaN(val) || val < 0) val = 0;
 
       var state = frostState[orderId];
       if (!state) return;
@@ -3098,7 +3099,6 @@
       }
 
       box.pieces[flavorKey] = val;
-      input.value = val;
 
       // Cap total pieces in this box at 56
       var totalPieces = 0;
@@ -3107,11 +3107,28 @@
         val = val - (totalPieces - 56);
         if (val < 0) val = 0;
         box.pieces[flavorKey] = val;
-        input.value = val;
       }
+
+      var activeFlavor = document.activeElement === input ? flavorKey : null;
+      var activeBox = document.activeElement === input ? boxNum : null;
 
       frostRenderBoxes(orderId);
       staffBoxAutoSave(orderId);
+
+      if (activeFlavor !== null && activeBox !== null) {
+        var selector = 'input.frost-line-input[data-order="' + orderId + '"][data-box="' + activeBox + '"][data-flavor="' + activeFlavor + '"]';
+        var newInput = document.querySelector(selector);
+        if (newInput) {
+          newInput.focus();
+          if (rawVal === '') {
+            newInput.value = '';
+          } else {
+            var v = newInput.value;
+            newInput.value = '';
+            newInput.value = v;
+          }
+        }
+      }
     }
 
     function frostUpdateRemaining(orderId) {
