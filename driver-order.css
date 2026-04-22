@@ -139,7 +139,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   padding-top:calc(12px + constant(safe-area-inset-top));
   padding-top:calc(12px + env(safe-area-inset-top));
   align-items:center;justify-content:space-between;
-  position:sticky;top:0;z-index:100;backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:150;backdrop-filter:blur(12px);
   -webkit-backdrop-filter:blur(12px)}
 .mobile-logo{height:32px;width:auto;object-fit:contain}
 [data-theme="dark"] .mobile-logo{filter:brightness(0) invert(1) sepia(1) saturate(2) hue-rotate(310deg)}
@@ -483,7 +483,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 /* Footer bar */
 .form-footer{position:fixed;bottom:0;left:0;right:0;background:var(--bg-card);
   border-top:1px solid var(--bd);padding:12px 16px;display:flex;align-items:center;
-  justify-content:space-between;z-index:100;backdrop-filter:blur(12px);
+  justify-content:space-between;z-index:150;backdrop-filter:blur(12px);
   padding-bottom:calc(12px + env(safe-area-inset-bottom));
   -webkit-transform:translateZ(0);transform:translateZ(0);will-change:transform}
 .form-footer-count{font-size:.9rem;color:var(--tx-muted)}

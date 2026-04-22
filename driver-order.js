@@ -585,8 +585,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('order-detail-overlay').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeOrderDetail();
   });
-  document.getElementById('balance-modal-close').addEventListener('click', closeBalanceBreakdown);
-  document.getElementById('balance-modal-overlay').addEventListener('click', (e) => {
+  document.getElementById('balance-modal-close')?.addEventListener('click', closeBalanceBreakdown);
+  document.getElementById('balance-modal-overlay')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeBalanceBreakdown();
   });
   const notifToggle = document.getElementById('notification-toggle');
@@ -1221,16 +1221,20 @@ let summaryIdx = 0;
 
 function openSummary() {
   if (window._swipeDismissCooldown) return;
-  saveFormToOrder(activeOrderIdx);
-  summaryIdx = 0;
-  renderSummaryOrder(0);
-  document.getElementById('summary-overlay').classList.add('open');
-  document.body.dataset.scrollY = window.scrollY;
-  document.body.style.position = 'fixed';
-  document.body.style.top = `-${window.scrollY}px`;
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-  applyLang();
+  try {
+    saveFormToOrder(activeOrderIdx);
+    summaryIdx = 0;
+    renderSummaryOrder(0);
+    document.getElementById('summary-overlay').classList.add('open');
+    document.body.dataset.scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${window.scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    applyLang();
+  } catch(e) {
+    console.error('[openSummary] Error:', e);
+  }
 }
 
 function closeSummary() {
