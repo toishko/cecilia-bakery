@@ -684,10 +684,24 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .oca-card {
   display: flex;
   align-items: center;
+  position: relative;
   padding: 14px 4px;
   border-bottom: 1px solid var(--bd);
   cursor: pointer;
   transition: background 0.15s;
+}
+
+.oca-ref {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--red);
+  background: var(--red-light, rgba(200, 16, 46, 0.1));
+  padding: 4px 10px;
+  border-radius: 8px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
 }
 .oca-card:hover { background: rgba(200,16,46,.03); }
 .oca-card:last-child { border-bottom: none; }

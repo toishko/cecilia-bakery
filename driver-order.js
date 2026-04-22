@@ -1864,12 +1864,11 @@ function renderSingleOcaCard(primary, isChild = false) {
 
   function getOrderName(o) {
     if (o.business_name && o.business_name.trim()) return o.business_name.trim();
-    if (o.driver_ref && o.driver_ref.trim()) return o.driver_ref.trim();
-    return "";
+    return lang === 'es' ? 'Sin negocio' : 'No business';
   }
 
   function getInit(name) {
-    if (!name) return '#';
+    if (!name || name === 'Sin negocio' || name === 'No business') return '#';
     const w = name.trim().split(/\s+/);
     return w.length >= 2 ? (w[0][0] + w[1][0]).toUpperCase() : name.substring(0, 2).toUpperCase();
   }
@@ -1887,8 +1886,11 @@ function renderSingleOcaCard(primary, isChild = false) {
     }
   }
 
+  const refHtml = primary.driver_ref ? `<div class="oca-ref">#${_esc(primary.driver_ref)}</div>` : '';
+
   return `
     <div class="oca-card ${isChild ? 'oca-child' : ''}" onclick="showOrderDetail('${primary.id}')">
+      ${refHtml}
       ${avatarHtml}
       <div class="oca-body">
         <div class="oca-name">${bizDisplay}</div>
@@ -1931,12 +1933,11 @@ function renderOrderCard(batch) {
 
   function getOrderName(o) {
     if (o.business_name && o.business_name.trim()) return o.business_name.trim();
-    if (o.driver_ref && o.driver_ref.trim()) return o.driver_ref.trim();
-    return "";
+    return lang === 'es' ? 'Sin negocio' : 'No business';
   }
 
   function getInit(name) {
-    if (!name) return '#';
+    if (!name || name === 'Sin negocio' || name === 'No business') return '#';
     const w = name.trim().split(/\s+/);
     return w.length >= 2 ? (w[0][0] + w[1][0]).toUpperCase() : name.substring(0, 2).toUpperCase();
   }
