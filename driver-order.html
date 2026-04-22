@@ -609,6 +609,87 @@
     </div>
   </div>
 
+  <!-- CLIENT PROFILE SHEET (Full-screen, Apple-style) -->
+  <div class="cp-overlay" id="cp-overlay">
+    <div class="cp-sheet">
+      <div class="cp-header">
+        <button class="cp-back" id="cp-back"><i data-lucide="chevron-left"></i><span data-en="Clients" data-es="Clientes">Clients</span></button>
+        <button class="cp-edit-btn" id="cp-edit-btn" data-en="Edit" data-es="Editar">Edit</button>
+      </div>
+      <div class="cp-body">
+        <!-- Client info card -->
+        <div class="cp-info-card">
+          <div class="cp-avatar" id="cp-avatar">AB</div>
+          <h2 class="cp-name" id="cp-name">Client Name</h2>
+          <div class="cp-subtitle" id="cp-subtitle"></div>
+        </div>
+
+        <!-- Info group (inset grouped list) -->
+        <div class="cp-group">
+          <div class="cp-group-label" data-en="Details" data-es="Detalles">Details</div>
+          <div class="cp-inset">
+            <div class="cp-row" id="cp-row-phone" style="display:none">
+              <span class="cp-row-icon"><i data-lucide="phone"></i></span>
+              <span class="cp-row-label" id="cp-phone-val"></span>
+            </div>
+            <div class="cp-row" id="cp-row-address" style="display:none">
+              <span class="cp-row-icon"><i data-lucide="map-pin"></i></span>
+              <span class="cp-row-label" id="cp-address-val"></span>
+            </div>
+            <div class="cp-row" id="cp-row-contact" style="display:none">
+              <span class="cp-row-icon"><i data-lucide="user"></i></span>
+              <span class="cp-row-label" id="cp-contact-val"></span>
+            </div>
+            <div class="cp-row" id="cp-row-notes" style="display:none">
+              <span class="cp-row-icon"><i data-lucide="file-text"></i></span>
+              <span class="cp-row-label cp-notes-text" id="cp-notes-val"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pricing section -->
+        <div class="cp-group">
+          <div class="cp-group-label" data-en="Pricing" data-es="Precios">Pricing</div>
+          <div class="cp-inset">
+            <div class="cp-row cp-row-toggle">
+              <span class="cp-row-label" data-en="Custom Pricing" data-es="Precios Personalizados">Custom Pricing</span>
+              <label class="cp-switch">
+                <input type="checkbox" id="cp-custom-toggle">
+                <span class="cp-switch-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="cp-pricing-hint" id="cp-pricing-hint" data-en="Enable to set prices specific to this client." data-es="Activa para establecer precios específicos para este cliente.">Enable to set prices specific to this client.</div>
+        </div>
+
+        <!-- Template button (visible when custom pricing ON) -->
+        <div class="cp-template-bar" id="cp-template-bar" style="display:none">
+          <button class="cp-template-btn" id="cp-template-btn">
+            <i data-lucide="copy"></i>
+            <span data-en="Copy prices from..." data-es="Copiar precios de...">Copy prices from...</span>
+          </button>
+        </div>
+
+        <!-- Price editor (visible when custom pricing ON) -->
+        <div id="cp-price-editor" style="display:none"></div>
+
+        <!-- Save pricing bar -->
+        <div class="cp-save-bar" id="cp-save-bar" style="display:none">
+          <button class="cp-save-btn" id="cp-save-prices-btn" data-en="Save Prices" data-es="Guardar Precios">Save Prices</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEMPLATE ACTION SHEET -->
+  <div class="cp-action-sheet-overlay" id="cp-action-sheet-overlay">
+    <div class="cp-action-sheet" id="cp-action-sheet">
+      <div class="cp-action-title" data-en="Copy prices from" data-es="Copiar precios de">Copy prices from</div>
+      <div class="cp-action-list" id="cp-action-list"></div>
+      <button class="cp-action-cancel" id="cp-action-cancel" data-en="Cancel" data-es="Cancelar">Cancel</button>
+    </div>
+  </div>
+
   <!-- PAYMENT MODAL -->
   <div class="pay-modal-overlay" id="pay-modal-overlay">
     <div class="pay-modal">

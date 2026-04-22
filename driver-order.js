@@ -610,6 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Order form ──
   document.getElementById('footer-continue-btn').addEventListener('click', openSummary);
+  _initClientProfileEvents();
   document.getElementById('summary-back').addEventListener('click', closeSummary);
   document.getElementById('summary-submit').addEventListener('click', submitAllOrders);
   document.getElementById('summary-prev').addEventListener('click', () => navigateSummary(-1));
@@ -2616,9 +2617,12 @@ async function initSalesSection() {
   if (currentVal) dropdown.value = currentVal;
   _saleClientId = dropdown.value || null;
 
-  dropdown.onchange = () => {
+  dropdown.onchange = async () => {
     _saleClientId = dropdown.value || null;
+    await loadActiveClientPrices(_saleClientId);
+    buildSaleProducts();
     updateSaleFooter();
+    applyLang();
   };
 
   // Build product list
@@ -2671,7 +2675,7 @@ function buildSaleProducts() {
     html += `<div class="sale-acc-body">`;
 
     flatItems.forEach(item => {
-      const price = driverPriceMap[item.key];
+      const price = getSalePrice(item.key);
       const hasPrice = price != null && price > 0;
       const priceStr = hasPrice ? `$${price.toFixed(2)}` : (lang === 'es' ? 'Sin precio' : 'No price');
       const qty = _saleQty[item.key] || 0;
@@ -2750,7 +2754,7 @@ function updateSaleRow(key) {
   const row = document.querySelector(`.sale-prod-row[data-key="${key}"]`);
   if (!row) return;
   const qty = _saleQty[key] || 0;
-  const price = driverPriceMap[key];
+  const price = getSalePrice(key);
   const hasPrice = price != null && price > 0;
   const lineEl = row.querySelector('.sale-line-total');
   if (lineEl) lineEl.textContent = (hasPrice && qty > 0) ? '$' + (qty * price).toFixed(2) : '';
@@ -2761,7 +2765,7 @@ function getSaleTotal() {
   let total = 0;
   Object.entries(_saleQty).forEach(([key, qty]) => {
     if (qty > 0) {
-      const price = driverPriceMap[key] || 0;
+      const price = getSalePrice(key);
       total += qty * price;
     }
   });
@@ -2921,7 +2925,7 @@ async function handleConfirmSale() {
 
     Object.entries(_saleQty).forEach(([key, qty]) => {
       if (qty > 0) {
-        const price = driverPriceMap[key] || 0;
+        const price = getSalePrice(key);
         items.push({
           product_key: key,
           product_label: saleLabelMap[key] || key,
@@ -3144,7 +3148,7 @@ function renderClientsList() {
     const phone = c.phone ? _esc(c.phone) : '';
     const contact = c.contact_name ? _esc(c.contact_name) : '';
 
-    html += `<div class="client-card" data-client-id="${c.id}">
+    html += `<div class="client-card" data-client-id="${c.id}" onclick="openClientProfile('${c.id}')" style="cursor:pointer">
       <div class="client-card-row1">
         <div class="client-card-name">${name}</div>
         <div class="client-card-actions">
@@ -3276,7 +3280,355 @@ window.confirmDeleteClient = function (clientId, clientName) {
       showToast(lang === 'es' ? 'Error al eliminar el cliente' : 'Error removing client', 'error');
     }
   });
-};
+/* ═══════════════════════════════════
+   CLIENT PROFILE — Apple-style Sheet
+   ═══════════════════════════════════ */
+let _cpClientId = null;
+let _cpPrices = {};       // product_key → price for the currently viewed client
+let _cpHasCustom = false; // whether custom pricing is enabled
+let _cpDirty = false;     // unsaved changes flag
+
+function openClientProfile(clientId) {
+  const client = _clientsList.find(c => c.id === clientId);
+  if (!client) return;
+  _cpClientId = clientId;
+  _cpDirty = false;
+
+  // Populate header
+  const initials = (client.business_name || '??')
+    .split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  document.getElementById('cp-avatar').textContent = initials;
+  document.getElementById('cp-name').textContent = client.business_name;
+  document.getElementById('cp-subtitle').textContent = client.address || '';
+
+  // Populate details
+  const showRow = (id, val) => {
+    const row = document.getElementById(id);
+    if (val) { row.style.display = ''; } else { row.style.display = 'none'; }
+  };
+  showRow('cp-row-phone', client.phone);
+  showRow('cp-row-address', client.address);
+  showRow('cp-row-contact', client.contact_name);
+  showRow('cp-row-notes', client.notes);
+  if (client.phone) document.getElementById('cp-phone-val').textContent = client.phone;
+  if (client.address) document.getElementById('cp-address-val').textContent = client.address;
+  if (client.contact_name) document.getElementById('cp-contact-val').textContent = client.contact_name;
+  if (client.notes) document.getElementById('cp-notes-val').textContent = client.notes;
+
+  // Load prices from DB then open
+  _loadClientPrices(clientId).then(() => {
+    _cpRenderPriceEditor();
+    document.getElementById('cp-overlay').classList.add('open');
+    document.body.dataset.scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${window.scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    applyLang();
+    lucide.createIcons();
+  });
+}
+window.openClientProfile = openClientProfile;
+
+function closeClientProfile() {
+  document.getElementById('cp-overlay').classList.remove('open');
+  const scrollY = document.body.dataset.scrollY || '0';
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  window.scrollTo(0, parseInt(scrollY));
+  _cpClientId = null;
+  _cpDirty = false;
+}
+
+// ── Load client prices from Supabase ──
+async function _loadClientPrices(clientId) {
+  _cpPrices = {};
+  _cpHasCustom = false;
+  if (!sb || !currentDriver) return;
+  try {
+    const { data, error } = await sb
+      .from('client_prices')
+      .select('product_key, price')
+      .eq('client_id', clientId)
+      .eq('driver_id', currentDriver.id);
+    if (error) { console.error('Load client prices error:', error); return; }
+    if (data && data.length > 0) {
+      _cpHasCustom = true;
+      data.forEach(p => { _cpPrices[p.product_key] = parseFloat(p.price); });
+    }
+  } catch (e) { console.error('Client prices error:', e); }
+
+  // Sync toggle
+  const toggle = document.getElementById('cp-custom-toggle');
+  if (toggle) toggle.checked = _cpHasCustom;
+  _cpTogglePricingUI(_cpHasCustom);
+}
+
+// ── Save client prices to Supabase ──
+async function _saveClientPrices() {
+  if (!sb || !currentDriver || !_cpClientId) return;
+  const btn = document.getElementById('cp-save-prices-btn');
+  btn.disabled = true;
+  btn.textContent = lang === 'es' ? 'Guardando...' : 'Saving...';
+
+  try {
+    // Delete existing prices for this client
+    await sb.from('client_prices')
+      .delete()
+      .eq('client_id', _cpClientId)
+      .eq('driver_id', currentDriver.id);
+
+    if (_cpHasCustom) {
+      // Insert new prices
+      const rows = [];
+      Object.entries(_cpPrices).forEach(([key, price]) => {
+        if (price != null && price > 0) {
+          rows.push({
+            client_id: _cpClientId,
+            driver_id: currentDriver.id,
+            product_key: key,
+            price: price,
+          });
+        }
+      });
+      if (rows.length > 0) {
+        const { error } = await sb.from('client_prices').insert(rows);
+        if (error) throw error;
+      }
+    }
+
+    _cpDirty = false;
+    showToast(lang === 'es' ? 'Precios guardados' : 'Prices saved', 'success');
+  } catch (e) {
+    console.error('Save client prices error:', e);
+    showToast(lang === 'es' ? 'Error al guardar precios' : 'Error saving prices', 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = lang === 'es' ? 'Guardar Precios' : 'Save Prices';
+}
+
+// ── Toggle pricing UI visibility ──
+function _cpTogglePricingUI(on) {
+  const editor = document.getElementById('cp-price-editor');
+  const saveBar = document.getElementById('cp-save-bar');
+  const templateBar = document.getElementById('cp-template-bar');
+  const hint = document.getElementById('cp-pricing-hint');
+
+  editor.style.display = on ? 'block' : 'none';
+  saveBar.style.display = on ? 'block' : 'none';
+  templateBar.style.display = on ? 'block' : 'none';
+  hint.style.display = on ? 'none' : 'block';
+}
+
+// ── Render the price editor (inset grouped by category) ──
+function _cpRenderPriceEditor() {
+  const container = document.getElementById('cp-price-editor');
+  let html = '';
+
+  Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
+    // Build flat item list (same logic as sales)
+    const flatItems = [];
+    if (sec.type === 'redondo') {
+      sec.items.forEach(item => {
+        if (hiddenProducts.has(item.key)) return;
+        (item.cols || []).forEach(col => {
+          if (col.endsWith('_nt')) return;
+          const compositeKey = item.key + '_' + col;
+          const colEn = col.charAt(0).toUpperCase() + col.slice(1);
+          const colEs = col === 'inside' ? 'Adentro' : col === 'top' ? 'Arriba' : colEn;
+          flatItems.push({ key: compositeKey, en: `${item.en} — ${colEn}`, es: `${item.es} — ${colEs}` });
+        });
+      });
+    } else {
+      sec.items.forEach(item => {
+        if (!hiddenProducts.has(item.key)) flatItems.push(item);
+      });
+    }
+    if (flatItems.length === 0) return;
+
+    html += `<div class="cp-price-section">`;
+    html += `<div class="cp-price-section-title" data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</div>`;
+    html += `<div class="cp-price-list">`;
+
+    flatItems.forEach(item => {
+      const price = _cpPrices[item.key];
+      const val = (price != null && price > 0) ? price.toFixed(2) : '';
+      const fallback = driverPriceMap[item.key];
+      const placeholder = (fallback != null && fallback > 0) ? fallback.toFixed(2) : '0.00';
+
+      html += `<div class="cp-price-row">
+        <span class="cp-price-row-name" data-en="${item.en}" data-es="${item.es}">${L(item)}</span>
+        <input type="number" inputmode="decimal" step="0.01" min="0"
+          class="cp-price-input" data-key="${item.key}"
+          value="${val}" placeholder="$${placeholder}">
+      </div>`;
+    });
+
+    html += `</div></div>`;
+  });
+
+  container.innerHTML = html;
+
+  // Bind price inputs
+  container.querySelectorAll('.cp-price-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const key = inp.dataset.key;
+      const val = parseFloat(inp.value);
+      if (!isNaN(val) && val >= 0) {
+        _cpPrices[key] = val;
+      } else {
+        delete _cpPrices[key];
+      }
+      _cpDirty = true;
+    });
+    // Select all text on focus for quick editing
+    inp.addEventListener('focus', () => inp.select());
+  });
+}
+
+// ── Template Action Sheet ──
+function _cpOpenTemplateSheet() {
+  const list = document.getElementById('cp-action-list');
+  let html = '';
+
+  // "Use Driver Prices" option
+  html += `<button class="cp-action-item" data-source="driver" data-en="My Default Prices" data-es="Mis Precios Base">${lang === 'es' ? 'Mis Precios Base' : 'My Default Prices'}</button>`;
+
+  // List other clients that have custom pricing
+  _clientsList.forEach(c => {
+    if (c.id === _cpClientId) return; // skip self
+    html += `<button class="cp-action-item" data-source="${c.id}">${_esc(c.business_name)}</button>`;
+  });
+
+  list.innerHTML = html;
+  document.getElementById('cp-action-sheet-overlay').classList.add('open');
+
+  // Bind clicks
+  list.querySelectorAll('.cp-action-item').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const source = btn.dataset.source;
+      _cpCloseTemplateSheet();
+      await _cpApplyTemplate(source);
+    });
+  });
+
+  applyLang();
+}
+
+function _cpCloseTemplateSheet() {
+  document.getElementById('cp-action-sheet-overlay').classList.remove('open');
+}
+
+async function _cpApplyTemplate(source) {
+  if (source === 'driver') {
+    // Copy from driver's standard prices
+    _cpPrices = {};
+    Object.entries(driverPriceMap).forEach(([key, price]) => {
+      if (price > 0) _cpPrices[key] = price;
+    });
+  } else {
+    // Copy from another client's prices
+    if (!sb || !currentDriver) return;
+    try {
+      const { data, error } = await sb
+        .from('client_prices')
+        .select('product_key, price')
+        .eq('client_id', source)
+        .eq('driver_id', currentDriver.id);
+      if (error) throw error;
+      _cpPrices = {};
+      if (data && data.length > 0) {
+        data.forEach(p => { _cpPrices[p.product_key] = parseFloat(p.price); });
+      } else {
+        // Client has no custom prices — copy driver defaults
+        Object.entries(driverPriceMap).forEach(([key, price]) => {
+          if (price > 0) _cpPrices[key] = price;
+        });
+        showToast(lang === 'es' ? 'Este cliente usa precios estándar — copiando los tuyos' : 'This client uses standard prices — copying yours');
+      }
+    } catch (e) {
+      console.error('Template load error:', e);
+      showToast(lang === 'es' ? 'Error al copiar precios' : 'Error copying prices', 'error');
+      return;
+    }
+  }
+
+  _cpDirty = true;
+  _cpRenderPriceEditor();
+  showToast(lang === 'es' ? 'Precios copiados — revisa y guarda' : 'Prices copied — review & save');
+}
+
+// ── Wire up Client Profile events ──
+function _initClientProfileEvents() {
+  document.getElementById('cp-back').addEventListener('click', () => {
+    if (_cpDirty) {
+      showAppConfirm(
+        lang === 'es' ? '¿Salir sin guardar los cambios de precios?' : 'Leave without saving price changes?',
+        () => closeClientProfile()
+      );
+    } else {
+      closeClientProfile();
+    }
+  });
+
+  document.getElementById('cp-edit-btn').addEventListener('click', () => {
+    if (_cpClientId) {
+      closeClientProfile();
+      openClientModal(_cpClientId);
+    }
+  });
+
+  document.getElementById('cp-custom-toggle').addEventListener('change', (e) => {
+    _cpHasCustom = e.target.checked;
+    _cpTogglePricingUI(_cpHasCustom);
+    _cpDirty = true;
+    if (_cpHasCustom && Object.keys(_cpPrices).length === 0) {
+      // Pre-fill with driver's standard prices
+      Object.entries(driverPriceMap).forEach(([key, price]) => {
+        if (price > 0) _cpPrices[key] = price;
+      });
+      _cpRenderPriceEditor();
+    }
+  });
+
+  document.getElementById('cp-template-btn').addEventListener('click', _cpOpenTemplateSheet);
+  document.getElementById('cp-action-cancel').addEventListener('click', _cpCloseTemplateSheet);
+  document.getElementById('cp-action-sheet-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) _cpCloseTemplateSheet();
+  });
+  document.getElementById('cp-save-prices-btn').addEventListener('click', _saveClientPrices);
+}
+
+// ── Sales Tab: get price for a product, checking client prices first ──
+let _activeClientPrices = null; // cached prices for the selected sale client
+
+async function loadActiveClientPrices(clientId) {
+  _activeClientPrices = null;
+  if (!sb || !currentDriver || !clientId) return;
+  try {
+    const { data } = await sb
+      .from('client_prices')
+      .select('product_key, price')
+      .eq('client_id', clientId)
+      .eq('driver_id', currentDriver.id);
+    if (data && data.length > 0) {
+      _activeClientPrices = {};
+      data.forEach(p => { _activeClientPrices[p.product_key] = parseFloat(p.price); });
+    }
+  } catch (e) { console.error('Load active client prices error:', e); }
+}
+
+function getSalePrice(productKey) {
+  // Client-specific price takes precedence
+  if (_activeClientPrices && _activeClientPrices[productKey] != null) {
+    return _activeClientPrices[productKey];
+  }
+  // Fallback to driver's standard price
+  return driverPriceMap[productKey] || 0;
+}
 
 /* ═══════════════════════════════════
    CUSTOM SCROLLABLE TIME PICKER
