@@ -286,6 +286,7 @@ function enterDashboard() {
   document.getElementById('welcome-name').textContent =
     (lang === 'es' ? 'Bienvenido, ' : 'Welcome, ') + currentDriver.name;
   showScreen('dashboard');
+  showSection('overview');
   lucide.createIcons();
   // Phase 5: load balance, recent orders, start realtime
   loadDriverBalance();

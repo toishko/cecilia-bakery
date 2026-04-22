@@ -1460,24 +1460,42 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 }
 .insights-pills {
   display: flex;
-  gap: 6px;
-  background: var(--bg-surface);
-  padding: 4px;
-  border-radius: 8px;
+  background: rgba(118, 118, 128, 0.12); /* Native iOS segmented control background */
+  padding: 2px;
+  border-radius: 9px;
+  gap: 0;
+}
+[data-theme="dark"] .insights-pills {
+  background: rgba(118, 118, 128, 0.24);
+}
+#tools-nav-pills {
+  width: 100%;
 }
 .insights-pill {
+  flex: 1;
+  text-align: center;
   border: none;
   background: transparent;
   color: var(--tx-muted);
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 7px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+.insights-pill:hover {
+  color: var(--tx);
 }
 .insights-pill.active {
-  background: var(--bg-card);
-  color: var(--tx);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background: #ffffff;
+  color: #000000;
+  font-weight: 600;
+  box-shadow: 0px 3px 8px rgba(0, 0, 0, 0.12), 0px 3px 1px rgba(0, 0, 0, 0.04);
+}
+[data-theme="dark"] .insights-pill.active {
+  background: #636366;
+  color: #ffffff;
+  box-shadow: 0px 3px 8px rgba(0, 0, 0, 0.2), 0px 3px 1px rgba(0, 0, 0, 0.1);
 }
