@@ -1832,7 +1832,7 @@ function getEditTimeRemaining(order) {
   return min;
 }
 
-// ── RENDER ORDER CARD ──
+// ── RENDER ORDER CARD (Admin-style avatar row) ──
 // `batch` is an array of orders (1 for solo, N for batch)
 function renderOrderCard(batch) {
   const primary = batch[0];
@@ -1846,55 +1846,82 @@ function renderOrderCard(batch) {
     if (o.payment_status !== 'paid' && o.payment_status !== 'partial') payStatus = 'not_paid';
     if (o.payment_status === 'partial' && payStatus === 'paid') payStatus = 'partial';
   });
-  let payBadge = '';
-  if (payStatus === 'paid') {
-    payBadge = `<span class="pay-badge paid">${lang === 'es' ? 'Pagado' : 'Paid'}</span>`;
-  } else if (payStatus === 'partial') {
-    payBadge = `<span class="pay-badge partial">${lang === 'es' ? 'Parcial' : 'Partial'}</span>`;
-  } else {
-    payBadge = `<span class="pay-badge not-paid">${lang === 'es' ? 'No Pagado' : 'Not Paid'}</span>`;
+  let payClass = 'unpaid', payText = lang === 'es' ? 'No Pagado' : 'Not Paid';
+  if (payStatus === 'paid') { payClass = 'paid'; payText = lang === 'es' ? 'Pagado' : 'Paid'; }
+  else if (payStatus === 'partial') { payClass = 'partial'; payText = lang === 'es' ? 'Parcial' : 'Partial'; }
+
+  // Status badge
+  const s = primary.status;
+  let statusBadge = '';
+  if (s === 'confirmed') statusBadge = `<span class="oca-status-pill confirmed">${lang === 'es' ? 'Confirmado' : 'Confirmed'}</span>`;
+  else if (s === 'sent') statusBadge = `<span class="oca-status-pill sent">${lang === 'es' ? 'Enviado' : 'Sent'}</span>`;
+  else if (s === 'picked_up') statusBadge = `<span class="oca-status-pill picked-up">${lang === 'es' ? 'Recogido' : 'Picked Up'}</span>`;
+
+  function getInit(name) {
+    const n = name || 'O';
+    const w = n.trim().split(/\s+/);
+    return w.length >= 2 ? (w[0][0] + w[1][0]).toUpperCase() : n.substring(0, 2).toUpperCase();
   }
 
-  // Business names
-  const bizNames = batch.map(o => _esc(o.business_name || (lang === 'es' ? 'Sin nombre' : 'No name')));
-  const bizDisplay = isBatch ? bizNames.join(' · ') : bizNames[0];
+  let bizDisplay = '';
+  let avatarHtml = '';
+  
+  if (!isBatch) {
+    bizDisplay = _esc(primary.business_name || (lang === 'es' ? 'Sin nombre' : 'No name'));
+    avatarHtml = `<div class="oca-avatar">${getInit(primary.business_name)}</div>`;
+  } else {
+    avatarHtml = '<div class="oca-avatar-stack">';
+    for (let i = 0; i < Math.min(batch.length, 3); i++) {
+      if (i === 2 && batch.length > 3) {
+        avatarHtml += `<div class="oca-avatar stack-item more">+${batch.length - 2}</div>`;
+      } else {
+        avatarHtml += `<div class="oca-avatar stack-item">${getInit(batch[i].business_name)}</div>`;
+      }
+    }
+    avatarHtml += '</div>';
 
-  // Combined total
-  const combinedTotal = batch.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
-  const totalStr = combinedTotal > 0 ? `$${combinedTotal.toFixed(2)}` : '';
-
-  // Edit indicator (use primary)
-  let editIndicator = '';
-  if (primary.status === 'pending') {
-    const minLeft = getEditTimeRemaining(primary);
-    if (minLeft !== null) {
-      editIndicator = `<div class="edit-indicator active"><i data-lucide="pencil"></i> ${minLeft} min</div>`;
+    const n1 = _esc(batch[0].business_name || 'No name');
+    if (batch.length === 2) {
+      const n2 = _esc(batch[1].business_name || 'No name');
+      bizDisplay = `${n1} & ${n2}`;
     } else {
-      editIndicator = `<div class="edit-indicator locked"><i data-lucide="lock"></i> ${lang === 'es' ? 'Bloqueado' : 'Locked'}</div>`;
+      const moreText = lang === 'es' ? 'más' : 'more';
+      bizDisplay = `${n1} +${batch.length - 1} ${moreText}`;
     }
   }
 
-  let statusBadge = '';
-  const s = primary.status;
-  if (s === 'pending') statusBadge = `<span class="status-badge pending">${lang === 'es' ? 'Pendiente' : 'Pending'}</span>`;
-  else if (s === 'confirmed') statusBadge = `<span class="status-badge confirmed">${lang === 'es' ? 'Confirmado' : 'Confirmed'}</span>`;
-  else if (s === 'sent') statusBadge = `<span class="status-badge sent">${lang === 'es' ? 'Enviado' : 'Sent'}</span>`;
-  else if (s === 'picked_up') statusBadge = `<span class="status-badge picked-up">${lang === 'es' ? 'Recogido' : 'Picked Up'}</span>`;
+  // Combined total
+  const combinedTotal = batch.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
+  const totalStr = combinedTotal > 0 ? `$${combinedTotal.toFixed(2)}` : '$0.00';
+
+  // Order number
+  const orderNum = primary.order_number ? `#${primary.order_number}` : `#${shortOrderId(primary)}`;
+  const batchLabel = isBatch ? ` · ${batch.length} ${lang === 'es' ? 'pedidos' : 'orders'}` : '';
+
+  // Edit indicator
+  let editHtml = '';
+  if (primary.status === 'pending') {
+    const minLeft = getEditTimeRemaining(primary);
+    if (minLeft !== null) {
+      editHtml = `<div class="oca-edit active"><i data-lucide="pencil"></i> ${minLeft} min</div>`;
+    }
+  }
 
   const orderIds = batch.map(o => o.id).join(',');
-  const batchLabel = isBatch ? `<span class="batch-count">${batch.length} ${lang === 'es' ? 'pedidos' : 'orders'}</span>` : '';
 
   return `
-    <div class="order-card" onclick="showOrderDetail('${orderIds}')">
-      <div class="order-card-row1">
-        <div class="order-card-name">${bizDisplay}</div>
-        <div class="order-card-total">${totalStr}</div>
+    <div class="oca-card" onclick="showOrderDetail('${orderIds}')">
+      ${avatarHtml}
+      <div class="oca-body">
+        <div class="oca-name">${bizDisplay}</div>
+        <div class="oca-time">${orderNum}${batchLabel} · ${dateInfo.value} · ${timeInfo.value}</div>
+        <div class="oca-badges">${statusBadge}</div>
       </div>
-      <div class="order-card-row2">
-        <div class="order-card-left">${statusBadge}${payBadge}${batchLabel}<span class="order-card-id">#${shortOrderId(primary)}</span></div>
-        <div class="order-card-date">${dateInfo.value} · ${timeInfo.value}</div>
+      <div class="oca-right">
+        <div class="oca-price">${totalStr}</div>
+        <div class="oca-pill ${payClass}">${payText}</div>
+        ${editHtml}
       </div>
-      ${editIndicator ? `<div class="order-card-edit">${editIndicator}</div>` : ''}
     </div>`;
 }
 

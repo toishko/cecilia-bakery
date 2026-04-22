@@ -657,54 +657,109 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .balance-banner{display:flex;align-items:center;gap:8px;transition:background .2s}
 .balance-banner:hover{background:var(--bg-surface)}
 
-/* ── Order Cards — Clean 2-row layout ── */
-.order-card{background:var(--bg-card,#fff);border-radius:12px;padding:16px;
-  margin-bottom:12px;cursor:pointer;transition:transform .15s,box-shadow .15s;
-  border:1px solid var(--bd)}
-.order-card:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
-.order-card:active{transform:scale(.98)}
+/* ── Order Cards — Admin-style avatar rows ── */
+.oca-card {
+  display: flex;
+  align-items: center;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--bd);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.oca-card:hover { background: rgba(200,16,46,.03); }
+.oca-card:last-child { border-bottom: none; }
+.oca-card:active { transform: scale(.99); }
 
-/* Row 1: business name + total */
-.order-card-row1{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
-.order-card-name{font-weight:600;font-size:.95rem;color:var(--tx);line-height:1.3;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
-.order-card-total{font-weight:700;font-size:.95rem;color:var(--red);white-space:nowrap;
-  font-family:'Cormorant Garamond',serif;flex-shrink:0}
+.oca-avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.82rem; font-weight: 700; color: #fff;
+  background: linear-gradient(135deg, var(--red) 0%, #7d081b 100%);
+  flex-shrink: 0; margin-right: 14px;
+  letter-spacing: 0.5px;
+}
 
-/* Row 2: badge + order ID (left) · date (right) */
-.order-card-row2{display:flex;justify-content:space-between;align-items:center;
-  margin-top:8px;gap:8px}
-.order-card-left{display:flex;align-items:center;gap:6px;min-width:0}
-.order-card-id{font-size:.72rem;color:var(--tx-faint);font-family:monospace;white-space:nowrap}
-.order-card-date{font-size:.78rem;color:var(--tx-muted);white-space:nowrap;flex-shrink:0}
+/* ── Stacked Avatars for Batch Orders ── */
+.oca-avatar-stack {
+  display: flex; align-items: center;
+  margin-right: 14px; flex-shrink: 0;
+  padding-left: 8px; /* space for offset */
+}
+.oca-avatar.stack-item {
+  width: 36px; height: 36px; margin-right: 0;
+  margin-left: -12px; border: 2px solid var(--bg-card);
+  font-size: 0.75rem; box-shadow: 2px 0 6px rgba(0,0,0,0.1);
+}
+.oca-avatar.stack-item:first-child { z-index: 3; }
+.oca-avatar.stack-item:nth-child(2) { z-index: 2; }
+.oca-avatar.stack-item:nth-child(3) { z-index: 1; }
+.oca-avatar.stack-item.more {
+  background: var(--bg-surface-elevated, #e0e0e0);
+  color: var(--tx-muted);
+  font-weight: 800; border-color: var(--bg-card);
+}
+[data-theme="dark"] .oca-avatar.stack-item.more {
+  background: rgba(255,255,255,0.1); color: var(--tx);
+}
+.oca-body { flex: 1; min-width: 0; }
+.oca-name {
+  font-weight: 600; font-size: 0.95rem; color: var(--tx);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.oca-time {
+  font-size: 0.75rem; color: var(--tx-faint); margin-top: 2px;
+}
+.oca-badges {
+  display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap;
+}
+.oca-status-pill {
+  display: inline-block; font-size: 0.62rem; font-weight: 700;
+  padding: 2px 7px; border-radius: 12px;
+  text-transform: uppercase; letter-spacing: 0.4px;
+}
+.oca-status-pill.confirmed { color: #00796b; background: rgba(0,121,107,.12); }
+.oca-status-pill.sent { color: var(--green); background: rgba(27,122,74,.12); }
+.oca-status-pill.picked-up { color: #2e7d32; background: rgba(46,125,50,.15); }
 
-/* Edit row (pending orders) */
-.order-card-edit{margin-top:8px;padding-top:6px;border-top:1px solid var(--bd)}
+.oca-right {
+  display: flex; flex-direction: column; align-items: flex-end;
+  justify-content: center; flex-shrink: 0; margin-left: 10px;
+}
+.oca-price {
+  font-weight: 650; font-size: 0.95rem; color: var(--tx);
+  font-family: 'Outfit', sans-serif;
+}
+.oca-pill {
+  font-size: 0.62rem; font-weight: 700;
+  padding: 2px 7px; border-radius: 12px; margin-top: 4px;
+  text-transform: uppercase; letter-spacing: 0.4px;
+}
+.oca-pill.paid { color: var(--green); background: rgba(27,122,74,.15); }
+.oca-pill.partial { color: var(--yellow); background: rgba(200,155,42,.15); }
+.oca-pill.unpaid { color: var(--red); background: rgba(200,16,46,.15); }
 
-/* Payment badges — fixed width for consistency */
-.pay-badge{display:inline-block;padding:2px 8px;border-radius:99px;
-  font-size:10px;font-weight:600;letter-spacing:.02em;min-width:50px;text-align:center;
-  white-space:nowrap;line-height:1.4}
-.pay-badge.paid{background:#e8f5e9;color:#2f8a4c}
-.pay-badge.not-paid{background:#ffebee;color:#c0392b}
-.pay-badge.partial{background:#fff8e1;color:#c09020}
+.oca-edit {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 0.62rem; font-weight: 600;
+  padding: 2px 6px; border-radius: 6px; margin-top: 4px;
+}
+.oca-edit svg { width: 10px; height: 10px; }
+.oca-edit.active { color: #27ae60; background: rgba(39,174,96,.08); }
 
-/* Status dot (subtle indicator for pending) */
-.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
-.status-dot.pending{background:#1565c0;box-shadow:0 0 0 2px rgba(21,101,192,.2)}
+/* Wrapper for order list — card container */
+#recent-orders, #all-orders {
+  background: var(--bg-card); border: 1px solid var(--bd);
+  border-radius: 12px; overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
 
-/* Status badges (kept for detail view) */
-.status-badge{display:inline-block;padding:2px 8px;border-radius:99px;
-  font-size:.68rem;font-weight:600}
-.status-badge.pending{background:#e3f2fd;color:#1565c0}
-.status-badge.sent{background:#e8f5e9;color:#2f8a4c}
-.status-badge.confirmed{background:#e0f2f1;color:#00796b}
-.status-badge.picked-up{background:#e8f5e9;color:#2e7d32}
-
-/* Batch count badge */
-.batch-count{display:inline-block;font-size:.65rem;font-weight:600;
-  background:var(--red);color:#fff;padding:1px 7px;border-radius:99px;margin-left:4px;
-  vertical-align:middle}
+/* Dark mode overrides */
+[data-theme="dark"] .oca-pill.paid { background: rgba(47,138,76,.15); color: #6fcf97; }
+[data-theme="dark"] .oca-pill.unpaid { background: rgba(200,16,46,.15); color: #e88a82; }
+[data-theme="dark"] .oca-pill.partial { background: rgba(192,144,32,.15); color: #f0c050; }
+[data-theme="dark"] .oca-status-pill.confirmed { background: rgba(0,121,107,.15); color: #4db6ac; }
+[data-theme="dark"] .oca-status-pill.sent { background: rgba(47,138,76,.15); color: #6fcf97; }
+[data-theme="dark"] .oca-status-pill.picked-up { background: rgba(46,125,50,.15); color: #81c784; }
 
 /* Batch nav in detail modal */
 .batch-nav{display:flex;align-items:center;justify-content:center;gap:12px;
@@ -826,9 +881,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 /* ═══════════════════════════════════
    MICRO-ANIMATIONS
    ═══════════════════════════════════ */
-.order-card{transition:transform .2s ease,box-shadow .2s ease}
-.order-card:hover{transform:translateY(-1px) scale(1.005);
-  box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.oca-card{transition:background .2s ease,transform .15s ease}
 
 /* Badge pulse */
 @keyframes badgePulse{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
