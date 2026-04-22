@@ -1069,13 +1069,14 @@
     .frost-modal-overlay.open { opacity:1; pointer-events:auto; }
     .frost-modal-sheet {
       position:fixed; bottom:0; left:0; right:0; z-index:10000;
-      background:var(--bg-panel);
+      background:var(--bg-card);
       border-radius:20px 20px 0 0;
       max-height:88vh; overflow-y:auto;
       -webkit-overflow-scrolling:touch;
       transform:translateY(100%);
       transition:transform .3s cubic-bezier(.32,.72,0,1);
       padding:0 0 env(safe-area-inset-bottom);
+      box-shadow: 0 -8px 40px rgba(0,0,0,.15);
     }
     .frost-modal-sheet.open { transform:translateY(0); }
     .frost-modal-handle {
@@ -1086,7 +1087,9 @@
       display:flex; justify-content:space-between; align-items:center;
       padding:14px 20px 10px;
       border-bottom:1px solid var(--bd);
-      position:sticky; top:0; background:var(--bg-panel);
+      position:sticky; top:0; 
+      background:var(--bg-nav);
+      backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
       z-index:1; border-radius:20px 20px 0 0;
     }
     .frost-modal-title { font-size:1rem; font-weight:700; color:var(--tx); }
