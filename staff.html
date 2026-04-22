@@ -921,16 +921,17 @@
     .box-calc-cat-header:first-child { margin-top: 0; }
 
     .box-calc-col-headers {
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex; align-items: center; justify-content: flex-end;
       padding: 0 0 6px; margin-bottom: 2px;
       border-bottom: 1.5px solid var(--bd);
+      gap: 8px;
     }
     .box-calc-col-label {
       font-size: .65rem; font-weight: 700;
       text-transform: uppercase; letter-spacing: .8px;
       color: var(--tx-faint);
     }
-    .box-calc-col-label:first-child { text-align: right; flex: 1; padding-right: 72px; }
+    .box-calc-col-label:first-child { width: 60px; text-align: center; }
     .box-calc-col-label:last-child { width: 56px; text-align: center; flex-shrink: 0; }
     .box-calc-item {
       display: flex; align-items: center;
