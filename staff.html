@@ -919,6 +919,19 @@
       margin-top: 4px;
     }
     .box-calc-cat-header:first-child { margin-top: 0; }
+
+    .box-calc-col-headers {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 0 6px; margin-bottom: 2px;
+      border-bottom: 1.5px solid var(--bd);
+    }
+    .box-calc-col-label {
+      font-size: .65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .8px;
+      color: var(--tx-faint);
+    }
+    .box-calc-col-label:first-child { text-align: right; flex: 1; padding-right: 72px; }
+    .box-calc-col-label:last-child { width: 56px; text-align: center; flex-shrink: 0; }
     .box-calc-item {
       display: flex; align-items: center;
       padding: 9px 0;
@@ -2508,6 +2521,7 @@
               var bi = CAT_ORDER.indexOf(b); if (bi === -1) bi = 999;
               return ai - bi;
             });
+            let isFirstCat = true;
             boxCalcItems = bcSortedCats.map(cat => {
               var isFrosted = /frosted|frostin/i.test(cat);
               if (isFrosted) {
@@ -2521,7 +2535,15 @@
                 });
                 return '';
               }
-              let catHtml = `<div class="box-calc-cat-header">${_esc(cat)}</div>`;
+              let headerRow = '';
+              if (isFirstCat) {
+                isFirstCat = false;
+                headerRow = `<div class="box-calc-col-headers">
+                  <span class="box-calc-col-label">Qty</span>
+                  <span class="box-calc-col-label">Box Qty</span>
+                </div>`;
+              }
+              let catHtml = headerRow + `<div class="box-calc-cat-header">${_esc(cat)}</div>`;
               catHtml += bcGrouped[cat].map(item => {
                 const label = _esc(item.product_label || item.product_key);
                 const qty = item.quantity || 0;
