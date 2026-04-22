@@ -1173,8 +1173,11 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .cp-price-input::placeholder{color:var(--tx-faint)}
 .cp-price-input:focus{color:var(--red)}
 
-/* Save bar */
-.cp-save-bar{padding:16px 0 24px}
+/* Save bar — sticky bottom */
+.cp-save-bar{position:sticky;bottom:0;padding:12px 16px;
+  padding-bottom:calc(12px + env(safe-area-inset-bottom));
+  background:var(--bg-surface);border-top:1px solid var(--bd);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:2}
 .cp-save-btn{width:100%;padding:14px;border-radius:12px;border:none;
   background:var(--red);color:var(--tx-on-red);font-size:1rem;font-weight:600;
   font-family:inherit;cursor:pointer;transition:background .15s,transform .1s}
