@@ -177,6 +177,7 @@ function showSection(name) {
   }
 
   requestAnimationFrame(() => lucide.createIcons());
+  window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
 /* ═══════════════════════════════════
