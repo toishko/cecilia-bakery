@@ -3280,6 +3280,8 @@ window.confirmDeleteClient = function (clientId, clientName) {
       showToast(lang === 'es' ? 'Error al eliminar el cliente' : 'Error removing client', 'error');
     }
   });
+};
+
 /* ═══════════════════════════════════
    CLIENT PROFILE — Apple-style Sheet
    ═══════════════════════════════════ */
