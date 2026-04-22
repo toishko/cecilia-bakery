@@ -482,14 +482,24 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 
 /* Footer bar */
 .form-footer{position:fixed;bottom:0;left:0;right:0;background:var(--bg-card);
-  border-top:1px solid var(--bd);padding:12px 16px;display:flex;align-items:center;
+  border-top:1px solid var(--bd);padding:10px 16px;display:flex;align-items:center;
   justify-content:space-between;z-index:150;backdrop-filter:blur(12px);
-  padding-bottom:calc(12px + env(safe-area-inset-bottom));
-  -webkit-transform:translateZ(0);transform:translateZ(0);will-change:transform}
-.form-footer-count{font-size:.9rem;color:var(--tx-muted)}
-.form-footer-count strong{color:var(--tx);font-weight:600}
-.form-footer-btn{padding:10px 24px;border:none;border-radius:8px;background:var(--red);
-  color:var(--tx-on-red);font-weight:600;font-family:inherit;cursor:pointer;transition:background .2s}
+  padding-bottom:calc(10px + env(safe-area-inset-bottom));
+  -webkit-transform:translateZ(0);transform:translateZ(0);will-change:transform;gap:8px}
+.form-footer-cancel{padding:10px 16px;border:none;border-radius:10px;
+  background:var(--bg-surface);color:var(--tx-muted);font-weight:600;
+  font-family:inherit;font-size:.85rem;cursor:pointer;transition:background .15s,color .15s;
+  white-space:nowrap;min-width:72px}
+.form-footer-cancel:hover{background:var(--bd);color:var(--tx)}
+.form-footer-center{display:flex;align-items:center;gap:6px;justify-content:center;flex:1}
+.form-footer-badge{display:inline-flex;align-items:center;justify-content:center;
+  min-width:28px;height:28px;border-radius:14px;background:var(--red);
+  color:var(--tx-on-red);font-weight:700;font-size:.85rem;padding:0 8px;
+  font-family:inherit;letter-spacing:.5px}
+.form-footer-label{font-size:.8rem;color:var(--tx-muted);font-weight:500}
+.form-footer-btn{padding:10px 20px;border:none;border-radius:10px;background:var(--red);
+  color:var(--tx-on-red);font-weight:600;font-family:inherit;font-size:.85rem;
+  cursor:pointer;transition:background .2s;white-space:nowrap;min-width:90px}
 .form-footer-btn:hover{background:var(--red-dk)}
 .form-footer-btn:disabled{opacity:.4;cursor:not-allowed}
 

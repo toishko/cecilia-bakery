@@ -154,7 +154,7 @@ function showSection(name) {
     saleFooter.style.display = 'none';
     document.body.classList.add('immersive-mode');
     if(mobileLogo) mobileLogo.style.display = 'none';
-    if(headerBackBtn) headerBackBtn.style.display = 'inline-flex';
+    if(headerBackBtn) headerBackBtn.style.display = 'none';
   } else if (activeTool === 'sales') {
     footer.style.display = 'none';
     saleFooter.style.display = 'flex';
@@ -610,6 +610,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Order form ──
   document.getElementById('footer-continue-btn').addEventListener('click', openSummary);
+  document.getElementById('footer-cancel-btn').addEventListener('click', () => {
+    document.querySelector('.bottom-nav-item[data-section=overview]').click();
+  });
   _initClientProfileEvents();
   document.getElementById('summary-back').addEventListener('click', closeSummary);
   document.getElementById('summary-submit').addEventListener('click', submitAllOrders);

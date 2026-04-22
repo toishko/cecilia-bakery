@@ -511,8 +511,11 @@
 
   <!-- FOOTER BAR (only visible during order form) -->
   <div class="form-footer" id="form-footer" style="display:none">
-    <div class="form-footer-count"><span data-en="Items:" data-es="Artículos:">Items:</span> <strong
-        id="footer-item-count">0</strong></div>
+    <button class="form-footer-cancel" id="footer-cancel-btn" data-en="Cancel" data-es="Cancelar">Cancel</button>
+    <div class="form-footer-center">
+      <span class="form-footer-badge" id="footer-item-count">0</span>
+      <span class="form-footer-label" data-en="items" data-es="artículos">items</span>
+    </div>
     <button class="form-footer-btn" id="footer-continue-btn" disabled data-en="Continue"
       data-es="Continuar">Continue</button>
   </div>
