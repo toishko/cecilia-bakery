@@ -3155,7 +3155,7 @@ function renderClientsList() {
       <div class="client-card-row1">
         <div class="client-card-name">${name}</div>
         <div class="client-card-actions">
-          <button class="client-card-edit" onclick="event.stopPropagation();openClientModal('${c.id}')" title="${lang === 'es' ? 'Editar' : 'Edit'}"><i data-lucide="pencil"></i></button>
+          <button class="client-card-edit" onclick="event.stopPropagation();openClientProfile('${c.id}')" title="${lang === 'es' ? 'Editar' : 'Edit'}"><i data-lucide="pencil"></i></button>
           <button class="client-card-delete" onclick="event.stopPropagation();confirmDeleteClient('${c.id}','${name.replace(/'/g, "\\'")}')" title="${lang === 'es' ? 'Eliminar' : 'Delete'}"><i data-lucide="trash-2"></i></button>
         </div>
       </div>
@@ -3601,9 +3601,10 @@ function _initClientProfileEvents() {
   });
 
   document.getElementById('cp-edit-btn').addEventListener('click', () => {
-    if (_cpClientId) {
+    const id = _cpClientId;
+    if (id) {
       closeClientProfile();
-      openClientModal(_cpClientId);
+      openClientModal(id);
     }
   });
 
