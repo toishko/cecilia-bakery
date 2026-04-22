@@ -39,6 +39,12 @@ try {
   }
 } catch (e) { console.error('Supabase init failed:', e); }
 
+/* ── PWA standalone detection — add class for CSS fallback ── */
+if (window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true) {
+  document.body.classList.add('is-pwa');
+}
+
 /* ═══════════════════════════════════
    STATE
    ═══════════════════════════════════ */
