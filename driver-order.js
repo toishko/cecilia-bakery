@@ -1918,7 +1918,7 @@ function renderSingleOcaCard(primary, isChild = false) {
       ${avatarHtml}
       <div class="oca-body">
         <div class="oca-name">${bizDisplay}</div>
-        <div class="oca-time">${orderNum} · ${dateInfo.value} · ${timeInfo.value}</div>
+        <div class="oca-time">${orderNum} · ${dateInfo.value}</div>
         <div class="oca-badges">${statusBadge}</div>
       </div>
       <div class="oca-right">
@@ -2010,7 +2010,7 @@ function renderOrderCard(batch) {
         ${avatarHtml}
         <div class="oca-body">
           <div class="oca-name">${bizDisplay}</div>
-          <div class="oca-time">${batchLabel} · ${dateInfo.value} · ${timeInfo.value}</div>
+          <div class="oca-time">${batchLabel} · ${dateInfo.value}</div>
           <div class="oca-badges">${statusBadge}</div>
         </div>
         <div class="oca-right">
