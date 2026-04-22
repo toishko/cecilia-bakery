@@ -1553,12 +1553,26 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .inv-form-input::-webkit-inner-spin-button,.inv-form-input::-webkit-outer-spin-button{
   -webkit-appearance:none;appearance:none}
 .inv-form-input:focus{border-color:var(--red);box-shadow:0 0 0 2px rgba(200,16,46,.1);outline:none}
-.inv-save-btn{width:100%;padding:14px;border:none;border-radius:12px;background:var(--green);
-  color:#fff;font-weight:700;font-family:inherit;font-size:1rem;cursor:pointer;
-  transition:background .2s,transform .15s;margin-top:16px}
-.inv-save-btn:hover{opacity:.9}
+.inv-save-float{position:fixed;bottom:0;left:0;right:0;
+  padding:0 20px;padding-bottom:calc(6px + env(safe-area-inset-bottom));
+  z-index:200;pointer-events:none}
+.inv-save-btn{width:100%;padding:16px;border:none;border-radius:16px;background:var(--red);
+  color:var(--tx-on-red);font-weight:700;font-family:inherit;font-size:1rem;cursor:pointer;
+  pointer-events:auto;
+  box-shadow:0 4px 24px rgba(200,16,46,.35),0 1px 4px rgba(0,0,0,.12);
+  transition:transform .25s cubic-bezier(.32,.72,0,1),
+    box-shadow .25s cubic-bezier(.32,.72,0,1),background .15s}
+.inv-save-btn:hover{background:var(--red-dk)}
 .inv-save-btn:active{transform:scale(.98)}
 .inv-save-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* Add More button */
+.inv-add-more-btn{display:inline-flex;align-items:center;gap:6px;
+  margin-top:10px;padding:9px 18px;border:1px solid var(--bd);border-radius:10px;
+  background:var(--bg-card);color:var(--red);font-size:.85rem;font-weight:600;
+  font-family:inherit;cursor:pointer;transition:background .15s}
+.inv-add-more-btn:hover{background:var(--bg-surface)}
+.inv-add-more-btn svg{width:16px;height:16px}
 
 /* ══════════════════════════════════════════════════════
    TICKET SCANNER

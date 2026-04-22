@@ -3983,12 +3983,29 @@ function renderInventoryBanner() {
   if (!banner) return;
 
   const isOrder = inventorySource.indexOf('order:') === 0;
-  const label = isOrder
+  const sourceLabel = isOrder
     ? '📦 ' + inventorySource.replace('order:', lang === 'es' ? 'Cargado de Pedido ' : 'From Order ')
     : '✏️ ' + (lang === 'es' ? 'Carga Manual' : 'Manual Entry');
   const cls = isOrder ? 'inv-banner order' : 'inv-banner manual';
 
-  banner.innerHTML = `<div class="${cls}">${label}</div>`;
+  const addMoreEn = 'Add More';
+  const addMoreEs = 'Agregar Más';
+
+  banner.innerHTML = `<div class="${cls}">${sourceLabel}</div>
+    <button class="inv-add-more-btn" id="inv-add-more-btn" data-en="${addMoreEn}" data-es="${addMoreEs}">
+      <i data-lucide="plus-circle"></i> ${lang === 'es' ? addMoreEs : addMoreEn}
+    </button>`;
+
+  document.getElementById('inv-add-more-btn')?.addEventListener('click', () => {
+    const form = document.getElementById('inv-load-form');
+    const summary = document.getElementById('inv-summary');
+    summary.style.display = 'none';
+    banner.querySelector('.inv-add-more-btn').style.display = 'none';
+    form.style.display = 'block';
+    renderManualLoadForm();
+  });
+
+  requestAnimationFrame(() => lucide.createIcons());
 }
 
 function renderInventorySummary() {
@@ -4232,9 +4249,21 @@ function renderManualLoadForm() {
     html += `</div>`;
   });
 
-  html += `<button class="inv-save-btn" id="inv-save-btn" data-en="Save Inventory" data-es="Guardar Inventario">${lang === 'es' ? 'Guardar Inventario' : 'Save Inventory'}</button>`;
+  html += `<div class="inv-save-float" id="inv-save-float">
+    <button class="inv-save-btn" id="inv-save-btn" data-en="Save Inventory" data-es="Guardar Inventario">${lang === 'es' ? 'Guardar Inventario' : 'Save Inventory'}</button>
+  </div>`;
 
   container.innerHTML = html;
+
+  // Pre-fill with existing inventory values
+  if (inventoryLoaded && driverInventory) {
+    container.querySelectorAll('.inv-form-input').forEach(inp => {
+      const pk = inp.dataset.pk;
+      if (driverInventory[pk] && driverInventory[pk].loaded > 0) {
+        inp.value = driverInventory[pk].loaded;
+      }
+    });
+  }
 
   // Bind save
   document.getElementById('inv-save-btn').addEventListener('click', saveManualLoad);
