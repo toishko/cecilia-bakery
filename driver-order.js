@@ -1786,7 +1786,6 @@ async function loadMyOrders() {
       .from('driver_orders')
       .select('*, driver_order_items(*)')
       .eq('driver_id', currentDriver.id)
-      .in('status', ['pending', 'sent', 'confirmed', 'picked_up'])
       .order('created_at', { ascending: false });
 
     if (error) { console.error('My orders error:', error); return; }

@@ -1415,7 +1415,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   background:var(--red)}
 
 /* FAB-style Nav Item */
-.bottom-nav-fab { overflow: visible !important; padding-top: 0; }
+.bottom-nav-fab { overflow: visible !important; padding-top: 0; flex: 0 0 56px !important; position: relative; }
 .bottom-nav-fab .fab-circle {
   width: 48px; height: 48px; border-radius: 50%;
   background: linear-gradient(135deg, var(--red), #a00d24);
