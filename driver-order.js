@@ -3407,7 +3407,7 @@ async function _saveClientPrices() {
 
     _cpDirty = false;
 
-    // ✓ Success feedback — green button with checkmark
+    // ✓ Success feedback — green button, then auto-close
     btn.style.background = '#34C759';
     btn.style.boxShadow = '0 4px 24px rgba(52,199,89,.35),0 1px 4px rgba(0,0,0,.12)';
     btn.textContent = lang === 'es' ? '✓ Guardado' : '✓ Saved';
@@ -3418,7 +3418,8 @@ async function _saveClientPrices() {
       btn.style.boxShadow = '';
       btn.textContent = lang === 'es' ? 'Guardar Precios' : 'Save Prices';
       btn.disabled = false;
-    }, 2000);
+      closeClientProfile();
+    }, 1000);
     return;
 
   } catch (e) {
