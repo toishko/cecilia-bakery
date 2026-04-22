@@ -2637,18 +2637,40 @@ function buildSaleProducts() {
   let html = '';
 
   Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
-    // Skip redondo for sales — simplify to standard items only
-    if (sec.type === 'redondo') return;
+    // Build a flat list of sale-able items for this section
+    const flatItems = [];
 
-    // Filter to visible products
-    const visibleItems = sec.items.filter(item => !hiddenProducts.has(item.key));
-    if (visibleItems.length === 0) return;
+    if (sec.type === 'redondo') {
+      // Flatten redondo columns into individual items (skip _nt variants)
+      sec.items.forEach(item => {
+        if (hiddenProducts.has(item.key)) return;
+        (item.cols || []).forEach(col => {
+          if (col.endsWith('_nt')) return; // skip no-ticket for sales
+          const compositeKey = item.key + '_' + col;
+          const colEn = col.charAt(0).toUpperCase() + col.slice(1);
+          const colEs = col === 'inside' ? 'Adentro' : col === 'top' ? 'Arriba' : colEn;
+          flatItems.push({
+            key: compositeKey,
+            en: `${item.en} — ${colEn}`,
+            es: `${item.es} — ${colEs}`,
+          });
+        });
+      });
+    } else {
+      sec.items.forEach(item => {
+        if (!hiddenProducts.has(item.key)) {
+          flatItems.push(item);
+        }
+      });
+    }
+
+    if (flatItems.length === 0) return;
 
     html += `<div class="sale-acc" data-section-key="${secKey}">`;
     html += `<div class="sale-acc-header"><span class="sale-acc-title" data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</span><svg class="sale-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>`;
     html += `<div class="sale-acc-body">`;
 
-    visibleItems.forEach(item => {
+    flatItems.forEach(item => {
       const price = driverPriceMap[item.key];
       const hasPrice = price != null && price > 0;
       const priceStr = hasPrice ? `$${price.toFixed(2)}` : (lang === 'es' ? 'Sin precio' : 'No price');
@@ -2880,19 +2902,29 @@ async function handleConfirmSale() {
 
     // Collect items
     const items = [];
+    // Build a full label map including composite redondo keys
+    const saleLabelMap = {};
+    Object.values(PRODUCTS).forEach(sec => {
+      sec.items.forEach(item => {
+        saleLabelMap[item.key] = item.en;
+        if (sec.type === 'redondo' && item.cols) {
+          item.cols.forEach(col => {
+            const compositeKey = item.key + '_' + col;
+            const isNT = col.endsWith('_nt');
+            const base = isNT ? col.replace('_nt', '') : col;
+            const colLabel = base.charAt(0).toUpperCase() + base.slice(1);
+            saleLabelMap[compositeKey] = `${item.en} — ${colLabel}${isNT ? ' NT' : ''}`;
+          });
+        }
+      });
+    });
+
     Object.entries(_saleQty).forEach(([key, qty]) => {
       if (qty > 0) {
         const price = driverPriceMap[key] || 0;
-        // Find label from PRODUCTS
-        let label = key;
-        Object.values(PRODUCTS).forEach(sec => {
-          sec.items.forEach(item => {
-            if (item.key === key) label = item.en;
-          });
-        });
         items.push({
           product_key: key,
-          product_label: label,
+          product_label: saleLabelMap[key] || key,
           quantity: qty,
           unit_price: price,
           line_total: qty * price,
