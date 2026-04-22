@@ -3752,15 +3752,21 @@ window.confirmAndSend = async function() {
     await window.saveOrderChanges();
 
     const now = new Date();
+    const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
 
-    await sb.from('driver_orders').update({
+    const updateData = {
       status: 'picked_up',
       confirmed_at: now.toISOString(),
       picked_up_at: now.toISOString()
-    }).eq('id', detailOrder.id);
+    };
+    // Ensure pickup_date is set so inventory lookup works
+    if (!detailOrder.pickup_date) updateData.pickup_date = todayStr;
+
+    await sb.from('driver_orders').update(updateData).eq('id', detailOrder.id);
 
     detailOrder.status = 'picked_up';
     detailOrder.confirmed_at = now.toISOString();
+    if (!detailOrder.pickup_date) detailOrder.pickup_date = todayStr;
 
     showToast(lang === 'es' ? 'Pedido confirmado y marcado como recogido' : 'Order confirmed & marked as picked up', 'success');
 
@@ -3781,12 +3787,20 @@ window.markAsPickedUp = async function() {
     // Save any form adjustments first
     await window.saveOrderChanges();
 
-    await sb.from('driver_orders').update({
+    const now = new Date();
+    const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+
+    const updateData = {
       status: 'picked_up',
-      picked_up_at: new Date().toISOString()
-    }).eq('id', detailOrder.id);
+      picked_up_at: now.toISOString()
+    };
+    // Ensure pickup_date is set so inventory lookup works
+    if (!detailOrder.pickup_date) updateData.pickup_date = todayStr;
+
+    await sb.from('driver_orders').update(updateData).eq('id', detailOrder.id);
 
     detailOrder.status = 'picked_up';
+    if (!detailOrder.pickup_date) detailOrder.pickup_date = todayStr;
 
     showToast(lang === 'es' ? 'Pedido marcado como recogido' : 'Order marked as picked up', 'success');
 
