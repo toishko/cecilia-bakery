@@ -1084,7 +1084,8 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 @keyframes cpSlideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
 
 .cp-header{display:flex;align-items:center;justify-content:space-between;
-  padding:12px 16px;border-bottom:1px solid var(--bd);
+  padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));
+  border-bottom:1px solid var(--bd);
   background:var(--bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   position:sticky;top:0;z-index:2}
 .cp-back{display:flex;align-items:center;gap:2px;background:none;border:none;
