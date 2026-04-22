@@ -4006,13 +4006,17 @@ function renderInventorySummary() {
   Object.values(PRODUCTS).forEach(sec => {
     sec.items.forEach(item => {
       labelMap[item.key] = L(item);
+      // Add _nt label for standard items
+      if (sec.type !== 'redondo') {
+        labelMap[item.key + '_nt'] = L(item) + ' (NT)';
+      }
       if (item.cols) {
         item.cols.forEach(col => {
           const subKey = item.key + '_' + col;
           const isNT = col.endsWith('_nt');
           const base = isNT ? col.replace('_nt', '') : col;
           const colLabel = base.charAt(0).toUpperCase() + base.slice(1);
-          labelMap[subKey] = L(item) + ' — ' + colLabel + (isNT ? ' NT' : '');
+          labelMap[subKey] = L(item) + ' — ' + colLabel + (isNT ? ' (NT)' : '');
         });
       }
     });
@@ -4057,6 +4061,13 @@ function renderInventorySummary() {
     sec.items.forEach(item => {
       if (driverInventory[item.key]) {
         matching.push({ key: item.key, label: labelMap[item.key] || item.key, ...driverInventory[item.key] });
+      }
+      // Check _nt variant for standard items
+      if (sec.type !== 'redondo') {
+        const ntKey = item.key + '_nt';
+        if (driverInventory[ntKey]) {
+          matching.push({ key: ntKey, label: labelMap[ntKey] || ntKey, ...driverInventory[ntKey] });
+        }
       }
       if (item.cols) {
         item.cols.forEach(col => {
@@ -4198,16 +4209,22 @@ function renderManualLoadForm() {
           const isNT = col.endsWith('_nt');
           const base = isNT ? col.replace('_nt', '') : col;
           const colLabel = base.charAt(0).toUpperCase() + base.slice(1);
-          const fullLabel = L(item) + ' — ' + colLabel + (isNT ? ' NT' : '');
+          const fullLabel = L(item) + ' — ' + colLabel + (isNT ? ' (NT)' : '');
           html += `<div class="inv-form-row">`;
           html += `<span class="inv-form-label">${_esc(fullLabel)}</span>`;
           html += `<input type="number" class="inv-form-input" data-pk="${subKey}" min="0" value="0" inputmode="numeric">`;
           html += `</div>`;
         });
       } else {
+        // Regular variant
         html += `<div class="inv-form-row">`;
         html += `<span class="inv-form-label" data-en="${item.en}" data-es="${item.es}">${L(item)}</span>`;
         html += `<input type="number" class="inv-form-input" data-pk="${item.key}" min="0" value="0" inputmode="numeric">`;
+        html += `</div>`;
+        // No-ticket variant
+        html += `<div class="inv-form-row">`;
+        html += `<span class="inv-form-label">${L(item)} (NT)</span>`;
+        html += `<input type="number" class="inv-form-input" data-pk="${item.key}_nt" min="0" value="0" inputmode="numeric">`;
         html += `</div>`;
       }
     });
