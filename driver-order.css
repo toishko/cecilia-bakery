@@ -1036,7 +1036,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .clients-empty{padding:60px 20px;text-align:center;color:var(--tx-muted);font-size:.9rem;line-height:1.5}
 
 /* Client Modal */
-.client-modal-overlay{position:fixed;inset:0;background:var(--bg-overlay);z-index:9000;
+.client-modal-overlay{position:fixed;inset:0;background:var(--bg-overlay);z-index:9600;
   display:none;align-items:flex-end;justify-content:center}
 .client-modal-overlay.open{display:flex}
 .client-modal-overlay.open .client-modal{animation:slideUp .3s ease}
