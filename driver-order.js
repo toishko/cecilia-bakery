@@ -104,9 +104,11 @@ function showSection(name) {
   const footer = document.getElementById('form-footer');
   const saleFooter = document.getElementById('sale-footer');
   if (name === 'new-order') {
-    initOrderForm();
-    footer.style.display = 'flex';
-    saleFooter.style.display = 'none';
+    loadDriverProducts().then(() => {
+      initOrderForm();
+      footer.style.display = 'flex';
+      saleFooter.style.display = 'none';
+    });
   } else if (name === 'sales') {
     footer.style.display = 'none';
     saleFooter.style.display = 'flex';
@@ -1072,13 +1074,76 @@ function buildProductSections() {
 /* ═══════════════════════════════════
    LOAD PRODUCTS FROM SUPABASE
    ═══════════════════════════════════ */
+
+// Map B2B tag_en values to hardcoded PRODUCTS section keys
+const _DRIVER_TAG_MAP = {
+  'Round': 'redondo', 'Redondo': 'redondo',
+  'Plain': 'plain',
+  'Tres Leche': 'tresleche',
+  'Pieces': 'piezas', 'Piezas': 'piezas',
+  'Frosted Pieces': 'frostin', 'Piezas Frostin': 'frostin',
+  'HB Big': 'hb_big', 'HB Grande': 'hb_big', 'Happy Birthday — BIG': 'hb_big',
+  'HB Small': 'hb_small', 'HB Pequeño': 'hb_small', 'Happy Birthday — SMALL': 'hb_small',
+  'Square': 'cuadrao', 'Cuadrao': 'cuadrao',
+  'Cups': 'basos', 'Basos': 'basos',
+  'Family Size': 'familiar', 'Familiar': 'familiar',
+};
+
 async function loadDriverProducts() {
   // The hardcoded PRODUCTS catalog above uses canonical keys (e.g. hb_s_pina,
-  // pz_pina, fr_pina) that match driver_prices exactly. Loading from
-  // b2b_products would generate naive keys from name_en (e.g. "piña" for ALL
-  // Piña variants), breaking price lookups and causing duplicate items.
-  // Keep using the hardcoded catalog until b2b_products stores proper keys.
-  _log('Driver: using hardcoded product catalog (canonical keys)');
+  // pz_pina, fr_pina) that match driver_prices exactly.
+  // B2B products use 'b2b_{uuid}' keys that NEVER collide with hardcoded keys.
+  _log('Driver: merging B2B products into hardcoded catalog');
+
+  try {
+    const { data: b2bRows } = await sb.from('b2b_products')
+      .select('product_key, name_en, name_es, tag_en, tag_es, type')
+      .eq('sold_out', false)
+      .not('product_key', 'is', null)
+      .order('sort_order', { ascending: true });
+
+    if (b2bRows && b2bRows.length > 0) {
+      // Collect all existing keys for fast dedup
+      const existingKeys = new Set();
+      Object.values(PRODUCTS).forEach(sec => {
+        sec.items.forEach(item => existingKeys.add(item.key));
+      });
+
+      b2bRows.forEach(row => {
+        if (!row.product_key || existingKeys.has(row.product_key)) return;
+
+        // Find matching section
+        const secKey = _DRIVER_TAG_MAP[row.tag_en];
+        let targetSec;
+
+        if (secKey && PRODUCTS[secKey]) {
+          targetSec = PRODUCTS[secKey];
+        } else {
+          // New category — create a section on the fly
+          const slug = 'b2b_cat_' + (row.tag_en || 'other').toLowerCase().replace(/[^a-z0-9]/g, '_');
+          if (!PRODUCTS[slug]) {
+            PRODUCTS[slug] = {
+              en: row.tag_en || 'Other',
+              es: row.tag_es || row.tag_en || 'Otro',
+              type: 'standard',
+              items: []
+            };
+          }
+          targetSec = PRODUCTS[slug];
+        }
+
+        // Append — all B2B products default to standard type
+        targetSec.items.push({
+          key: row.product_key,
+          en: row.name_en,
+          es: row.name_es || row.name_en,
+        });
+        existingKeys.add(row.product_key);
+      });
+    }
+  } catch(e) {
+    _log('Driver: B2B merge skipped — ' + e.message);
+  }
 }
 
 // ── Load driver prices into global map (for summary display) ──

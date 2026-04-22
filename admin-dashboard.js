@@ -4644,9 +4644,83 @@ window.showEditDriver = async function(driverId) {
 }
 
 // ── PRICE TABLE ─────────────────────
-function renderPriceTable(priceMap, creditMap) {
+
+// Build an augmented copy of ADMIN_PRODUCTS that includes B2B products
+// This is called each time we render the price table so new products appear immediately
+let _cachedAugmentedProducts = null;
+
+async function _getAugmentedAdminProducts() {
+  // Deep-clone the hardcoded array
+  const augmented = JSON.parse(JSON.stringify(ADMIN_PRODUCTS));
+
+  try {
+    const { data: b2bRows } = await sb.from('b2b_products')
+      .select('product_key, name_en, name_es, tag_en, tag_es, type')
+      .eq('sold_out', false)
+      .not('product_key', 'is', null)
+      .order('sort_order', { ascending: true });
+
+    if (b2bRows && b2bRows.length > 0) {
+      // Build set of all existing keys for dedup
+      const existingKeys = new Set();
+      augmented.forEach(sec => sec.items.forEach(item => existingKeys.add(item.key)));
+
+      // Map section names to their index in augmented
+      const sectionMap = {};
+      augmented.forEach((sec, idx) => { sectionMap[sec.section] = idx; });
+
+      b2bRows.forEach(row => {
+        if (!row.product_key || existingKeys.has(row.product_key)) return;
+
+        // Build price-table items for this B2B product
+        const items = [
+          { key: row.product_key, en: row.name_en, es: row.name_es || row.name_en },
+          { key: row.product_key + '_nt', en: row.name_en + ' (NT)', es: (row.name_es || row.name_en) + ' (ST)' },
+        ];
+
+        // Find matching section by tag_en
+        const tagToSection = {
+          'Round': 'Redondo', 'Redondo': 'Redondo',
+          'Plain': 'Plain',
+          'Tres Leche': 'Tres Leche',
+          'Pieces': 'Pieces', 'Piezas': 'Pieces',
+          'Frosted Pieces': 'Frosted Pieces', 'Piezas Frostin': 'Frosted Pieces',
+          'HB Big': 'HB Big', 'HB Grande': 'HB Big', 'Happy Birthday — BIG': 'HB Big',
+          'HB Small': 'HB Small', 'HB Pequeño': 'HB Small', 'Happy Birthday — SMALL': 'HB Small',
+          'Square': 'Square', 'Cuadrao': 'Square',
+          'Cups': 'Cups', 'Basos': 'Cups',
+          'Family Size': 'Family Size', 'Familiar': 'Family Size',
+        };
+
+        const mappedSection = tagToSection[row.tag_en];
+        const idx = mappedSection ? sectionMap[mappedSection] : undefined;
+
+        if (idx !== undefined) {
+          augmented[idx].items.push(...items);
+        } else {
+          // New category
+          augmented.push({
+            section: row.tag_en || 'Other',
+            sectionEs: row.tag_es || row.tag_en || 'Otro',
+            items: items
+          });
+        }
+        existingKeys.add(row.product_key);
+        existingKeys.add(row.product_key + '_nt');
+      });
+    }
+  } catch(e) {
+    console.warn('Price table B2B merge skipped:', e);
+  }
+
+  _cachedAugmentedProducts = augmented;
+  return augmented;
+}
+
+async function renderPriceTable(priceMap, creditMap) {
+  const products = await _getAugmentedAdminProducts();
   let html = '';
-  ADMIN_PRODUCTS.forEach((sec, idx) => {
+  products.forEach((sec, idx) => {
     html += `<div class="price-section">`;
     html += `<div class="price-section-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
         <span>${lang === 'es' ? sec.sectionEs : sec.section}</span>
@@ -4676,12 +4750,13 @@ function renderPriceTable(priceMap, creditMap) {
 }
 
 window.applyCategoryPrice = function(secIdx) {
+  const products = _cachedAugmentedProducts || ADMIN_PRODUCTS;
   const priceEl = document.getElementById(`cat-price-${secIdx}`);
   const creditEl = document.getElementById(`cat-credit-${secIdx}`);
   const priceVal = priceEl ? priceEl.value : '';
   const creditVal = creditEl ? creditEl.value : '';
   if (!priceVal && !creditVal) return;
-  const sec = ADMIN_PRODUCTS[secIdx];
+  const sec = products[secIdx];
   if (!sec) return;
   sec.items.forEach(item => {
     if (priceVal) {
@@ -4704,9 +4779,10 @@ window.applyCategoryPrice = function(secIdx) {
   showToast(lang === 'es' ? 'Valores aplicados a la categoría' : 'Values applied to category', 'success');
 };
 
-function renderProfilePrices(priceMap) {
+async function renderProfilePrices(priceMap) {
+  const products = await _getAugmentedAdminProducts();
   let html = '';
-  ADMIN_PRODUCTS.forEach(sec => {
+  products.forEach(sec => {
     html += `<div class="profile-price-section">`;
     html += `<div class="profile-price-section-title">${lang === 'es' ? sec.sectionEs : sec.section}</div>`;
     sec.items.forEach(item => {
@@ -4782,7 +4858,8 @@ async function saveDriver() {
   priceInputs.forEach(input => {
     const val = input.value.trim();
     if (!val && !editingDriverId) { allFilled = false; return; }
-    const product = ADMIN_PRODUCTS.flatMap(s => s.items).find(i => i.key === input.dataset.key);
+    const allProducts = (_cachedAugmentedProducts || ADMIN_PRODUCTS).flatMap(s => s.items);
+    const product = allProducts.find(i => i.key === input.dataset.key);
     prices.push({
       product_key: input.dataset.key,
       product_label: product ? product.en : input.dataset.key,
@@ -8105,7 +8182,30 @@ function _b2bOpenModal(product) {
       ({ error } = await sb.from('b2b_products').update(payload).eq('id', product.id));
     } else {
       payload.sort_order = 999;
-      ({ error } = await sb.from('b2b_products').insert(payload));
+      // Insert and get back the new row so we can set product_key
+      var insertRes = await sb.from('b2b_products').insert(payload).select('id').single();
+      error = insertRes.error;
+      // Auto-generate product_key = 'b2b_' + uuid
+      if (!error && insertRes.data) {
+        var newId = insertRes.data.id;
+        var pKey = 'b2b_' + newId;
+        await sb.from('b2b_products').update({ product_key: pKey }).eq('id', newId);
+        // Auto-insert driver_prices for ALL active drivers at $0
+        try {
+          var { data: drivers } = await sb.from('drivers').select('id').eq('is_active', true);
+          if (drivers && drivers.length > 0) {
+            var priceKeys = [pKey];
+            if (type === 'standard') priceKeys.push(pKey + '_nt');
+            var priceRows = [];
+            drivers.forEach(function(d) {
+              priceKeys.forEach(function(pk) {
+                priceRows.push({ driver_id: d.id, product_key: pk, product_label: nameEn + (pk.endsWith('_nt') ? ' (NT)' : ''), price: 0 });
+              });
+            });
+            await sb.from('driver_prices').upsert(priceRows, { onConflict: 'driver_id,product_key' });
+          }
+        } catch(e) { console.warn('Auto driver_prices insert:', e); }
+      }
     }
 
     if (error) { showToast('Error: ' + error.message, 'error'); return; }
@@ -8154,6 +8254,20 @@ function _noCreateBlankOrder() {
   });
   return { business: '', date: _noGetTodayStr(), time: '', ref: '', notes: '', qty, scanData: null };
 }
+
+// Map B2B tag_en values to hardcoded section keys
+const _B2B_TAG_MAP = {
+  'Round': 'redondo', 'Redondo': 'redondo',
+  'Plain': 'plain',
+  'Tres Leche': 'tresleche',
+  'Pieces': 'piezas', 'Piezas': 'piezas',
+  'Frosted Pieces': 'frostin', 'Piezas Frostin': 'frostin',
+  'HB Big': 'hb_big', 'HB Grande': 'hb_big', 'Happy Birthday — BIG': 'hb_big',
+  'HB Small': 'hb_small', 'HB Pequeño': 'hb_small', 'Happy Birthday — SMALL': 'hb_small',
+  'Square': 'cuadrao', 'Cuadrao': 'cuadrao',
+  'Cups': 'basos', 'Basos': 'basos',
+  'Family Size': 'familiar', 'Familiar': 'familiar',
+};
 
 async function _noLoadProducts() {
   if (adminNoProductsLoaded) return;
@@ -8253,6 +8367,58 @@ async function _noLoadProducts() {
       ]
     },
   };
+
+  // ── Merge B2B products from database ──
+  try {
+    const { data: b2bRows } = await sb.from('b2b_products')
+      .select('product_key, name_en, name_es, tag_en, tag_es, type')
+      .eq('sold_out', false)
+      .not('product_key', 'is', null)
+      .order('sort_order', { ascending: true });
+
+    if (b2bRows && b2bRows.length > 0) {
+      // Collect all existing keys across all sections for fast dedup
+      const existingKeys = new Set();
+      Object.values(adminNoProducts).forEach(sec => {
+        sec.items.forEach(item => existingKeys.add(item.key));
+      });
+
+      b2bRows.forEach(row => {
+        if (!row.product_key || existingKeys.has(row.product_key)) return;
+
+        // Find matching section
+        const secKey = _B2B_TAG_MAP[row.tag_en];
+        let targetSec;
+
+        if (secKey && adminNoProducts[secKey]) {
+          targetSec = adminNoProducts[secKey];
+        } else {
+          // New category — create a section on the fly
+          const slug = 'b2b_cat_' + (row.tag_en || 'other').toLowerCase().replace(/[^a-z0-9]/g, '_');
+          if (!adminNoProducts[slug]) {
+            adminNoProducts[slug] = {
+              en: row.tag_en || 'Other',
+              es: row.tag_es || row.tag_en || 'Otro',
+              type: 'standard',
+              items: []
+            };
+          }
+          targetSec = adminNoProducts[slug];
+        }
+
+        // Append — all B2B products default to standard type in the form
+        targetSec.items.push({
+          key: row.product_key,
+          en: row.name_en,
+          es: row.name_es || row.name_en,
+        });
+        existingKeys.add(row.product_key);
+      });
+    }
+  } catch(e) {
+    console.warn('Admin New Order: b2b merge skipped', e);
+  }
+
   adminNoProductsLoaded = true;
 }
 
