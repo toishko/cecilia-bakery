@@ -1096,17 +1096,30 @@ async function loadDriverProducts() {
   _log('Driver: merging B2B products into hardcoded catalog');
 
   try {
-    const { data: b2bRows } = await sb.from('b2b_products')
-      .select('product_key, name_en, name_es, tag_en, tag_es, type')
-      .eq('sold_out', false)
+    const { data: b2bRowsRaw } = await sb.from('b2b_products')
+      .select('product_key, name_en, name_es, tag_en, tag_es, type, sold_out')
       .not('product_key', 'is', null)
       .order('sort_order', { ascending: true });
 
-    if (b2bRows && b2bRows.length > 0) {
+    if (b2bRowsRaw && b2bRowsRaw.length > 0) {
+      const b2bRows = b2bRowsRaw.filter(r => r.sold_out !== true);
       // Collect all existing keys for fast dedup
       const existingKeys = new Set();
       Object.values(PRODUCTS).forEach(sec => {
         sec.items.forEach(item => existingKeys.add(item.key));
+      });
+
+      // Build name sets per section for name-based dedup
+      // (B2B table mirrors hardcoded products but with different keys like b2b_{uuid})
+      const sectionNameSets = {};
+      Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
+        const names = new Set();
+        sec.items.forEach(item => {
+          const baseName = item.en.replace(/\s*\(NT\)$/i, '').replace(/\s*\(ST\)$/i, '')
+            .replace(/\s*(Inside|Top|Interior|Arriba)$/i, '').trim().toLowerCase();
+          names.add(baseName);
+        });
+        sectionNameSets[secKey] = names;
       });
 
       b2bRows.forEach(row => {
@@ -1117,6 +1130,9 @@ async function loadDriverProducts() {
         let targetSec;
 
         if (secKey && PRODUCTS[secKey]) {
+          // Skip if the same product name already exists in this section
+          const nameNorm = (row.name_en || '').trim().toLowerCase();
+          if (sectionNameSets[secKey] && sectionNameSets[secKey].has(nameNorm)) return;
           targetSec = PRODUCTS[secKey];
         } else {
           // New category — create a section on the fly
@@ -1128,6 +1144,7 @@ async function loadDriverProducts() {
               type: 'standard',
               items: []
             };
+            sectionNameSets[slug] = new Set();
           }
           targetSec = PRODUCTS[slug];
         }

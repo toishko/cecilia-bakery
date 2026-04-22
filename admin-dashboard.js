@@ -4654,13 +4654,13 @@ async function _getAugmentedAdminProducts() {
   const augmented = JSON.parse(JSON.stringify(ADMIN_PRODUCTS));
 
   try {
-    const { data: b2bRows } = await sb.from('b2b_products')
-      .select('product_key, name_en, name_es, tag_en, tag_es, type')
-      .eq('sold_out', false)
+    const { data: b2bRowsRaw } = await sb.from('b2b_products')
+      .select('product_key, name_en, name_es, tag_en, tag_es, type, sold_out')
       .not('product_key', 'is', null)
       .order('sort_order', { ascending: true });
 
-    if (b2bRows && b2bRows.length > 0) {
+    if (b2bRowsRaw && b2bRowsRaw.length > 0) {
+      const b2bRows = b2bRowsRaw.filter(r => r.sold_out !== true);
       // Build set of all existing keys for dedup
       const existingKeys = new Set();
       augmented.forEach(sec => sec.items.forEach(item => existingKeys.add(item.key)));
@@ -4669,14 +4669,22 @@ async function _getAugmentedAdminProducts() {
       const sectionMap = {};
       augmented.forEach((sec, idx) => { sectionMap[sec.section] = idx; });
 
+      // Build a set of existing product names per section for name-based dedup
+      // (B2B table mirrors hardcoded products but with different keys like b2b_{uuid})
+      const sectionNameSets = {};
+      augmented.forEach((sec, idx) => {
+        const names = new Set();
+        sec.items.forEach(item => {
+          // Normalize: strip suffixes like " Inside", " Top", " (NT)", " (ST)" for comparison
+          const baseName = item.en.replace(/\s*\(NT\)$/i, '').replace(/\s*\(ST\)$/i, '')
+            .replace(/\s*(Inside|Top|Interior|Arriba)$/i, '').trim().toLowerCase();
+          names.add(baseName);
+        });
+        sectionNameSets[idx] = names;
+      });
+
       b2bRows.forEach(row => {
         if (!row.product_key || existingKeys.has(row.product_key)) return;
-
-        // Build price-table items for this B2B product
-        const items = [
-          { key: row.product_key, en: row.name_en, es: row.name_es || row.name_en },
-          { key: row.product_key + '_nt', en: row.name_en + ' (NT)', es: (row.name_es || row.name_en) + ' (ST)' },
-        ];
 
         // Find matching section by tag_en
         const tagToSection = {
@@ -4694,6 +4702,18 @@ async function _getAugmentedAdminProducts() {
 
         const mappedSection = tagToSection[row.tag_en];
         const idx = mappedSection ? sectionMap[mappedSection] : undefined;
+
+        // Skip if the same product name already exists in the target section (name-based dedup)
+        if (idx !== undefined) {
+          const nameNorm = (row.name_en || '').trim().toLowerCase();
+          if (sectionNameSets[idx] && sectionNameSets[idx].has(nameNorm)) return;
+        }
+
+        // Build price-table items for this B2B product
+        const items = [
+          { key: row.product_key, en: row.name_en, es: row.name_es || row.name_en },
+          { key: row.product_key + '_nt', en: row.name_en + ' (NT)', es: (row.name_es || row.name_en) + ' (ST)' },
+        ];
 
         if (idx !== undefined) {
           augmented[idx].items.push(...items);
@@ -8174,6 +8194,7 @@ function _b2bOpenModal(product) {
       name_en: nameEn, name_es: nameEs || nameEn,
       tag_en: tagEn, tag_es: tagEs,
       type: type,
+      sold_out: false,
       updated_at: new Date().toISOString()
     };
 
@@ -8370,17 +8391,29 @@ async function _noLoadProducts() {
 
   // ── Merge B2B products from database ──
   try {
-    const { data: b2bRows } = await sb.from('b2b_products')
-      .select('product_key, name_en, name_es, tag_en, tag_es, type')
-      .eq('sold_out', false)
+    const { data: b2bRowsRaw } = await sb.from('b2b_products')
+      .select('product_key, name_en, name_es, tag_en, tag_es, type, sold_out')
       .not('product_key', 'is', null)
       .order('sort_order', { ascending: true });
 
-    if (b2bRows && b2bRows.length > 0) {
+    if (b2bRowsRaw && b2bRowsRaw.length > 0) {
+      const b2bRows = b2bRowsRaw.filter(r => r.sold_out !== true);
       // Collect all existing keys across all sections for fast dedup
       const existingKeys = new Set();
       Object.values(adminNoProducts).forEach(sec => {
         sec.items.forEach(item => existingKeys.add(item.key));
+      });
+
+      // Build name sets per section for name-based dedup
+      const sectionNameSets = {};
+      Object.entries(adminNoProducts).forEach(([secKey, sec]) => {
+        const names = new Set();
+        sec.items.forEach(item => {
+          const baseName = item.en.replace(/\s*\(NT\)$/i, '').replace(/\s*\(ST\)$/i, '')
+            .replace(/\s*(Inside|Top|Interior|Arriba)$/i, '').trim().toLowerCase();
+          names.add(baseName);
+        });
+        sectionNameSets[secKey] = names;
       });
 
       b2bRows.forEach(row => {
@@ -8389,9 +8422,14 @@ async function _noLoadProducts() {
         // Find matching section
         const secKey = _B2B_TAG_MAP[row.tag_en];
         let targetSec;
+        let targetSecKey;
 
         if (secKey && adminNoProducts[secKey]) {
+          // Skip if the same product name already exists in this section
+          const nameNorm = (row.name_en || '').trim().toLowerCase();
+          if (sectionNameSets[secKey] && sectionNameSets[secKey].has(nameNorm)) return;
           targetSec = adminNoProducts[secKey];
+          targetSecKey = secKey;
         } else {
           // New category — create a section on the fly
           const slug = 'b2b_cat_' + (row.tag_en || 'other').toLowerCase().replace(/[^a-z0-9]/g, '_');
@@ -8402,8 +8440,10 @@ async function _noLoadProducts() {
               type: 'standard',
               items: []
             };
+            sectionNameSets[slug] = new Set();
           }
           targetSec = adminNoProducts[slug];
+          targetSecKey = slug;
         }
 
         // Append — all B2B products default to standard type in the form
