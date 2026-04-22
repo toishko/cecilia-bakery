@@ -3380,10 +3380,11 @@ async function _saveClientPrices() {
 
   try {
     // Delete existing prices for this client
-    await sb.from('client_prices')
+    const { error: delErr } = await sb.from('client_prices')
       .delete()
       .eq('client_id', _cpClientId)
       .eq('driver_id', currentDriver.id);
+    if (delErr) throw delErr;
 
     if (_cpHasCustom) {
       // Insert new prices
@@ -3405,14 +3406,33 @@ async function _saveClientPrices() {
     }
 
     _cpDirty = false;
+
+    // ✓ Success feedback — green button with checkmark
+    btn.style.background = '#34C759';
+    btn.style.boxShadow = '0 4px 24px rgba(52,199,89,.35),0 1px 4px rgba(0,0,0,.12)';
+    btn.textContent = lang === 'es' ? '✓ Guardado' : '✓ Saved';
     showToast(lang === 'es' ? 'Precios guardados' : 'Prices saved', 'success');
+
+    setTimeout(() => {
+      btn.style.background = '';
+      btn.style.boxShadow = '';
+      btn.textContent = lang === 'es' ? 'Guardar Precios' : 'Save Prices';
+      btn.disabled = false;
+    }, 2000);
+    return;
+
   } catch (e) {
     console.error('Save client prices error:', e);
-    showToast(lang === 'es' ? 'Error al guardar precios' : 'Error saving prices', 'error');
-  }
 
-  btn.disabled = false;
-  btn.textContent = lang === 'es' ? 'Guardar Precios' : 'Save Prices';
+    // ✗ Error feedback — shake + red flash
+    btn.textContent = lang === 'es' ? '✗ Error' : '✗ Error';
+    showToast(lang === 'es' ? 'Error al guardar precios' : 'Error saving prices', 'error');
+
+    setTimeout(() => {
+      btn.textContent = lang === 'es' ? 'Guardar Precios' : 'Save Prices';
+      btn.disabled = false;
+    }, 2000);
+  }
 }
 
 // ── Toggle pricing UI visibility ──
