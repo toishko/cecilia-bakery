@@ -145,17 +145,29 @@ function showSection(name) {
   // Show/hide footer and init order form
   const footer = document.getElementById('form-footer');
   const saleFooter = document.getElementById('sale-footer');
+  const mobileLogo = document.getElementById('mobile-logo');
+  const headerBackBtn = document.getElementById('header-back-btn');
+
   if (name === 'new-order') {
     initOrderForm();
     footer.style.display = 'flex';
     saleFooter.style.display = 'none';
+    document.body.classList.add('immersive-mode');
+    if(mobileLogo) mobileLogo.style.display = 'none';
+    if(headerBackBtn) headerBackBtn.style.display = 'inline-flex';
   } else if (activeTool === 'sales') {
     footer.style.display = 'none';
     saleFooter.style.display = 'flex';
     initSalesSection();
+    document.body.classList.add('immersive-mode');
+    if(mobileLogo) mobileLogo.style.display = 'none';
+    if(headerBackBtn) headerBackBtn.style.display = 'inline-flex';
   } else {
     footer.style.display = 'none';
     saleFooter.style.display = 'none';
+    document.body.classList.remove('immersive-mode');
+    if(mobileLogo) mobileLogo.style.display = 'block';
+    if(headerBackBtn) headerBackBtn.style.display = 'none';
   }
 
   // Execute loaders

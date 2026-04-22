@@ -102,9 +102,15 @@
 
     <!-- MOBILE HEADER -->
     <header class="mobile-header" id="mobile-header">
-      <img src="assets/logo.png" alt="Cecilia" class="mobile-logo" style="cursor:pointer"
-        onclick="document.querySelector('.bottom-nav-item[data-section=overview]').click()">
+      <div id="header-left-slot" style="width: 80px; display: flex; align-items: center;">
+        <img src="assets/logo.png" alt="Cecilia" class="mobile-logo" id="mobile-logo" style="cursor:pointer"
+          onclick="document.querySelector('.bottom-nav-item[data-section=overview]').click()">
+        <button id="header-back-btn" class="header-back-btn" style="display:none;" onclick="document.querySelector('.bottom-nav-item[data-section=overview]').click()">
+          <i data-lucide="chevron-left"></i> <span data-en="Cancel" data-es="Cancelar">Cancel</span>
+        </button>
+      </div>
       <span class="mobile-section-name" id="mobile-section-name" data-en="Overview" data-es="Resumen">Overview</span>
+      <div id="header-right-slot" style="width: 80px;"></div>
     </header>
 
 
