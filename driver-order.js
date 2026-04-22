@@ -72,6 +72,9 @@ function showScreen(id) {
 }
 
 function showSection(name) {
+  // Close any open settings sub-views (e.g. My Products)
+  document.querySelectorAll('.settings-subview.open').forEach(sv => sv.classList.remove('open'));
+
   // Hide all sections, show target
   document.querySelectorAll('.dash-section').forEach(s => s.style.display = 'none');
   const target = document.getElementById('section-' + name);
