@@ -104,11 +104,9 @@ function showSection(name) {
   const footer = document.getElementById('form-footer');
   const saleFooter = document.getElementById('sale-footer');
   if (name === 'new-order') {
-    loadDriverProducts().then(() => {
-      initOrderForm();
-      footer.style.display = 'flex';
-      saleFooter.style.display = 'none';
-    });
+    initOrderForm();
+    footer.style.display = 'flex';
+    saleFooter.style.display = 'none';
   } else if (name === 'sales') {
     footer.style.display = 'none';
     saleFooter.style.display = 'flex';
@@ -1075,43 +1073,12 @@ function buildProductSections() {
    LOAD PRODUCTS FROM SUPABASE
    ═══════════════════════════════════ */
 async function loadDriverProducts() {
-  // The hardcoded PRODUCTS catalog uses canonical keys that match driver_prices.
-  // B2B products added by the owner in the B2B Catalog tab are fetched from
-  // the b2b_products table and MERGED into the appropriate section.
-  try {
-    if (!sb) return;
-    const { data, error } = await sb.from('b2b_products')
-      .select('id, name_en, name_es, tag_en, type, sold_out')
-      .order('sort_order', { ascending: true });
-    if (error || !data || !data.length) return;
-
-    // Map human-readable tag_en → hardcoded section key
-    var tagToSection = {
-      'Round': 'redondo', 'Redondo': 'redondo',
-      'Plain': 'plain',
-      'Tres Leche': 'tresleche',
-      'Pieces': 'piezas', 'Piezas': 'piezas',
-      'Frosted Pieces': 'frostin', 'Piezas Frostin': 'frostin', 'Frostin': 'frostin',
-      'Happy Birthday — BIG': 'hb_big', 'HB Big': 'hb_big',
-      'Happy Birthday — SMALL': 'hb_small', 'HB Small': 'hb_small',
-      'Square': 'cuadrao', 'Cuadrao': 'cuadrao',
-      'Cups': 'basos', 'Basos': 'basos',
-      'Family Size': 'familiar', 'Familiar': 'familiar',
-    };
-
-    data.forEach(function(p) {
-      if (p.sold_out) return; // skip sold out items
-      var secKey = tagToSection[p.tag_en] || p.tag_en;
-      var sec = PRODUCTS[secKey];
-      if (!sec) return;
-      // Generate a stable key from the b2b product id
-      var driverKey = 'b2b_' + p.name_en.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-      // Skip if already in the catalog
-      if (sec.items.some(function(item) { return item.key === driverKey; })) return;
-      sec.items.push({ key: driverKey, en: p.name_en, es: p.name_es || p.name_en });
-    });
-    _log('B2B products merged:', data.length, 'items');
-  } catch (e) { console.warn('loadDriverProducts B2B:', e); }
+  // The hardcoded PRODUCTS catalog above uses canonical keys (e.g. hb_s_pina,
+  // pz_pina, fr_pina) that match driver_prices exactly. Loading from
+  // b2b_products would generate naive keys from name_en (e.g. "piña" for ALL
+  // Piña variants), breaking price lookups and causing duplicate items.
+  // Keep using the hardcoded catalog until b2b_products stores proper keys.
+  _log('Driver: using hardcoded product catalog (canonical keys)');
 }
 
 // ── Load driver prices into global map (for summary display) ──

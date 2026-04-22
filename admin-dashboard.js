@@ -6130,77 +6130,19 @@ async function _pmSave() {
   if (error) { showToast(error.message || 'Save failed', 'error'); return; }
 
   if (_pmEditId) {
+    // ── Existing product: surgical card update (no full reload) ──
     const p = _pmProducts.find(x => x.id === _pmEditId);
     if (p) Object.assign(p, payload);
     showToast('Product updated ✓', 'success');
     _pmCloseModal();
     _pmUpdateCard(_pmEditId, payload);
   } else {
+    // ── New product: full reload to render the new card ──
     showToast('Product added ✓', 'success');
     const scrollY = window.scrollY;
     _pmCloseModal();
     await _pmFetch();
     requestAnimationFrame(() => window.scrollTo(0, scrollY));
-  }
-}
-
-/* ── Auto-insert driver_prices for a new B2B product ── */
-async function _pmInsertB2BPrices(b2bKey, label, category) {
-  // 1. Get all active drivers
-  const { data: drivers } = await sb.from('drivers').select('id').eq('is_active', true);
-  if (!drivers || !drivers.length) return;
-
-  // Resolve human-readable tag_en to section key if needed
-  const tagToSection = {
-    'Round': 'redondo', 'Redondo': 'redondo',
-    'Plain': 'plain',
-    'Tres Leche': 'tresleche',
-    'Pieces': 'piezas', 'Piezas': 'piezas',
-    'Frosted Pieces': 'frostin', 'Piezas Frostin': 'frostin', 'Frostin': 'frostin',
-    'Happy Birthday — BIG': 'hb_big', 'HB Big': 'hb_big',
-    'Happy Birthday — SMALL': 'hb_small', 'HB Small': 'hb_small',
-    'Square': 'cuadrao', 'Cuadrao': 'cuadrao',
-    'Cups': 'basos', 'Basos': 'basos',
-    'Family Size': 'familiar', 'Familiar': 'familiar',
-  };
-  const sectionKey = tagToSection[category] || category;
-
-  // 2. Map section key → existing product key prefixes for price lookup
-  const catPrefixMap = {
-    redondo: ['pina_inside','guava_inside','dulce_inside'],
-    plain: ['plain','raisin','pudin'],
-    tresleche: ['tl','tl_hershey','cuatro_leche'],
-    piezas: ['pz_rv','pz_carrot','pz_cheese'],
-    frostin: ['fr_guava','fr_pina','fr_dulce','fr_choco'],
-    hb_big: ['hb_b_pina','hb_b_guava','hb_b_dulce'],
-    hb_small: ['hb_s_pina','hb_s_guava','hb_s_dulce'],
-    cuadrao: ['cdr_pudin','cdr_pound','cdr_raisin'],
-    basos: ['bas_tl','bas_cl','bas_hershey'],
-    familiar: ['fam_tl','fam_cl'],
-  };
-  const sampleKeys = catPrefixMap[sectionKey] || [];
-
-  // 3. For each driver, find the avg price of that category and insert
-  for (const drv of drivers) {
-    let defaultPrice = 0;
-    if (sampleKeys.length) {
-      const { data: existingPrices } = await sb.from('driver_prices')
-        .select('price')
-        .eq('driver_id', drv.id)
-        .in('product_key', sampleKeys);
-      if (existingPrices && existingPrices.length) {
-        const sum = existingPrices.reduce((a, p) => a + parseFloat(p.price), 0);
-        defaultPrice = Math.round((sum / existingPrices.length) * 100) / 100;
-      }
-    }
-    // Insert (upsert to avoid duplicate errors)
-    await sb.from('driver_prices').upsert({
-      driver_id: drv.id,
-      product_key: b2bKey,
-      product_label: label,
-      price: defaultPrice,
-      credit_value: 0,
-    }, { onConflict: 'driver_id,product_key' });
   }
 }
 
@@ -8167,14 +8109,7 @@ function _b2bOpenModal(product) {
     }
 
     if (error) { showToast('Error: ' + error.message, 'error'); return; }
-
-    // Auto-insert driver_prices for all drivers when adding a new B2B product
-    if (!isEdit) {
-      var driverKey = 'b2b_' + nameEn.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-      try { await _pmInsertB2BPrices(driverKey, nameEn, tagEn); } catch (e) { console.warn('B2B auto-pricing:', e); }
-    }
-
-    showToast(isEdit ? 'Product updated' : 'Product added ✓ — drivers can now order this', 'success');
+    showToast(isEdit ? 'Product updated' : 'Product added', 'success');
     document.getElementById('b2b-modal-overlay').remove();
     await _b2bLoadProducts();
   });
@@ -8318,37 +8253,6 @@ async function _noLoadProducts() {
       ]
     },
   };
-
-  // ── Merge B2B products from b2b_products table ──
-  try {
-    const { data: b2bItems } = await sb.from('b2b_products')
-      .select('id, name_en, name_es, tag_en, type, sold_out')
-      .order('sort_order', { ascending: true });
-    if (b2bItems && b2bItems.length) {
-      const tagToSection = {
-        'Round': 'redondo', 'Redondo': 'redondo',
-        'Plain': 'plain',
-        'Tres Leche': 'tresleche',
-        'Pieces': 'piezas', 'Piezas': 'piezas',
-        'Frosted Pieces': 'frostin', 'Piezas Frostin': 'frostin', 'Frostin': 'frostin',
-        'Happy Birthday — BIG': 'hb_big', 'HB Big': 'hb_big',
-        'Happy Birthday — SMALL': 'hb_small', 'HB Small': 'hb_small',
-        'Square': 'cuadrao', 'Cuadrao': 'cuadrao',
-        'Cups': 'basos', 'Basos': 'basos',
-        'Family Size': 'familiar', 'Familiar': 'familiar',
-      };
-      b2bItems.forEach(p => {
-        if (p.sold_out) return;
-        const secKey = tagToSection[p.tag_en] || p.tag_en;
-        const sec = adminNoProducts[secKey];
-        if (!sec) return;
-        const driverKey = 'b2b_' + p.name_en.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-        if (sec.items.some(item => item.key === driverKey)) return;
-        sec.items.push({ key: driverKey, en: p.name_en, es: p.name_es || p.name_en });
-      });
-    }
-  } catch (e) { console.warn('B2B products merge:', e); }
-
   adminNoProductsLoaded = true;
 }
 
