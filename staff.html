@@ -1457,9 +1457,13 @@
                 </div>
               </div>
               <div class="settings-row">
-                <span class="settings-row-label" data-en="Theme" data-es="Tema">Theme</span>
+                <span class="settings-row-label" data-en="Dark Mode" data-es="Modo Oscuro">Dark Mode</span>
                 <div class="settings-row-actions">
-                  <button onclick="toggleTheme()" style="padding:6px 14px;background:none;border:1px solid var(--bd);border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--tx)" data-en="Toggle Theme" data-es="Cambiar Tema">Toggle Theme</button>
+                  <label class="staff-toggle">
+                    <input type="checkbox" id="settings-theme-toggle" onchange="toggleTheme()">
+                    <div class="staff-toggle-track"></div>
+                    <div class="staff-toggle-thumb"></div>
+                  </label>
                 </div>
               </div>
               <div class="settings-row">
@@ -1526,12 +1530,15 @@
       document.documentElement.setAttribute('data-theme', t);
       const moonEl = document.getElementById('theme-icon-moon');
       const sunEl = document.getElementById('theme-icon-sun');
+      const toggle = document.getElementById('settings-theme-toggle');
       if (t === 'dark') {
         if (moonEl) moonEl.classList.add('hidden');
         if (sunEl) sunEl.classList.remove('hidden');
+        if (toggle) toggle.checked = true;
       } else {
         if (moonEl) moonEl.classList.remove('hidden');
         if (sunEl) sunEl.classList.add('hidden');
+        if (toggle) toggle.checked = false;
       }
       try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
     }
