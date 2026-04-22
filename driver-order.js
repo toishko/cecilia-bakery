@@ -2141,13 +2141,7 @@ function formatTime12(timeStr) {
 // ── BALANCE REDIRECT ──
 window.goToUnpaidOrders = function() {
   // Navigate to My Orders section
-  const myOrdersBtn = document.querySelector('.sidebar-nav-item[data-section=my-orders]');
-  if (myOrdersBtn && myOrdersBtn.offsetParent !== null) {
-    myOrdersBtn.click();
-  } else {
-    const mobileMyOrdersBtn = document.querySelector('.mobile-nav-item[data-section=my-orders]');
-    if (mobileMyOrdersBtn) mobileMyOrdersBtn.click();
-  }
+  showSection('my-orders');
 
   // Set filter to unpaid
   currentOrdersFilter = 'unpaid';
