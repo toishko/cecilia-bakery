@@ -3,7 +3,7 @@
    ═══════════════════════════════════ */
 // M1: Production-safe logger — silences debug logs on production
 const __DEV__ = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-const _log = __DEV__ ? console.log.bind(console) : () => {};
+const _log = __DEV__ ? console.log.bind(console) : () => { };
 
 const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
@@ -61,7 +61,7 @@ const DRIVER_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 let hiddenProducts = new Set(JSON.parse(localStorage.getItem('cecilia_hidden_products') || '[]'));
 
 /* ── Escape helper for XSS prevention ── */
-function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 /* ═══════════════════════════════════
    SCREEN MANAGEMENT
@@ -75,32 +75,69 @@ function showSection(name) {
   // Close any open settings sub-views (e.g. My Products)
   document.querySelectorAll('.settings-subview.open').forEach(sv => sv.classList.remove('open'));
 
+  const toolsSections = ['sales', 'inventory', 'clients'];
+  let activeSection = name;
+  let activeTool = null;
+
+  if (toolsSections.includes(name)) {
+    activeSection = 'tools';
+    activeTool = name;
+  } else if (name === 'tools') {
+    activeTool = 'sales'; // Default
+  }
+
   // Hide all sections, show target
   document.querySelectorAll('.dash-section').forEach(s => s.style.display = 'none');
-  const target = document.getElementById('section-' + name);
+  const target = document.getElementById('section-' + activeSection);
   if (target) target.style.display = 'block';
 
-  // Determine which bottom nav tab should be active
-  // If the section is from the action sheet (clients, inventory, sales, settings), the settings/menu tab should be active
-  const isActionSheetSection = ['clients', 'inventory', 'sales', 'settings'].includes(name);
-  const bottomNavActiveTarget = isActionSheetSection ? 'settings' : name;
+  // If a tool is active, switch panes
+  if (activeTool) {
+    document.querySelectorAll('.tool-pane').forEach(p => p.style.display = 'none');
+    const pane = document.getElementById('tool-pane-' + activeTool);
+    if (pane) pane.style.display = 'block';
+    
+    // Update pills
+    document.querySelectorAll('#tools-nav-pills .insights-pill').forEach(btn => {
+      if (btn.dataset.tool === activeTool) {
+        btn.classList.add('active');
+        // Update header name based on active tool
+        const sectionNameEl = document.getElementById('mobile-section-name');
+        if (sectionNameEl) {
+          sectionNameEl.textContent = btn.getAttribute('data-' + lang) || btn.textContent;
+          sectionNameEl.setAttribute('data-en', btn.getAttribute('data-en'));
+          sectionNameEl.setAttribute('data-es', btn.getAttribute('data-es'));
+        }
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
 
-  // Update active state on sidebar, bottom nav, and action items
+  // Determine which bottom nav tab should be active
+  const isSettings = name === 'settings';
+  const bottomNavActiveTarget = isSettings ? 'settings' : activeSection;
+
+  // Update active state on sidebar, bottom nav
   document.querySelectorAll('.sidebar-nav-item').forEach(btn => btn.classList.toggle('active', btn.dataset.section === name));
   document.querySelectorAll('.bottom-nav-item').forEach(btn => btn.classList.toggle('active', btn.dataset.section === bottomNavActiveTarget));
-  document.querySelectorAll('.action-item').forEach(btn => btn.classList.toggle('active-section', btn.dataset.section === name));
 
-  // Update mobile section name dynamically based on what is active
-  const sectionNameEl = document.getElementById('mobile-section-name');
-  if (sectionNameEl) {
-    // Try to find the button representing this section to pull the translated string
-    const btn = document.querySelector(`.sidebar-nav-item[data-section="${name}"]`) || document.querySelector(`.bottom-nav-item[data-section="${name}"]`) || document.querySelector(`.action-item[data-section="${name}"]`);
-    if (btn) {
-      const spanEl = btn.querySelector('span[data-en]');
-      if (spanEl) {
-        sectionNameEl.textContent = spanEl.getAttribute('data-' + lang) || spanEl.textContent;
-        sectionNameEl.setAttribute('data-en', spanEl.getAttribute('data-en'));
-        sectionNameEl.setAttribute('data-es', spanEl.getAttribute('data-es'));
+  // Update mobile section name dynamically (if not handled by tool pill)
+  if (!activeTool) {
+    const sectionNameEl = document.getElementById('mobile-section-name');
+    if (sectionNameEl) {
+      const btn = document.querySelector(`.sidebar-nav-item[data-section="${name}"]`) || document.querySelector(`.bottom-nav-item[data-section="${name}"]`);
+      if (btn) {
+        const spanEl = btn.querySelector('span[data-en]');
+        if (spanEl) {
+          sectionNameEl.textContent = spanEl.getAttribute('data-' + lang) || spanEl.textContent;
+          sectionNameEl.setAttribute('data-en', spanEl.getAttribute('data-en'));
+          sectionNameEl.setAttribute('data-es', spanEl.getAttribute('data-es'));
+        }
+      } else if (name === 'settings') {
+        sectionNameEl.textContent = lang === 'es' ? 'Configuración' : 'Settings';
+        sectionNameEl.setAttribute('data-en', 'Settings');
+        sectionNameEl.setAttribute('data-es', 'Configuración');
       }
     }
   }
@@ -112,7 +149,7 @@ function showSection(name) {
     initOrderForm();
     footer.style.display = 'flex';
     saleFooter.style.display = 'none';
-  } else if (name === 'sales') {
+  } else if (activeTool === 'sales') {
     footer.style.display = 'none';
     saleFooter.style.display = 'flex';
     initSalesSection();
@@ -120,7 +157,8 @@ function showSection(name) {
     footer.style.display = 'none';
     saleFooter.style.display = 'none';
   }
-  // Phase 5: load My Orders when switching to that tab
+
+  // Execute loaders
   if (name === 'my-orders') {
     loadDriverBalance();
     loadMyOrders();
@@ -131,13 +169,13 @@ function showSection(name) {
     loadDriverClients();
     loadOverviewDashboard();
   }
-  if (name === 'clients') {
+  if (activeTool === 'clients') {
     loadDriverClients();
   }
-  if (name === 'inventory') {
+  if (activeTool === 'inventory') {
     loadInventoryTab();
   }
-  // Refresh icons for dynamically rendered content
+
   requestAnimationFrame(() => lucide.createIcons());
 }
 
@@ -258,7 +296,7 @@ function enterDashboard() {
   if ('Notification' in window && Notification.permission === 'granted') {
     subscribeToPush('driver', currentDriver.id);
   } else if ('Notification' in window && Notification.permission === 'default'
-             && !localStorage.getItem('cecilia_push_dismissed')) {
+    && !localStorage.getItem('cecilia_push_dismissed')) {
     const optIn = document.getElementById('push-opt-in');
     if (optIn) optIn.style.display = 'flex';
   }
@@ -425,82 +463,16 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.bottom-nav-item').forEach(btn => {
     btn.addEventListener('click', () => {
       const section = btn.dataset.section;
-      if (section === 'settings') {
-        // Always open action sheet since all advanced features are now available
-        document.getElementById('action-sheet-overlay').classList.add('open');
-      } else {
-        showSection(section);
-      }
+      showSection(section);
     });
   });
 
-  // Action sheet items
-  document.querySelectorAll('.action-item').forEach(btn => {
+  // Tools Sub-tabs
+  document.querySelectorAll('#tools-nav-pills .insights-pill').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.getElementById('action-sheet-overlay').classList.remove('open');
-      showSection(btn.dataset.section);
+      showSection(btn.dataset.tool);
     });
   });
-
-  // Action sheet close — tap backdrop or overlay (outside sheet)
-  const sheetOverlay = document.getElementById('action-sheet-overlay');
-  const sheetBackdrop = document.getElementById('action-sheet-backdrop');
-  const sheet = document.getElementById('action-sheet');
-
-  function closeActionSheet() {
-    sheet.style.transform = '';
-    sheet.classList.remove('dragging');
-    sheetOverlay.classList.remove('open');
-  }
-
-  if (sheetBackdrop) sheetBackdrop.addEventListener('click', closeActionSheet);
-  // Also close if tapping outside the sheet but inside overlay
-  if (sheetOverlay) sheetOverlay.addEventListener('click', (e) => {
-    if (e.target === sheetOverlay) closeActionSheet();
-  });
-
-  // ── iOS-style swipe-to-dismiss ──
-  let _sheetStartY = 0;
-  let _sheetCurrentY = 0;
-  let _sheetDragging = false;
-
-  function onSheetTouchStart(e) {
-    _sheetStartY = e.touches[0].clientY;
-    _sheetCurrentY = _sheetStartY;
-    _sheetDragging = true;
-    sheet.classList.add('dragging');
-  }
-  function onSheetTouchMove(e) {
-    if (!_sheetDragging) return;
-    _sheetCurrentY = e.touches[0].clientY;
-    const dy = Math.max(0, _sheetCurrentY - _sheetStartY);
-    sheet.style.transform = `translate3d(0, ${dy}px, 0)`;
-    // Fade backdrop proportionally
-    const sheetH = sheet.offsetHeight || 300;
-    const progress = Math.min(1, dy / sheetH);
-    sheetBackdrop.style.opacity = 1 - progress * 0.6;
-    e.preventDefault();
-  }
-  function onSheetTouchEnd() {
-    if (!_sheetDragging) return;
-    _sheetDragging = false;
-    sheet.classList.remove('dragging');
-    const dy = _sheetCurrentY - _sheetStartY;
-    sheetBackdrop.style.opacity = '';
-    if (dy > 80) {
-      // Dismiss
-      closeActionSheet();
-    } else {
-      // Snap back
-      sheet.style.transform = '';
-    }
-  }
-
-  if (sheet) {
-    sheet.addEventListener('touchstart', onSheetTouchStart, { passive: true });
-    sheet.addEventListener('touchmove', onSheetTouchMove, { passive: false });
-    sheet.addEventListener('touchend', onSheetTouchEnd, { passive: true });
-  }
 
   document.getElementById('new-order-cta')?.addEventListener('click', () => showSection('new-order'));
 
@@ -648,9 +620,9 @@ let PRODUCTS = {
   redondo: {
     en: 'Round', es: 'Redondo', type: 'redondo',
     items: [
-      { key: 'pina', en: 'Piña', es: 'Piña', cols: ['inside','inside_nt','top','top_nt'] },
-      { key: 'guava', en: 'Guava', es: 'Guayaba', cols: ['inside','inside_nt','top','top_nt'] },
-      { key: 'dulce', en: 'Dulce De Leche', es: 'Dulce De Leche', cols: ['inside','inside_nt'] },
+      { key: 'pina', en: 'Piña', es: 'Piña', cols: ['inside', 'inside_nt', 'top', 'top_nt'] },
+      { key: 'guava', en: 'Guava', es: 'Guayaba', cols: ['inside', 'inside_nt', 'top', 'top_nt'] },
+      { key: 'dulce', en: 'Dulce De Leche', es: 'Dulce De Leche', cols: ['inside', 'inside_nt'] },
     ]
   },
   plain: {
@@ -765,7 +737,7 @@ function createBlankOrder() {
 
 function getTodayStr() {
   const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
 function initOrderForm() {
@@ -1268,7 +1240,7 @@ function navigateSummary(dir) {
 function renderSummaryOrder(idx) {
   const o = orders[idx];
   const titleEl = document.getElementById('summary-title');
-  titleEl.textContent = (lang === 'es' ? `Pedido ${idx+1} de ${orders.length}` : `Order ${idx+1} of ${orders.length}`);
+  titleEl.textContent = (lang === 'es' ? `Pedido ${idx + 1} de ${orders.length}` : `Order ${idx + 1} of ${orders.length}`);
   document.getElementById('summary-prev').disabled = idx === 0;
   document.getElementById('summary-next').disabled = idx === orders.length - 1;
 
@@ -1376,7 +1348,7 @@ async function submitAllOrders() {
             (item.cols || []).forEach(col => {
               const k = item.key + '_' + col;
               const v = o.qty[k] || 0;
-              if (v > 0) { const colClean = col.replace('_nt',''); const ntTag = col.endsWith('_nt') ? ' (No Ticket)' : ''; items.push({ product_key: k, product_label: `${item.en} (${colClean})${ntTag}`, quantity: v }); }
+              if (v > 0) { const colClean = col.replace('_nt', ''); const ntTag = col.endsWith('_nt') ? ' (No Ticket)' : ''; items.push({ product_key: k, product_label: `${item.en} (${colClean})${ntTag}`, quantity: v }); }
             });
           } else {
             const v = o.qty[item.key] || 0;
@@ -1518,7 +1490,7 @@ async function submitAllOrders() {
       }
 
       if (orderErr) {
-        console.error(`Order ${i+1} insert error:`, orderErr);
+        console.error(`Order ${i + 1} insert error:`, orderErr);
         throw orderErr;
       }
 
@@ -1533,7 +1505,7 @@ async function submitAllOrders() {
 
       const { error: itemsErr } = await sb.from('driver_order_items').insert(orderItems);
       if (itemsErr) {
-        console.error(`Order ${i+1} items insert error:`, itemsErr);
+        console.error(`Order ${i + 1} items insert error:`, itemsErr);
         throw itemsErr;
       }
 
@@ -1660,7 +1632,7 @@ function productLabel(key, storedLabel) {
 // ── SHORT ORDER ID (UUID → readable) ──
 function shortOrderId(orderOrUuid) {
   if (!orderOrUuid) return '???';
-  
+
   // If we passed the full order object and it has an order number, prefer it
   if (typeof orderOrUuid === 'object') {
     if (orderOrUuid.order_number) return orderOrUuid.order_number;
@@ -1668,7 +1640,7 @@ function shortOrderId(orderOrUuid) {
     const clean = orderOrUuid.id.replace(/-/g, '');
     return clean.slice(-5).toUpperCase();
   }
-  
+
   // Fallback: it's just the raw UUID string
   if (typeof orderOrUuid === 'string') {
     const clean = orderOrUuid.replace(/-/g, '');
@@ -1698,13 +1670,13 @@ function smartTimeLabel(order) {
   const h = created.getHours(), m = created.getMinutes();
   const period = h >= 12 ? 'PM' : 'AM';
   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return { label: lang === 'es' ? 'Hora del Pedido' : 'Time Ordered', value: `${h12}:${String(m).padStart(2,'0')} ${period}` };
+  return { label: lang === 'es' ? 'Hora del Pedido' : 'Time Ordered', value: `${h12}:${String(m).padStart(2, '0')} ${period}` };
 }
 
 function formatDate(d) {
   const months = lang === 'es'
-    ? ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-    : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    ? ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+    : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
 
@@ -1714,7 +1686,7 @@ function formatTime(timeStr) {
   const m = parseInt(mStr);
   const period = h >= 12 ? 'PM' : 'AM';
   if (h === 0) h = 12; else if (h > 12) h -= 12;
-  return `${h}:${String(m).padStart(2,'0')} ${period}`;
+  return `${h}:${String(m).padStart(2, '0')} ${period}`;
 }
 
 // ── LOAD DRIVER BALANCE ──
@@ -1818,7 +1790,7 @@ async function loadMyOrders() {
       .order('created_at', { ascending: false });
 
     if (error) { console.error('My orders error:', error); return; }
-    
+
     let filteredData = data || [];
     if (currentOrdersFilter === 'paid') {
       filteredData = filteredData.filter(o => o.payment_status === 'paid');
@@ -1939,7 +1911,7 @@ let driverEditOrderObj = null; // Track the full object for order number
 let _batchOrders = [];
 let _batchIdx = 0;
 
-window.showOrderDetail = async function(orderIdStr) {
+window.showOrderDetail = async function (orderIdStr) {
   if (window._swipeDismissCooldown) return;
   if (!sb) return;
   const overlay = document.getElementById('order-detail-overlay');
@@ -1972,7 +1944,7 @@ window.showOrderDetail = async function(orderIdStr) {
   } catch (e) { console.error('Order detail error:', e); }
 };
 
-window.batchDetailNav = function(dir) {
+window.batchDetailNav = function (dir) {
   _batchIdx = Math.max(0, Math.min(_batchOrders.length - 1, _batchIdx + dir));
   renderOrderInDetail(_batchIdx);
 };
@@ -2155,7 +2127,7 @@ function closeOrderDetail() {
 window.closeOrderDetail = closeOrderDetail;
 
 // ── EDIT ORDER (30-MIN WINDOW) ──
-window.editOrder = async function(orderId) {
+window.editOrder = async function (orderId) {
   if (!sb) return;
   closeOrderDetail();
 
@@ -2230,13 +2202,13 @@ function formatTime12(timeStr) {
 }
 
 // ── BALANCE REDIRECT ──
-window.goToUnpaidOrders = function() {
+window.goToUnpaidOrders = function () {
   // Navigate to My Orders section
   showSection('my-orders');
 
   // Set filter to unpaid
   currentOrdersFilter = 'unpaid';
-  
+
   // Update pills UI
   const filterBtns = document.querySelectorAll('#driver-orders-filter .insights-pill');
   filterBtns.forEach(b => {
@@ -2601,11 +2573,11 @@ function buildSaleProducts() {
       const inp = container.querySelector(`.sale-qty-input[data-key="${key}"]`);
       const cur = parseInt(inp.value) || 0;
       const delta = btn.dataset.dir === '+' ? 1 : -1;
-      
+
       const maxInv = driverInventory[key] ? Math.max(0, driverInventory[key].remaining) : 0;
       let newVal = Math.max(0, cur + delta);
       if (newVal > maxInv) newVal = maxInv;
-      
+
       inp.value = newVal;
       _saleQty[key] = newVal;
       updateSaleRow(key);
@@ -2621,7 +2593,7 @@ function buildSaleProducts() {
     inp.addEventListener('focus', () => { if (inp.value === '0') inp.value = ''; });
     inp.addEventListener('blur', () => {
       if (inp.value === '') inp.value = '0';
-      
+
       const key = inp.dataset.key;
       const maxInv = driverInventory[key] ? Math.max(0, driverInventory[key].remaining) : 0;
       let newVal = parseInt(inp.value) || 0;
@@ -2630,7 +2602,7 @@ function buildSaleProducts() {
         inp.value = newVal;
         if (newVal === 0) showToast(lang === 'es' ? 'Sin inventario disponible' : 'No inventory available', 'error');
       }
-      
+
       _saleQty[key] = newVal;
       updateSaleRow(key);
       updateSaleFooter();
@@ -2703,10 +2675,10 @@ function updateSalesTicker() {
     const initiallyRemaining = parseInt(inv.remaining) || 0;
     // Map to _saleQty which holds the Sales tab cart!
     const inCart = _saleQty[k] || 0;
-    
+
     // Calculate true live remaining based on what they are currently typing in
     const trulyRemaining = Math.max(0, initiallyRemaining - inCart);
-    
+
     if (totalLoaded > 0 || initiallyRemaining > 0) {
       tickerItems.push({
         key: k,
@@ -2720,9 +2692,9 @@ function updateSalesTicker() {
     ticker.style.display = 'none';
     return;
   }
-  
+
   ticker.style.display = 'flex';
-  tickerItems.sort((a,b) => a.remaining - b.remaining);
+  tickerItems.sort((a, b) => a.remaining - b.remaining);
 
   let html = '';
   tickerItems.forEach(item => {
@@ -3031,7 +3003,7 @@ function renderClientsList() {
         <div class="client-card-name">${name}</div>
         <div class="client-card-actions">
           <button class="client-card-edit" onclick="event.stopPropagation();openClientModal('${c.id}')" title="${lang === 'es' ? 'Editar' : 'Edit'}"><i data-lucide="pencil"></i></button>
-          <button class="client-card-delete" onclick="event.stopPropagation();confirmDeleteClient('${c.id}','${name.replace(/'/g, "\\'") }')" title="${lang === 'es' ? 'Eliminar' : 'Delete'}"><i data-lucide="trash-2"></i></button>
+          <button class="client-card-delete" onclick="event.stopPropagation();confirmDeleteClient('${c.id}','${name.replace(/'/g, "\\'")}')" title="${lang === 'es' ? 'Eliminar' : 'Delete'}"><i data-lucide="trash-2"></i></button>
         </div>
       </div>
       <div class="client-card-row2">`;
@@ -3145,7 +3117,7 @@ async function handleSaveClient() {
   }
 }
 
-window.confirmDeleteClient = function(clientId, clientName) {
+window.confirmDeleteClient = function (clientId, clientName) {
   const message = lang === 'es'
     ? `¿Eliminar "${clientName}"? Esta acción no se puede deshacer.`
     : `Remove "${clientName}"? This cannot be undone.`;
@@ -3339,8 +3311,8 @@ async function loadInventoryTab() {
 
   banner.innerHTML = '';
   let skels = '';
-  for(let i=0; i<5; i++) {
-    skels += `<div class="inv-skeleton-row"><div class="inv-sk-left"><div class="inv-sk-line" style="width:${Math.floor(Math.random()*40 + 30)}%"></div><div class="inv-sk-line thin" style="width:60%"></div></div><div class="inv-sk-ring"></div></div>`;
+  for (let i = 0; i < 5; i++) {
+    skels += `<div class="inv-skeleton-row"><div class="inv-sk-left"><div class="inv-sk-line" style="width:${Math.floor(Math.random() * 40 + 30)}%"></div><div class="inv-sk-line thin" style="width:60%"></div></div><div class="inv-sk-ring"></div></div>`;
   }
   summary.innerHTML = skels;
   form.style.display = 'none';
@@ -3358,7 +3330,7 @@ async function loadInventoryTab() {
     renderManualLoadForm();
   }
   applyLang();
-  
+
   // Update sales ticker since inventory data is ready
   updateSalesTicker();
 }
@@ -3511,7 +3483,7 @@ function renderInventorySummary() {
     const pct = p.loaded > 0 ? Math.max(0, (p.remaining / p.loaded) * 100) : 0;
     const offset = 119.38 - (pct / 100) * 119.38; // 2 * PI * 19 = 119.38
     const ringColor = p.remaining <= 0 ? '#c0392b' : p.remaining < 3 ? '#d4a017' : '#2a9d5c';
-    
+
     const lblLoaded = lang === 'es' ? 'cargado' : 'loaded';
     const lblSold = lang === 'es' ? 'vendido' : 'sold';
     const lblLeft = lang === 'es' ? 'restante' : 'left';
@@ -3657,7 +3629,7 @@ function renderInventorySummary() {
   container.innerHTML = html;
 }
 
-window.toggleInvCategory = function(el) {
+window.toggleInvCategory = function (el) {
   const cat = el.closest('.inv-category');
   if (cat) cat.classList.toggle('collapsed');
 };
@@ -4033,7 +4005,7 @@ function renderTopClients(salesData) {
    ═══════════════════════════════════ */
 async function checkAdvancedFeatures() {
   if (!currentDriver) return;
-  
+
   try {
     if (sb) {
       const { data, error } = await sb
@@ -4041,7 +4013,7 @@ async function checkAdvancedFeatures() {
         .select('scanner_enabled')
         .eq('id', currentDriver.id)
         .single();
-      
+
       if (!error && data) {
         currentDriver.scanner_enabled = data.scanner_enabled;
         // Update local storage session so it persists
@@ -4051,7 +4023,7 @@ async function checkAdvancedFeatures() {
             const parsed = JSON.parse(saved);
             parsed.scanner_enabled = data.scanner_enabled;
             localStorage.setItem('cecilia_driver', JSON.stringify(parsed));
-          } catch(e) {}
+          } catch (e) { }
         }
       }
     }
@@ -4130,10 +4102,10 @@ async function _preprocessTicketImage(dataUrl) {
       const d = imageData.data;
       const factor = 1.8;
       for (let i = 0; i < d.length; i += 4) {
-        const gray = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+        const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
         let val = ((gray / 255 - 0.5) * factor + 0.5) * 255;
         val = Math.max(0, Math.min(255, val));
-        d[i] = d[i+1] = d[i+2] = val;
+        d[i] = d[i + 1] = d[i + 2] = val;
       }
       ctx.putImageData(imageData, 0, 0);
       resolve(canvas.toDataURL('image/jpeg', 0.7));
