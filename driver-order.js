@@ -1774,6 +1774,15 @@ function getEditTimeRemaining(order) {
   return min;
 }
 
+function getDriverDisplayName(o, lang) {
+  let n = (o.business_name || '').trim();
+  const lower = n.toLowerCase();
+  if (n === '' || lower === 'no name' || lower === 'sin nombre' || lower === 'noname') {
+    return lang === 'es' ? 'Cliente Minorista' : 'Retail Customer';
+  }
+  return n;
+}
+
 // ── RENDER ORDER CARD ──
 // `batch` is an array of orders (1 for solo, N for batch)
 function renderOrderCard(batch) {
@@ -1798,7 +1807,7 @@ function renderOrderCard(batch) {
   }
 
   // Business names
-  const bizNames = batch.map(o => _esc(o.business_name || (lang === 'es' ? 'Sin nombre' : 'No name')));
+  const bizNames = batch.map(o => _esc(getDriverDisplayName(o, lang)));
   const bizDisplay = isBatch ? bizNames.join(' · ') : bizNames[0];
 
   // Combined total
@@ -1935,7 +1944,7 @@ function renderOrderInDetail(idx) {
   // Meta
   const dateInfo = smartDateLabel(order);
   const timeInfo = smartTimeLabel(order);
-  const bizName = _esc(order.business_name || (lang === 'es' ? 'Sin nombre' : 'No name'));
+  const bizName = _esc(getDriverDisplayName(order, lang));
   let metaHtml = `
     <span><i data-lucide="store"></i>${bizName}</span>
     <span><i data-lucide="calendar"></i>${dateInfo.label}: ${dateInfo.value}</span>
