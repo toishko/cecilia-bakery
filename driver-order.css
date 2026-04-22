@@ -1173,18 +1173,16 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .cp-price-input::placeholder{color:var(--tx-faint)}
 .cp-price-input:focus{color:var(--red)}
 
-/* Save bar — Apple-style sticky bottom */
-.cp-save-bar{position:sticky;bottom:0;padding:16px 16px;
-  padding-bottom:calc(20px + env(safe-area-inset-bottom));
-  background:linear-gradient(to bottom, transparent 0%,
-    var(--bg-surface) 12%);
-  z-index:2;pointer-events:none}
-.cp-save-btn{width:100%;padding:16px;border-radius:14px;border:none;
+/* Save button — floating at bottom */
+.cp-save-float{position:fixed;bottom:0;left:0;right:0;
+  padding:0 20px;padding-bottom:calc(24px + env(safe-area-inset-bottom));
+  z-index:9501;pointer-events:none}
+.cp-save-btn{width:100%;padding:16px;border-radius:16px;border:none;
   background:var(--red);color:var(--tx-on-red);font-size:1rem;font-weight:600;
   font-family:inherit;cursor:pointer;pointer-events:auto;
-  box-shadow:0 2px 12px rgba(200,16,46,.25),0 0 0 1px rgba(200,16,46,.1);
-  transition:transform .2s cubic-bezier(.32,.72,0,1),
-    box-shadow .2s cubic-bezier(.32,.72,0,1),
+  box-shadow:0 4px 24px rgba(200,16,46,.35),0 1px 4px rgba(0,0,0,.12);
+  transition:transform .25s cubic-bezier(.32,.72,0,1),
+    box-shadow .25s cubic-bezier(.32,.72,0,1),
     background .15s}
 .cp-save-btn:hover{background:var(--red-dk)}
 .cp-save-btn:active{transform:scale(.98)}
