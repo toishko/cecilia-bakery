@@ -3482,15 +3482,13 @@ async function renderOrderSheet() {
 
   // Actions
   let actionsHtml = '';
-  if (order.status === 'pending' || (order.status === 'sent' && canEditOrder(order))) {
+  if (order.status === 'pending') {
     // Fully editable: one "Save Changes" button that saves everything including payment
     actionsHtml += `<button class="btn-save" onclick="saveOrderChanges()" data-en="Save Changes" data-es="Guardar Cambios">${lang === 'es' ? 'Guardar Cambios' : 'Save Changes'}</button>`;
-  } else if (order.status === 'sent' || order.status === 'confirmed' || order.status === 'picked_up') {
+    actionsHtml += `<button class="btn-pickup" onclick="markAsPickedUp()" data-en="Mark as Picked Up" data-es="Marcar Recogido">&#10003; ${lang === 'es' ? 'Marcar Recogido' : 'Mark as Picked Up'}</button>`;
+  } else if (order.status === 'picked_up') {
     // Not fully editable, but payment is always editable
     actionsHtml += `<button class="btn-save" onclick="savePaymentOnly()" data-en="Update Payment" data-es="Actualizar Pago">${lang === 'es' ? 'Actualizar Pago' : 'Update Payment'}</button>`;
-  }
-  if (order.status === 'pending' || order.status === 'sent' || order.status === 'confirmed') {
-    actionsHtml += `<button class="btn-pickup" onclick="markAsPickedUp()" data-en="Mark as Picked Up" data-es="Marcar Recogido">&#10003; ${lang === 'es' ? 'Marcar Recogido' : 'Mark as Picked Up'}</button>`;
   }
   // Export bar
   actionsHtml += `<div class="export-bar">
@@ -4908,7 +4906,7 @@ window.showDriverProfile = async function(driverId) {
         ${statusBadge}
       </div>
     </div>
-    <div class="profile-balance-card" onclick="_openHistoryForDriver('${driver.id}')" style="cursor:pointer">
+    <div class="profile-balance-card">
       <div class="profile-balance-label">${lang === 'es' ? 'Saldo Pendiente' : 'Outstanding Balance'}</div>
       <div class="profile-balance-amount ${balClass}">${formatCurrency(totalBalance)}</div>
     </div>

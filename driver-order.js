@@ -1828,10 +1828,11 @@ function renderOrderCard(batch) {
 
   let statusBadge = '';
   const s = primary.status;
-  if (s === 'pending') statusBadge = `<span class="status-badge pending">${lang === 'es' ? 'Pendiente' : 'Pending'}</span>`;
-  else if (s === 'confirmed') statusBadge = `<span class="status-badge confirmed">${lang === 'es' ? 'Confirmado' : 'Confirmed'}</span>`;
-  else if (s === 'sent') statusBadge = `<span class="status-badge sent">${lang === 'es' ? 'Enviado' : 'Sent'}</span>`;
-  else if (s === 'picked_up') statusBadge = `<span class="status-badge picked-up">${lang === 'es' ? 'Recogido' : 'Picked Up'}</span>`;
+  if (s === 'picked_up') {
+    statusBadge = `<span class="status-badge picked-up">${lang === 'es' ? 'Recogido' : 'Picked Up'}</span>`;
+  } else {
+    statusBadge = `<span class="status-badge pending">${lang === 'es' ? 'Pendiente' : 'Pending'}</span>`;
+  }
 
   const orderIds = batch.map(o => o.id).join(',');
   const batchLabel = isBatch ? `<span class="batch-count">${batch.length} ${lang === 'es' ? 'pedidos' : 'orders'}</span>` : '';
@@ -2193,19 +2194,23 @@ function setupDriverRealtime() {
         loadMyOrders();
       }
 
-      // Chime if order was just confirmed/sent
-      if (payload.eventType === 'UPDATE' && payload.new && payload.new.status === 'sent') {
-        if (notificationsEnabled) {
-          playChime();
-          const msg = lang === 'es'
-            ? 'Tu pedido ha sido confirmado'
-            : 'Your order has been confirmed';
-          showToast(msg, 'success');
-          showBrowserNotification(
-            lang === 'es' ? 'Pedido Confirmado' : 'Order Confirmed',
-            msg,
-            'my-orders'
-          );
+      // Chime if order was just picked up
+      if (payload.eventType === 'UPDATE' && payload.new && payload.new.status === 'picked_up') {
+        // Simple check to avoid duplicate chimes if we already know it's picked up locally
+        const localOrder = _ordersList.find(o => o.id === payload.new.id);
+        if (!localOrder || localOrder.status !== 'picked_up') {
+          if (notificationsEnabled) {
+            playChime();
+            const msg = lang === 'es'
+              ? 'Tu pedido ha sido agregado a tu inventario'
+              : 'Your order has been added to your inventory';
+            showToast(msg, 'success');
+            showBrowserNotification(
+              lang === 'es' ? 'Inventario Actualizado' : 'Inventory Updated',
+              msg,
+              'my-orders'
+            );
+          }
         }
       }
     })
