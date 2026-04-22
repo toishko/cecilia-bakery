@@ -3061,6 +3061,7 @@ function renderReceipt(sale, items, client) {
    ═══════════════════════════════════ */
 let _clientsList = [];
 let _editingClientId = null;
+let _editFromProfile = false;
 
 async function loadDriverClients() {
   if (!sb || !currentDriver) return;
@@ -3216,6 +3217,15 @@ window.openClientModal = openClientModal;
 
 function closeClientModal() {
   document.getElementById('client-modal-overlay').classList.remove('open');
+
+  // If we came from the profile, return to it instead of restoring scroll
+  if (_editFromProfile && _cpClientId) {
+    _editFromProfile = false;
+    _editingClientId = null;
+    return;
+  }
+
+  _editFromProfile = false;
   const scrollY = document.body.dataset.scrollY || '0';
   document.body.style.position = '';
   document.body.style.top = '';
@@ -3257,14 +3267,20 @@ async function handleSaveClient() {
   saveBtn.textContent = lang === 'es' ? 'Guardar' : 'Save';
 
   if (result) {
+    const wasFromProfile = _editFromProfile;
+    const editedId = _editingClientId;
     closeClientModal();
     showToast(
-      _editingClientId
+      editedId
         ? (lang === 'es' ? 'Cliente actualizado' : 'Client updated')
         : (lang === 'es' ? 'Cliente agregado' : 'Client added'),
       'success'
     );
     await loadDriverClients();
+    // Refresh the profile with updated data if we came from there
+    if (wasFromProfile && editedId) {
+      openClientProfile(editedId);
+    }
   } else {
     showToast(lang === 'es' ? 'Error al guardar el cliente' : 'Error saving client', 'error');
   }
@@ -3603,7 +3619,7 @@ function _initClientProfileEvents() {
   document.getElementById('cp-edit-btn').addEventListener('click', () => {
     const id = _cpClientId;
     if (id) {
-      closeClientProfile();
+      _editFromProfile = true;
       openClientModal(id);
     }
   });
