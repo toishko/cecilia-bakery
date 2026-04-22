@@ -1084,13 +1084,16 @@
       border-radius:2px; margin:10px auto 0;
     }
     .frost-modal-header {
-      display:flex; justify-content:space-between; align-items:center;
-      padding:14px 20px 10px;
+      display:flex; flex-direction:column; align-items:stretch; gap:12px;
+      padding:14px 20px 12px;
       border-bottom:1px solid var(--bd);
       position:sticky; top:0; 
       background:var(--bg-nav);
       backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
       z-index:1; border-radius:20px 20px 0 0;
+    }
+    .frost-modal-header-top {
+      display:flex; justify-content:space-between; align-items:center;
     }
     .frost-modal-title { font-size:1rem; font-weight:700; color:var(--tx); }
     .frost-modal-subtitle { font-size:.75rem; color:var(--tx-faint); font-weight:500; }
@@ -3735,14 +3738,16 @@
   <div class="frost-modal-sheet" id="frost-modal-sheet">
     <div class="frost-modal-handle"></div>
     <div class="frost-modal-header">
-      <div>
-        <div class="frost-modal-title" id="frost-modal-title">🧊 Frosted Box Packer</div>
-        <div class="frost-modal-subtitle" id="frost-modal-subtitle"></div>
+      <div class="frost-modal-header-top">
+        <div>
+          <div class="frost-modal-title" id="frost-modal-title">🧊 Frosted Box Packer</div>
+          <div class="frost-modal-subtitle" id="frost-modal-subtitle"></div>
+        </div>
+        <button class="frost-modal-close" onclick="frostCloseModal()">✕</button>
       </div>
-      <button class="frost-modal-close" onclick="frostCloseModal()">✕</button>
+      <div class="frost-pill-dock" id="frost-pills-modal" style="margin:0;"></div>
     </div>
     <div class="frost-modal-body">
-      <div class="frost-pill-dock" id="frost-pills-modal"></div>
       <div id="frost-boxes-modal" style="display:flex;flex-direction:column;gap:8px;"></div>
       <button class="frost-add-box-btn" id="frost-modal-add-btn">+ Add Box</button>
     </div>
