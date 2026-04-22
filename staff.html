@@ -2936,8 +2936,8 @@
         }
       });
 
-      // Calculate fill percentage (based on total box capacity)
-      var pct = totalBoxCapacity > 0 ? Math.min(Math.round((totalPacked / totalBoxCapacity) * 100), 100) : 0;
+      // Calculate fill percentage (based on total ordered quantity)
+      var pct = totalOrdered > 0 ? Math.min(Math.round((totalPacked / totalOrdered) * 100), 100) : 0;
 
       // Build gradient from bottom to top with flavor colors
       var gradient = '';
