@@ -1428,9 +1428,12 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
    ACTION SHEET (slide-up sub-menu)
    ═══════════════════════════════════ */
 .action-sheet-overlay{position:fixed;inset:0;z-index:9000;
-  background:rgba(0,0,0,.45);opacity:0;pointer-events:none;
+  opacity:0;pointer-events:none;
   transition:opacity .25s ease;-webkit-tap-highlight-color:transparent}
 .action-sheet-overlay.open{opacity:1;pointer-events:auto;overscroll-behavior:contain}
+
+.action-sheet-backdrop{position:absolute;inset:0;
+  background:rgba(0,0,0,.45);-webkit-tap-highlight-color:transparent}
 
 .action-sheet{position:fixed;bottom:0;left:0;right:0;z-index:9001;
   background:var(--bg-card);border-top-left-radius:20px;border-top-right-radius:20px;
@@ -1442,12 +1445,13 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   will-change:transform;
   box-shadow:0 -8px 40px rgba(0,0,0,.15);
   max-height:calc((100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 0.6);
-  overflow-y:auto}
+  overflow-y:auto;touch-action:none}
 .action-sheet-overlay.open .action-sheet{transform:translate3d(0,0,0)}
+.action-sheet.dragging{transition:none}
 [data-theme="dark"] .action-sheet{box-shadow:0 -8px 40px rgba(0,0,0,.4)}
 
 .action-sheet-handle{width:36px;height:4px;border-radius:2px;
-  background:var(--tx-faint);margin:0 auto 14px;opacity:.5}
+  background:var(--tx-faint);margin:0 auto 14px;opacity:.5;cursor:grab}
 
 .action-sheet-body{display:flex;flex-direction:column;gap:4px}
 .action-item{display:flex;align-items:center;gap:14px;

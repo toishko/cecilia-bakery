@@ -442,12 +442,65 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Action sheet close listeners
+  // Action sheet close — tap backdrop or overlay (outside sheet)
   const sheetOverlay = document.getElementById('action-sheet-overlay');
   const sheetBackdrop = document.getElementById('action-sheet-backdrop');
-  if (sheetBackdrop) sheetBackdrop.addEventListener('click', () => sheetOverlay.classList.remove('open'));
-  const sheetHandle = document.querySelector('.action-sheet-handle');
-  if (sheetHandle) sheetHandle.addEventListener('click', () => sheetOverlay.classList.remove('open'));
+  const sheet = document.getElementById('action-sheet');
+
+  function closeActionSheet() {
+    sheet.style.transform = '';
+    sheet.classList.remove('dragging');
+    sheetOverlay.classList.remove('open');
+  }
+
+  if (sheetBackdrop) sheetBackdrop.addEventListener('click', closeActionSheet);
+  // Also close if tapping outside the sheet but inside overlay
+  if (sheetOverlay) sheetOverlay.addEventListener('click', (e) => {
+    if (e.target === sheetOverlay) closeActionSheet();
+  });
+
+  // ── iOS-style swipe-to-dismiss ──
+  let _sheetStartY = 0;
+  let _sheetCurrentY = 0;
+  let _sheetDragging = false;
+
+  function onSheetTouchStart(e) {
+    _sheetStartY = e.touches[0].clientY;
+    _sheetCurrentY = _sheetStartY;
+    _sheetDragging = true;
+    sheet.classList.add('dragging');
+  }
+  function onSheetTouchMove(e) {
+    if (!_sheetDragging) return;
+    _sheetCurrentY = e.touches[0].clientY;
+    const dy = Math.max(0, _sheetCurrentY - _sheetStartY);
+    sheet.style.transform = `translate3d(0, ${dy}px, 0)`;
+    // Fade backdrop proportionally
+    const sheetH = sheet.offsetHeight || 300;
+    const progress = Math.min(1, dy / sheetH);
+    sheetBackdrop.style.opacity = 1 - progress * 0.6;
+    e.preventDefault();
+  }
+  function onSheetTouchEnd() {
+    if (!_sheetDragging) return;
+    _sheetDragging = false;
+    sheet.classList.remove('dragging');
+    const dy = _sheetCurrentY - _sheetStartY;
+    sheetBackdrop.style.opacity = '';
+    if (dy > 80) {
+      // Dismiss
+      closeActionSheet();
+    } else {
+      // Snap back
+      sheet.style.transform = '';
+    }
+  }
+
+  if (sheet) {
+    sheet.addEventListener('touchstart', onSheetTouchStart, { passive: true });
+    sheet.addEventListener('touchmove', onSheetTouchMove, { passive: false });
+    sheet.addEventListener('touchend', onSheetTouchEnd, { passive: true });
+  }
 
   document.getElementById('new-order-cta')?.addEventListener('click', () => showSection('new-order'));
 
