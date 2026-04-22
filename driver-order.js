@@ -1857,36 +1857,45 @@ function renderOrderCard(batch) {
   else if (s === 'sent') statusBadge = `<span class="oca-status-pill sent">${lang === 'es' ? 'Enviado' : 'Sent'}</span>`;
   else if (s === 'picked_up') statusBadge = `<span class="oca-status-pill picked-up">${lang === 'es' ? 'Recogido' : 'Picked Up'}</span>`;
 
+  function getOrderName(o) {
+    if (o.business_name && o.business_name.trim()) return o.business_name.trim();
+    if (o.driver_ref && o.driver_ref.trim()) return o.driver_ref.trim();
+    return "";
+  }
+
   function getInit(name) {
-    const n = name || 'O';
-    const w = n.trim().split(/\s+/);
-    return w.length >= 2 ? (w[0][0] + w[1][0]).toUpperCase() : n.substring(0, 2).toUpperCase();
+    if (!name) return '#';
+    const w = name.trim().split(/\s+/);
+    return w.length >= 2 ? (w[0][0] + w[1][0]).toUpperCase() : name.substring(0, 2).toUpperCase();
   }
 
   let bizDisplay = '';
   let avatarHtml = '';
   
   if (!isBatch) {
-    bizDisplay = _esc(primary.business_name || (lang === 'es' ? 'Sin nombre' : 'No name'));
-    avatarHtml = `<div class="oca-avatar">${getInit(primary.business_name)}</div>`;
+    bizDisplay = _esc(getOrderName(primary));
+    avatarHtml = `<div class="oca-avatar">${getInit(getOrderName(primary))}</div>`;
   } else {
     avatarHtml = '<div class="oca-avatar-stack">';
     for (let i = 0; i < Math.min(batch.length, 3); i++) {
       if (i === 2 && batch.length > 3) {
         avatarHtml += `<div class="oca-avatar stack-item more">+${batch.length - 2}</div>`;
       } else {
-        avatarHtml += `<div class="oca-avatar stack-item">${getInit(batch[i].business_name)}</div>`;
+        avatarHtml += `<div class="oca-avatar stack-item">${getInit(getOrderName(batch[i]))}</div>`;
       }
     }
     avatarHtml += '</div>';
 
-    const n1 = _esc(batch[0].business_name || 'No name');
+    const n1 = getOrderName(batch[0]);
     if (batch.length === 2) {
-      const n2 = _esc(batch[1].business_name || 'No name');
-      bizDisplay = `${n1} & ${n2}`;
+      const n2 = getOrderName(batch[1]);
+      if (n1 && n2) bizDisplay = _esc(`${n1} & ${n2}`);
+      else if (n1 || n2) bizDisplay = _esc(n1 || n2);
+      else bizDisplay = "";
     } else {
       const moreText = lang === 'es' ? 'más' : 'more';
-      bizDisplay = `${n1} +${batch.length - 1} ${moreText}`;
+      if (n1) bizDisplay = _esc(`${n1} +${batch.length - 1} ${moreText}`);
+      else bizDisplay = ""; 
     }
   }
 
