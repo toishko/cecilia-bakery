@@ -164,6 +164,18 @@
     /* ════════════════════════════════════════
        BOTTOM NAV (MOBILE FIRST)
        ════════════════════════════════════════ */
+    /* Mobile keyboard & zoom fixes */
+    @media (max-width: 768px) {
+      /* Force 16px to prevent iOS Safari auto-zoom on focus */
+      input[type="number"], input[type="text"], input[type="tel"], textarea, select {
+        font-size: 16px !important;
+      }
+      /* Hide bottom nav when keyboard opens so it doesn't float over the screen */
+      body:has(input:focus, textarea:focus, select:focus) .bottom-nav {
+        display: none !important;
+      }
+    }
+
     .bottom-nav {
       position: fixed;
       bottom: 0; left: 0; right: 0;
