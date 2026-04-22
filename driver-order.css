@@ -32,12 +32,16 @@
    ═══════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-padding-top:80px;overscroll-behavior:none;
-  background:var(--bg);height:100%}
+  background:var(--bg);height:100%; touch-action: manipulation;}
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--tx);
   overflow-x:hidden;transition:background .3s ease,color .3s ease;
   min-height:100vh;min-height:100dvh;overscroll-behavior:none;
   padding-bottom:env(safe-area-inset-bottom);
-  overflow-wrap:break-word}
+  overflow-wrap:break-word; touch-action: manipulation;}
+/* Ensure inputs prevent iOS auto-zoom by enforcing 16px minimum */
+input[type="text"], input[type="number"], input[type="tel"], input[type="email"], input[type="date"], input[type="password"], select, textarea {
+  font-size: 16px !important;
+}
 h1,h2,h3{font-family:'Cormorant Garamond',serif;font-weight:600}
 :focus-visible{outline:2px solid var(--red);outline-offset:2px;border-radius:var(--r)}
 i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height:1.1em;

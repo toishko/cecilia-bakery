@@ -32,12 +32,16 @@
    RESET & BASE
    ═══════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-padding-top:80px}
+html{scroll-padding-top:80px; touch-action: manipulation;}
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--tx);
   overflow-x:hidden;transition:background .3s ease,color .3s ease;
   min-height:100vh;min-height:100dvh;overflow-wrap:break-word;
   padding-bottom:env(safe-area-inset-bottom);
-  -webkit-text-size-adjust:100%;text-size-adjust:100%}
+  -webkit-text-size-adjust:100%;text-size-adjust:100%; touch-action: manipulation;}
+/* Ensure inputs prevent iOS auto-zoom by enforcing 16px minimum */
+input[type="text"], input[type="number"], input[type="tel"], input[type="email"], select, textarea {
+  font-size: 16px !important;
+}
 html.scroll-locked,
 html.scroll-locked body {
   overflow: hidden !important;
