@@ -1832,11 +1832,83 @@ function getEditTimeRemaining(order) {
   return min;
 }
 
+window.toggleBatch = function(el) {
+  const wrapper = el.closest('.oca-batch-wrapper');
+  if (!wrapper) return;
+  const children = wrapper.querySelector('.oca-batch-children');
+  const chevron = wrapper.querySelector('.oca-chevron');
+  if (wrapper.classList.contains('open')) {
+    wrapper.classList.remove('open');
+    children.style.display = 'none';
+    if(chevron) chevron.style.transform = 'rotate(0deg)';
+  } else {
+    wrapper.classList.add('open');
+    children.style.display = 'block';
+    if(chevron) chevron.style.transform = 'rotate(180deg)';
+  }
+}
+
+function renderSingleOcaCard(primary, isChild = false) {
+  const dateInfo = smartDateLabel(primary);
+  const timeInfo = smartTimeLabel(primary);
+
+  let payClass = 'unpaid', payText = lang === 'es' ? 'No Pagado' : 'Not Paid';
+  if (primary.payment_status === 'paid') { payClass = 'paid'; payText = lang === 'es' ? 'Pagado' : 'Paid'; }
+  else if (primary.payment_status === 'partial') { payClass = 'partial'; payText = lang === 'es' ? 'Parcial' : 'Partial'; }
+
+  const s = primary.status;
+  let statusBadge = '';
+  if (s === 'confirmed') statusBadge = `<span class="oca-status-pill confirmed">${lang === 'es' ? 'Confirmado' : 'Confirmed'}</span>`;
+  else if (s === 'sent') statusBadge = `<span class="oca-status-pill sent">${lang === 'es' ? 'Enviado' : 'Sent'}</span>`;
+  else if (s === 'picked_up') statusBadge = `<span class="oca-status-pill picked-up">${lang === 'es' ? 'Recogido' : 'Picked Up'}</span>`;
+
+  function getOrderName(o) {
+    if (o.business_name && o.business_name.trim()) return o.business_name.trim();
+    if (o.driver_ref && o.driver_ref.trim()) return o.driver_ref.trim();
+    return "";
+  }
+
+  function getInit(name) {
+    if (!name) return '#';
+    const w = name.trim().split(/\s+/);
+    return w.length >= 2 ? (w[0][0] + w[1][0]).toUpperCase() : name.substring(0, 2).toUpperCase();
+  }
+
+  const bizDisplay = _esc(getOrderName(primary));
+  const avatarHtml = `<div class="oca-avatar">${getInit(getOrderName(primary))}</div>`;
+  const totalStr = parseFloat(primary.total_amount || 0) > 0 ? `$${parseFloat(primary.total_amount).toFixed(2)}` : '$0.00';
+  const orderNum = primary.order_number ? `#${primary.order_number}` : `#${shortOrderId(primary)}`;
+
+  let editHtml = '';
+  if (primary.status === 'pending') {
+    const minLeft = getEditTimeRemaining(primary);
+    if (minLeft !== null) {
+      editHtml = `<div class="oca-edit active"><i data-lucide="pencil"></i> ${minLeft} min</div>`;
+    }
+  }
+
+  return `
+    <div class="oca-card ${isChild ? 'oca-child' : ''}" onclick="showOrderDetail('${primary.id}')">
+      ${avatarHtml}
+      <div class="oca-body">
+        <div class="oca-name">${bizDisplay}</div>
+        <div class="oca-time">${orderNum} · ${dateInfo.value} · ${timeInfo.value}</div>
+        <div class="oca-badges">${statusBadge}</div>
+      </div>
+      <div class="oca-right">
+        <div class="oca-price">${totalStr}</div>
+        <div class="oca-pill ${payClass}">${payText}</div>
+        ${editHtml}
+      </div>
+    </div>`;
+}
+
 // ── RENDER ORDER CARD (Admin-style avatar row) ──
 // `batch` is an array of orders (1 for solo, N for batch)
 function renderOrderCard(batch) {
+  if (batch.length === 1) return renderSingleOcaCard(batch[0]);
+
   const primary = batch[0];
-  const isBatch = batch.length > 1;
   const dateInfo = smartDateLabel(primary);
   const timeInfo = smartTimeLabel(primary);
 
@@ -1870,42 +1942,33 @@ function renderOrderCard(batch) {
   }
 
   let bizDisplay = '';
-  let avatarHtml = '';
-  
-  if (!isBatch) {
-    bizDisplay = _esc(getOrderName(primary));
-    avatarHtml = `<div class="oca-avatar">${getInit(getOrderName(primary))}</div>`;
-  } else {
-    avatarHtml = '<div class="oca-avatar-stack">';
-    for (let i = 0; i < Math.min(batch.length, 3); i++) {
-      if (i === 2 && batch.length > 3) {
-        avatarHtml += `<div class="oca-avatar stack-item more">+${batch.length - 2}</div>`;
-      } else {
-        avatarHtml += `<div class="oca-avatar stack-item">${getInit(getOrderName(batch[i]))}</div>`;
-      }
-    }
-    avatarHtml += '</div>';
-
-    const n1 = getOrderName(batch[0]);
-    if (batch.length === 2) {
-      const n2 = getOrderName(batch[1]);
-      if (n1 && n2) bizDisplay = _esc(`${n1} & ${n2}`);
-      else if (n1 || n2) bizDisplay = _esc(n1 || n2);
-      else bizDisplay = "";
+  let avatarHtml = '<div class="oca-avatar-stack">';
+  for (let i = 0; i < Math.min(batch.length, 3); i++) {
+    if (i === 2 && batch.length > 3) {
+      avatarHtml += `<div class="oca-avatar stack-item more">+${batch.length - 2}</div>`;
     } else {
-      const moreText = lang === 'es' ? 'más' : 'more';
-      if (n1) bizDisplay = _esc(`${n1} +${batch.length - 1} ${moreText}`);
-      else bizDisplay = ""; 
+      avatarHtml += `<div class="oca-avatar stack-item">${getInit(getOrderName(batch[i]))}</div>`;
     }
+  }
+  avatarHtml += '</div>';
+
+  const n1 = getOrderName(batch[0]);
+  if (batch.length === 2) {
+    const n2 = getOrderName(batch[1]);
+    if (n1 && n2) bizDisplay = _esc(`${n1} & ${n2}`);
+    else if (n1 || n2) bizDisplay = _esc(n1 || n2);
+    else bizDisplay = "";
+  } else {
+    const moreText = lang === 'es' ? 'más' : 'more';
+    if (n1) bizDisplay = _esc(`${n1} +${batch.length - 1} ${moreText}`);
+    else bizDisplay = ""; 
   }
 
   // Combined total
   const combinedTotal = batch.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
   const totalStr = combinedTotal > 0 ? `$${combinedTotal.toFixed(2)}` : '$0.00';
 
-  // Order number
-  const orderNum = primary.order_number ? `#${primary.order_number}` : `#${shortOrderId(primary)}`;
-  const batchLabel = isBatch ? ` · ${batch.length} ${lang === 'es' ? 'pedidos' : 'orders'}` : '';
+  const batchLabel = `${batch.length} ${lang === 'es' ? 'pedidos' : 'orders'}`;
 
   // Edit indicator
   let editHtml = '';
@@ -1916,20 +1979,24 @@ function renderOrderCard(batch) {
     }
   }
 
-  const orderIds = batch.map(o => o.id).join(',');
-
   return `
-    <div class="oca-card" onclick="showOrderDetail('${orderIds}')">
-      ${avatarHtml}
-      <div class="oca-body">
-        <div class="oca-name">${bizDisplay}</div>
-        <div class="oca-time">${orderNum}${batchLabel} · ${dateInfo.value} · ${timeInfo.value}</div>
-        <div class="oca-badges">${statusBadge}</div>
+    <div class="oca-batch-wrapper">
+      <div class="oca-card batch-header" onclick="toggleBatch(this)">
+        ${avatarHtml}
+        <div class="oca-body">
+          <div class="oca-name">${bizDisplay}</div>
+          <div class="oca-time">${batchLabel} · ${dateInfo.value} · ${timeInfo.value}</div>
+          <div class="oca-badges">${statusBadge}</div>
+        </div>
+        <div class="oca-right">
+          <div class="oca-price">${totalStr}</div>
+          <div class="oca-pill ${payClass}">${payText}</div>
+          ${editHtml}
+        </div>
+        <div class="oca-chevron" style="margin-left: 8px; color: var(--tx-muted); transition: transform 0.2s;"><i data-lucide="chevron-down"></i></div>
       </div>
-      <div class="oca-right">
-        <div class="oca-price">${totalStr}</div>
-        <div class="oca-pill ${payClass}">${payText}</div>
-        ${editHtml}
+      <div class="oca-batch-children" style="display:none; background: rgba(0,0,0,0.02); border-top: 1px solid var(--bd);">
+        ${batch.map(o => renderSingleOcaCard(o, true)).join('')}
       </div>
     </div>`;
 }

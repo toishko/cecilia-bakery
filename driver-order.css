@@ -658,6 +658,29 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .balance-banner:hover{background:var(--bg-surface)}
 
 /* ── Order Cards — Admin-style avatar rows ── */
+.oca-batch-wrapper {
+  display: block;
+}
+.oca-batch-wrapper .oca-card.batch-header {
+  background: transparent;
+}
+.oca-batch-wrapper.open .oca-card.batch-header {
+  background: rgba(200, 16, 46, 0.03);
+}
+.oca-child {
+  padding-left: 20px;
+  background: rgba(0,0,0,0.015);
+}
+[data-theme="dark"] .oca-child { background: rgba(255,255,255,0.015); }
+.oca-child .oca-avatar {
+  width: 32px; height: 32px; font-size: 0.7rem;
+}
+.oca-child:last-child {
+  border-bottom: 1px solid var(--bd);
+}
+.oca-batch-wrapper:last-child .oca-child:last-child {
+  border-bottom: none;
+}
 .oca-card {
   display: flex;
   align-items: center;
