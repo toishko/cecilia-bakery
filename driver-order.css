@@ -1400,3 +1400,26 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .inv-save-btn:hover{opacity:.9}
 .inv-save-btn:active{transform:scale(.98)}
 .inv-save-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Orders Filter Pills ── */
+.orders-header-row {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+}
+.orders-header-row .section-title { margin-bottom: 0; }
+
+.insights-pills {
+  display: flex; gap: 4px; background: var(--bg-surface);
+  border-radius: 12px; padding: 3px;
+}
+.insights-pill {
+  font-family: 'Outfit', sans-serif; font-size: 0.72rem; font-weight: 600;
+  color: var(--tx-muted); background: transparent; border: none;
+  padding: 4px 12px; border-radius: 10px; cursor: pointer;
+  transition: all 0.2s;
+}
+.insights-pill:active { transform: scale(0.95); }
+.insights-pill.active {
+  background: var(--red); color: #fff;
+  box-shadow: 0 2px 8px rgba(200, 16, 46, 0.3);
+}
+[data-theme="dark"] .insights-pills { background: rgba(255,255,255,0.05); }

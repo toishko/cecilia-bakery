@@ -1792,6 +1792,22 @@ async function loadRecentOrders() {
 }
 
 // ── LOAD MY ORDERS (Full list) ──
+let currentOrdersFilter = 'all';
+
+document.addEventListener('DOMContentLoaded', () => {
+  const filterBtns = document.querySelectorAll('#driver-orders-filter .insights-pill');
+  if (filterBtns.length > 0) {
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        filterBtns.forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        currentOrdersFilter = e.target.dataset.filter;
+        loadMyOrders();
+      });
+    });
+  }
+});
+
 async function loadMyOrders() {
   if (!sb || !currentDriver) return;
   const container = document.getElementById('all-orders');
@@ -1804,12 +1820,20 @@ async function loadMyOrders() {
       .order('created_at', { ascending: false });
 
     if (error) { console.error('My orders error:', error); return; }
-    if (!data || data.length === 0) {
-      container.innerHTML = `<div class="empty-state" data-en="No orders yet" data-es="Aún no hay pedidos">${lang === 'es' ? 'Aún no hay pedidos' : 'No orders yet'}</div>`;
+    
+    let filteredData = data || [];
+    if (currentOrdersFilter === 'paid') {
+      filteredData = filteredData.filter(o => o.payment_status === 'paid');
+    } else if (currentOrdersFilter === 'unpaid') {
+      filteredData = filteredData.filter(o => o.payment_status !== 'paid');
+    }
+
+    if (filteredData.length === 0) {
+      container.innerHTML = `<div class="empty-state" data-en="No orders found" data-es="No se encontraron pedidos">${lang === 'es' ? 'No se encontraron pedidos' : 'No orders found'}</div>`;
       return;
     }
 
-    const batches = groupOrdersByBatch(data);
+    const batches = groupOrdersByBatch(filteredData);
     container.innerHTML = batches.map(batch => renderOrderCard(batch)).join('');
     requestAnimationFrame(() => lucide.createIcons());
   } catch (e) { console.error('My orders load error:', e); }
