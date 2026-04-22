@@ -841,7 +841,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   .mobile-header{display:flex}
   .mobile-nav{display:block}
   .dash-screen{flex-direction:column !important}
-  .main-content{margin-left:0;padding:16px;max-width:100%}
+  .main-content{margin-left:0;padding:16px;padding-bottom:100px;max-width:100%}
 }
 
 /* PWA standalone mode: always hide sidebar, remove left margin */
@@ -850,11 +850,11 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   .mobile-header{display:flex}
   .mobile-nav{display:block}
   .dash-screen{flex-direction:column !important}
-  .main-content{margin-left:0;padding:16px;max-width:100%}
+  .main-content{margin-left:0;padding:16px;padding-bottom:100px;max-width:100%}
 }
 
 @media(min-width:769px) and (max-width:1024px){
-  .main-content{padding:24px}
+  .main-content{padding:24px;padding-bottom:100px;}
 }
 
 /* ═══════════════════════════════════
