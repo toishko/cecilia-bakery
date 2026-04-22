@@ -8981,14 +8981,25 @@ function _noBuildProductSections() {
 
     if (sec.type === 'redondo') {
       sec.items.forEach(item => {
-        const insideLabel = `${_noL(item)} — Inside`;
-        html += `<div class="prod-row"><span class="prod-name">${insideLabel}</span>`;
-        html += `<div class="prod-qty-group"><span class="prod-qty-label">Qty</span>${_noQtyControl(item.key + '_inside')}</div>`;
-        html += `<div class="prod-qty-group"><span class="prod-qty-label">No Tkt</span>${_noQtyControl(item.key + '_inside_nt')}</div></div>`;
-        const topLabel = `${_noL(item)} — Top`;
-        html += `<div class="prod-row"><span class="prod-name">${topLabel}</span>`;
-        html += `<div class="prod-qty-group"><span class="prod-qty-label">Qty</span>${_noQtyControl(item.key + '_top')}</div>`;
-        html += `<div class="prod-qty-group"><span class="prod-qty-label">No Tkt</span>${_noQtyControl(item.key + '_top_nt')}</div></div>`;
+        const cols = item.cols || [];
+        const hasInside = cols.includes('inside');
+        const hasTop = cols.includes('top');
+
+        if (hasInside) {
+          const insideLabel = hasTop
+            ? `${_noL(item)} — ${lang === 'es' ? 'Adentro' : 'Inside'}`
+            : _noL(item);
+          html += `<div class="prod-row"><span class="prod-name">${insideLabel}</span>`;
+          html += `<div class="prod-qty-group"><span class="prod-qty-label">${lang === 'es' ? 'Cant' : 'Qty'}</span>${_noQtyControl(item.key + '_inside')}</div>`;
+          html += `<div class="prod-qty-group"><span class="prod-qty-label">${lang === 'es' ? 'Sin Tkt' : 'No Tkt'}</span>${_noQtyControl(item.key + '_inside_nt')}</div></div>`;
+        }
+
+        if (hasTop) {
+          const topLabel = `${_noL(item)} — ${lang === 'es' ? 'Arriba' : 'Top'}`;
+          html += `<div class="prod-row"><span class="prod-name">${topLabel}</span>`;
+          html += `<div class="prod-qty-group"><span class="prod-qty-label">${lang === 'es' ? 'Cant' : 'Qty'}</span>${_noQtyControl(item.key + '_top')}</div>`;
+          html += `<div class="prod-qty-group"><span class="prod-qty-label">${lang === 'es' ? 'Sin Tkt' : 'No Tkt'}</span>${_noQtyControl(item.key + '_top_nt')}</div></div>`;
+        }
       });
     } else {
       sec.items.forEach(item => {
