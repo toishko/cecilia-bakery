@@ -4908,7 +4908,7 @@ window.showDriverProfile = async function(driverId) {
         ${statusBadge}
       </div>
     </div>
-    <div class="profile-balance-card">
+    <div class="profile-balance-card" onclick="_openHistoryForDriver('${driver.id}')" style="cursor:pointer">
       <div class="profile-balance-label">${lang === 'es' ? 'Saldo Pendiente' : 'Outstanding Balance'}</div>
       <div class="profile-balance-amount ${balClass}">${formatCurrency(totalBalance)}</div>
     </div>
