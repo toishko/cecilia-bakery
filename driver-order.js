@@ -1806,9 +1806,10 @@ function renderOrderCard(batch) {
     payBadge = `<span class="pay-badge not-paid">${lang === 'es' ? 'No Pagado' : 'Not Paid'}</span>`;
   }
 
-  // Business names
-  const bizNames = batch.map(o => _esc(getDriverDisplayName(o, lang)));
-  const bizDisplay = isBatch ? bizNames.join(' · ') : bizNames[0];
+  // Business names (deduplicated for batches)
+  const allNames = batch.map(o => getDriverDisplayName(o, lang));
+  const uniqueNames = [...new Set(allNames)];
+  const bizDisplay = _esc(uniqueNames.join(' · '));
 
   // Combined total
   const combinedTotal = batch.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
