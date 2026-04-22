@@ -252,7 +252,14 @@
         <div class="balance-amount green" id="balance-amount-orders">$0.00</div>
         <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--tx-faint)"></i>
       </div>
-      <h3 class="section-title" data-en="My Orders" data-es="Mis Pedidos">My Orders</h3>
+      <div class="orders-header-row">
+        <h3 class="section-title" data-en="My Orders" data-es="Mis Pedidos">My Orders</h3>
+        <div class="insights-pills" id="driver-orders-filter">
+          <button class="insights-pill active" data-filter="all" data-en="All" data-es="Todos">All</button>
+          <button class="insights-pill" data-filter="unpaid" data-en="Unpaid" data-es="Sin Pagar">Unpaid</button>
+          <button class="insights-pill" data-filter="paid" data-en="Paid" data-es="Pagados">Paid</button>
+        </div>
+      </div>
       <div id="all-orders">
         <div class="empty-state" data-en="No orders yet" data-es="Aún no hay pedidos">No orders yet</div>
       </div>

@@ -1462,3 +1462,37 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 
 .scan-review-summary { font-size: 0.78rem; color: var(--tx-muted); font-family: 'Outfit', sans-serif;
   padding-top: 12px; font-weight: 500; text-align: center; }
+
+/* Orders Header Row & Pills */
+.orders-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.orders-header-row .section-title {
+  margin-bottom: 0;
+}
+.insights-pills {
+  display: flex;
+  gap: 6px;
+  background: var(--bg-surface);
+  padding: 4px;
+  border-radius: 8px;
+}
+.insights-pill {
+  border: none;
+  background: transparent;
+  color: var(--tx-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.insights-pill.active {
+  background: var(--bg-card);
+  color: var(--tx);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
