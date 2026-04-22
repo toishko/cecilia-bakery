@@ -1175,7 +1175,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 
 /* Save button — floating at bottom */
 .cp-save-float{position:fixed;bottom:0;left:0;right:0;
-  padding:0 20px;padding-bottom:calc(12px + env(safe-area-inset-bottom));
+  padding:0 20px;padding-bottom:calc(6px + env(safe-area-inset-bottom));
   z-index:9501;pointer-events:none}
 .cp-save-btn{width:100%;padding:16px;border-radius:16px;border:none;
   background:var(--red);color:var(--tx-on-red);font-size:1rem;font-weight:600;
