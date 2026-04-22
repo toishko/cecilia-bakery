@@ -1879,7 +1879,8 @@ function renderSingleOcaCard(primary, isChild = false) {
   }
 
   const bizDisplay = _esc(getOrderName(primary));
-  const avatarHtml = `<div class="oca-avatar">${getInit(getOrderName(primary))}</div>`;
+  const driverInitials = getInit(currentDriver ? currentDriver.name : '');
+  const avatarHtml = `<div class="oca-avatar">${driverInitials}</div>`;
   const totalStr = parseFloat(primary.total_amount || 0) > 0 ? `$${parseFloat(primary.total_amount).toFixed(2)}` : '$0.00';
   const orderNum = primary.order_number ? `#${primary.order_number}` : `#${shortOrderId(primary)}`;
 
@@ -1947,17 +1948,10 @@ function renderOrderCard(batch) {
     return w.length >= 2 ? (w[0][0] + w[1][0]).toUpperCase() : name.substring(0, 2).toUpperCase();
   }
 
-  let bizDisplay = '';
-  let avatarHtml = '<div class="oca-avatar-stack">';
-  for (let i = 0; i < Math.min(batch.length, 3); i++) {
-    if (i === 2 && batch.length > 3) {
-      avatarHtml += `<div class="oca-avatar stack-item more">+${batch.length - 2}</div>`;
-    } else {
-      avatarHtml += `<div class="oca-avatar stack-item">${getInit(getOrderName(batch[i]))}</div>`;
-    }
-  }
-  avatarHtml += '</div>';
+  const driverInitials = getInit(currentDriver ? currentDriver.name : '');
+  let avatarHtml = `<div class="oca-avatar">${driverInitials}</div>`;
 
+  let bizDisplay = '';
   const n1 = getOrderName(batch[0]);
   if (batch.length === 2) {
     const n2 = getOrderName(batch[1]);
