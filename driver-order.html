@@ -136,7 +136,7 @@
       </div>
 
       <!-- Outstanding Balance -->
-      <div class="balance-banner" id="balance-banner-overview" onclick="showBalanceBreakdown()" style="cursor:pointer">
+      <div class="balance-banner" id="balance-banner-overview" onclick="goToUnpaidOrders()" style="cursor:pointer">
         <div><div class="balance-label" data-en="Outstanding Balance" data-es="Saldo Pendiente">Outstanding Balance</div></div>
         <div class="balance-amount green" id="balance-amount">$0.00</div>
         <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--tx-faint)"></i>
@@ -247,7 +247,7 @@
 
     <!-- MY ORDERS -->
     <div id="section-my-orders" class="dash-section" style="display:none">
-      <div class="balance-banner" id="balance-banner-orders" onclick="showBalanceBreakdown()" style="cursor:pointer">
+      <div class="balance-banner" id="balance-banner-orders" onclick="goToUnpaidOrders()" style="cursor:pointer">
         <div><div class="balance-label" data-en="Outstanding Balance" data-es="Saldo Pendiente">Outstanding Balance</div></div>
         <div class="balance-amount green" id="balance-amount-orders">$0.00</div>
         <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--tx-faint)"></i>
@@ -497,17 +497,7 @@
   </div>
 </div>
 
-<!-- BALANCE BREAKDOWN MODAL -->
-<div class="balance-modal-overlay" id="balance-modal-overlay">
-  <div class="balance-modal">
-    <div class="balance-modal-header">
-      <h3 data-en="Balance Breakdown" data-es="Desglose de Saldo">Balance Breakdown</h3>
-      <button class="balance-modal-close" id="balance-modal-close"><i data-lucide="x"></i></button>
-    </div>
-    <div class="balance-modal-total" id="balance-modal-total"></div>
-    <div class="balance-modal-list" id="balance-modal-list"></div>
-  </div>
-</div>
+<!-- BALANCE BREAKDOWN MODAL REMOVED -->
 
 <!-- Push Notification Opt-In Banner -->
 <div id="push-opt-in" class="push-opt-in" style="display:none">

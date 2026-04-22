@@ -2138,70 +2138,30 @@ function formatTime12(timeStr) {
   return `${hr12}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
-// ── BALANCE BREAKDOWN MODAL ──
-window.showBalanceBreakdown = function() {
-  if (window._swipeDismissCooldown) return;
-  const overlay = document.getElementById('balance-modal-overlay');
-  const totalEl = document.getElementById('balance-modal-total');
-  const listEl = document.getElementById('balance-modal-list');
-
-  let total = 0;
-  balanceOrders.forEach(o => {
-    if (o.payment_status === 'not_paid') total += (o.total_amount || 0);
-    else if (o.payment_status === 'partial') total += Math.max(0, (o.total_amount || 0) - (o.payment_amount || 0));
-  });
-
-  const colorClass = total === 0 ? 'green' : total >= 100 ? 'red' : 'yellow';
-  totalEl.innerHTML = `<span class="balance-amount ${colorClass}">$${total.toFixed(2)}</span>`;
-
-  if (balanceOrders.length === 0) {
-    listEl.innerHTML = `<div class="balance-empty">${lang === 'es' ? 'No hay saldo pendiente' : 'No outstanding balance'}</div>`;
+// ── BALANCE REDIRECT ──
+window.goToUnpaidOrders = function() {
+  // Navigate to My Orders section
+  const myOrdersBtn = document.querySelector('.sidebar-nav-item[data-section=my-orders]');
+  if (myOrdersBtn && myOrdersBtn.offsetParent !== null) {
+    myOrdersBtn.click();
   } else {
-    let html = '';
-    balanceOrders.forEach(o => {
-      const remaining = o.payment_status === 'not_paid'
-        ? (o.total_amount || 0)
-        : Math.max(0, (o.total_amount || 0) - (o.payment_amount || 0));
-      const dateVal = o.pickup_date || (o.created_at ? o.created_at.split('T')[0] : '');
-      const d = new Date(dateVal + 'T00:00:00');
-      const dateStr = formatDate(d);
-      const biz = o.business_name || (lang === 'es' ? 'Sin nombre' : 'No name');
-      const paidStr = o.payment_status === 'partial'
-        ? `${lang === 'es' ? 'Pagado' : 'Paid'}: $${(o.payment_amount || 0).toFixed(2)} / $${(o.total_amount || 0).toFixed(2)}`
-        : `${lang === 'es' ? 'Total' : 'Total'}: $${(o.total_amount || 0).toFixed(2)}`;
-
-      html += `
-        <div class="balance-item">
-          <div class="balance-item-info">
-            <div class="balance-item-biz">${biz} <span style="color:var(--tx-faint);font-weight:400">#${shortOrderId(o)}</span></div>
-            <div class="balance-item-date">${dateStr}</div>
-            <div class="balance-item-detail">${paidStr}</div>
-          </div>
-          <div class="balance-item-remaining">$${remaining.toFixed(2)}</div>
-        </div>`;
-    });
-    listEl.innerHTML = html;
+    const mobileMyOrdersBtn = document.querySelector('.mobile-nav-item[data-section=my-orders]');
+    if (mobileMyOrdersBtn) mobileMyOrdersBtn.click();
   }
 
-  overlay.classList.add('open');
-  document.body.dataset.scrollY = window.scrollY;
-  document.body.style.position = 'fixed';
-  document.body.style.top = `-${window.scrollY}px`;
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-  lucide.createIcons();
-};
+  // Set filter to unpaid
+  currentOrdersFilter = 'unpaid';
+  
+  // Update pills UI
+  const filterBtns = document.querySelectorAll('#driver-orders-filter .insights-pill');
+  filterBtns.forEach(b => {
+    if (b.dataset.filter === 'unpaid') b.classList.add('active');
+    else b.classList.remove('active');
+  });
 
-function closeBalanceBreakdown() {
-  document.getElementById('balance-modal-overlay').classList.remove('open');
-  const scrollY = document.body.dataset.scrollY || '0';
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  window.scrollTo(0, parseInt(scrollY));
-}
-window.closeBalanceBreakdown = closeBalanceBreakdown;
+  // Reload orders to apply filter immediately
+  loadMyOrders();
+};
 
 // ── REALTIME SUBSCRIPTION ──
 function setupDriverRealtime() {
