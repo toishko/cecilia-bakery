@@ -1638,24 +1638,50 @@
       var card = document.getElementById('staff-order-' + idx);
       if (!card) return;
 
+      // Load existing saved data first so we can merge
+      var existingCalcByPK = {};
+      var existingFrost = null;
+      var existingRaw = localStorage.getItem('cb-staff-ordercalc-' + order.id);
+      if (existingRaw) {
+        try {
+          var existing = JSON.parse(existingRaw);
+          existingCalcByPK = existing.calcByProductKey || {};
+          existingFrost = existing.frostState || null;
+        } catch(e) {}
+      }
+
       var state = { boxCalc: {}, frostState: null, calcByProductKey: {} };
 
       // Gather box calc inputs from this card only
+      var newCalcByProductKey = {};
+      var hasAnyInputValues = false;
       var calcInputs = card.querySelectorAll('.box-calc-input');
       calcInputs.forEach(function(inp) {
         if (inp.value && inp.id) {
           state.boxCalc[inp.id] = inp.value;
-          // Also find the product_key from the parent row
+          hasAnyInputValues = true;
           var row = inp.closest('.box-calc-item');
           if (row && row.dataset.productKey) {
-            state.calcByProductKey[row.dataset.productKey] = parseInt(inp.value);
+            newCalcByProductKey[row.dataset.productKey] = parseInt(inp.value);
           }
         }
       });
 
-      // Gather frost packer state for this order
+      // Merge: start with existing saved calcs, then overlay current DOM values
+      var mergedCalc = {};
+      Object.keys(existingCalcByPK).forEach(function(k) {
+        if (existingCalcByPK[k] > 0) mergedCalc[k] = existingCalcByPK[k];
+      });
+      Object.keys(newCalcByProductKey).forEach(function(k) {
+        mergedCalc[k] = newCalcByProductKey[k];
+      });
+      state.calcByProductKey = mergedCalc;
+
+      // Gather frost packer state — prefer live state, fall back to saved
       if (typeof frostState !== 'undefined' && frostState[order.id]) {
         state.frostState = JSON.parse(JSON.stringify(frostState[order.id]));
+      } else if (existingFrost) {
+        state.frostState = existingFrost;
       }
 
       // Store order metadata + items for display in the Saved tab
