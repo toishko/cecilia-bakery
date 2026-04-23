@@ -322,112 +322,108 @@
       </div>
 
       <!-- Sub-view 2: DRIVER FORM (Add/Edit) -->
-      <div id="drivers-form-view" style="display:none">
-        <div class="form-back-row">
-          <button class="btn-back" id="btn-back-to-list">
-            <i data-lucide="arrow-left" style="width:16px;height:16px"></i>
-            <span data-en="Back to Drivers" data-es="Volver a Conductores">Back to Drivers</span>
-          </button>
+      <div id="drivers-form-view" class="apple-view" style="display:none">
+        <div class="apple-nav-bar">
+          <button class="apple-nav-btn" id="btn-cancel-driver" data-en="Cancel" data-es="Cancelar">Cancel</button>
+          <span class="apple-nav-title" id="driver-form-title" data-en="Edit Driver" data-es="Editar Conductor">Edit Driver</span>
+          <button class="apple-nav-btn action" id="btn-save-driver" data-en="Save" data-es="Guardar">Save</button>
         </div>
-        <h2 class="page-title" id="driver-form-title" data-en="Add New Driver" data-es="Agregar Nuevo Conductor">Add New Driver</h2>
 
-        <div class="driver-form-card">
-          <div class="driver-form-fields">
-            <div class="form-row">
-              <div class="form-field">
-                <label data-en="Name" data-es="Nombre">Name</label>
-                <input type="text" id="df-name" placeholder="Driver name" data-en-placeholder="Driver name" data-es-placeholder="Nombre del conductor">
-              </div>
-              <div class="form-field">
-                <label data-en="Code" data-es="Código">Code</label>
-                <input type="text" id="df-code" placeholder="e.g. carlos01" data-en-placeholder="e.g. carlos01" data-es-placeholder="ej. carlos01">
-              </div>
+        <div class="apple-view-content">
+          <h4 class="apple-group-title" data-en="Basic Info" data-es="Información Básica">Basic Info</h4>
+          <div class="apple-inset-group">
+            <div class="apple-inset-row input-row">
+              <label data-en="Name" data-es="Nombre">Name</label>
+              <input type="text" id="df-name" placeholder="Name">
             </div>
-            <div class="form-row">
-              <div class="form-field">
-                <label data-en="Phone" data-es="Teléfono">Phone</label>
-                <input type="tel" id="df-phone" placeholder="Optional" data-en-placeholder="Optional" data-es-placeholder="Opcional">
-              </div>
-              <div class="form-field" id="df-status-wrap" style="display:none">
-                <label data-en="Status" data-es="Estado">Status</label>
-                <div class="status-toggle-wrap">
-                  <label class="toggle">
-                    <input type="checkbox" id="df-active" checked>
-                    <span class="toggle-track"></span>
-                    <span class="toggle-thumb"></span>
-                  </label>
-                  <span id="df-active-label" data-en="Active" data-es="Activo">Active</span>
-                </div>
-              </div>
+            <div class="apple-inset-row input-row">
+              <label data-en="Code" data-es="Código">Code</label>
+              <input type="text" id="df-code" placeholder="Code">
             </div>
+            <div class="apple-inset-row input-row">
+              <label data-en="Phone" data-es="Teléfono">Phone</label>
+              <input type="tel" id="df-phone" placeholder="Optional">
+            </div>
+          </div>
 
-            <div class="form-row" id="df-scanner-wrap" style="display:none">
-              <div class="form-field full">
-                <label data-en="Ticket Scanner" data-es="Escáner de Ticket">Ticket Scanner</label>
-                <div class="status-toggle-wrap">
-                  <label class="toggle">
-                    <input type="checkbox" id="df-scanner">
-                    <span class="toggle-track"></span>
-                    <span class="toggle-thumb"></span>
-                  </label>
-                  <span id="df-scanner-label" class="settings-desc" data-en="OCR photo scanner" data-es="Escáner de fotos OCR">OCR photo scanner</span>
+          <div id="df-status-wrap" style="display:none">
+            <h4 class="apple-group-title" data-en="Permissions" data-es="Permisos">Permissions</h4>
+            <div class="apple-inset-group">
+              <div class="apple-inset-row between">
+                <span data-en="Active Account" data-es="Cuenta Activa">Active Account</span>
+                <label class="apple-toggle">
+                  <input type="checkbox" id="df-active" checked>
+                  <span class="apple-toggle-track"></span>
+                </label>
+                <span id="df-active-label" style="display:none"></span>
+              </div>
+              <div class="apple-inset-row between" id="df-scanner-wrap" style="display:flex;">
+                <div>
+                  <span data-en="Ticket Scanner (OCR)" data-es="Escáner de Ticket">Ticket Scanner (OCR)</span>
+                  <div style="font-size:0.75rem; color:var(--tx-muted); margin-top:2px" data-en="Allow driver to scan paper tickets" data-es="Permitir escanear tickets de papel">Allow driver to scan paper tickets</div>
+                  <span id="df-scanner-label" style="display:none"></span>
                 </div>
+                <label class="apple-toggle">
+                  <input type="checkbox" id="df-scanner">
+                  <span class="apple-toggle-track"></span>
+                </label>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- PRICE TABLE -->
-        <div class="driver-form-card">
-          <div class="price-table-header">
-            <h3 data-en="Prices" data-es="Precios">Prices</h3>
-            <div class="copy-prices-wrap">
-              <label data-en="Copy prices from:" data-es="Copiar precios de:">Copy prices from:</label>
-              <select id="copy-prices-select">
-                <option value="" data-en="— Select —" data-es="— Seleccionar —">— Select —</option>
-              </select>
+          <h4 class="apple-group-title" data-en="Pricing Setup" data-es="Configuración de Precios">Pricing Setup</h4>
+          <div class="apple-inset-group" style="margin-bottom: 24px;">
+            <div class="apple-inset-row between tap-row" onclick="document.getElementById('price-table-wrapper').style.display = document.getElementById('price-table-wrapper').style.display === 'none' ? 'block' : 'none'">
+              <span data-en="Edit Custom Pricing" data-es="Editar Precios">Edit Custom Pricing</span>
+              <i data-lucide="chevron-down" style="width:16px;color:var(--tx-muted)"></i>
+            </div>
+            <div id="price-table-wrapper" style="display:none; border-top: 1px solid var(--bd);">
+              <div style="padding: 12px 16px;">
+                <div class="copy-prices-wrap" style="margin-bottom: 12px;">
+                  <label data-en="Copy from:" data-es="Copiar de:">Copy from:</label>
+                  <select id="copy-prices-select">
+                    <option value="">— Select —</option>
+                  </select>
+                </div>
+                <div id="price-table-container"></div>
+              </div>
             </div>
           </div>
-          <div id="price-table-container"></div>
-        </div>
-
-        <div class="driver-form-actions">
-          <button class="btn-cancel" id="btn-cancel-driver" data-en="Cancel" data-es="Cancelar">Cancel</button>
-          <button class="btn-save-driver" id="btn-save-driver" data-en="Save Driver" data-es="Guardar Conductor">Save Driver</button>
         </div>
       </div>
 
       <!-- Sub-view 3: DRIVER PROFILE -->
-      <div id="drivers-profile-view" style="display:none">
-        <div class="form-back-row">
-          <button class="btn-back" id="btn-back-from-profile">
-            <i data-lucide="arrow-left" style="width:16px;height:16px"></i>
-            <span data-en="Back to Drivers" data-es="Volver a Conductores">Back to Drivers</span>
+      <div id="drivers-profile-view" class="apple-view" style="display:none">
+        <div class="apple-nav-bar">
+          <button class="apple-nav-btn" id="btn-back-from-profile">
+            <i data-lucide="chevron-left" style="width:20px;height:20px;margin-right:-4px;"></i>
+            <span data-en="Drivers" data-es="Conductores">Drivers</span>
           </button>
+          <button class="apple-nav-btn action" id="btn-edit-driver-from-profile" data-en="Edit" data-es="Editar">Edit</button>
         </div>
 
-        <div class="driver-profile-header" id="driver-profile-header"></div>
-
-        <div class="profile-section">
-          <div class="section-header">
-            <h3 data-en="Balance Breakdown" data-es="Desglose de Saldo">Balance Breakdown</h3>
+        <div class="apple-view-content">
+          <div class="apple-contact-header" id="driver-profile-header">
+            <!-- Populated by JS -->
           </div>
-          <div id="profile-balance-list"></div>
-        </div>
 
-        <div class="profile-section">
-          <div class="section-header">
-            <h3 data-en="Recent Orders" data-es="Pedidos Recientes">Recent Orders</h3>
+          <h4 class="apple-group-title" data-en="Financials" data-es="Finanzas">Financials</h4>
+          <div class="apple-inset-group">
+            <div class="apple-inset-row balance-row-cols" id="profile-balance-list">
+              <!-- Populated by JS -->
+            </div>
           </div>
-          <div id="profile-recent-orders"></div>
-        </div>
 
-        <div class="profile-section">
-          <div class="section-header">
-            <h3 data-en="Price Table" data-es="Tabla de Precios">Price Table</h3>
-            <button class="link-btn" id="btn-edit-driver-from-profile" data-en="Edit Driver" data-es="Editar Conductor">Edit Driver</button>
+          <h4 class="apple-group-title" data-en="Recent Orders" data-es="Pedidos Recientes">Recent Orders</h4>
+          <div class="apple-inset-group">
+            <div id="profile-recent-orders"></div>
+            <div class="apple-inset-row tap-row center-text" onclick="showSection('history'); document.getElementById('filter-driver').value = profileDriverId; document.getElementById('filter-apply-btn').click();">
+              <span data-en="View All Order History" data-es="Ver todo el historial">View All Order History</span>
+            </div>
           </div>
-          <div id="profile-prices"></div>
+
+          <!-- Hidden prices for legacy JS compatibility -->
+          <div id="profile-prices" style="display:none;"></div>
         </div>
       </div>
 

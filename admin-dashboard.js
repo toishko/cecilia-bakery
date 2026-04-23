@@ -4890,93 +4890,87 @@ window.showDriverProfile = async function(driverId) {
   const { data: driver } = await sb.from('drivers').select('*').eq('id', driverId).single();
   if (!driver) return;
 
-  // Compute balance
-  const { data: unpaidOrders } = await sb.from('driver_orders')
-    .select('id, business_name, submitted_at, total_amount, payment_amount, payment_status, order_number')
+  // Fetch all orders for this driver to compute financials and recent activity
+  const { data: allOrders } = await sb.from('driver_orders')
+    .select('id, business_name, submitted_at, total_amount, payment_amount, payment_status, status, order_number')
     .eq('driver_id', driverId)
-    .in('payment_status', ['not_paid', 'partial'])
     .order('submitted_at', { ascending: false });
 
-  let totalBalance = 0;
-  if (unpaidOrders) {
-    unpaidOrders.forEach(o => {
-      totalBalance += Math.max(0, parseFloat(o.total_amount || 0) - parseFloat(o.payment_amount || 0));
+  let gross = 0;
+  let collected = 0;
+  let pending = 0;
+  let recentOrders = [];
+
+  if (allOrders) {
+    recentOrders = allOrders.slice(0, 3);
+    allOrders.forEach(o => {
+      const t = parseFloat(o.total_amount || 0);
+      const c = parseFloat(o.payment_amount || 0);
+      gross += t;
+      collected += c;
+      pending += Math.max(0, t - c);
     });
   }
 
   // Profile header
+  const initials = driver.name ? driver.name.substring(0, 2).toUpperCase() : 'DR';
   const statusBadge = driver.is_active
     ? `<span class="badge badge-sent">${lang === 'es' ? 'Activo' : 'Active'}</span>`
     : `<span class="badge badge-pending">${lang === 'es' ? 'Desactivado' : 'Disabled'}</span>`;
-  const balClass = totalBalance > 0 ? 'has-balance' : 'no-balance';
+  const ocrBadge = driver.scanner_enabled 
+    ? `<span class="badge badge-sent" style="background:rgba(200,16,46,0.1);color:var(--red);">OCR</span>`
+    : '';
 
   document.getElementById('driver-profile-header').innerHTML = `
-    <div class="profile-info">
-      <div class="profile-name">${_esc(driver.name)}</div>
-      <div class="profile-meta">
-        <span class="code-masked" data-code="${_escAttr(driver.code)}">••••••</span>
-        <button class="code-eye-btn" onclick="toggleCode(this)" title="Show code"><i data-lucide="eye"></i></button>
-        ${driver.phone ? `<span>${_esc(driver.phone)}</span>` : ''}
-        ${statusBadge}
-      </div>
+    <div class="apple-avatar">${initials}</div>
+    <div class="apple-contact-name">${_esc(driver.name)}</div>
+    <div class="apple-contact-code">
+      <span class="code-masked" data-code="${_escAttr(driver.code)}">••••••</span>
+      <button class="code-eye-btn" onclick="toggleCode(this)" title="Show code" style="vertical-align:middle;margin:-2px 0 0 2px;"><i data-lucide="eye"></i></button>
+      ${driver.phone ? ' • ' + _esc(driver.phone) : ''}
     </div>
-    <div class="profile-balance-card">
-      <div class="profile-balance-label">${lang === 'es' ? 'Saldo Pendiente' : 'Outstanding Balance'}</div>
-      <div class="profile-balance-amount ${balClass}">${formatCurrency(totalBalance)}</div>
-    </div>
+    <div class="apple-contact-badges">${statusBadge} ${ocrBadge}</div>
   `;
 
   // Balance breakdown
-  if (unpaidOrders && unpaidOrders.length > 0) {
-    document.getElementById('profile-balance-list').innerHTML = unpaidOrders.map(o => {
-      const remaining = Math.max(0, parseFloat(o.total_amount || 0) - parseFloat(o.payment_amount || 0));
-      return `<div class="balance-row" onclick="openOrderDetail('${o.id}')">
-        <div class="balance-row-info">
-          <span class="balance-row-date">${formatDate(o.submitted_at)} — #${o.order_number}</span>
-          <span class="balance-row-business">${_esc(o.business_name || (lang === 'es' ? 'Sin negocio' : 'No business'))}</span>
-        </div>
-        <div class="balance-row-amounts">
-          <span class="balance-row-total">${lang === 'es' ? 'Total:' : 'Total:'} ${formatCurrency(o.total_amount)}</span>
-          <span class="balance-row-remaining">${lang === 'es' ? 'Resta:' : 'Remaining:'} ${formatCurrency(remaining)}</span>
-        </div>
-      </div>`;
-    }).join('');
-  } else {
-    document.getElementById('profile-balance-list').innerHTML =
-      `<div class="empty-state">${lang === 'es' ? 'Sin saldo pendiente' : 'No outstanding balance'}</div>`;
-  }
+  document.getElementById('profile-balance-list').innerHTML = `
+    <div class="bal-col">
+      <span class="bal-label">${lang === 'es' ? 'Bruto' : 'Gross'}</span>
+      <span class="bal-value">${formatCurrency(gross)}</span>
+    </div>
+    <div class="bal-col">
+      <span class="bal-label">${lang === 'es' ? 'Cobrado' : 'Collected'}</span>
+      <span class="bal-value" style="color:var(--green)">${formatCurrency(collected)}</span>
+    </div>
+    <div class="bal-col">
+      <span class="bal-label">${lang === 'es' ? 'Pendiente' : 'Pending'}</span>
+      <span class="bal-value" style="color:var(--red)">${formatCurrency(pending)}</span>
+    </div>
+  `;
 
-  // Recent orders (last 10)
-  const { data: recentOrders } = await sb.from('driver_orders')
-    .select('id, business_name, submitted_at, total_amount, payment_status, status, order_number')
-    .eq('driver_id', driverId)
-    .order('submitted_at', { ascending: false })
-    .limit(10);
-
-  if (recentOrders && recentOrders.length > 0) {
+  // Recent orders (last 3)
+  if (recentOrders.length > 0) {
     document.getElementById('profile-recent-orders').innerHTML = recentOrders.map(o => {
-      let payBadge = '';
-      if (o.payment_status === 'paid') payBadge = `<span class="badge badge-paid">${lang === 'es' ? 'Pagado' : 'Paid'}</span>`;
-      else if (o.payment_status === 'partial') payBadge = `<span class="badge badge-partial">${lang === 'es' ? 'Parcial' : 'Partial'}</span>`;
-      else payBadge = `<span class="badge badge-unpaid">${lang === 'es' ? 'Sin Pagar' : 'Not Paid'}</span>`;
+      let payColor = '';
+      if (o.payment_status === 'paid') payColor = 'var(--green)';
+      else if (o.payment_status === 'partial') payColor = 'var(--orange)';
+      else payColor = 'var(--red)';
 
-      return `<div class="order-card" onclick="openOrderDetail('${o.id}')">
-        <div class="order-card-top">
-          <div class="order-card-info">
-            <div class="order-card-driver">${_esc(o.business_name || (lang === 'es' ? 'Sin negocio' : 'No business'))}</div>
-            <div class="order-card-meta">
-              <span class="order-card-number">#${o.order_number}</span>
-              <span class="order-card-time"><i data-lucide="clock" style="width:12px;height:12px"></i> ${formatTime(o.submitted_at)}</span>
-            </div>
+      return `<div class="apple-inset-row tap-row between" onclick="openOrderDetail('${o.id}')">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:${payColor}"></div>
+          <div>
+            <div style="font-weight:600;">${_esc(o.business_name || (lang === 'es' ? 'Sin negocio' : 'No business'))}</div>
+            <div style="font-size:0.8rem;color:var(--tx-muted);">${formatDate(o.submitted_at)} — #${o.order_number}</div>
           </div>
-          <div class="order-card-badges">${payBadge}</div>
         </div>
+        <div style="font-weight:600;">${formatCurrency(o.total_amount)}</div>
       </div>`;
     }).join('');
     lucide.createIcons();
   } else {
     document.getElementById('profile-recent-orders').innerHTML =
-      `<div class="empty-state">${lang === 'es' ? 'Sin pedidos' : 'No orders yet'}</div>`;
+      `<div class="apple-inset-row center-text" style="color:var(--tx-muted); cursor:default;">${lang === 'es' ? 'Sin pedidos' : 'No orders yet'}</div>`;
   }
 
   // Price table (read-only)
