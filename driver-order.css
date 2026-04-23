@@ -1842,15 +1842,15 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 
 @media(max-width:768px){
   .form-footer, .sale-footer {
-    bottom: calc(56px + env(safe-area-inset-bottom));
-    padding-bottom: 12px;
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    padding-bottom: 16px;
     border-bottom: 1px solid var(--bd);
   }
 }
 @media(display-mode:standalone){
   .form-footer, .sale-footer {
-    bottom: calc(56px + env(safe-area-inset-bottom));
-    padding-bottom: 12px;
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    padding-bottom: 16px;
     border-bottom: 1px solid var(--bd);
   }
 }
