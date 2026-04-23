@@ -4303,7 +4303,7 @@ function renderInventorySummary() {
       const catOffset = 87.96 - (catPct / 100) * 87.96;
       const catColor = catTotalRem <= 0 ? '#c0392b' : catPct < 25 ? '#d4a017' : '#2a9d5c';
 
-      html += `<div class="inv-category">`;
+      html += `<div class="inv-category collapsed">`;
       html += `<div class="inv-cat-title" onclick="toggleInvCategory(this)">
                  <span data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</span>
                  <div class="inv-cat-title-right">
@@ -4349,7 +4349,7 @@ function renderInventorySummary() {
       const catOffset = 87.96 - (catPct / 100) * 87.96;
       const catColor = catTotalRem <= 0 ? '#c0392b' : catPct < 25 ? '#d4a017' : '#2a9d5c';
 
-      html += `<div class="inv-category">
+      html += `<div class="inv-category collapsed">
                  <div class="inv-cat-title" onclick="toggleInvCategory(this)">
                    <span>${lang === 'es' ? 'Otro' : 'Other'}</span>
                    <div class="inv-cat-title-right">
