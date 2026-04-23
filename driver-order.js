@@ -4428,9 +4428,15 @@ async function saveManualLoad() {
       return;
     }
 
+    // Delete existing manual inventory for today to allow clean insert and removals (setting to 0)
+    await sb.from('driver_inventory')
+      .delete()
+      .eq('driver_id', currentDriver.id)
+      .eq('date', today);
+
     const { error } = await sb
       .from('driver_inventory')
-      .upsert(rows, { onConflict: 'driver_id,product_key,date' });
+      .insert(rows);
 
     if (error) throw error;
 
