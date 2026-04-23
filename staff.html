@@ -1085,9 +1085,8 @@
       position:fixed; bottom:0; left:0; right:0; z-index:10000;
       background:var(--bg-card);
       border-radius:20px 20px 0 0;
-      max-height:88vh; overflow-y:auto;
-      -webkit-overflow-scrolling:touch;
-      overscroll-behavior:contain;
+      max-height:88vh; 
+      display:flex; flex-direction:column; overflow:hidden;
       transform:translateY(100%);
       transition:transform .3s cubic-bezier(.32,.72,0,1);
       padding:0 0 env(safe-area-inset-bottom);
@@ -1102,10 +1101,9 @@
       display:flex; flex-direction:column; align-items:stretch; gap:12px;
       padding:14px 20px 12px;
       border-bottom:1px solid var(--bd);
-      position:sticky; top:0; 
       background:var(--bg-nav);
-      backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
       z-index:1; border-radius:20px 20px 0 0;
+      flex-shrink:0;
     }
     .frost-modal-header-top {
       display:flex; justify-content:space-between; align-items:center;
@@ -1118,7 +1116,14 @@
       cursor:pointer; color:var(--tx-muted); font-size:.9rem;
     }
     .frost-modal-close:hover { background:var(--bd); }
-    .frost-modal-body { padding:16px 20px 24px; }
+    .frost-modal-body { 
+      padding:16px 20px 24px; 
+      overflow-y:auto; 
+      -webkit-overflow-scrolling:touch;
+      overscroll-behavior:contain;
+      flex:1; 
+      min-height:0;
+    }
     /* ── Pill Dock ── */
     .frost-pill-dock { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 14px 0; }
     .frost-pill {
@@ -3815,6 +3820,7 @@
     (function() {
       var sheet = document.getElementById('frost-modal-sheet');
       if (!sheet) return;
+      var scrollBody = sheet.querySelector('.frost-modal-body');
       var startY = 0;
       var currentY = 0;
       var isDragging = false;
@@ -3826,7 +3832,7 @@
         startY = touch.clientY;
         currentY = startY;
         isDragging = true;
-        hasScrolled = sheet.scrollTop > 0;
+        hasScrolled = scrollBody ? scrollBody.scrollTop > 0 : false;
         sheet.style.transition = 'none'; 
       }, { passive: true });
 
@@ -3836,9 +3842,9 @@
         currentY = touch.clientY;
         var deltaY = currentY - startY;
 
-        var isScrollable = sheet.scrollHeight > sheet.clientHeight;
+        var isScrollable = scrollBody ? scrollBody.scrollHeight > scrollBody.clientHeight : false;
 
-        if (sheet.scrollTop > 0) {
+        if (scrollBody && scrollBody.scrollTop > 0) {
           hasScrolled = true;
           return;
         }
@@ -3855,10 +3861,11 @@
         if (!isDragging) return;
         isDragging = false;
         var deltaY = currentY - startY;
+        var bodyTop = scrollBody ? scrollBody.scrollTop : 0;
         
         sheet.style.transition = 'transform .3s cubic-bezier(.32,.72,0,1)';
         
-        if (deltaY > 100 && !hasScrolled && sheet.scrollTop <= 0) {
+        if (deltaY > 100 && !hasScrolled && bodyTop <= 0) {
           frostCloseModal();
           setTimeout(function() { sheet.style.transform = ''; }, 300);
         } else {
