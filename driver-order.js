@@ -550,6 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('print-instructions').style.display = 'none';
     showScreen('dashboard');
     showSection('sales');
+    document.getElementById('bottom-nav').style.display = 'flex';
   });
 
   document.getElementById('receipt-delete-btn')?.addEventListener('click', async () => {
@@ -581,10 +582,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // If we came from 'my-orders' (sales filter), refresh it
       if (document.getElementById('section-my-orders').classList.contains('active')) {
         loadMyOrders();
-        document.getElementById('bottom-nav').style.display = 'flex';
       } else {
         showSection('sales');
       }
+      document.getElementById('bottom-nav').style.display = 'flex';
 
     } catch (e) {
       console.error('Error deleting sale:', e);
