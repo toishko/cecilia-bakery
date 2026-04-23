@@ -2138,16 +2138,18 @@
             }
           }
         });
-        // Check if frost state has ACTUAL user data (not just empty frostInit boxes)
-        var hasFrostData = false;
+        // Check if frost state has actual piece data (not just empty boxes from frostInit)
+        var hasFrost = false;
         if (typeof frostState !== 'undefined' && frostState[order.id] && frostState[order.id].boxes) {
           frostState[order.id].boxes.forEach(function(box) {
-            Object.keys(box.pieces || {}).forEach(function(k) {
-              if (box.pieces[k] > 0) hasFrostData = true;
-            });
+            if (box.pieces) {
+              Object.keys(box.pieces).forEach(function(k) {
+                if (box.pieces[k] > 0) hasFrost = true;
+              });
+            }
           });
         }
-        if (!hasValues && !hasFrostData) return;
+        if (!hasValues && !hasFrost) return;
         
         // Merge with existing saved data to preserve calcs from other sessions
         var existingRaw = localStorage.getItem('cb-staff-ordercalc-' + order.id);
@@ -2169,9 +2171,9 @@
           mergedCalcByProductKey[k] = calcByProductKey[k]; 
         });
         
-        // Frost state: only save live state if it has actual data, otherwise preserve saved
+        // Frost state: prefer live state, fall back to existing saved
         var frostToSave = null;
-        if (hasFrostData) {
+        if (hasFrost) {
           frostToSave = JSON.parse(JSON.stringify(frostState[order.id]));
         } else if (existingFrost) {
           frostToSave = existingFrost;
@@ -3014,7 +3016,10 @@
         flavors: items,
         boxes: []
       };
-      frostAddBox(orderId);
+      // Add an initial empty box without triggering a save (loadBoxCalcState will restore saved data)
+      var pieces = {};
+      items.forEach(function(f) { pieces[f.key] = 0; });
+      frostState[orderId].boxes.push({ num: 1, pieces: pieces });
       frostUpdateBar(orderId);
     }
 
