@@ -2947,6 +2947,7 @@
       'fr_choco': { fill: '#5c3317', glow: 'rgba(92,51,23,.3)' }
     };
     var frostModalOrderId = null;
+    var frostScrollY = 0;
 
     function frostInit(orderId, items) {
       frostState[orderId] = {
@@ -2976,13 +2977,25 @@
       // Open modal
       document.getElementById('frost-modal-overlay').classList.add('open');
       document.getElementById('frost-modal-sheet').classList.add('open');
+      
+      // True scroll lock for iOS
+      frostScrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = '-' + frostScrollY + 'px';
+      document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
     }
 
     function frostCloseModal() {
       document.getElementById('frost-modal-overlay').classList.remove('open');
       document.getElementById('frost-modal-sheet').classList.remove('open');
+      
+      // Release scroll lock
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
       document.body.style.overflow = '';
+      window.scrollTo(0, frostScrollY);
 
       // Update the inline bar for this order
       if (frostModalOrderId) {
