@@ -1631,17 +1631,19 @@
       var card = document.getElementById('staff-order-' + idx);
       if (!card) return;
 
-      var state = { boxCalc: {}, frostState: null, calcByItemIdx: {} };
+      var state = { boxCalc: {}, frostState: null, calcByProductKey: {} };
 
       // Gather box calc inputs from this card only
       var calcInputs = card.querySelectorAll('.box-calc-input');
-      var calcIdx = 0;
       calcInputs.forEach(function(inp) {
         if (inp.value && inp.id) {
           state.boxCalc[inp.id] = inp.value;
-          state.calcByItemIdx[calcIdx] = parseInt(inp.value);
+          // Also find the product_key from the parent row
+          var row = inp.closest('.box-calc-item');
+          if (row && row.dataset.productKey) {
+            state.calcByProductKey[row.dataset.productKey] = parseInt(inp.value);
+          }
         }
-        calcIdx++;
       });
 
       // Gather frost packer state for this order
@@ -1865,10 +1867,19 @@
                 // Standard items with box calc
                 catGroups[cat].forEach(function(item) {
                   var boxSize = 0;
-                  var inputId = 'bc-' + entry.orderId + '-' + item._gi;
-                  if (d.boxCalc && d.boxCalc[inputId]) {
-                    boxSize = parseInt(d.boxCalc[inputId], 10) || 0;
-                  } else if (d.calcByItemIdx && typeof d.calcByItemIdx[item._gi] === 'number') {
+                  // Priority 1: look up by stable product_key
+                  if (d.calcByProductKey && typeof d.calcByProductKey[item.key] === 'number') {
+                    boxSize = d.calcByProductKey[item.key];
+                  }
+                  // Priority 2: try boxCalc with reconstructed input ID
+                  if (boxSize === 0 && d.boxCalc) {
+                    var inputId = 'bc-' + entry.orderId + '-' + item._gi;
+                    if (d.boxCalc[inputId]) {
+                      boxSize = parseInt(d.boxCalc[inputId], 10) || 0;
+                    }
+                  }
+                  // Priority 3: legacy calcByItemIdx fallback
+                  if (boxSize === 0 && d.calcByItemIdx && typeof d.calcByItemIdx[item._gi] === 'number') {
                     boxSize = d.calcByItemIdx[item._gi];
                   }
                   var calcVal = '';
@@ -2075,20 +2086,22 @@
         var inputs = card.querySelectorAll('.box-calc-input');
         var hasValues = false;
         var boxCalc = {};
-        var calcByItemIdx = {};
-        var calcIdx = 0;
+        var calcByProductKey = {};
         inputs.forEach(function(inp) {
           if (inp.value && inp.id) { 
             boxCalc[inp.id] = inp.value; 
-            calcByItemIdx[calcIdx] = parseInt(inp.value);
-            hasValues = true; 
+            hasValues = true;
+            // Also find the product_key from the parent row
+            var row = inp.closest('.box-calc-item');
+            if (row && row.dataset.productKey) {
+              calcByProductKey[row.dataset.productKey] = parseInt(inp.value);
+            }
           }
-          calcIdx++;
         });
         if (!hasValues) return;
         var state = {
           boxCalc: boxCalc,
-          calcByItemIdx: calcByItemIdx,
+          calcByProductKey: calcByProductKey,
           frostState: (typeof frostState !== 'undefined' && frostState[order.id]) ? JSON.parse(JSON.stringify(frostState[order.id])) : null,
           driverName: getDriverName(order.driver_id),
           businessName: order.business_name || '',
