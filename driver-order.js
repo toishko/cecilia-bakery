@@ -2651,19 +2651,17 @@ function buildSaleProducts() {
     const flatItems = [];
 
     if (sec.type === 'redondo') {
-      // Flatten redondo columns into individual items (include _nt variants)
       sec.items.forEach(item => {
         if (hiddenProducts.has(item.key)) return;
         (item.cols || []).forEach(col => {
-          const isNT = col.endsWith('_nt');
-          const baseCol = isNT ? col.replace('_nt', '') : col;
+          if (col.endsWith('_nt')) return; // Only process base items
           const compositeKey = item.key + '_' + col;
-          const colEn = baseCol.charAt(0).toUpperCase() + baseCol.slice(1);
-          const colEs = baseCol === 'inside' ? 'Adentro' : baseCol === 'top' ? 'Arriba' : colEn;
+          const colEn = col.charAt(0).toUpperCase() + col.slice(1);
+          const colEs = col === 'inside' ? 'Adentro' : col === 'top' ? 'Arriba' : colEn;
           flatItems.push({
             key: compositeKey,
-            en: `${item.en} — ${colEn}${isNT ? ' (NT)' : ''}`,
-            es: `${item.es} — ${colEs}${isNT ? ' (NT)' : ''}`,
+            en: `${item.en} — ${colEn}`,
+            es: `${item.es} — ${colEs}`,
           });
         });
       });
@@ -2671,12 +2669,6 @@ function buildSaleProducts() {
       sec.items.forEach(item => {
         if (!hiddenProducts.has(item.key)) {
           flatItems.push(item);
-          // Add No-Ticket variant
-          flatItems.push({
-            key: item.key + '_nt',
-            en: item.en + ' (NT)',
-            es: item.es + ' (NT)',
-          });
         }
       });
     }
@@ -2691,20 +2683,44 @@ function buildSaleProducts() {
       const price = getSalePrice(item.key);
       const hasPrice = price != null && price > 0;
       const priceStr = hasPrice ? `$${price.toFixed(2)}` : (lang === 'es' ? 'Sin precio' : 'No price');
-      const qty = _saleQty[item.key] || 0;
-      const lineTotal = hasPrice && qty > 0 ? (qty * price).toFixed(2) : '';
+      
+      const keyReg = item.key;
+      const keyNT = item.key + '_nt';
 
-      const maxInv = driverInventory[item.key] ? Math.max(0, driverInventory[item.key].remaining) : 0;
-      let stockStr = `<span style="color:var(--tx-muted);font-size:11px;margin-left:6px;">(${maxInv} ${lang === 'es' ? 'disp.' : 'avail.'})</span>`;
-      if (maxInv === 0) stockStr = `<span style="color:var(--red);font-size:11px;margin-left:6px;">(0 ${lang === 'es' ? 'disp.' : 'avail.'})</span>`;
+      const qtyReg = _saleQty[keyReg] || 0;
+      const qtyNT = _saleQty[keyNT] || 0;
 
-      html += `<div class="sale-prod-row${qty > 0 ? ' has-value' : ''}" data-key="${item.key}">`;
-      html += `<div class="sale-prod-info">`;
-      html += `<div class="sale-prod-name" data-en="${item.en}" data-es="${item.es}">${L(item)}</div>`;
-      html += `<div class="sale-prod-price${hasPrice ? '' : ' no-price'}">${priceStr}${stockStr}</div>`;
-      html += `</div>`;
-      html += `<div class="sale-qty-wrap"><button class="sale-qty-btn" data-dir="-" data-key="${item.key}">−</button><input type="number" class="sale-qty-input" data-key="${item.key}" value="${qty}" min="0"><button class="sale-qty-btn" data-dir="+" data-key="${item.key}">+</button></div>`;
-      html += `<span class="sale-line-total" data-key="${item.key}">${lineTotal ? '$' + lineTotal : ''}</span>`;
+      const maxInvReg = driverInventory[keyReg] ? Math.max(0, driverInventory[keyReg].remaining) : 0;
+      const maxInvNT = driverInventory[keyNT] ? Math.max(0, driverInventory[keyNT].remaining) : 0;
+
+      const lineTotalReg = hasPrice && qtyReg > 0 ? qtyReg * price : 0;
+      const lineTotalNT = hasPrice && qtyNT > 0 ? qtyNT * price : 0;
+      const lineTotal = lineTotalReg + lineTotalNT;
+      const lineTotalStr = lineTotal > 0 ? '$' + lineTotal.toFixed(2) : '';
+
+      html += `<div class="sale-prod-row${qtyReg > 0 || qtyNT > 0 ? ' has-value' : ''}" data-parent-key="${item.key}">`;
+      html += `  <div class="sale-prod-header">`;
+      html += `    <div class="sale-prod-info">`;
+      html += `      <div class="sale-prod-name" data-en="${item.en}" data-es="${item.es}">${L(item)}</div>`;
+      html += `      <div class="sale-prod-price${hasPrice ? '' : ' no-price'}">${priceStr}</div>`;
+      html += `    </div>`;
+      html += `    <span class="sale-line-total" data-group-key="${item.key}">${lineTotalStr}</span>`;
+      html += `  </div>`;
+
+      html += `  <div class="sale-prod-controls">`;
+      // Regular Group
+      html += `    <div class="sale-qty-group">`;
+      html += `      <span class="sale-qty-lbl">Reg <small class="${maxInvReg===0?'out':''}">${maxInvReg}</small></span>`;
+      html += `      <div class="sale-qty-wrap"><button class="sale-qty-btn" data-dir="-" data-key="${keyReg}">−</button><input type="number" class="sale-qty-input" data-key="${keyReg}" data-parent-key="${item.key}" value="${qtyReg}" min="0"><button class="sale-qty-btn" data-dir="+" data-key="${keyReg}">+</button></div>`;
+      html += `    </div>`;
+
+      // No-Ticket (NT) Group
+      html += `    <div class="sale-qty-group">`;
+      html += `      <span class="sale-qty-lbl">NT <small class="${maxInvNT===0?'out':''}">${maxInvNT}</small></span>`;
+      html += `      <div class="sale-qty-wrap"><button class="sale-qty-btn" data-dir="-" data-key="${keyNT}">−</button><input type="number" class="sale-qty-input" data-key="${keyNT}" data-parent-key="${item.key}" value="${qtyNT}" min="0"><button class="sale-qty-btn" data-dir="+" data-key="${keyNT}">+</button></div>`;
+      html += `    </div>`;
+      html += `  </div>`;
+      
       html += `</div>`;
     });
 
@@ -2764,14 +2780,30 @@ function buildSaleProducts() {
 }
 
 function updateSaleRow(key) {
-  const row = document.querySelector(`.sale-prod-row[data-key="${key}"]`);
+  // Find the input to get its parent-key
+  const inp = document.querySelector(`.sale-qty-input[data-key="${key}"]`);
+  if (!inp) return;
+  const parentKey = inp.dataset.parentKey;
+  
+  const row = document.querySelector(`.sale-prod-row[data-parent-key="${parentKey}"]`);
   if (!row) return;
-  const qty = _saleQty[key] || 0;
-  const price = getSalePrice(key);
+
+  const keyReg = parentKey;
+  const keyNT = parentKey + '_nt';
+
+  const qtyReg = _saleQty[keyReg] || 0;
+  const qtyNT = _saleQty[keyNT] || 0;
+  const price = getSalePrice(keyReg); // Price is same for both
   const hasPrice = price != null && price > 0;
+
+  const lineTotal = hasPrice ? (qtyReg + qtyNT) * price : 0;
   const lineEl = row.querySelector('.sale-line-total');
-  if (lineEl) lineEl.textContent = (hasPrice && qty > 0) ? '$' + (qty * price).toFixed(2) : '';
-  row.classList.toggle('has-value', qty > 0);
+  
+  if (lineEl) {
+    lineEl.textContent = lineTotal > 0 ? '$' + lineTotal.toFixed(2) : '';
+  }
+  
+  row.classList.toggle('has-value', qtyReg > 0 || qtyNT > 0);
 }
 
 function getSaleTotal() {

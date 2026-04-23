@@ -1280,29 +1280,45 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .sale-acc-body{max-height:0;overflow:hidden;transition:max-height .3s ease}
 .sale-acc.open .sale-acc-body{max-height:2000px}
 
-.sale-prod-row{display:flex;align-items:center;gap:8px;padding:10px 14px;
-  border-bottom:1px solid rgba(200,16,46,.08)}
+/* Sales Product Row - Sleek Apple Style */
+.sale-prod-row{display:flex;flex-direction:column;gap:12px;padding:16px 20px;
+  border-bottom:1px solid rgba(200,16,46,.08);background:var(--bg-card);transition:background .2s}
 .sale-prod-row:last-child{border-bottom:none}
-.sale-prod-row.has-value{background:rgba(27,122,74,.04)}
-.sale-prod-info{flex:1;min-width:0}
-.sale-prod-name{font-size:.85rem;color:var(--tx);font-weight:500;
+.sale-prod-row.has-value{background:rgba(200,16,46,.02)}
+
+.sale-prod-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.sale-prod-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.sale-prod-name{font-weight:600;font-size:1rem;color:var(--tx);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sale-prod-price{font-size:.72rem;color:var(--tx-muted);margin-top:1px}
-.sale-prod-price.no-price{color:var(--tx-faint);font-style:italic}
-.sale-qty-wrap{display:flex;align-items:center;gap:0;border:1px solid var(--bd);
-  border-radius:6px;overflow:hidden;flex-shrink:0}
-.sale-qty-btn{min-width:32px;min-height:32px;border:none;background:none;color:var(--tx);
-  cursor:pointer;font-size:1rem;font-weight:600;display:flex;align-items:center;
-  justify-content:center;transition:background .1s;padding:4px}
-.sale-qty-btn:hover{background:var(--bg-surface)}
-.sale-qty-btn:active{background:rgba(200,16,46,.1)}
-.sale-qty-input{min-width:36px;width:2.5em;min-height:32px;border:none;background:transparent;
-  text-align:center;font-size:.85rem;font-family:inherit;color:var(--tx);
-  -moz-appearance:textfield;appearance:textfield}
-.sale-qty-input::-webkit-inner-spin-button,.sale-qty-input::-webkit-outer-spin-button{
-  -webkit-appearance:none;appearance:none}
-.sale-line-total{font-size:.82rem;font-weight:600;color:var(--green);
-  min-width:52px;text-align:right;flex-shrink:0}
+.sale-prod-price{font-size:.85rem;color:var(--tx-muted);font-weight:500}
+.sale-prod-price.no-price{color:var(--red);font-style:italic}
+
+.sale-line-total{font-weight:700;font-size:1.05rem;color:var(--tx);
+  font-family:'Outfit',sans-serif;white-space:nowrap;margin-top:2px}
+
+.sale-prod-controls{display:flex;gap:16px;background:var(--bg-input);
+  padding:10px 14px;border-radius:12px;border:1px solid var(--bd-input)}
+
+.sale-qty-group{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+.sale-qty-lbl{font-size:.7rem;font-weight:700;color:var(--tx-muted);
+  text-transform:uppercase;letter-spacing:.5px}
+.sale-qty-lbl small{color:var(--tx-faint);font-weight:500;margin-left:2px}
+.sale-qty-lbl small.out{color:var(--red)}
+
+.sale-qty-wrap{display:flex;align-items:center;justify-content:space-between;
+  width:100%;max-width:140px;background:var(--bg-card);border-radius:8px;
+  border:1px solid var(--bd);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+
+.sale-qty-btn{width:36px;height:32px;background:none;border:none;color:var(--red);
+  font-size:1.1rem;font-weight:400;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;transition:background .15s}
+.sale-qty-btn:active{background:rgba(200,16,46,.08)}
+
+.sale-qty-input{flex:1;width:100%;min-width:0;text-align:center;border:none;background:transparent;
+  font-weight:700;font-size:1rem;color:var(--tx);font-family:'Outfit',sans-serif;
+  -moz-appearance:textfield;appearance:textfield;padding:0}
+.sale-qty-input::-webkit-inner-spin-button,
+.sale-qty-input::-webkit-outer-spin-button{-webkit-appearance:none;appearance:none}
 
 /* Sale footer */
 .sale-footer{position:fixed;bottom:0;left:0;right:0;background:var(--bg-card);
