@@ -72,6 +72,9 @@ function showScreen(id) {
 }
 
 function showSection(name) {
+  // Always scroll to top when switching sections
+  window.scrollTo({ top: 0, behavior: 'instant' });
+
   // Close any open settings sub-views (e.g. My Products)
   document.querySelectorAll('.settings-subview.open').forEach(sv => sv.classList.remove('open'));
 
