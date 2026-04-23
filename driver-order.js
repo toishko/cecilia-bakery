@@ -2588,6 +2588,11 @@ async function initSalesSection() {
     await loadDriverPriceMap();
   }
 
+  // Ensure inventory is loaded so stock limits work
+  if (!inventoryLoaded || Object.keys(driverInventory).length === 0) {
+    await loadInventoryData();
+  }
+
   // Load clients for dropdown
   if (!_clientsList || _clientsList.length === 0) {
     await loadDriverClients();
