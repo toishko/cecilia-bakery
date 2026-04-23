@@ -751,41 +751,14 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
         <span data-en="Delete" data-es="Borrar">Delete</span>
       </button>
+      <button class="receipt-share-btn" id="receipt-share-btn" data-en="Share" data-es="Compartir" style="background: none; border: none; color: var(--blue); padding: 10px; cursor: pointer; font-family: inherit; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+        <span data-en="Share" data-es="Compartir">Share</span>
+      </button>
       <button class="receipt-print-btn" id="receipt-print-btn" data-en="Print" data-es="Imprimir">Print</button>
     </div>
     <div class="receipt-paper" id="receipt-paper">
       <!-- Populated by JS -->
-    </div>
-
-    <!-- iOS Print Instructions (shown after tapping Print on iPhone) -->
-    <div id="print-instructions" class="print-instructions" style="display:none">
-      <div class="print-step">
-        <div class="print-step-num">1</div>
-        <div class="print-step-text">
-          <strong data-en="Link Copied!" data-es="¡Link Copiado!">Link Copied!</strong>
-          <span data-en="Receipt link is on your clipboard" data-es="El link del recibo está en tu portapapeles">Receipt
-            link is on your clipboard</span>
-        </div>
-        <span class="print-step-check">✓</span>
-      </div>
-      <div class="print-step">
-        <div class="print-step-num">2</div>
-        <div class="print-step-text">
-          <strong data-en="Open Woosim App" data-es="Abre la App Woosim">Open Woosim App</strong>
-          <span data-en="Tap the address bar and paste" data-es="Toca la barra de dirección y pega">Tap the address bar
-            and paste</span>
-        </div>
-      </div>
-      <div class="print-step">
-        <div class="print-step-num">3</div>
-        <div class="print-step-text">
-          <strong data-en="Tap Print" data-es="Toca Imprimir">Tap Print</strong>
-          <span data-en="Tap the printer icon 🖨️" data-es="Toca el icono de impresora 🖨️">Tap the printer icon
-            🖨️</span>
-        </div>
-      </div>
-      <button class="print-copy-btn" id="print-copy-btn" data-en="📋 Copy Print Link Again"
-        data-es="📋 Copiar Link de Nuevo">📋 Copy Print Link Again</button>
     </div>
   </div>
 

@@ -547,7 +547,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === e.currentTarget) closePaymentModal();
   });
   document.getElementById('receipt-back-btn').addEventListener('click', () => {
-    document.getElementById('print-instructions').style.display = 'none';
     showScreen('dashboard');
     showSection('sales');
     document.getElementById('bottom-nav').style.display = 'flex';
@@ -576,7 +575,6 @@ document.addEventListener('DOMContentLoaded', () => {
       driverInventory = {};
 
       // Close receipt
-      document.getElementById('print-instructions').style.display = 'none';
       showScreen('dashboard');
       
       // If we came from 'my-orders' (sales filter), refresh it
@@ -596,22 +594,35 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('receipt-print-btn').addEventListener('click', () => {
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (!isIOS) {
-      window.print();
-      return;
-    }
-    // iOS: copy receipt URL and show visual instructions
-    const driverId = currentDriver?.id || '';
-    const url = window.location.origin + '/receipt.html?driver=' + encodeURIComponent(driverId);
-    _copyReceiptLink(url);
-    document.getElementById('print-instructions').style.display = 'block';
-    applyLang();
+    window.print();
   });
-  document.getElementById('print-copy-btn').addEventListener('click', () => {
-    const driverId = currentDriver?.id || '';
-    const url = window.location.origin + '/receipt.html?driver=' + encodeURIComponent(driverId);
-    _copyReceiptLink(url);
+
+  document.getElementById('receipt-share-btn')?.addEventListener('click', async () => {
+    if (!window._cachedReceiptSale) return;
+    const sale = window._cachedReceiptSale;
+    const itemsText = sale.driver_sale_items ? sale.driver_sale_items.map(it => `${it.quantity}x ${it.product_label} - $${parseFloat(it.line_total).toFixed(2)}`).join('\n') : '';
+    
+    const text = `Cecilia Bakery\n${lang === 'es' ? 'Recibo #' : 'Receipt #'}: ${sale.receipt_number || 'N/A'}\n${lang === 'es' ? 'Total:' : 'Total:'} $${parseFloat(sale.total).toFixed(2)}\n\n${lang === 'es' ? 'Artículos:' : 'Items:'}\n${itemsText}\n\n${lang === 'es' ? '¡Gracias!' : 'Thank you!'}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: lang === 'es' ? 'Recibo de Cecilia Bakery' : 'Cecilia Bakery Receipt',
+          text: text
+        });
+      } catch (e) {
+        // AbortError is thrown when user cancels the share dialog, no need to toast.
+        console.error('Share aborted or failed:', e);
+      }
+    } else {
+      // Fallback: Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast(lang === 'es' ? 'Recibo copiado al portapapeles' : 'Receipt copied to clipboard', 'success');
+      } catch (e) {
+        showToast(lang === 'es' ? 'No se pudo compartir' : 'Could not share', 'error');
+      }
+    }
   });
   // Pay toggle groups
   document.querySelectorAll('#pay-method-group .pay-toggle-btn').forEach(btn => {
@@ -3181,6 +3192,8 @@ async function handleConfirmSale() {
 
 /* ── Receipt Rendering ── */
 function renderReceipt(sale, items, client) {
+  window._cachedReceiptSale = { ...sale, driver_sale_items: items };
+
   const paper = document.getElementById('receipt-paper');
   const now = new Date(sale.created_at || new Date());
   const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
