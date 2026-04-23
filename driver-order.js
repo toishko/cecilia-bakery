@@ -2651,18 +2651,19 @@ function buildSaleProducts() {
     const flatItems = [];
 
     if (sec.type === 'redondo') {
-      // Flatten redondo columns into individual items (skip _nt variants)
+      // Flatten redondo columns into individual items (include _nt variants)
       sec.items.forEach(item => {
         if (hiddenProducts.has(item.key)) return;
         (item.cols || []).forEach(col => {
-          if (col.endsWith('_nt')) return; // skip no-ticket for sales
+          const isNT = col.endsWith('_nt');
+          const baseCol = isNT ? col.replace('_nt', '') : col;
           const compositeKey = item.key + '_' + col;
-          const colEn = col.charAt(0).toUpperCase() + col.slice(1);
-          const colEs = col === 'inside' ? 'Adentro' : col === 'top' ? 'Arriba' : colEn;
+          const colEn = baseCol.charAt(0).toUpperCase() + baseCol.slice(1);
+          const colEs = baseCol === 'inside' ? 'Adentro' : baseCol === 'top' ? 'Arriba' : colEn;
           flatItems.push({
             key: compositeKey,
-            en: `${item.en} — ${colEn}`,
-            es: `${item.es} — ${colEs}`,
+            en: `${item.en} — ${colEn}${isNT ? ' (NT)' : ''}`,
+            es: `${item.es} — ${colEs}${isNT ? ' (NT)' : ''}`,
           });
         });
       });
@@ -2670,6 +2671,12 @@ function buildSaleProducts() {
       sec.items.forEach(item => {
         if (!hiddenProducts.has(item.key)) {
           flatItems.push(item);
+          // Add No-Ticket variant
+          flatItems.push({
+            key: item.key + '_nt',
+            en: item.en + ' (NT)',
+            es: item.es + ' (NT)',
+          });
         }
       });
     }
