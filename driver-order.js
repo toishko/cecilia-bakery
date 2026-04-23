@@ -162,7 +162,7 @@ function showSection(name) {
     footer.style.display = 'none';
     saleFooter.style.display = 'flex';
     initSalesSection();
-    document.body.classList.add('immersive-mode');
+    document.body.classList.remove('immersive-mode');
     if(mobileLogo) mobileLogo.style.display = 'none';
     if(headerBackBtn) headerBackBtn.style.display = 'inline-flex';
   } else {
