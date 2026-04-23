@@ -4327,18 +4327,62 @@ function renderInventoryBanner() {
   const addMoreEn = 'Edit Inventory';
   const addMoreEs = 'Editar Inventario';
 
+  const clearEn = 'Clear';
+  const clearEs = 'Borrar';
+
   banner.innerHTML = `<div class="inv-banner-row">${sourceHtml}
-    <button class="inv-add-more-btn" id="inv-add-more-btn" data-en="${addMoreEn}" data-es="${addMoreEs}">
-      <i data-lucide="pencil"></i> ${lang === 'es' ? addMoreEs : addMoreEn}
-    </button></div>`;
+    <div style="display: flex; gap: 4px; align-items: center;">
+      <button class="inv-clear-btn" id="inv-clear-btn" data-en="${clearEn}" data-es="${clearEs}">
+        ${lang === 'es' ? clearEs : clearEn}
+      </button>
+      <button class="inv-add-more-btn" id="inv-add-more-btn" style="margin-top: 0" data-en="${addMoreEn}" data-es="${addMoreEs}">
+        <i data-lucide="pencil"></i> ${lang === 'es' ? addMoreEs : addMoreEn}
+      </button>
+    </div>
+  </div>`;
 
   document.getElementById('inv-add-more-btn')?.addEventListener('click', () => {
     const form = document.getElementById('inv-load-form');
     const summary = document.getElementById('inv-summary');
     summary.style.display = 'none';
     banner.querySelector('.inv-add-more-btn').style.display = 'none';
+    if(banner.querySelector('.inv-clear-btn')) banner.querySelector('.inv-clear-btn').style.display = 'none';
     form.style.display = 'block';
     renderManualLoadForm();
+  });
+
+  document.getElementById('inv-clear-btn')?.addEventListener('click', async () => {
+    const msg = lang === 'es' 
+      ? '¿Estás seguro de que quieres borrar tu inventario actual? Tendrás que cargarlo de nuevo.' 
+      : 'Are you sure you want to clear your current inventory? You will have to load it again.';
+    if (!confirm(msg)) return;
+
+    try {
+      const btn = document.getElementById('inv-clear-btn');
+      btn.disabled = true;
+      btn.textContent = '...';
+
+      const { error } = await sb.from('driver_inventory').delete().eq('driver_id', currentDriver.id);
+      if (error) throw error;
+
+      showToast(lang === 'es' ? 'Inventario borrado' : 'Inventory cleared', 'success');
+      
+      // Reset state
+      driverInventory = {};
+      inventorySource = '';
+      inventoryLoaded = false;
+      
+      // Reload inventory view
+      loadInventoryData();
+    } catch (e) {
+      console.error('Error clearing inventory:', e);
+      showToast(lang === 'es' ? 'Error al borrar' : 'Error clearing inventory', 'error');
+      const btn = document.getElementById('inv-clear-btn');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = lang === 'es' ? clearEs : clearEn;
+      }
+    }
   });
 
   requestAnimationFrame(() => lucide.createIcons());

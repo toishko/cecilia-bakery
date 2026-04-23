@@ -1611,13 +1611,17 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .inv-save-btn:active{transform:scale(.98)}
 .inv-save-btn:disabled{opacity:.5;cursor:not-allowed}
 
-/* Add More button */
 .inv-add-more-btn{display:inline-flex;align-items:center;gap:6px;
   margin-top:10px;padding:9px 18px;border:1px solid var(--bd);border-radius:10px;
   background:var(--bg-card);color:var(--red);font-size:.85rem;font-weight:600;
   font-family:inherit;cursor:pointer;transition:background .15s}
 .inv-add-more-btn:hover{background:var(--bg-surface)}
 .inv-add-more-btn svg{width:16px;height:16px}
+
+.inv-clear-btn{background:none;border:none;cursor:pointer;color:#ff3b30;
+  font-family:inherit;font-size:.85rem;font-weight:600;padding:9px 12px;
+  transition:opacity .2s}
+.inv-clear-btn:active{opacity:.6}
 
 /* ══════════════════════════════════════════════════════
    TICKET SCANNER
