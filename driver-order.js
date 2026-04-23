@@ -551,6 +551,49 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen('dashboard');
     showSection('sales');
   });
+
+  document.getElementById('receipt-delete-btn')?.addEventListener('click', async () => {
+    if (!window._currentReceiptSaleId) return;
+    const msg = lang === 'es' 
+      ? '¿Estás seguro de que quieres borrar esta venta? Se eliminará permanentemente y el inventario se restaurará.' 
+      : 'Are you sure you want to delete this sale? It will be permanently removed and inventory will be restored.';
+    if (!confirm(msg)) return;
+
+    try {
+      const deleteBtn = document.getElementById('receipt-delete-btn');
+      deleteBtn.disabled = true;
+
+      // Delete items first (just in case no CASCADE)
+      await sb.from('driver_sale_items').delete().eq('sale_id', window._currentReceiptSaleId);
+      // Delete sale
+      await sb.from('driver_sales').delete().eq('id', window._currentReceiptSaleId);
+
+      showToast(lang === 'es' ? 'Venta borrada' : 'Sale deleted', 'success');
+
+      // Force inventory recalculation
+      inventoryLoaded = false;
+      driverInventory = {};
+
+      // Close receipt
+      document.getElementById('print-instructions').style.display = 'none';
+      showScreen('dashboard');
+      
+      // If we came from 'my-orders' (sales filter), refresh it
+      if (document.getElementById('section-my-orders').classList.contains('active')) {
+        loadMyOrders();
+        document.getElementById('bottom-nav').style.display = 'flex';
+      } else {
+        showSection('sales');
+      }
+
+    } catch (e) {
+      console.error('Error deleting sale:', e);
+      showToast(lang === 'es' ? 'Error al borrar' : 'Error deleting', 'error');
+    } finally {
+      document.getElementById('receipt-delete-btn').disabled = false;
+    }
+  });
+
   document.getElementById('receipt-print-btn').addEventListener('click', () => {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     if (!isIOS) {
@@ -3192,6 +3235,17 @@ function renderReceipt(sale, items, client) {
 
     <div class="receipt-footer">¡Gracias! / Thank you!</div>
   `;
+
+  const deleteBtn = document.getElementById('receipt-delete-btn');
+  if (deleteBtn) {
+    if (sale.id) {
+      window._currentReceiptSaleId = sale.id;
+      deleteBtn.style.display = 'flex';
+    } else {
+      window._currentReceiptSaleId = null;
+      deleteBtn.style.display = 'none';
+    }
+  }
 
   applyLang();
 }
