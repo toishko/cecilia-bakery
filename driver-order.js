@@ -564,9 +564,12 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteBtn.disabled = true;
 
       // Delete items first (just in case no CASCADE)
-      await sb.from('driver_sale_items').delete().eq('sale_id', window._currentReceiptSaleId);
+      const { error: err1 } = await sb.from('driver_sale_items').delete().eq('sale_id', window._currentReceiptSaleId);
+      if (err1) throw err1;
+      
       // Delete sale
-      await sb.from('driver_sales').delete().eq('id', window._currentReceiptSaleId);
+      const { error: err2 } = await sb.from('driver_sales').delete().eq('id', window._currentReceiptSaleId);
+      if (err2) throw err2;
 
       showToast(lang === 'es' ? 'Venta borrada' : 'Sale deleted', 'success');
 
@@ -578,7 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showScreen('dashboard');
       
       // If we came from 'my-orders' (sales filter), refresh it
-      if (document.getElementById('section-my-orders').classList.contains('active')) {
+      if (document.getElementById('section-my-orders').style.display === 'block') {
         loadMyOrders();
       } else {
         showSection('sales');
