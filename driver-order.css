@@ -491,6 +491,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   font-family:inherit;font-size:.85rem;cursor:pointer;transition:all .2s;
   white-space:nowrap;min-width:90px;text-align:center}
 .form-footer-cancel:hover{background:rgba(200,16,46,.04);border-color:var(--red);color:var(--tx)}
+[data-theme="dark"] .form-footer-cancel { color: var(--red); border-color: rgba(200,16,46,0.35); }
 .form-footer-center{display:flex;align-items:center;gap:6px;justify-content:center;flex:1}
 .form-footer-badge{display:inline-flex;align-items:center;justify-content:center;
   min-width:28px;height:28px;border-radius:14px;background:var(--red);
