@@ -1788,16 +1788,23 @@
           var detailHtml = '';
           if (d.items && d.items.length > 0) {
             var catGroups = {};
-            var catOrder = [];
-            var giCounter = 0;
             d.items.forEach(function(item) {
-              if (!catGroups[item.cat]) { catGroups[item.cat] = []; catOrder.push(item.cat); }
-              if (/frosted|frostin/i.test(item.cat)) {
-                item._gi = -1;
-              } else {
-                item._gi = giCounter++;
-              }
+              if (!catGroups[item.cat]) { catGroups[item.cat] = []; }
               catGroups[item.cat].push(item);
+            });
+
+            var catOrder = Object.keys(catGroups).sort(function(a, b) {
+              var ai = typeof CAT_ORDER !== 'undefined' ? CAT_ORDER.indexOf(a) : -1; if (ai === -1) ai = 999;
+              var bi = typeof CAT_ORDER !== 'undefined' ? CAT_ORDER.indexOf(b) : -1; if (bi === -1) bi = 999;
+              return ai - bi;
+            });
+
+            var giCounter = 0;
+            catOrder.forEach(function(cat) {
+              var isFrosted = /frosted|frostin/i.test(cat);
+              catGroups[cat].forEach(function(item) {
+                item._gi = isFrosted ? -1 : giCounter++;
+              });
             });
 
             catOrder.forEach(function(cat) {
