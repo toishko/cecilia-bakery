@@ -3040,8 +3040,17 @@
     }
 
     function frostCloseModal() {
-      document.getElementById('frost-modal-overlay').classList.remove('open');
-      document.getElementById('frost-modal-sheet').classList.remove('open');
+      var sheet = document.getElementById('frost-modal-sheet');
+      var overlay = document.getElementById('frost-modal-overlay');
+      
+      // Clear any drag-related inline styles first
+      sheet.style.transition = '';
+      sheet.style.transform = '';
+      overlay.style.transition = '';
+      overlay.style.opacity = '';
+      
+      overlay.classList.remove('open');
+      sheet.classList.remove('open');
       
       // Release scroll lock
       document.body.style.position = '';
