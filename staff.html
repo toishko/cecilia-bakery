@@ -2138,9 +2138,16 @@
             }
           }
         });
-        // If no inputs have values AND no frost state, don't overwrite existing saved data
-        var hasFrost = typeof frostState !== 'undefined' && frostState[order.id] && frostState[order.id].boxes && frostState[order.id].boxes.length > 0;
-        if (!hasValues && !hasFrost) return;
+        // Check if frost state has ACTUAL user data (not just empty frostInit boxes)
+        var hasFrostData = false;
+        if (typeof frostState !== 'undefined' && frostState[order.id] && frostState[order.id].boxes) {
+          frostState[order.id].boxes.forEach(function(box) {
+            Object.keys(box.pieces || {}).forEach(function(k) {
+              if (box.pieces[k] > 0) hasFrostData = true;
+            });
+          });
+        }
+        if (!hasValues && !hasFrostData) return;
         
         // Merge with existing saved data to preserve calcs from other sessions
         var existingRaw = localStorage.getItem('cb-staff-ordercalc-' + order.id);
@@ -2162,9 +2169,9 @@
           mergedCalcByProductKey[k] = calcByProductKey[k]; 
         });
         
-        // Frost state: prefer live state, fall back to existing saved
+        // Frost state: only save live state if it has actual data, otherwise preserve saved
         var frostToSave = null;
-        if (hasFrost) {
+        if (hasFrostData) {
           frostToSave = JSON.parse(JSON.stringify(frostState[order.id]));
         } else if (existingFrost) {
           frostToSave = existingFrost;
