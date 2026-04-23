@@ -1638,6 +1638,7 @@
 
     /* ── Per-Order Save (explicit button inside each order card) ── */
     function staffSaveOrder(idx, silent = false) {
+      if (_restoringState) return;
       var order = staffOrders[idx];
       if (!order) { if(!silent) staffToast('Order not found', 'error'); return; }
       var card = document.getElementById('staff-order-' + idx);
@@ -1682,8 +1683,18 @@
       });
       state.calcByProductKey = mergedCalc;
 
-      // Gather frost packer state — prefer live state, fall back to saved
-      if (typeof frostState !== 'undefined' && frostState[order.id]) {
+      // Gather frost packer state — only use live state if it has actual piece data
+      var liveFrostHasData = false;
+      if (typeof frostState !== 'undefined' && frostState[order.id] && frostState[order.id].boxes) {
+        frostState[order.id].boxes.forEach(function(box) {
+          if (box.pieces) {
+            Object.keys(box.pieces).forEach(function(k) {
+              if (box.pieces[k] > 0) liveFrostHasData = true;
+            });
+          }
+        });
+      }
+      if (liveFrostHasData) {
         state.frostState = JSON.parse(JSON.stringify(frostState[order.id]));
       } else if (existingFrost) {
         state.frostState = existingFrost;
@@ -2116,8 +2127,11 @@
       if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
+    var _restoringState = false;
+
     /* ── Box Calculator Auto-Persistence (still works per-order) ── */
     function saveBoxCalcState() {
+      if (_restoringState) return;
       // Auto-save: save all orders that have calc inputs with values
       if (!staffOrders || !staffOrders.length) return;
       staffOrders.forEach(function(order, idx) {
@@ -2210,6 +2224,7 @@
     function loadBoxCalcState() {
       // Auto-load: restore calc inputs for each order if saved
       if (!staffOrders || !staffOrders.length) return;
+      _restoringState = true;
       staffOrders.forEach(function(order, idx) {
         var saved = localStorage.getItem('cb-staff-ordercalc-' + order.id);
         if (!saved) return;
@@ -2244,6 +2259,7 @@
           }
         } catch(e) { console.warn('Failed to restore box calc for order:', e); }
       });
+      _restoringState = false;
     }
 
     function cleanOldBoxCalcState() {
