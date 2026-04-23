@@ -2057,7 +2057,18 @@
       try {
         var state = JSON.parse(saved);
         // Restore box calc inputs for this card
-        if (state.boxCalc) {
+        if (state.calcByProductKey) {
+          Object.keys(state.calcByProductKey).forEach(function(productKey) {
+            var row = card.querySelector('.box-calc-item[data-product-key="' + productKey + '"]');
+            if (row) {
+              var inp = row.querySelector('.box-calc-input');
+              if (inp) {
+                inp.value = state.calcByProductKey[productKey];
+                calcBox(inp);
+              }
+            }
+          });
+        } else if (state.boxCalc) {
           Object.keys(state.boxCalc).forEach(function(inputId) {
             var inp = document.getElementById(inputId);
             if (inp) {
@@ -2137,7 +2148,21 @@
         if (!saved) return;
         try {
           var state = JSON.parse(saved);
-          if (state.boxCalc) {
+          if (state.calcByProductKey) {
+            var card = document.getElementById('staff-order-' + idx);
+            if (card) {
+              Object.keys(state.calcByProductKey).forEach(function(productKey) {
+                var row = card.querySelector('.box-calc-item[data-product-key="' + productKey + '"]');
+                if (row) {
+                  var inp = row.querySelector('.box-calc-input');
+                  if (inp) {
+                    inp.value = state.calcByProductKey[productKey];
+                    calcBox(inp);
+                  }
+                }
+              });
+            }
+          } else if (state.boxCalc) {
             Object.keys(state.boxCalc).forEach(function(inputId) {
               var inp = document.getElementById(inputId);
               if (inp) {
