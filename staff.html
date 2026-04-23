@@ -1094,9 +1094,14 @@
     }
     .frost-modal-sheet.open { transform:translateY(0); }
     .frost-modal-handle {
-      width:36px; height:4px; background:rgba(0,0,0,.15);
-      border-radius:2px; margin:10px auto 0;
+      width:36px; height:5px; background:rgba(0,0,0,.18);
+      border-radius:3px; margin:0 auto;
     }
+    .frost-modal-drag-region {
+      padding:10px 0 0;
+      cursor:grab; touch-action:none;
+    }
+    .frost-modal-drag-region:active { cursor:grabbing; }
     .frost-modal-header {
       display:flex; flex-direction:column; align-items:stretch; gap:12px;
       padding:14px 20px 12px;
@@ -3866,77 +3871,159 @@
       }
     });
 
-    /* ── Modal Drag to Close Logic ── */
+    /* ── Apple-Style Bottom Sheet Drag ── */
     (function() {
       var sheet = document.getElementById('frost-modal-sheet');
+      var overlay = document.getElementById('frost-modal-overlay');
       if (!sheet) return;
+
+      var dragRegion = sheet.querySelector('.frost-modal-drag-region');
       var scrollBody = sheet.querySelector('.frost-modal-body');
+      if (!dragRegion) return;
+
       var startY = 0;
       var currentY = 0;
+      var startTime = 0;
       var isDragging = false;
-      var hasScrolled = false;
+      var dragSource = ''; // 'handle' or 'body'
 
-      sheet.addEventListener('touchstart', function(e) {
+      // --- Handle / Header drag (always initiates pull-down) ---
+      dragRegion.addEventListener('touchstart', function(e) {
         if (!sheet.classList.contains('open')) return;
-        var touch = e.touches[0];
-        startY = touch.clientY;
-        currentY = startY;
         isDragging = true;
-        hasScrolled = scrollBody ? scrollBody.scrollTop > 0 : false;
-        sheet.style.transition = 'none'; 
+        dragSource = 'handle';
+        startY = e.touches[0].clientY;
+        currentY = startY;
+        startTime = Date.now();
+        sheet.style.transition = 'none';
+        overlay.style.transition = 'none';
       }, { passive: true });
 
-      sheet.addEventListener('touchmove', function(e) {
+      dragRegion.addEventListener('touchmove', function(e) {
         if (!isDragging) return;
-        var touch = e.touches[0];
-        currentY = touch.clientY;
-        var deltaY = currentY - startY;
-
-        var isScrollable = scrollBody ? scrollBody.scrollHeight > scrollBody.clientHeight : false;
-
-        if (scrollBody && scrollBody.scrollTop > 0) {
-          hasScrolled = true;
-          return;
+        currentY = e.touches[0].clientY;
+        var dy = currentY - startY;
+        if (dy < 0) {
+          // Rubber-band resistance when dragging up
+          dy = dy * 0.15;
         }
+        sheet.style.transform = 'translateY(' + Math.max(dy, -20) + 'px)';
+        // Dim overlay proportionally
+        var progress = Math.max(0, Math.min(1, 1 - (dy / (sheet.offsetHeight * 0.5))));
+        overlay.style.opacity = progress;
+      }, { passive: true });
 
-        if (deltaY > 0 && !hasScrolled) {
-          e.preventDefault(); 
-          sheet.style.transform = 'translateY(' + deltaY + 'px)';
-        } else if (deltaY < 0 && !isScrollable) {
-          e.preventDefault();
-        }
-      }, { passive: false });
-
-      sheet.addEventListener('touchend', function(e) {
+      dragRegion.addEventListener('touchend', function(e) {
         if (!isDragging) return;
+        finishDrag();
+      }, { passive: true });
+
+      // --- Body scroll → pull-down transition ---
+      var bodyDragActive = false;
+      if (scrollBody) {
+        scrollBody.addEventListener('touchstart', function(e) {
+          if (!sheet.classList.contains('open')) return;
+          bodyDragActive = false;
+          startY = e.touches[0].clientY;
+          currentY = startY;
+          startTime = Date.now();
+        }, { passive: true });
+
+        scrollBody.addEventListener('touchmove', function(e) {
+          if (!sheet.classList.contains('open')) return;
+          currentY = e.touches[0].clientY;
+          var dy = currentY - startY;
+
+          // Only activate pull-down when scrolled to the very top and pulling down
+          if (scrollBody.scrollTop <= 0 && dy > 0) {
+            if (!bodyDragActive) {
+              bodyDragActive = true;
+              isDragging = true;
+              dragSource = 'body';
+              startY = currentY; // reset start to avoid jump
+              sheet.style.transition = 'none';
+              overlay.style.transition = 'none';
+            }
+            e.preventDefault();
+            var pullDy = currentY - startY;
+            sheet.style.transform = 'translateY(' + pullDy + 'px)';
+            var progress = Math.max(0, Math.min(1, 1 - (pullDy / (sheet.offsetHeight * 0.5))));
+            overlay.style.opacity = progress;
+          } else {
+            // Normal scroll — reset drag state
+            if (bodyDragActive) {
+              bodyDragActive = false;
+              isDragging = false;
+              sheet.style.transition = '';
+              sheet.style.transform = '';
+              overlay.style.transition = '';
+              overlay.style.opacity = '';
+            }
+          }
+        }, { passive: false });
+
+        scrollBody.addEventListener('touchend', function(e) {
+          if (bodyDragActive && isDragging) {
+            finishDrag();
+          }
+          bodyDragActive = false;
+        }, { passive: true });
+      }
+
+      function finishDrag() {
         isDragging = false;
-        var deltaY = currentY - startY;
-        var bodyTop = scrollBody ? scrollBody.scrollTop : 0;
-        
-        sheet.style.transition = 'transform .3s cubic-bezier(.32,.72,0,1)';
-        
-        if (deltaY > 100 && !hasScrolled && bodyTop <= 0) {
-          frostCloseModal();
-          setTimeout(function() { sheet.style.transform = ''; }, 300);
+        var dy = currentY - startY;
+        var dt = Date.now() - startTime;
+        var velocity = dy / Math.max(dt, 1); // px per ms
+
+        // Dismiss if dragged > 30% of sheet height OR flicked fast (velocity > 0.5 px/ms)
+        var threshold = sheet.offsetHeight * 0.3;
+        var shouldDismiss = (dy > threshold) || (dy > 40 && velocity > 0.4);
+
+        if (shouldDismiss) {
+          // Slide out with Apple spring
+          sheet.style.transition = 'transform .32s cubic-bezier(.36,.66,.04,1)';
+          sheet.style.transform = 'translateY(100%)';
+          overlay.style.transition = 'opacity .32s ease';
+          overlay.style.opacity = '0';
+          setTimeout(function() {
+            frostCloseModal();
+            // Reset inline styles after close animation
+            sheet.style.transition = '';
+            sheet.style.transform = '';
+            overlay.style.transition = '';
+            overlay.style.opacity = '';
+          }, 340);
         } else {
-          sheet.style.transform = '';
+          // Snap back with spring bounce
+          sheet.style.transition = 'transform .4s cubic-bezier(.34,1.56,.64,1)';
+          sheet.style.transform = 'translateY(0)';
+          overlay.style.transition = 'opacity .3s ease';
+          overlay.style.opacity = '1';
+          setTimeout(function() {
+            sheet.style.transition = '';
+            overlay.style.transition = '';
+            overlay.style.opacity = '';
+          }, 420);
         }
-      }, { passive: true });
+      }
     })();
   </script>
   <!-- Frost Packer Modal -->
   <div class="frost-modal-overlay" id="frost-modal-overlay" onclick="frostCloseModal()" ontouchmove="event.preventDefault()"></div>
   <div class="frost-modal-sheet" id="frost-modal-sheet">
-    <div class="frost-modal-handle"></div>
-    <div class="frost-modal-header">
-      <div class="frost-modal-header-top">
-        <div>
-          <div class="frost-modal-title" id="frost-modal-title">🧊 Frosted Box Packer</div>
-          <div class="frost-modal-subtitle" id="frost-modal-subtitle"></div>
+    <div class="frost-modal-drag-region">
+      <div class="frost-modal-handle"></div>
+      <div class="frost-modal-header">
+        <div class="frost-modal-header-top">
+          <div>
+            <div class="frost-modal-title" id="frost-modal-title">🧊 Frosted Box Packer</div>
+            <div class="frost-modal-subtitle" id="frost-modal-subtitle"></div>
+          </div>
+          <button class="frost-modal-close" onclick="frostCloseModal()">✕</button>
         </div>
-        <button class="frost-modal-close" onclick="frostCloseModal()">✕</button>
+        <div class="frost-pill-dock" id="frost-pills-modal" style="margin:0;"></div>
       </div>
-      <div class="frost-pill-dock" id="frost-pills-modal" style="margin:0;"></div>
     </div>
     <div class="frost-modal-body">
       <div id="frost-boxes-modal" style="display:flex;flex-direction:column;gap:8px;"></div>
