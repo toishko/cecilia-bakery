@@ -3347,6 +3347,9 @@ function openClientProfile(clientId) {
     document.body.style.right = '0';
     applyLang();
     lucide.createIcons();
+
+    // Load sales history async (don't block opening)
+    _loadClientSalesHistory(clientId);
   });
 }
 window.openClientProfile = openClientProfile;
@@ -3529,6 +3532,109 @@ function _cpRenderPriceEditor() {
     // Select all text on focus for quick editing
     inp.addEventListener('focus', () => inp.select());
   });
+}
+
+// ── Client Sales History ──
+async function _loadClientSalesHistory(clientId) {
+  const container = document.getElementById('cp-sales-history');
+  if (!container || !sb || !currentDriver) return;
+
+  try {
+    const { data: sales, error } = await sb
+      .from('driver_sales')
+      .select('id, receipt_number, total, payment_method, payment_status, created_at')
+      .eq('driver_id', currentDriver.id)
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+
+    if (!sales || sales.length === 0) {
+      container.innerHTML = `<div class="cp-row" style="justify-content:center;color:var(--tx-faint);font-size:.85rem"
+        data-en="No sales yet" data-es="Sin ventas aún">${lang === 'es' ? 'Sin ventas aún' : 'No sales yet'}</div>`;
+      return;
+    }
+
+    let html = '';
+    sales.forEach(sale => {
+      const dt = new Date(sale.created_at);
+      const dateStr = dt.toLocaleDateString(lang === 'es' ? 'es-US' : 'en-US', {
+        month: 'short', day: 'numeric', year: 'numeric'
+      });
+      const timeStr = dt.toLocaleTimeString(lang === 'es' ? 'es-US' : 'en-US', {
+        hour: 'numeric', minute: '2-digit'
+      });
+
+      const statusIcon = sale.payment_status === 'paid' ? '✓' : '○';
+      const statusCls = sale.payment_status === 'paid' ? 'cp-sale-paid' : 'cp-sale-unpaid';
+
+      html += `<div class="cp-sale-row" data-sale-id="${sale.id}">
+        <div class="cp-sale-main">
+          <div class="cp-sale-left">
+            <span class="cp-sale-date">${dateStr}</span>
+            <span class="cp-sale-meta">${sale.receipt_number || timeStr}</span>
+          </div>
+          <div class="cp-sale-right">
+            <span class="cp-sale-total">$${parseFloat(sale.total).toFixed(2)}</span>
+            <span class="cp-sale-status ${statusCls}">${statusIcon} ${sale.payment_status === 'paid' ? (lang === 'es' ? 'Pagado' : 'Paid') : (lang === 'es' ? 'Pendiente' : 'Unpaid')}</span>
+          </div>
+        </div>
+        <div class="cp-sale-detail" id="cp-sale-detail-${sale.id}" style="display:none"></div>
+      </div>`;
+    });
+
+    container.innerHTML = html;
+
+    // Bind tap to expand/collapse sale details
+    container.querySelectorAll('.cp-sale-row').forEach(row => {
+      row.addEventListener('click', () => _toggleSaleDetail(row.dataset.saleId));
+    });
+
+  } catch (e) {
+    console.error('Client sales history error:', e);
+    container.innerHTML = `<div class="cp-row" style="justify-content:center;color:var(--tx-faint);font-size:.85rem">Error</div>`;
+  }
+}
+
+async function _toggleSaleDetail(saleId) {
+  const detail = document.getElementById('cp-sale-detail-' + saleId);
+  if (!detail) return;
+
+  // Toggle visibility
+  if (detail.style.display !== 'none') {
+    detail.style.display = 'none';
+    return;
+  }
+
+  // Load items if not already loaded
+  if (!detail.dataset.loaded) {
+    try {
+      const { data: items } = await sb
+        .from('driver_sale_items')
+        .select('product_label, quantity, unit_price, line_total')
+        .eq('sale_id', saleId);
+
+      if (items && items.length > 0) {
+        let html = '';
+        items.forEach(it => {
+          html += `<div class="cp-sale-item">
+            <span class="cp-sale-item-name">${_esc(it.product_label)}</span>
+            <span class="cp-sale-item-qty">${it.quantity} × $${parseFloat(it.unit_price).toFixed(2)}</span>
+            <span class="cp-sale-item-total">$${parseFloat(it.line_total).toFixed(2)}</span>
+          </div>`;
+        });
+        detail.innerHTML = html;
+      } else {
+        detail.innerHTML = `<div class="cp-sale-item" style="color:var(--tx-faint)">${lang === 'es' ? 'Sin detalles' : 'No details'}</div>`;
+      }
+      detail.dataset.loaded = '1';
+    } catch (e) {
+      console.error('Load sale items error:', e);
+    }
+  }
+
+  detail.style.display = 'block';
 }
 
 // ── Template Action Sheet ──

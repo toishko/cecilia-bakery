@@ -1188,6 +1188,28 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .cp-save-btn:active{transform:scale(.98)}
 .cp-save-btn:disabled{opacity:.5;cursor:not-allowed}
 
+/* Client Sales History */
+.cp-sale-row{padding:12px 16px;border-bottom:1px solid var(--bd);cursor:pointer;
+  transition:background .12s}
+.cp-sale-row:last-child{border-bottom:none}
+.cp-sale-row:active{background:var(--bg-surface)}
+.cp-sale-main{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cp-sale-left{display:flex;flex-direction:column;gap:2px}
+.cp-sale-date{font-size:.88rem;font-weight:600;color:var(--tx)}
+.cp-sale-meta{font-size:.72rem;color:var(--tx-faint);font-family:monospace}
+.cp-sale-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.cp-sale-total{font-size:.92rem;font-weight:700;color:var(--tx)}
+.cp-sale-status{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.cp-sale-paid{color:var(--green)}
+.cp-sale-unpaid{color:var(--red)}
+.cp-sale-detail{padding:8px 12px 4px;border-top:1px solid var(--bd);
+  background:var(--bg-surface);border-radius:0 0 12px 12px}
+.cp-sale-item{display:flex;align-items:center;justify-content:space-between;
+  padding:6px 4px;font-size:.82rem;gap:8px}
+.cp-sale-item-name{flex:1;color:var(--tx);font-weight:500}
+.cp-sale-item-qty{color:var(--tx-muted);font-size:.75rem;white-space:nowrap}
+.cp-sale-item-total{font-weight:600;color:var(--tx);white-space:nowrap;min-width:50px;text-align:right}
+
 /* Template Action Sheet (iOS-style) */
 .cp-action-sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);
   z-index:10000;display:none;align-items:flex-end;justify-content:center;
