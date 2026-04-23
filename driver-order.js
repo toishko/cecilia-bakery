@@ -4373,7 +4373,7 @@ function renderInventoryBanner() {
       inventoryLoaded = false;
       
       // Reload inventory view
-      loadInventoryData();
+      loadInventoryTab();
     } catch (e) {
       console.error('Error clearing inventory:', e);
       showToast(lang === 'es' ? 'Error al borrar' : 'Error clearing inventory', 'error');
