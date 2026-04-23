@@ -3871,143 +3871,6 @@
       }
     });
 
-    /* ── Apple-Style Bottom Sheet Drag ── */
-    (function() {
-      var sheet = document.getElementById('frost-modal-sheet');
-      var overlay = document.getElementById('frost-modal-overlay');
-      if (!sheet) return;
-
-      var dragRegion = sheet.querySelector('.frost-modal-drag-region');
-      var scrollBody = sheet.querySelector('.frost-modal-body');
-      if (!dragRegion) return;
-
-      var startY = 0;
-      var currentY = 0;
-      var startTime = 0;
-      var isDragging = false;
-      var dragSource = ''; // 'handle' or 'body'
-
-      // --- Handle / Header drag (always initiates pull-down) ---
-      dragRegion.addEventListener('touchstart', function(e) {
-        if (!sheet.classList.contains('open')) return;
-        isDragging = true;
-        dragSource = 'handle';
-        startY = e.touches[0].clientY;
-        currentY = startY;
-        startTime = Date.now();
-        sheet.style.transition = 'none';
-        overlay.style.transition = 'none';
-      }, { passive: true });
-
-      dragRegion.addEventListener('touchmove', function(e) {
-        if (!isDragging) return;
-        currentY = e.touches[0].clientY;
-        var dy = currentY - startY;
-        if (dy < 0) {
-          // Rubber-band resistance when dragging up
-          dy = dy * 0.15;
-        }
-        sheet.style.transform = 'translateY(' + Math.max(dy, -20) + 'px)';
-        // Dim overlay proportionally
-        var progress = Math.max(0, Math.min(1, 1 - (dy / (sheet.offsetHeight * 0.5))));
-        overlay.style.opacity = progress;
-      }, { passive: true });
-
-      dragRegion.addEventListener('touchend', function(e) {
-        if (!isDragging) return;
-        finishDrag();
-      }, { passive: true });
-
-      // --- Body scroll → pull-down transition ---
-      var bodyDragActive = false;
-      if (scrollBody) {
-        scrollBody.addEventListener('touchstart', function(e) {
-          if (!sheet.classList.contains('open')) return;
-          bodyDragActive = false;
-          startY = e.touches[0].clientY;
-          currentY = startY;
-          startTime = Date.now();
-        }, { passive: true });
-
-        scrollBody.addEventListener('touchmove', function(e) {
-          if (!sheet.classList.contains('open')) return;
-          currentY = e.touches[0].clientY;
-          var dy = currentY - startY;
-
-          // Only activate pull-down when scrolled to the very top and pulling down
-          if (scrollBody.scrollTop <= 0 && dy > 0) {
-            if (!bodyDragActive) {
-              bodyDragActive = true;
-              isDragging = true;
-              dragSource = 'body';
-              startY = currentY; // reset start to avoid jump
-              sheet.style.transition = 'none';
-              overlay.style.transition = 'none';
-            }
-            e.preventDefault();
-            var pullDy = currentY - startY;
-            sheet.style.transform = 'translateY(' + pullDy + 'px)';
-            var progress = Math.max(0, Math.min(1, 1 - (pullDy / (sheet.offsetHeight * 0.5))));
-            overlay.style.opacity = progress;
-          } else {
-            // Normal scroll — reset drag state
-            if (bodyDragActive) {
-              bodyDragActive = false;
-              isDragging = false;
-              sheet.style.transition = '';
-              sheet.style.transform = '';
-              overlay.style.transition = '';
-              overlay.style.opacity = '';
-            }
-          }
-        }, { passive: false });
-
-        scrollBody.addEventListener('touchend', function(e) {
-          if (bodyDragActive && isDragging) {
-            finishDrag();
-          }
-          bodyDragActive = false;
-        }, { passive: true });
-      }
-
-      function finishDrag() {
-        isDragging = false;
-        var dy = currentY - startY;
-        var dt = Date.now() - startTime;
-        var velocity = dy / Math.max(dt, 1); // px per ms
-
-        // Dismiss if dragged > 30% of sheet height OR flicked fast (velocity > 0.5 px/ms)
-        var threshold = sheet.offsetHeight * 0.3;
-        var shouldDismiss = (dy > threshold) || (dy > 40 && velocity > 0.4);
-
-        if (shouldDismiss) {
-          // Slide out with Apple spring
-          sheet.style.transition = 'transform .32s cubic-bezier(.36,.66,.04,1)';
-          sheet.style.transform = 'translateY(100%)';
-          overlay.style.transition = 'opacity .32s ease';
-          overlay.style.opacity = '0';
-          setTimeout(function() {
-            frostCloseModal();
-            // Reset inline styles after close animation
-            sheet.style.transition = '';
-            sheet.style.transform = '';
-            overlay.style.transition = '';
-            overlay.style.opacity = '';
-          }, 340);
-        } else {
-          // Snap back with spring bounce
-          sheet.style.transition = 'transform .4s cubic-bezier(.34,1.56,.64,1)';
-          sheet.style.transform = 'translateY(0)';
-          overlay.style.transition = 'opacity .3s ease';
-          overlay.style.opacity = '1';
-          setTimeout(function() {
-            sheet.style.transition = '';
-            overlay.style.transition = '';
-            overlay.style.opacity = '';
-          }, 420);
-        }
-      }
-    })();
   </script>
   <!-- Frost Packer Modal -->
   <div class="frost-modal-overlay" id="frost-modal-overlay" onclick="frostCloseModal()" ontouchmove="event.preventDefault()"></div>
@@ -4030,6 +3893,138 @@
       <button class="frost-add-box-btn" id="frost-modal-add-btn">+ Add Box</button>
     </div>
   </div>
+
+  <script>
+  /* ── Apple-Style Bottom Sheet Drag ── */
+  (function() {
+    var sheet = document.getElementById('frost-modal-sheet');
+    var overlay = document.getElementById('frost-modal-overlay');
+    if (!sheet) return;
+
+    var dragRegion = sheet.querySelector('.frost-modal-drag-region');
+    var scrollBody = sheet.querySelector('.frost-modal-body');
+    if (!dragRegion) return;
+
+    var startY = 0;
+    var currentY = 0;
+    var startTime = 0;
+    var isDragging = false;
+    var dragSource = '';
+
+    // --- Handle / Header drag (always initiates pull-down) ---
+    dragRegion.addEventListener('touchstart', function(e) {
+      if (!sheet.classList.contains('open')) return;
+      isDragging = true;
+      dragSource = 'handle';
+      startY = e.touches[0].clientY;
+      currentY = startY;
+      startTime = Date.now();
+      sheet.style.transition = 'none';
+      overlay.style.transition = 'none';
+    }, { passive: true });
+
+    dragRegion.addEventListener('touchmove', function(e) {
+      if (!isDragging) return;
+      currentY = e.touches[0].clientY;
+      var dy = currentY - startY;
+      if (dy < 0) {
+        dy = dy * 0.15;
+      }
+      sheet.style.transform = 'translateY(' + Math.max(dy, -20) + 'px)';
+      var progress = Math.max(0, Math.min(1, 1 - (dy / (sheet.offsetHeight * 0.5))));
+      overlay.style.opacity = progress;
+    }, { passive: true });
+
+    dragRegion.addEventListener('touchend', function(e) {
+      if (!isDragging) return;
+      finishDrag();
+    }, { passive: true });
+
+    // --- Body scroll → pull-down transition ---
+    var bodyDragActive = false;
+    if (scrollBody) {
+      scrollBody.addEventListener('touchstart', function(e) {
+        if (!sheet.classList.contains('open')) return;
+        bodyDragActive = false;
+        startY = e.touches[0].clientY;
+        currentY = startY;
+        startTime = Date.now();
+      }, { passive: true });
+
+      scrollBody.addEventListener('touchmove', function(e) {
+        if (!sheet.classList.contains('open')) return;
+        currentY = e.touches[0].clientY;
+        var dy = currentY - startY;
+
+        if (scrollBody.scrollTop <= 0 && dy > 0) {
+          if (!bodyDragActive) {
+            bodyDragActive = true;
+            isDragging = true;
+            dragSource = 'body';
+            startY = currentY;
+            sheet.style.transition = 'none';
+            overlay.style.transition = 'none';
+          }
+          e.preventDefault();
+          var pullDy = currentY - startY;
+          sheet.style.transform = 'translateY(' + pullDy + 'px)';
+          var progress = Math.max(0, Math.min(1, 1 - (pullDy / (sheet.offsetHeight * 0.5))));
+          overlay.style.opacity = progress;
+        } else {
+          if (bodyDragActive) {
+            bodyDragActive = false;
+            isDragging = false;
+            sheet.style.transition = '';
+            sheet.style.transform = '';
+            overlay.style.transition = '';
+            overlay.style.opacity = '';
+          }
+        }
+      }, { passive: false });
+
+      scrollBody.addEventListener('touchend', function(e) {
+        if (bodyDragActive && isDragging) {
+          finishDrag();
+        }
+        bodyDragActive = false;
+      }, { passive: true });
+    }
+
+    function finishDrag() {
+      isDragging = false;
+      var dy = currentY - startY;
+      var dt = Date.now() - startTime;
+      var velocity = dy / Math.max(dt, 1);
+
+      var threshold = sheet.offsetHeight * 0.3;
+      var shouldDismiss = (dy > threshold) || (dy > 40 && velocity > 0.4);
+
+      if (shouldDismiss) {
+        sheet.style.transition = 'transform .32s cubic-bezier(.36,.66,.04,1)';
+        sheet.style.transform = 'translateY(100%)';
+        overlay.style.transition = 'opacity .32s ease';
+        overlay.style.opacity = '0';
+        setTimeout(function() {
+          frostCloseModal();
+          sheet.style.transition = '';
+          sheet.style.transform = '';
+          overlay.style.transition = '';
+          overlay.style.opacity = '';
+        }, 340);
+      } else {
+        sheet.style.transition = 'transform .4s cubic-bezier(.34,1.56,.64,1)';
+        sheet.style.transform = 'translateY(0)';
+        overlay.style.transition = 'opacity .3s ease';
+        overlay.style.opacity = '1';
+        setTimeout(function() {
+          sheet.style.transition = '';
+          overlay.style.transition = '';
+          overlay.style.opacity = '';
+        }, 420);
+      }
+    }
+  })();
+  </script>
 </body>
 
 </html>
