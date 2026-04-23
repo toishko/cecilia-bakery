@@ -3810,6 +3810,62 @@
         showState('signin');
       }
     });
+
+    /* ── Modal Drag to Close Logic ── */
+    (function() {
+      var sheet = document.getElementById('frost-modal-sheet');
+      if (!sheet) return;
+      var startY = 0;
+      var currentY = 0;
+      var isDragging = false;
+      var hasScrolled = false;
+
+      sheet.addEventListener('touchstart', function(e) {
+        if (!sheet.classList.contains('open')) return;
+        var touch = e.touches[0];
+        startY = touch.clientY;
+        currentY = startY;
+        isDragging = true;
+        hasScrolled = sheet.scrollTop > 0;
+        sheet.style.transition = 'none'; 
+      }, { passive: true });
+
+      sheet.addEventListener('touchmove', function(e) {
+        if (!isDragging) return;
+        var touch = e.touches[0];
+        currentY = touch.clientY;
+        var deltaY = currentY - startY;
+
+        var isScrollable = sheet.scrollHeight > sheet.clientHeight;
+
+        if (sheet.scrollTop > 0) {
+          hasScrolled = true;
+          return;
+        }
+
+        if (deltaY > 0 && !hasScrolled) {
+          e.preventDefault(); 
+          sheet.style.transform = 'translateY(' + deltaY + 'px)';
+        } else if (deltaY < 0 && !isScrollable) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      sheet.addEventListener('touchend', function(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        var deltaY = currentY - startY;
+        
+        sheet.style.transition = 'transform .3s cubic-bezier(.32,.72,0,1)';
+        
+        if (deltaY > 100 && !hasScrolled && sheet.scrollTop <= 0) {
+          frostCloseModal();
+          setTimeout(function() { sheet.style.transform = ''; }, 300);
+        } else {
+          sheet.style.transform = '';
+        }
+      }, { passive: true });
+    })();
   </script>
   <!-- Frost Packer Modal -->
   <div class="frost-modal-overlay" id="frost-modal-overlay" onclick="frostCloseModal()" ontouchmove="event.preventDefault()"></div>
