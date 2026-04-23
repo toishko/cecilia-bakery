@@ -5214,18 +5214,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   // close button is now inline on the HTML element; sheet backdrop handled by onclick on overlay
 
   // ── Driver management ──
-  document.getElementById('btn-add-driver').addEventListener('click', showAddDriver);
-  document.getElementById('btn-back-to-list').addEventListener('click', () => {
+  document.getElementById('btn-add-driver')?.addEventListener('click', showAddDriver);
+  document.getElementById('btn-back-to-list')?.addEventListener('click', () => {
     showDriversListView(); loadDriverList();
   });
-  document.getElementById('btn-cancel-driver').addEventListener('click', () => {
+  document.getElementById('btn-cancel-driver')?.addEventListener('click', () => {
     showDriversListView(); loadDriverList();
   });
-  document.getElementById('btn-save-driver').addEventListener('click', saveDriver);
-  document.getElementById('btn-back-from-profile').addEventListener('click', () => {
+  document.getElementById('btn-save-driver')?.addEventListener('click', saveDriver);
+  document.getElementById('btn-back-from-profile')?.addEventListener('click', () => {
     showDriversListView(); loadDriverList();
   });
-  document.getElementById('btn-edit-driver-from-profile').addEventListener('click', () => {
+  document.getElementById('btn-edit-driver-from-profile')?.addEventListener('click', () => {
     if (profileDriverId) showEditDriver(profileDriverId);
   });
   document.getElementById('driver-search').addEventListener('input', renderDriverTable);
