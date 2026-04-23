@@ -158,7 +158,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
    MAIN CONTENT AREA
    ═══════════════════════════════════ */
 .main-content{flex:1;margin-left:var(--sidebar-w);padding:28px 32px;max-width:960px;width:100%;
-  overflow-x:hidden;box-sizing:border-box;padding-bottom:100px}
+  overflow-x:hidden;box-sizing:border-box;padding-bottom:140px}
 
 .settings-website-link{display:flex;align-items:center;justify-content:center;gap:6px;
   padding:12px;border:1px solid var(--bd);border-radius:10px;background:none;
@@ -969,7 +969,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   .mobile-header{display:flex}
   .mobile-nav{display:block}
   .dash-screen{flex-direction:column !important}
-  .main-content{margin-left:0;padding:16px;padding-bottom:100px;max-width:100%}
+  .main-content{margin-left:0;padding:16px;padding-bottom:140px;max-width:100%}
 }
 
 /* PWA standalone mode: always hide sidebar, remove left margin */
@@ -978,11 +978,11 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   .mobile-header{display:flex}
   .mobile-nav{display:block}
   .dash-screen{flex-direction:column !important}
-  .main-content{margin-left:0;padding:16px;padding-bottom:100px;max-width:100%}
+  .main-content{margin-left:0;padding:16px;padding-bottom:140px;max-width:100%}
 }
 
 @media(min-width:769px) and (max-width:1024px){
-  .main-content{padding:24px;padding-bottom:100px;}
+  .main-content{padding:24px;padding-bottom:140px;}
 }
 
 /* ═══════════════════════════════════
