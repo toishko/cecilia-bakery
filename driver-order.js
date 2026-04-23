@@ -4324,12 +4324,12 @@ function renderInventoryBanner() {
     sourceHtml = `<span class="inv-adjusted-badge"><i data-lucide="pencil"></i> ${lang === 'es' ? 'Ajustado' : 'Adjusted'}</span>`;
   }
 
-  const addMoreEn = 'Add More';
-  const addMoreEs = 'Agregar Más';
+  const addMoreEn = 'Edit Inventory';
+  const addMoreEs = 'Editar Inventario';
 
   banner.innerHTML = `<div class="inv-banner-row">${sourceHtml}
     <button class="inv-add-more-btn" id="inv-add-more-btn" data-en="${addMoreEn}" data-es="${addMoreEs}">
-      <i data-lucide="plus-circle"></i> ${lang === 'es' ? addMoreEs : addMoreEn}
+      <i data-lucide="pencil"></i> ${lang === 'es' ? addMoreEs : addMoreEn}
     </button></div>`;
 
   document.getElementById('inv-add-more-btn')?.addEventListener('click', () => {
