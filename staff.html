@@ -2138,16 +2138,19 @@
             }
           }
         });
-        // If no inputs have values, don't overwrite existing saved data
-        if (!hasValues) return;
+        // If no inputs have values AND no frost state, don't overwrite existing saved data
+        var hasFrost = typeof frostState !== 'undefined' && frostState[order.id] && frostState[order.id].boxes && frostState[order.id].boxes.length > 0;
+        if (!hasValues && !hasFrost) return;
         
         // Merge with existing saved data to preserve calcs from other sessions
         var existingRaw = localStorage.getItem('cb-staff-ordercalc-' + order.id);
         var existingCalc = {};
+        var existingFrost = null;
         if (existingRaw) {
           try {
             var existing = JSON.parse(existingRaw);
             existingCalc = existing.calcByProductKey || {};
+            existingFrost = existing.frostState || null;
           } catch(e) {}
         }
         // Merge: current DOM values take priority over old saved values
@@ -2159,10 +2162,18 @@
           mergedCalcByProductKey[k] = calcByProductKey[k]; 
         });
         
+        // Frost state: prefer live state, fall back to existing saved
+        var frostToSave = null;
+        if (hasFrost) {
+          frostToSave = JSON.parse(JSON.stringify(frostState[order.id]));
+        } else if (existingFrost) {
+          frostToSave = existingFrost;
+        }
+        
         var state = {
           boxCalc: boxCalc,
           calcByProductKey: mergedCalcByProductKey,
-          frostState: (typeof frostState !== 'undefined' && frostState[order.id]) ? JSON.parse(JSON.stringify(frostState[order.id])) : null,
+          frostState: frostToSave,
           driverName: getDriverName(order.driver_id),
           businessName: order.business_name || '',
           pickupDate: order.pickup_date || '',
