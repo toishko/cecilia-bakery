@@ -4444,6 +4444,7 @@ async function saveManualLoad() {
 
     showToast(lang === 'es' ? 'Inventario guardado' : 'Inventory saved', 'success');
     loadInventoryTab();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (e) {
     console.error('Save inventory error:', e);
     showToast(lang === 'es' ? 'Error al guardar' : 'Error saving inventory', 'error');
