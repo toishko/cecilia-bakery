@@ -1807,6 +1807,26 @@ async function loadMyOrders() {
   if (!sb || !currentDriver) return;
   const container = document.getElementById('all-orders');
   try {
+    if (currentOrdersFilter === 'sales') {
+      const { data: sales, error: salesErr } = await sb
+        .from('driver_sales')
+        .select(`*, driver_sale_items(*)`)
+        .eq('driver_id', currentDriver.id)
+        .order('created_at', { ascending: false });
+        
+      if (salesErr) { console.error('Sales error:', salesErr); return; }
+      
+      if (!sales || sales.length === 0) {
+        container.innerHTML = `<div class="empty-state" data-en="No sales yet" data-es="Sin ventas aún">${lang === 'es' ? 'Sin ventas aún' : 'No sales yet'}</div>`;
+        return;
+      }
+      
+      window._cachedDriverSales = sales; // Cache for receipt viewing
+      container.innerHTML = sales.map(s => renderDriverSaleCard(s)).join('');
+      requestAnimationFrame(() => lucide.createIcons());
+      return;
+    }
+
     const { data, error } = await sb
       .from('driver_orders')
       .select('*, driver_order_items(*)')
@@ -1933,6 +1953,57 @@ function renderSingleOcaCard(primary, isChild = false) {
       </div>
     </div>`;
 }
+
+// ── RENDER DRIVER SALE CARD ──
+function renderDriverSaleCard(s) {
+  const dt = new Date(s.created_at);
+  const dateStr = dt.toLocaleDateString(lang === 'es' ? 'es-US' : 'en-US', { month: 'short', day: 'numeric' });
+  const timeStr = dt.toLocaleTimeString(lang === 'es' ? 'es-US' : 'en-US', { hour: 'numeric', minute: '2-digit' });
+  
+  let bizDisplay = lang === 'es' ? 'Venta Directa' : 'Direct Sale';
+  if (s.client_id && typeof _clientsList !== 'undefined') {
+    const c = _clientsList.find(x => x.id === s.client_id);
+    if (c) bizDisplay = _esc(c.business_name);
+  }
+  
+  let payClass = 'unpaid', payText = lang === 'es' ? 'No Pagado' : 'Not Paid';
+  if (s.payment_status === 'paid') { payClass = 'paid'; payText = lang === 'es' ? 'Pagado' : 'Paid'; }
+  else if (s.payment_status === 'partial' || s.payment_status === 'on_account') { payClass = 'partial'; payText = lang === 'es' ? 'A Cuenta' : 'On Account'; }
+  
+  const totalStr = parseFloat(s.total || 0) > 0 ? `$${parseFloat(s.total).toFixed(2)}` : '$0.00';
+  const statusBadge = `<span class="oca-status-pill picked-up">${lang === 'es' ? 'Completado' : 'Completed'}</span>`;
+  const receiptNum = s.receipt_number ? `#${_esc(s.receipt_number)}` : '';
+
+  return `
+    <div class="oca-card" onclick="viewPastSaleReceipt('${s.id}')">
+      <div class="oca-body">
+        <div class="oca-name">${bizDisplay}</div>
+        <div class="oca-time">${receiptNum} · ${dateStr} ${timeStr}</div>
+        <div class="oca-badges">${statusBadge}</div>
+      </div>
+      <div class="oca-right">
+        <div class="oca-price">${totalStr}</div>
+        <div class="oca-pill ${payClass}">${payText}</div>
+      </div>
+    </div>`;
+}
+
+window.viewPastSaleReceipt = function(saleId) {
+  if (!window._cachedDriverSales) return;
+  const sale = window._cachedDriverSales.find(s => s.id === saleId);
+  if (!sale) return;
+  
+  let client = null;
+  if (sale.client_id && typeof _clientsList !== 'undefined') {
+    client = _clientsList.find(x => x.id === sale.client_id);
+  }
+  
+  const items = sale.driver_sale_items || [];
+  renderReceipt(sale, items, client);
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-receipt').classList.add('active');
+  document.getElementById('bottom-nav').style.display = 'none';
+};
 
 // ── RENDER ORDER CARD (Admin-style avatar row) ──
 // `batch` is an array of orders (1 for solo, N for batch)
