@@ -3965,17 +3965,20 @@ async function loadInventoryTab() {
     skels += `<div class="inv-skeleton-row"><div class="inv-sk-left"><div class="inv-sk-line" style="width:${Math.floor(Math.random() * 40 + 30)}%"></div><div class="inv-sk-line thin" style="width:60%"></div></div><div class="inv-sk-ring"></div></div>`;
   }
   summary.innerHTML = skels;
+  summary.style.display = 'block';
   form.style.display = 'none';
 
   await loadInventoryData();
 
   if (inventoryLoaded) {
+    summary.style.display = 'block';
     renderInventoryBanner();
     renderInventorySummary();
     form.style.display = 'none';
   } else {
     banner.innerHTML = '';
     summary.innerHTML = '';
+    summary.style.display = 'none';
     form.style.display = 'block';
     renderManualLoadForm();
   }
