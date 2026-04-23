@@ -4970,7 +4970,7 @@ window.showDriverProfile = async function(driverId) {
     lucide.createIcons();
   } else {
     document.getElementById('profile-recent-orders').innerHTML =
-      `<div class="apple-inset-row center-text" style="color:var(--tx-muted); cursor:default;">${lang === 'es' ? 'Sin pedidos' : 'No orders yet'}</div>`;
+      `<div class="apple-inset-row center-text tap-row" onclick="document.getElementById('filter-driver').value = profileDriverId; showSection('history');" style="color:var(--blue); cursor:pointer;">${lang === 'es' ? 'Ver Todo el Historial de Pedidos' : 'View All Order History'}</div>`;
   }
 
   // Price table (read-only)
