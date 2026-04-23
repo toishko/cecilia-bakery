@@ -3,7 +3,7 @@
    ═══════════════════════════════════ */
 // M1: Production-safe logger — silences debug logs on production
 const __DEV__ = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-const _log = __DEV__ ? console.log.bind(console) : () => {};
+const _log = __DEV__ ? console.log.bind(console) : () => { };
 
 const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
@@ -52,7 +52,7 @@ let driverPriceMap = {}; // product_key → price, loaded on login
 let driverInventory = {};    // product_key → { loaded, sold, remaining }
 let inventoryLoaded = false;
 let inventorySource = '';    // 'order:#123' or 'manual'
-let advancedFeaturesEnabled = false; // controlled by admin Settings > Feature Flags
+
 
 // Session timeout: 24 hours
 const DRIVER_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -61,7 +61,7 @@ const DRIVER_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 let hiddenProducts = new Set(JSON.parse(localStorage.getItem('cecilia_hidden_products') || '[]'));
 
 /* ── Escape helper for XSS prevention ── */
-function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 /* ═══════════════════════════════════
    SCREEN MANAGEMENT
@@ -72,52 +72,108 @@ function showScreen(id) {
 }
 
 function showSection(name) {
-  // Close mobile nav dropdown
-  const mobileNav = document.getElementById('mobile-nav');
-  const mobileBtn = document.getElementById('mobile-menu-btn');
-  if (mobileNav) mobileNav.classList.remove('open');
-  if (mobileBtn) mobileBtn.classList.remove('open');
+  // Always scroll to top when switching sections
+  window.scrollTo({ top: 0, behavior: 'instant' });
+
+  // Close any open settings sub-views (e.g. My Products)
+  document.querySelectorAll('.settings-subview.open').forEach(sv => sv.classList.remove('open'));
+
+  const toolsSections = ['sales', 'inventory', 'clients'];
+  let activeSection = name;
+  let activeTool = null;
+
+  if (toolsSections.includes(name)) {
+    activeSection = 'tools';
+    activeTool = name;
+  } else if (name === 'tools') {
+    activeTool = 'inventory'; // Default
+  }
 
   // Hide all sections, show target
   document.querySelectorAll('.dash-section').forEach(s => s.style.display = 'none');
-  const target = document.getElementById('section-' + name);
+  const target = document.getElementById('section-' + activeSection);
   if (target) target.style.display = 'block';
 
-  // Update active state on sidebar + mobile nav
-  document.querySelectorAll('.sidebar-nav-item, .mobile-nav-item').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.section === name);
-  });
+  // If a tool is active, switch panes
+  if (activeTool) {
+    document.querySelectorAll('.tool-pane').forEach(p => p.style.display = 'none');
+    const pane = document.getElementById('tool-pane-' + activeTool);
+    if (pane) pane.style.display = 'block';
+    
+    // Update pills
+    document.querySelectorAll('#tools-nav-pills .insights-pill').forEach(btn => {
+      if (btn.dataset.tool === activeTool) {
+        btn.classList.add('active');
+        // Update header name based on active tool
+        const sectionNameEl = document.getElementById('mobile-section-name');
+        if (sectionNameEl) {
+          sectionNameEl.textContent = btn.getAttribute('data-' + lang) || btn.textContent;
+          sectionNameEl.setAttribute('data-en', btn.getAttribute('data-en'));
+          sectionNameEl.setAttribute('data-es', btn.getAttribute('data-es'));
+        }
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
 
-  // Update mobile section name
-  const sectionNameEl = document.getElementById('mobile-section-name');
-  const activeBtn = document.querySelector(`.sidebar-nav-item[data-section="${name}"]`);
-  if (sectionNameEl && activeBtn) {
-    const spanEl = activeBtn.querySelector('span[data-en]');
-    if (spanEl) {
-      sectionNameEl.textContent = spanEl.getAttribute('data-' + lang) || spanEl.textContent;
-      sectionNameEl.setAttribute('data-en', spanEl.getAttribute('data-en'));
-      sectionNameEl.setAttribute('data-es', spanEl.getAttribute('data-es'));
+  // Determine which bottom nav tab should be active
+  const isSettings = name === 'settings';
+  const bottomNavActiveTarget = isSettings ? 'settings' : activeSection;
+
+  // Update active state on sidebar, bottom nav
+  document.querySelectorAll('.sidebar-nav-item').forEach(btn => btn.classList.toggle('active', btn.dataset.section === name));
+  document.querySelectorAll('.bottom-nav-item').forEach(btn => btn.classList.toggle('active', btn.dataset.section === bottomNavActiveTarget));
+
+  // Update mobile section name dynamically (if not handled by tool pill)
+  if (!activeTool) {
+    const sectionNameEl = document.getElementById('mobile-section-name');
+    if (sectionNameEl) {
+      const btn = document.querySelector(`.sidebar-nav-item[data-section="${name}"]`) || document.querySelector(`.bottom-nav-item[data-section="${name}"]`);
+      if (btn) {
+        const spanEl = btn.querySelector('span[data-en]');
+        if (spanEl) {
+          sectionNameEl.textContent = spanEl.getAttribute('data-' + lang) || spanEl.textContent;
+          sectionNameEl.setAttribute('data-en', spanEl.getAttribute('data-en'));
+          sectionNameEl.setAttribute('data-es', spanEl.getAttribute('data-es'));
+        }
+      } else if (name === 'settings') {
+        sectionNameEl.textContent = lang === 'es' ? 'Configuración' : 'Settings';
+        sectionNameEl.setAttribute('data-en', 'Settings');
+        sectionNameEl.setAttribute('data-es', 'Configuración');
+      }
     }
   }
 
   // Show/hide footer and init order form
   const footer = document.getElementById('form-footer');
   const saleFooter = document.getElementById('sale-footer');
+  const mobileLogo = document.getElementById('mobile-logo');
+  const headerBackBtn = document.getElementById('header-back-btn');
+
   if (name === 'new-order') {
-    loadDriverProducts().then(() => {
-      initOrderForm();
-      footer.style.display = 'flex';
-      saleFooter.style.display = 'none';
-    });
-  } else if (name === 'sales') {
+    initOrderForm();
+    footer.style.display = 'flex';
+    saleFooter.style.display = 'none';
+    document.body.classList.add('immersive-mode');
+    if(mobileLogo) mobileLogo.style.display = 'none';
+    if(headerBackBtn) headerBackBtn.style.display = 'none';
+  } else if (activeTool === 'sales') {
     footer.style.display = 'none';
     saleFooter.style.display = 'flex';
     initSalesSection();
+    document.body.classList.remove('immersive-mode');
+    if(mobileLogo) mobileLogo.style.display = 'none';
+    if(headerBackBtn) headerBackBtn.style.display = 'inline-flex';
   } else {
     footer.style.display = 'none';
     saleFooter.style.display = 'none';
+    document.body.classList.remove('immersive-mode');
+    if(mobileLogo) mobileLogo.style.display = 'block';
+    if(headerBackBtn) headerBackBtn.style.display = 'none';
   }
-  // Phase 5: load My Orders when switching to that tab
+
+  // Execute loaders
   if (name === 'my-orders') {
     loadDriverBalance();
     loadMyOrders();
@@ -125,16 +181,18 @@ function showSection(name) {
   if (name === 'overview') {
     loadDriverBalance();
     loadRecentOrders();
+    loadDriverClients();
     loadOverviewDashboard();
   }
-  if (name === 'clients') {
+  if (activeTool === 'clients') {
     loadDriverClients();
   }
-  if (name === 'inventory') {
+  if (activeTool === 'inventory') {
     loadInventoryTab();
   }
-  // Refresh icons for dynamically rendered content
+
   requestAnimationFrame(() => lucide.createIcons());
+  window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
 /* ═══════════════════════════════════
@@ -244,6 +302,7 @@ function enterDashboard() {
   document.getElementById('welcome-name').textContent =
     (lang === 'es' ? 'Bienvenido, ' : 'Welcome, ') + currentDriver.name;
   showScreen('dashboard');
+  showSection('overview');
   lucide.createIcons();
   // Phase 5: load balance, recent orders, start realtime
   loadDriverBalance();
@@ -254,7 +313,7 @@ function enterDashboard() {
   if ('Notification' in window && Notification.permission === 'granted') {
     subscribeToPush('driver', currentDriver.id);
   } else if ('Notification' in window && Notification.permission === 'default'
-             && !localStorage.getItem('cecilia_push_dismissed')) {
+    && !localStorage.getItem('cecilia_push_dismissed')) {
     const optIn = document.getElementById('push-opt-in');
     if (optIn) optIn.style.display = 'flex';
   }
@@ -266,7 +325,10 @@ function enterDashboard() {
   // Frosted Pieces, Family Size, etc. that don't exist in the menu products table.
   // Load driver prices for summary display
   loadDriverPriceMap();
-  // Check if advanced features (Sales, Inventory, Clients) are enabled
+  // Load overview analytics for all drivers
+  loadDriverClients();
+  loadOverviewDashboard();
+  // Check scanner feature flag
   checkAdvancedFeatures();
 }
 
@@ -409,21 +471,26 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('login-theme-btn').addEventListener('click', toggleTheme);
 
   // ── Dashboard nav ──
-  // Mobile hamburger toggle
-  document.getElementById('mobile-menu-btn').addEventListener('click', () => {
-    const nav = document.getElementById('mobile-nav');
-    const btn = document.getElementById('mobile-menu-btn');
-    nav.classList.toggle('open');
-    btn.classList.toggle('open');
-  });
-  // Sidebar nav items
+  // Sidebar nav items (desktop fallback)
   document.querySelectorAll('.sidebar-nav-item').forEach(btn => {
     btn.addEventListener('click', () => showSection(btn.dataset.section));
   });
-  // Mobile nav items
-  document.querySelectorAll('.mobile-nav-item').forEach(btn => {
-    btn.addEventListener('click', () => showSection(btn.dataset.section));
+
+  // Bottom nav items
+  document.querySelectorAll('.bottom-nav-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const section = btn.dataset.section;
+      showSection(section);
+    });
   });
+
+  // Tools Sub-tabs
+  document.querySelectorAll('#tools-nav-pills .insights-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      showSection(btn.dataset.tool);
+    });
+  });
+
   document.getElementById('new-order-cta')?.addEventListener('click', () => showSection('new-order'));
 
   // ── Quick action cards (overview) ──
@@ -480,27 +547,85 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === e.currentTarget) closePaymentModal();
   });
   document.getElementById('receipt-back-btn').addEventListener('click', () => {
-    document.getElementById('print-instructions').style.display = 'none';
     showScreen('dashboard');
     showSection('sales');
+    document.getElementById('bottom-nav').style.display = 'flex';
   });
-  document.getElementById('receipt-print-btn').addEventListener('click', () => {
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (!isIOS) {
-      window.print();
-      return;
+
+  document.getElementById('receipt-delete-btn')?.addEventListener('click', async () => {
+    if (!window._currentReceiptSaleId) return;
+    const msg = lang === 'es' 
+      ? '¿Estás seguro de que quieres borrar esta venta? Se eliminará permanentemente y el inventario se restaurará.' 
+      : 'Are you sure you want to delete this sale? It will be permanently removed and inventory will be restored.';
+    if (!confirm(msg)) return;
+
+    try {
+      const deleteBtn = document.getElementById('receipt-delete-btn');
+      deleteBtn.disabled = true;
+
+      // Delete items first (just in case no CASCADE)
+      const { error: err1 } = await sb.from('driver_sale_items').delete().eq('sale_id', window._currentReceiptSaleId);
+      if (err1) throw err1;
+      
+      // Delete sale
+      const { error: err2 } = await sb.from('driver_sales').delete().eq('id', window._currentReceiptSaleId);
+      if (err2) throw err2;
+
+      showToast(lang === 'es' ? 'Venta borrada' : 'Sale deleted', 'success');
+
+      // Force inventory recalculation
+      inventoryLoaded = false;
+      driverInventory = {};
+
+      // Close receipt
+      showScreen('dashboard');
+      
+      // If we came from 'my-orders' (sales filter), refresh it
+      if (document.getElementById('section-my-orders').style.display === 'block') {
+        loadMyOrders();
+      } else {
+        showSection('sales');
+      }
+      document.getElementById('bottom-nav').style.display = 'flex';
+
+    } catch (e) {
+      console.error('Error deleting sale:', e);
+      showToast(lang === 'es' ? 'Error al borrar' : 'Error deleting', 'error');
+    } finally {
+      document.getElementById('receipt-delete-btn').disabled = false;
     }
-    // iOS: copy receipt URL and show visual instructions
-    const driverId = currentDriver?.id || '';
-    const url = window.location.origin + '/receipt.html?driver=' + encodeURIComponent(driverId);
-    _copyReceiptLink(url);
-    document.getElementById('print-instructions').style.display = 'block';
-    applyLang();
   });
-  document.getElementById('print-copy-btn').addEventListener('click', () => {
-    const driverId = currentDriver?.id || '';
-    const url = window.location.origin + '/receipt.html?driver=' + encodeURIComponent(driverId);
-    _copyReceiptLink(url);
+
+  document.getElementById('receipt-print-btn').addEventListener('click', () => {
+    window.print();
+  });
+
+  document.getElementById('receipt-share-btn')?.addEventListener('click', async () => {
+    if (!window._cachedReceiptSale) return;
+    const sale = window._cachedReceiptSale;
+    const itemsText = sale.driver_sale_items ? sale.driver_sale_items.map(it => `${it.quantity}x ${it.product_label} - $${parseFloat(it.line_total).toFixed(2)}`).join('\n') : '';
+    
+    const text = `Cecilia Bakery\n${lang === 'es' ? 'Recibo #' : 'Receipt #'}: ${sale.receipt_number || 'N/A'}\n${lang === 'es' ? 'Total:' : 'Total:'} $${parseFloat(sale.total).toFixed(2)}\n\n${lang === 'es' ? 'Artículos:' : 'Items:'}\n${itemsText}\n\n${lang === 'es' ? '¡Gracias!' : 'Thank you!'}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: lang === 'es' ? 'Recibo de Cecilia Bakery' : 'Cecilia Bakery Receipt',
+          text: text
+        });
+      } catch (e) {
+        // AbortError is thrown when user cancels the share dialog, no need to toast.
+        console.error('Share aborted or failed:', e);
+      }
+    } else {
+      // Fallback: Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast(lang === 'es' ? 'Recibo copiado al portapapeles' : 'Receipt copied to clipboard', 'success');
+      } catch (e) {
+        showToast(lang === 'es' ? 'No se pudo compartir' : 'Could not share', 'error');
+      }
+    }
   });
   // Pay toggle groups
   document.querySelectorAll('#pay-method-group .pay-toggle-btn').forEach(btn => {
@@ -521,8 +646,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('order-detail-overlay').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeOrderDetail();
   });
-  document.getElementById('balance-modal-close').addEventListener('click', closeBalanceBreakdown);
-  document.getElementById('balance-modal-overlay').addEventListener('click', (e) => {
+  document.getElementById('balance-modal-close')?.addEventListener('click', closeBalanceBreakdown);
+  document.getElementById('balance-modal-overlay')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeBalanceBreakdown();
   });
   const notifToggle = document.getElementById('notification-toggle');
@@ -546,6 +671,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Order form ──
   document.getElementById('footer-continue-btn').addEventListener('click', openSummary);
+  document.getElementById('footer-cancel-btn').addEventListener('click', () => {
+    document.querySelector('.bottom-nav-item[data-section=overview]').click();
+  });
+  _initClientProfileEvents();
   document.getElementById('summary-back').addEventListener('click', closeSummary);
   document.getElementById('summary-submit').addEventListener('click', submitAllOrders);
   document.getElementById('summary-prev').addEventListener('click', () => navigateSummary(-1));
@@ -570,9 +699,9 @@ let PRODUCTS = {
   redondo: {
     en: 'Round', es: 'Redondo', type: 'redondo',
     items: [
-      { key: 'pina', en: 'Piña', es: 'Piña', cols: ['inside','inside_nt','top','top_nt'] },
-      { key: 'guava', en: 'Guava', es: 'Guayaba', cols: ['inside','inside_nt','top','top_nt'] },
-      { key: 'dulce', en: 'Dulce De Leche', es: 'Dulce De Leche', cols: ['inside','inside_nt'] },
+      { key: 'pina', en: 'Piña', es: 'Piña', cols: ['inside', 'inside_nt', 'top', 'top_nt'] },
+      { key: 'guava', en: 'Guava', es: 'Guayaba', cols: ['inside', 'inside_nt', 'top', 'top_nt'] },
+      { key: 'dulce', en: 'Dulce De Leche', es: 'Dulce De Leche', cols: ['inside', 'inside_nt'] },
     ]
   },
   plain: {
@@ -687,7 +816,7 @@ function createBlankOrder() {
 
 function getTodayStr() {
   const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
 function initOrderForm() {
@@ -1237,16 +1366,20 @@ let summaryIdx = 0;
 
 function openSummary() {
   if (window._swipeDismissCooldown) return;
-  saveFormToOrder(activeOrderIdx);
-  summaryIdx = 0;
-  renderSummaryOrder(0);
-  document.getElementById('summary-overlay').classList.add('open');
-  document.body.dataset.scrollY = window.scrollY;
-  document.body.style.position = 'fixed';
-  document.body.style.top = `-${window.scrollY}px`;
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-  applyLang();
+  try {
+    saveFormToOrder(activeOrderIdx);
+    summaryIdx = 0;
+    renderSummaryOrder(0);
+    document.getElementById('summary-overlay').classList.add('open');
+    document.body.dataset.scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${window.scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    applyLang();
+  } catch(e) {
+    console.error('[openSummary] Error:', e);
+  }
 }
 
 function closeSummary() {
@@ -1270,7 +1403,7 @@ function navigateSummary(dir) {
 function renderSummaryOrder(idx) {
   const o = orders[idx];
   const titleEl = document.getElementById('summary-title');
-  titleEl.textContent = (lang === 'es' ? `Pedido ${idx+1} de ${orders.length}` : `Order ${idx+1} of ${orders.length}`);
+  titleEl.textContent = (lang === 'es' ? `Pedido ${idx + 1} de ${orders.length}` : `Order ${idx + 1} of ${orders.length}`);
   document.getElementById('summary-prev').disabled = idx === 0;
   document.getElementById('summary-next').disabled = idx === orders.length - 1;
 
@@ -1378,7 +1511,7 @@ async function submitAllOrders() {
             (item.cols || []).forEach(col => {
               const k = item.key + '_' + col;
               const v = o.qty[k] || 0;
-              if (v > 0) { const colClean = col.replace('_nt',''); const ntTag = col.endsWith('_nt') ? ' (No Ticket)' : ''; items.push({ product_key: k, product_label: `${item.en} (${colClean})${ntTag}`, quantity: v }); }
+              if (v > 0) { const colClean = col.replace('_nt', ''); const ntTag = col.endsWith('_nt') ? ' (No Ticket)' : ''; items.push({ product_key: k, product_label: `${item.en} (${colClean})${ntTag}`, quantity: v }); }
             });
           } else {
             const v = o.qty[item.key] || 0;
@@ -1520,7 +1653,7 @@ async function submitAllOrders() {
       }
 
       if (orderErr) {
-        console.error(`Order ${i+1} insert error:`, orderErr);
+        console.error(`Order ${i + 1} insert error:`, orderErr);
         throw orderErr;
       }
 
@@ -1535,7 +1668,7 @@ async function submitAllOrders() {
 
       const { error: itemsErr } = await sb.from('driver_order_items').insert(orderItems);
       if (itemsErr) {
-        console.error(`Order ${i+1} items insert error:`, itemsErr);
+        console.error(`Order ${i + 1} items insert error:`, itemsErr);
         throw itemsErr;
       }
 
@@ -1662,7 +1795,7 @@ function productLabel(key, storedLabel) {
 // ── SHORT ORDER ID (UUID → readable) ──
 function shortOrderId(orderOrUuid) {
   if (!orderOrUuid) return '???';
-  
+
   // If we passed the full order object and it has an order number, prefer it
   if (typeof orderOrUuid === 'object') {
     if (orderOrUuid.order_number) return orderOrUuid.order_number;
@@ -1670,7 +1803,7 @@ function shortOrderId(orderOrUuid) {
     const clean = orderOrUuid.id.replace(/-/g, '');
     return clean.slice(-5).toUpperCase();
   }
-  
+
   // Fallback: it's just the raw UUID string
   if (typeof orderOrUuid === 'string') {
     const clean = orderOrUuid.replace(/-/g, '');
@@ -1700,13 +1833,13 @@ function smartTimeLabel(order) {
   const h = created.getHours(), m = created.getMinutes();
   const period = h >= 12 ? 'PM' : 'AM';
   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return { label: lang === 'es' ? 'Hora del Pedido' : 'Time Ordered', value: `${h12}:${String(m).padStart(2,'0')} ${period}` };
+  return { label: lang === 'es' ? 'Hora del Pedido' : 'Time Ordered', value: `${h12}:${String(m).padStart(2, '0')} ${period}` };
 }
 
 function formatDate(d) {
   const months = lang === 'es'
-    ? ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-    : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    ? ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+    : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
 
@@ -1716,7 +1849,7 @@ function formatTime(timeStr) {
   const m = parseInt(mStr);
   const period = h >= 12 ? 'PM' : 'AM';
   if (h === 0) h = 12; else if (h > 12) h -= 12;
-  return `${h}:${String(m).padStart(2,'0')} ${period}`;
+  return `${h}:${String(m).padStart(2, '0')} ${period}`;
 }
 
 // ── LOAD DRIVER BALANCE ──
@@ -1812,15 +1945,34 @@ async function loadMyOrders() {
   if (!sb || !currentDriver) return;
   const container = document.getElementById('all-orders');
   try {
+    if (currentOrdersFilter === 'sales') {
+      const { data: sales, error: salesErr } = await sb
+        .from('driver_sales')
+        .select(`*, driver_sale_items(*)`)
+        .eq('driver_id', currentDriver.id)
+        .order('created_at', { ascending: false });
+        
+      if (salesErr) { console.error('Sales error:', salesErr); return; }
+      
+      if (!sales || sales.length === 0) {
+        container.innerHTML = `<div class="empty-state" data-en="No sales yet" data-es="Sin ventas aún">${lang === 'es' ? 'Sin ventas aún' : 'No sales yet'}</div>`;
+        return;
+      }
+      
+      window._cachedDriverSales = sales; // Cache for receipt viewing
+      container.innerHTML = sales.map(s => renderDriverSaleCard(s)).join('');
+      requestAnimationFrame(() => lucide.createIcons());
+      return;
+    }
+
     const { data, error } = await sb
       .from('driver_orders')
       .select('*, driver_order_items(*)')
       .eq('driver_id', currentDriver.id)
-      .in('status', ['pending', 'sent', 'confirmed', 'picked_up'])
       .order('created_at', { ascending: false });
 
     if (error) { console.error('My orders error:', error); return; }
-    
+
     let filteredData = data || [];
     if (currentOrdersFilter === 'paid') {
       filteredData = filteredData.filter(o => o.payment_status === 'paid');
@@ -1829,7 +1981,7 @@ async function loadMyOrders() {
     }
 
     if (filteredData.length === 0) {
-      container.innerHTML = `<div class="empty-state" data-en="No orders found" data-es="No se encontraron pedidos">${lang === 'es' ? 'No se encontraron pedidos' : 'No orders found'}</div>`;
+      container.innerHTML = `<div class="empty-state" data-en="No orders yet" data-es="Aún no hay pedidos">${lang === 'es' ? 'Aún no hay pedidos' : 'No orders yet'}</div>`;
       return;
     }
 
@@ -1856,6 +2008,16 @@ function getEditTimeRemaining(order) {
   return min;
 }
 
+function getDriverDisplayName(o, lang) {
+  let n = (o.business_name || '').trim();
+  const lower = n.toLowerCase();
+  if (n === '' || lower === 'no name' || lower === 'sin nombre' || lower === 'noname') {
+    return lang === 'es' ? 'Cliente Minorista' : 'Retail Customer';
+  }
+  return n;
+}
+
+// ── RENDER ORDER CARD ──
 window.toggleBatch = function(el) {
   const wrapper = el.closest('.oca-batch-wrapper');
   if (!wrapper) return;
@@ -1870,7 +2032,7 @@ window.toggleBatch = function(el) {
     children.style.display = 'block';
     if(chevron) chevron.style.transform = 'rotate(180deg)';
   }
-}
+};
 
 function renderSingleOcaCard(primary, isChild = false) {
   const dateInfo = smartDateLabel(primary);
@@ -1898,7 +2060,8 @@ function renderSingleOcaCard(primary, isChild = false) {
   }
 
   const bizDisplay = _esc(getOrderName(primary));
-  const avatarHtml = `<div class="oca-avatar">${getInit(getOrderName(primary))}</div>`;
+  const driverInitials = getInit(currentDriver ? currentDriver.name : '');
+  const avatarHtml = `<div class="oca-avatar">${driverInitials}</div>`;
   const totalStr = parseFloat(primary.total_amount || 0) > 0 ? `$${parseFloat(primary.total_amount).toFixed(2)}` : '$0.00';
   const orderNum = primary.order_number ? `#${primary.order_number}` : `#${shortOrderId(primary)}`;
 
@@ -1928,6 +2091,57 @@ function renderSingleOcaCard(primary, isChild = false) {
       </div>
     </div>`;
 }
+
+// ── RENDER DRIVER SALE CARD ──
+function renderDriverSaleCard(s) {
+  const dt = new Date(s.created_at);
+  const dateStr = dt.toLocaleDateString(lang === 'es' ? 'es-US' : 'en-US', { month: 'short', day: 'numeric' });
+  const timeStr = dt.toLocaleTimeString(lang === 'es' ? 'es-US' : 'en-US', { hour: 'numeric', minute: '2-digit' });
+  
+  let bizDisplay = lang === 'es' ? 'Venta Directa' : 'Direct Sale';
+  if (s.client_id && typeof _clientsList !== 'undefined') {
+    const c = _clientsList.find(x => x.id === s.client_id);
+    if (c) bizDisplay = _esc(c.business_name);
+  }
+  
+  let payClass = 'unpaid', payText = lang === 'es' ? 'No Pagado' : 'Not Paid';
+  if (s.payment_status === 'paid') { payClass = 'paid'; payText = lang === 'es' ? 'Pagado' : 'Paid'; }
+  else if (s.payment_status === 'partial' || s.payment_status === 'on_account') { payClass = 'partial'; payText = lang === 'es' ? 'A Cuenta' : 'On Account'; }
+  
+  const totalStr = parseFloat(s.total || 0) > 0 ? `$${parseFloat(s.total).toFixed(2)}` : '$0.00';
+  const statusBadge = `<span class="oca-status-pill picked-up">${lang === 'es' ? 'Completado' : 'Completed'}</span>`;
+  const receiptNum = s.receipt_number ? `#${_esc(s.receipt_number)}` : '';
+
+  return `
+    <div class="oca-card" onclick="viewPastSaleReceipt('${s.id}')">
+      <div class="oca-body">
+        <div class="oca-name">${bizDisplay}</div>
+        <div class="oca-time">${receiptNum} · ${dateStr} ${timeStr}</div>
+        <div class="oca-badges">${statusBadge}</div>
+      </div>
+      <div class="oca-right">
+        <div class="oca-price">${totalStr}</div>
+        <div class="oca-pill ${payClass}">${payText}</div>
+      </div>
+    </div>`;
+}
+
+window.viewPastSaleReceipt = function(saleId) {
+  if (!window._cachedDriverSales) return;
+  const sale = window._cachedDriverSales.find(s => s.id === saleId);
+  if (!sale) return;
+  
+  let client = null;
+  if (sale.client_id && typeof _clientsList !== 'undefined') {
+    client = _clientsList.find(x => x.id === sale.client_id);
+  }
+  
+  const items = sale.driver_sale_items || [];
+  renderReceipt(sale, items, client);
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-receipt').classList.add('active');
+  document.getElementById('bottom-nav').style.display = 'none';
+};
 
 // ── RENDER ORDER CARD (Admin-style avatar row) ──
 // `batch` is an array of orders (1 for solo, N for batch)
@@ -1966,17 +2180,10 @@ function renderOrderCard(batch) {
     return w.length >= 2 ? (w[0][0] + w[1][0]).toUpperCase() : name.substring(0, 2).toUpperCase();
   }
 
-  let bizDisplay = '';
-  let avatarHtml = '<div class="oca-avatar-stack">';
-  for (let i = 0; i < Math.min(batch.length, 3); i++) {
-    if (i === 2 && batch.length > 3) {
-      avatarHtml += `<div class="oca-avatar stack-item more">+${batch.length - 2}</div>`;
-    } else {
-      avatarHtml += `<div class="oca-avatar stack-item">${getInit(getOrderName(batch[i]))}</div>`;
-    }
-  }
-  avatarHtml += '</div>';
+  const driverInitials = getInit(currentDriver ? currentDriver.name : '');
+  let avatarHtml = `<div class="oca-avatar">${driverInitials}</div>`;
 
+  let bizDisplay = '';
   const n1 = getOrderName(batch[0]);
   if (batch.length === 2) {
     const n2 = getOrderName(batch[1]);
@@ -2034,7 +2241,7 @@ let driverEditOrderObj = null; // Track the full object for order number
 let _batchOrders = [];
 let _batchIdx = 0;
 
-window.showOrderDetail = async function(orderIdStr) {
+window.showOrderDetail = async function (orderIdStr) {
   if (window._swipeDismissCooldown) return;
   if (!sb) return;
   const overlay = document.getElementById('order-detail-overlay');
@@ -2067,7 +2274,7 @@ window.showOrderDetail = async function(orderIdStr) {
   } catch (e) { console.error('Order detail error:', e); }
 };
 
-window.batchDetailNav = function(dir) {
+window.batchDetailNav = function (dir) {
   _batchIdx = Math.max(0, Math.min(_batchOrders.length - 1, _batchIdx + dir));
   renderOrderInDetail(_batchIdx);
 };
@@ -2121,7 +2328,7 @@ function renderOrderInDetail(idx) {
   // Meta
   const dateInfo = smartDateLabel(order);
   const timeInfo = smartTimeLabel(order);
-  const bizName = _esc(order.business_name || (lang === 'es' ? 'Sin nombre' : 'No name'));
+  const bizName = _esc(getDriverDisplayName(order, lang));
   let metaHtml = `
     <span><i data-lucide="store"></i>${bizName}</span>
     <span><i data-lucide="calendar"></i>${dateInfo.label}: ${dateInfo.value}</span>
@@ -2250,7 +2457,7 @@ function closeOrderDetail() {
 window.closeOrderDetail = closeOrderDetail;
 
 // ── EDIT ORDER (30-MIN WINDOW) ──
-window.editOrder = async function(orderId) {
+window.editOrder = async function (orderId) {
   if (!sb) return;
   closeOrderDetail();
 
@@ -2324,70 +2531,24 @@ function formatTime12(timeStr) {
   return `${hr12}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
-// ── BALANCE BREAKDOWN MODAL ──
-window.showBalanceBreakdown = function() {
-  if (window._swipeDismissCooldown) return;
-  const overlay = document.getElementById('balance-modal-overlay');
-  const totalEl = document.getElementById('balance-modal-total');
-  const listEl = document.getElementById('balance-modal-list');
+// ── BALANCE REDIRECT ──
+window.goToUnpaidOrders = function () {
+  // Navigate to My Orders section
+  showSection('my-orders');
 
-  let total = 0;
-  balanceOrders.forEach(o => {
-    if (o.payment_status === 'not_paid') total += (o.total_amount || 0);
-    else if (o.payment_status === 'partial') total += Math.max(0, (o.total_amount || 0) - (o.payment_amount || 0));
+  // Set filter to unpaid
+  currentOrdersFilter = 'unpaid';
+
+  // Update pills UI
+  const filterBtns = document.querySelectorAll('#driver-orders-filter .insights-pill');
+  filterBtns.forEach(b => {
+    if (b.dataset.filter === 'unpaid') b.classList.add('active');
+    else b.classList.remove('active');
   });
 
-  const colorClass = total === 0 ? 'green' : total >= 100 ? 'red' : 'yellow';
-  totalEl.innerHTML = `<span class="balance-amount ${colorClass}">$${total.toFixed(2)}</span>`;
-
-  if (balanceOrders.length === 0) {
-    listEl.innerHTML = `<div class="balance-empty">${lang === 'es' ? 'No hay saldo pendiente' : 'No outstanding balance'}</div>`;
-  } else {
-    let html = '';
-    balanceOrders.forEach(o => {
-      const remaining = o.payment_status === 'not_paid'
-        ? (o.total_amount || 0)
-        : Math.max(0, (o.total_amount || 0) - (o.payment_amount || 0));
-      const dateVal = o.pickup_date || (o.created_at ? o.created_at.split('T')[0] : '');
-      const d = new Date(dateVal + 'T00:00:00');
-      const dateStr = formatDate(d);
-      const biz = o.business_name || (lang === 'es' ? 'Sin nombre' : 'No name');
-      const paidStr = o.payment_status === 'partial'
-        ? `${lang === 'es' ? 'Pagado' : 'Paid'}: $${(o.payment_amount || 0).toFixed(2)} / $${(o.total_amount || 0).toFixed(2)}`
-        : `${lang === 'es' ? 'Total' : 'Total'}: $${(o.total_amount || 0).toFixed(2)}`;
-
-      html += `
-        <div class="balance-item">
-          <div class="balance-item-info">
-            <div class="balance-item-biz">${biz} <span style="color:var(--tx-faint);font-weight:400">#${shortOrderId(o)}</span></div>
-            <div class="balance-item-date">${dateStr}</div>
-            <div class="balance-item-detail">${paidStr}</div>
-          </div>
-          <div class="balance-item-remaining">$${remaining.toFixed(2)}</div>
-        </div>`;
-    });
-    listEl.innerHTML = html;
-  }
-
-  overlay.classList.add('open');
-  document.body.dataset.scrollY = window.scrollY;
-  document.body.style.position = 'fixed';
-  document.body.style.top = `-${window.scrollY}px`;
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-  lucide.createIcons();
+  // Reload orders to apply filter immediately
+  loadMyOrders();
 };
-
-function closeBalanceBreakdown() {
-  document.getElementById('balance-modal-overlay').classList.remove('open');
-  const scrollY = document.body.dataset.scrollY || '0';
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  window.scrollTo(0, parseInt(scrollY));
-}
-window.closeBalanceBreakdown = closeBalanceBreakdown;
 
 // ── REALTIME SUBSCRIPTION ──
 function setupDriverRealtime() {
@@ -2415,19 +2576,23 @@ function setupDriverRealtime() {
         loadMyOrders();
       }
 
-      // Chime if order was just confirmed/sent
-      if (payload.eventType === 'UPDATE' && payload.new && payload.new.status === 'sent') {
-        if (notificationsEnabled) {
-          playChime();
-          const msg = lang === 'es'
-            ? 'Tu pedido ha sido confirmado'
-            : 'Your order has been confirmed';
-          showToast(msg, 'success');
-          showBrowserNotification(
-            lang === 'es' ? 'Pedido Confirmado' : 'Order Confirmed',
-            msg,
-            'my-orders'
-          );
+      // Chime if order was just picked up
+      if (payload.eventType === 'UPDATE' && payload.new && payload.new.status === 'picked_up') {
+        // Simple check to avoid duplicate chimes if we already know it's picked up locally
+        const localOrder = _ordersList.find(o => o.id === payload.new.id);
+        if (!localOrder || localOrder.status !== 'picked_up') {
+          if (notificationsEnabled) {
+            playChime();
+            const msg = lang === 'es'
+              ? 'Tu pedido ha sido agregado a tu inventario'
+              : 'Your order has been added to your inventory';
+            showToast(msg, 'success');
+            showBrowserNotification(
+              lang === 'es' ? 'Inventario Actualizado' : 'Inventory Updated',
+              msg,
+              'my-orders'
+            );
+          }
         }
       }
     })
@@ -2632,6 +2797,11 @@ async function initSalesSection() {
     await loadDriverPriceMap();
   }
 
+  // Ensure inventory is loaded so stock limits work
+  if (!inventoryLoaded || Object.keys(driverInventory).length === 0) {
+    await loadInventoryData();
+  }
+
   // Load clients for dropdown
   if (!_clientsList || _clientsList.length === 0) {
     await loadDriverClients();
@@ -2667,9 +2837,12 @@ async function initSalesSection() {
   if (currentVal) dropdown.value = currentVal;
   _saleClientId = dropdown.value || null;
 
-  dropdown.onchange = () => {
+  dropdown.onchange = async () => {
     _saleClientId = dropdown.value || null;
+    await loadActiveClientPrices(_saleClientId);
+    buildSaleProducts();
     updateSaleFooter();
+    applyLang();
   };
 
   // Build product list
@@ -2688,35 +2861,83 @@ function buildSaleProducts() {
   let html = '';
 
   Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
-    // Skip redondo for sales — simplify to standard items only
-    if (sec.type === 'redondo') return;
+    // Build a flat list of sale-able items for this section
+    const flatItems = [];
 
-    // Filter to visible products
-    const visibleItems = sec.items.filter(item => !hiddenProducts.has(item.key));
-    if (visibleItems.length === 0) return;
+    if (sec.type === 'redondo') {
+      sec.items.forEach(item => {
+        if (hiddenProducts.has(item.key)) return;
+        (item.cols || []).forEach(col => {
+          if (col.endsWith('_nt')) return; // Only process base items
+          const compositeKey = item.key + '_' + col;
+          const colEn = col.charAt(0).toUpperCase() + col.slice(1);
+          const colEs = col === 'inside' ? 'Adentro' : col === 'top' ? 'Arriba' : colEn;
+          flatItems.push({
+            key: compositeKey,
+            en: `${item.en} — ${colEn}`,
+            es: `${item.es} — ${colEs}`,
+          });
+        });
+      });
+    } else {
+      sec.items.forEach(item => {
+        if (!hiddenProducts.has(item.key)) {
+          flatItems.push(item);
+        }
+      });
+    }
+
+    if (flatItems.length === 0) return;
 
     html += `<div class="sale-acc" data-section-key="${secKey}">`;
     html += `<div class="sale-acc-header"><span class="sale-acc-title" data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</span><svg class="sale-acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></div>`;
     html += `<div class="sale-acc-body">`;
 
-    visibleItems.forEach(item => {
-      const price = driverPriceMap[item.key];
+    flatItems.forEach(item => {
+      const price = getSalePrice(item.key);
       const hasPrice = price != null && price > 0;
       const priceStr = hasPrice ? `$${price.toFixed(2)}` : (lang === 'es' ? 'Sin precio' : 'No price');
-      const qty = _saleQty[item.key] || 0;
-      const lineTotal = hasPrice && qty > 0 ? (qty * price).toFixed(2) : '';
+      
+      const keyReg = item.key;
+      const keyNT = item.key + '_nt';
 
-      const maxInv = driverInventory[item.key] ? Math.max(0, driverInventory[item.key].remaining) : 0;
-      let stockStr = `<span style="color:var(--tx-muted);font-size:11px;margin-left:6px;">(${maxInv} ${lang === 'es' ? 'disp.' : 'avail.'})</span>`;
-      if (maxInv === 0) stockStr = `<span style="color:var(--red);font-size:11px;margin-left:6px;">(0 ${lang === 'es' ? 'disp.' : 'avail.'})</span>`;
+      const qtyReg = _saleQty[keyReg] || 0;
+      const qtyNT = _saleQty[keyNT] || 0;
 
-      html += `<div class="sale-prod-row${qty > 0 ? ' has-value' : ''}" data-key="${item.key}">`;
-      html += `<div class="sale-prod-info">`;
-      html += `<div class="sale-prod-name" data-en="${item.en}" data-es="${item.es}">${L(item)}</div>`;
-      html += `<div class="sale-prod-price${hasPrice ? '' : ' no-price'}">${priceStr}${stockStr}</div>`;
-      html += `</div>`;
-      html += `<div class="sale-qty-wrap"><button class="sale-qty-btn" data-dir="-" data-key="${item.key}">−</button><input type="number" class="sale-qty-input" data-key="${item.key}" value="${qty}" min="0"><button class="sale-qty-btn" data-dir="+" data-key="${item.key}">+</button></div>`;
-      html += `<span class="sale-line-total" data-key="${item.key}">${lineTotal ? '$' + lineTotal : ''}</span>`;
+      const maxInvReg = driverInventory[keyReg] ? Math.max(0, driverInventory[keyReg].remaining) : 0;
+      const maxInvNT = driverInventory[keyNT] ? Math.max(0, driverInventory[keyNT].remaining) : 0;
+
+      const availReg = Math.max(0, maxInvReg - qtyReg);
+      const availNT = Math.max(0, maxInvNT - qtyNT);
+
+      const lineTotalReg = hasPrice && qtyReg > 0 ? qtyReg * price : 0;
+      const lineTotalNT = hasPrice && qtyNT > 0 ? qtyNT * price : 0;
+      const lineTotal = lineTotalReg + lineTotalNT;
+      const lineTotalStr = lineTotal > 0 ? '$' + lineTotal.toFixed(2) : '';
+
+      html += `<div class="sale-prod-row${qtyReg > 0 || qtyNT > 0 ? ' has-value' : ''}" data-parent-key="${item.key}">`;
+      html += `  <div class="sale-prod-header">`;
+      html += `    <div class="sale-prod-info">`;
+      html += `      <div class="sale-prod-name" data-en="${item.en}" data-es="${item.es}">${L(item)}</div>`;
+      html += `      <div class="sale-prod-price${hasPrice ? '' : ' no-price'}">${priceStr}</div>`;
+      html += `    </div>`;
+      html += `    <span class="sale-line-total" data-group-key="${item.key}">${lineTotalStr}</span>`;
+      html += `  </div>`;
+
+      html += `  <div class="sale-prod-controls">`;
+      // Regular Group
+      html += `    <div class="sale-qty-group">`;
+      html += `      <span class="sale-qty-lbl">Reg <small class="sale-avail-lbl ${availReg===0?'out':''}" data-key="${keyReg}">${availReg}</small></span>`;
+      html += `      <div class="sale-qty-wrap"><button class="sale-qty-btn" data-dir="-" data-key="${keyReg}">−</button><input type="number" class="sale-qty-input" data-key="${keyReg}" data-parent-key="${item.key}" value="${qtyReg}" min="0"><button class="sale-qty-btn" data-dir="+" data-key="${keyReg}">+</button></div>`;
+      html += `    </div>`;
+
+      // No-Ticket (NT) Group
+      html += `    <div class="sale-qty-group">`;
+      html += `      <span class="sale-qty-lbl">NT <small class="sale-avail-lbl ${availNT===0?'out':''}" data-key="${keyNT}">${availNT}</small></span>`;
+      html += `      <div class="sale-qty-wrap"><button class="sale-qty-btn" data-dir="-" data-key="${keyNT}">−</button><input type="number" class="sale-qty-input" data-key="${keyNT}" data-parent-key="${item.key}" value="${qtyNT}" min="0"><button class="sale-qty-btn" data-dir="+" data-key="${keyNT}">+</button></div>`;
+      html += `    </div>`;
+      html += `  </div>`;
+      
       html += `</div>`;
     });
 
@@ -2738,11 +2959,11 @@ function buildSaleProducts() {
       const inp = container.querySelector(`.sale-qty-input[data-key="${key}"]`);
       const cur = parseInt(inp.value) || 0;
       const delta = btn.dataset.dir === '+' ? 1 : -1;
-      
+
       const maxInv = driverInventory[key] ? Math.max(0, driverInventory[key].remaining) : 0;
       let newVal = Math.max(0, cur + delta);
       if (newVal > maxInv) newVal = maxInv;
-      
+
       inp.value = newVal;
       _saleQty[key] = newVal;
       updateSaleRow(key);
@@ -2758,7 +2979,7 @@ function buildSaleProducts() {
     inp.addEventListener('focus', () => { if (inp.value === '0') inp.value = ''; });
     inp.addEventListener('blur', () => {
       if (inp.value === '') inp.value = '0';
-      
+
       const key = inp.dataset.key;
       const maxInv = driverInventory[key] ? Math.max(0, driverInventory[key].remaining) : 0;
       let newVal = parseInt(inp.value) || 0;
@@ -2767,7 +2988,7 @@ function buildSaleProducts() {
         inp.value = newVal;
         if (newVal === 0) showToast(lang === 'es' ? 'Sin inventario disponible' : 'No inventory available', 'error');
       }
-      
+
       _saleQty[key] = newVal;
       updateSaleRow(key);
       updateSaleFooter();
@@ -2776,21 +2997,56 @@ function buildSaleProducts() {
 }
 
 function updateSaleRow(key) {
-  const row = document.querySelector(`.sale-prod-row[data-key="${key}"]`);
+  // Find the input to get its parent-key
+  const inp = document.querySelector(`.sale-qty-input[data-key="${key}"]`);
+  if (!inp) return;
+  const parentKey = inp.dataset.parentKey;
+  
+  const row = document.querySelector(`.sale-prod-row[data-parent-key="${parentKey}"]`);
   if (!row) return;
-  const qty = _saleQty[key] || 0;
-  const price = driverPriceMap[key];
+
+  const keyReg = parentKey;
+  const keyNT = parentKey + '_nt';
+
+  const qtyReg = _saleQty[keyReg] || 0;
+  const qtyNT = _saleQty[keyNT] || 0;
+  const price = getSalePrice(keyReg); // Price is same for both
   const hasPrice = price != null && price > 0;
+
+  const lineTotal = hasPrice ? (qtyReg + qtyNT) * price : 0;
   const lineEl = row.querySelector('.sale-line-total');
-  if (lineEl) lineEl.textContent = (hasPrice && qty > 0) ? '$' + (qty * price).toFixed(2) : '';
-  row.classList.toggle('has-value', qty > 0);
+  
+  if (lineEl) {
+    lineEl.textContent = lineTotal > 0 ? '$' + lineTotal.toFixed(2) : '';
+  }
+  
+  // Update live inventory numbers on the badges
+  if (driverInventory) {
+    const maxReg = driverInventory[keyReg] ? Math.max(0, driverInventory[keyReg].remaining) : 0;
+    const availReg = Math.max(0, maxReg - qtyReg);
+    const lblReg = row.querySelector(`.sale-avail-lbl[data-key="${keyReg}"]`);
+    if (lblReg) {
+      lblReg.textContent = availReg;
+      lblReg.className = `sale-avail-lbl ${availReg === 0 ? 'out' : ''}`;
+    }
+
+    const maxNT = driverInventory[keyNT] ? Math.max(0, driverInventory[keyNT].remaining) : 0;
+    const availNT = Math.max(0, maxNT - qtyNT);
+    const lblNT = row.querySelector(`.sale-avail-lbl[data-key="${keyNT}"]`);
+    if (lblNT) {
+      lblNT.textContent = availNT;
+      lblNT.className = `sale-avail-lbl ${availNT === 0 ? 'out' : ''}`;
+    }
+  }
+
+  row.classList.toggle('has-value', qtyReg > 0 || qtyNT > 0);
 }
 
 function getSaleTotal() {
   let total = 0;
   Object.entries(_saleQty).forEach(([key, qty]) => {
     if (qty > 0) {
-      const price = driverPriceMap[key] || 0;
+      const price = getSalePrice(key);
       total += qty * price;
     }
   });
@@ -2840,10 +3096,10 @@ function updateSalesTicker() {
     const initiallyRemaining = parseInt(inv.remaining) || 0;
     // Map to _saleQty which holds the Sales tab cart!
     const inCart = _saleQty[k] || 0;
-    
+
     // Calculate true live remaining based on what they are currently typing in
     const trulyRemaining = Math.max(0, initiallyRemaining - inCart);
-    
+
     if (totalLoaded > 0 || initiallyRemaining > 0) {
       tickerItems.push({
         key: k,
@@ -2857,9 +3113,9 @@ function updateSalesTicker() {
     ticker.style.display = 'none';
     return;
   }
-  
+
   ticker.style.display = 'flex';
-  tickerItems.sort((a,b) => a.remaining - b.remaining);
+  tickerItems.sort((a, b) => a.remaining - b.remaining);
 
   let html = '';
   tickerItems.forEach(item => {
@@ -2931,19 +3187,29 @@ async function handleConfirmSale() {
 
     // Collect items
     const items = [];
+    // Build a full label map including composite redondo keys
+    const saleLabelMap = {};
+    Object.values(PRODUCTS).forEach(sec => {
+      sec.items.forEach(item => {
+        saleLabelMap[item.key] = item.en;
+        if (sec.type === 'redondo' && item.cols) {
+          item.cols.forEach(col => {
+            const compositeKey = item.key + '_' + col;
+            const isNT = col.endsWith('_nt');
+            const base = isNT ? col.replace('_nt', '') : col;
+            const colLabel = base.charAt(0).toUpperCase() + base.slice(1);
+            saleLabelMap[compositeKey] = `${item.en} — ${colLabel}${isNT ? ' NT' : ''}`;
+          });
+        }
+      });
+    });
+
     Object.entries(_saleQty).forEach(([key, qty]) => {
       if (qty > 0) {
-        const price = driverPriceMap[key] || 0;
-        // Find label from PRODUCTS
-        let label = key;
-        Object.values(PRODUCTS).forEach(sec => {
-          sec.items.forEach(item => {
-            if (item.key === key) label = item.en;
-          });
-        });
+        const price = getSalePrice(key);
         items.push({
           product_key: key,
-          product_label: label,
+          product_label: saleLabelMap[key] || key,
           quantity: qty,
           unit_price: price,
           line_total: qty * price,
@@ -3009,6 +3275,8 @@ async function handleConfirmSale() {
 
 /* ── Receipt Rendering ── */
 function renderReceipt(sale, items, client) {
+  window._cachedReceiptSale = { ...sale, driver_sale_items: items };
+
   const paper = document.getElementById('receipt-paper');
   const now = new Date(sale.created_at || new Date());
   const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -3065,6 +3333,17 @@ function renderReceipt(sale, items, client) {
     <div class="receipt-footer">¡Gracias! / Thank you!</div>
   `;
 
+  const deleteBtn = document.getElementById('receipt-delete-btn');
+  if (deleteBtn) {
+    if (sale.id) {
+      window._currentReceiptSaleId = sale.id;
+      deleteBtn.style.display = 'flex';
+    } else {
+      window._currentReceiptSaleId = null;
+      deleteBtn.style.display = 'none';
+    }
+  }
+
   applyLang();
 }
 
@@ -3073,6 +3352,7 @@ function renderReceipt(sale, items, client) {
    ═══════════════════════════════════ */
 let _clientsList = [];
 let _editingClientId = null;
+let _editFromProfile = false;
 
 async function loadDriverClients() {
   if (!sb || !currentDriver) return;
@@ -3163,12 +3443,12 @@ function renderClientsList() {
     const phone = c.phone ? _esc(c.phone) : '';
     const contact = c.contact_name ? _esc(c.contact_name) : '';
 
-    html += `<div class="client-card" data-client-id="${c.id}">
+    html += `<div class="client-card" data-client-id="${c.id}" onclick="openClientProfile('${c.id}')" style="cursor:pointer">
       <div class="client-card-row1">
         <div class="client-card-name">${name}</div>
         <div class="client-card-actions">
-          <button class="client-card-edit" onclick="event.stopPropagation();openClientModal('${c.id}')" title="${lang === 'es' ? 'Editar' : 'Edit'}"><i data-lucide="pencil"></i></button>
-          <button class="client-card-delete" onclick="event.stopPropagation();confirmDeleteClient('${c.id}','${name.replace(/'/g, "\\'") }')" title="${lang === 'es' ? 'Eliminar' : 'Delete'}"><i data-lucide="trash-2"></i></button>
+          <button class="client-card-edit" onclick="event.stopPropagation();openClientProfile('${c.id}')" title="${lang === 'es' ? 'Editar' : 'Edit'}"><i data-lucide="pencil"></i></button>
+          <button class="client-card-delete" onclick="event.stopPropagation();confirmDeleteClient('${c.id}','${name.replace(/'/g, "\\'")}')" title="${lang === 'es' ? 'Eliminar' : 'Delete'}"><i data-lucide="trash-2"></i></button>
         </div>
       </div>
       <div class="client-card-row2">`;
@@ -3228,6 +3508,15 @@ window.openClientModal = openClientModal;
 
 function closeClientModal() {
   document.getElementById('client-modal-overlay').classList.remove('open');
+
+  // If we came from the profile, return to it instead of restoring scroll
+  if (_editFromProfile && _cpClientId) {
+    _editFromProfile = false;
+    _editingClientId = null;
+    return;
+  }
+
+  _editFromProfile = false;
   const scrollY = document.body.dataset.scrollY || '0';
   document.body.style.position = '';
   document.body.style.top = '';
@@ -3269,20 +3558,26 @@ async function handleSaveClient() {
   saveBtn.textContent = lang === 'es' ? 'Guardar' : 'Save';
 
   if (result) {
+    const wasFromProfile = _editFromProfile;
+    const editedId = _editingClientId;
     closeClientModal();
     showToast(
-      _editingClientId
+      editedId
         ? (lang === 'es' ? 'Cliente actualizado' : 'Client updated')
         : (lang === 'es' ? 'Cliente agregado' : 'Client added'),
       'success'
     );
     await loadDriverClients();
+    // Refresh the profile with updated data if we came from there
+    if (wasFromProfile && editedId) {
+      openClientProfile(editedId);
+    }
   } else {
     showToast(lang === 'es' ? 'Error al guardar el cliente' : 'Error saving client', 'error');
   }
 }
 
-window.confirmDeleteClient = function(clientId, clientName) {
+window.confirmDeleteClient = function (clientId, clientName) {
   const message = lang === 'es'
     ? `¿Eliminar "${clientName}"? Esta acción no se puede deshacer.`
     : `Remove "${clientName}"? This cannot be undone.`;
@@ -3296,6 +3591,484 @@ window.confirmDeleteClient = function(clientId, clientName) {
     }
   });
 };
+
+/* ═══════════════════════════════════
+   CLIENT PROFILE — Apple-style Sheet
+   ═══════════════════════════════════ */
+let _cpClientId = null;
+let _cpPrices = {};       // product_key → price for the currently viewed client
+let _cpHasCustom = false; // whether custom pricing is enabled
+let _cpDirty = false;     // unsaved changes flag
+
+function openClientProfile(clientId) {
+  const client = _clientsList.find(c => c.id === clientId);
+  if (!client) return;
+  _cpClientId = clientId;
+  _cpDirty = false;
+
+  // Populate header
+  const initials = (client.business_name || '??')
+    .split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  document.getElementById('cp-avatar').textContent = initials;
+  document.getElementById('cp-name').textContent = client.business_name;
+  document.getElementById('cp-subtitle').textContent = client.address || '';
+
+  // Populate details
+  const showRow = (id, val) => {
+    const row = document.getElementById(id);
+    if (val) { row.style.display = ''; } else { row.style.display = 'none'; }
+  };
+  showRow('cp-row-phone', client.phone);
+  showRow('cp-row-address', client.address);
+  showRow('cp-row-contact', client.contact_name);
+  showRow('cp-row-notes', client.notes);
+  if (client.phone) document.getElementById('cp-phone-val').textContent = client.phone;
+  if (client.address) document.getElementById('cp-address-val').textContent = client.address;
+  if (client.contact_name) document.getElementById('cp-contact-val').textContent = client.contact_name;
+  if (client.notes) document.getElementById('cp-notes-val').textContent = client.notes;
+
+  // Load prices from DB then open
+  _loadClientPrices(clientId).then(() => {
+    _cpRenderPriceEditor();
+    document.getElementById('cp-overlay').classList.add('open');
+    document.body.dataset.scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${window.scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    applyLang();
+    lucide.createIcons();
+
+    // Load sales history async (don't block opening)
+    _loadClientSalesHistory(clientId);
+  });
+}
+window.openClientProfile = openClientProfile;
+
+function closeClientProfile() {
+  document.getElementById('cp-overlay').classList.remove('open');
+  const scrollY = document.body.dataset.scrollY || '0';
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  window.scrollTo(0, parseInt(scrollY));
+  _cpClientId = null;
+  _cpDirty = false;
+}
+
+// ── Load client prices from Supabase ──
+async function _loadClientPrices(clientId) {
+  _cpPrices = {};
+  _cpHasCustom = false;
+  if (!sb || !currentDriver) return;
+  try {
+    const { data, error } = await sb
+      .from('client_prices')
+      .select('product_key, price')
+      .eq('client_id', clientId)
+      .eq('driver_id', currentDriver.id);
+    if (error) { console.error('Load client prices error:', error); return; }
+    if (data && data.length > 0) {
+      _cpHasCustom = true;
+      data.forEach(p => { _cpPrices[p.product_key] = parseFloat(p.price); });
+    }
+  } catch (e) { console.error('Client prices error:', e); }
+
+  // Sync toggle
+  const toggle = document.getElementById('cp-custom-toggle');
+  if (toggle) toggle.checked = _cpHasCustom;
+  _cpTogglePricingUI(_cpHasCustom);
+}
+
+// ── Save client prices to Supabase ──
+async function _saveClientPrices() {
+  if (!sb || !currentDriver || !_cpClientId) return;
+  const btn = document.getElementById('cp-save-prices-btn');
+  btn.disabled = true;
+  btn.textContent = lang === 'es' ? 'Guardando...' : 'Saving...';
+
+  try {
+    // Delete existing prices for this client
+    const { error: delErr } = await sb.from('client_prices')
+      .delete()
+      .eq('client_id', _cpClientId)
+      .eq('driver_id', currentDriver.id);
+    if (delErr) throw delErr;
+
+    if (_cpHasCustom) {
+      // Insert new prices
+      const rows = [];
+      Object.entries(_cpPrices).forEach(([key, price]) => {
+        if (price != null && price > 0) {
+          rows.push({
+            client_id: _cpClientId,
+            driver_id: currentDriver.id,
+            product_key: key,
+            price: price,
+          });
+        }
+      });
+      if (rows.length > 0) {
+        const { error } = await sb.from('client_prices').insert(rows);
+        if (error) throw error;
+      }
+    }
+
+    _cpDirty = false;
+
+    // ✓ Success feedback — green button, then auto-close
+    btn.style.background = '#34C759';
+    btn.style.boxShadow = '0 4px 24px rgba(52,199,89,.35),0 1px 4px rgba(0,0,0,.12)';
+    btn.textContent = lang === 'es' ? '✓ Guardado' : '✓ Saved';
+    showToast(lang === 'es' ? 'Precios guardados' : 'Prices saved', 'success');
+
+    setTimeout(() => {
+      btn.style.background = '';
+      btn.style.boxShadow = '';
+      btn.textContent = lang === 'es' ? 'Guardar Precios' : 'Save Prices';
+      btn.disabled = false;
+      closeClientProfile();
+    }, 1000);
+    return;
+
+  } catch (e) {
+    console.error('Save client prices error:', e);
+
+    // ✗ Error feedback — shake + red flash
+    btn.textContent = lang === 'es' ? '✗ Error' : '✗ Error';
+    showToast(lang === 'es' ? 'Error al guardar precios' : 'Error saving prices', 'error');
+
+    setTimeout(() => {
+      btn.textContent = lang === 'es' ? 'Guardar Precios' : 'Save Prices';
+      btn.disabled = false;
+    }, 2000);
+  }
+}
+
+// ── Toggle pricing UI visibility ──
+function _cpTogglePricingUI(on) {
+  const editor = document.getElementById('cp-price-editor');
+  const saveBar = document.getElementById('cp-save-bar');
+  const templateBar = document.getElementById('cp-template-bar');
+  const hint = document.getElementById('cp-pricing-hint');
+
+  editor.style.display = on ? 'block' : 'none';
+  saveBar.style.display = on ? 'block' : 'none';
+  templateBar.style.display = on ? 'block' : 'none';
+  hint.style.display = on ? 'none' : 'block';
+}
+
+// ── Render the price editor (inset grouped by category) ──
+function _cpRenderPriceEditor() {
+  const container = document.getElementById('cp-price-editor');
+  let html = '';
+
+  Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
+    // Build flat item list (same logic as sales)
+    const flatItems = [];
+    if (sec.type === 'redondo') {
+      sec.items.forEach(item => {
+        if (hiddenProducts.has(item.key)) return;
+        (item.cols || []).forEach(col => {
+          if (col.endsWith('_nt')) return;
+          const compositeKey = item.key + '_' + col;
+          const colEn = col.charAt(0).toUpperCase() + col.slice(1);
+          const colEs = col === 'inside' ? 'Adentro' : col === 'top' ? 'Arriba' : colEn;
+          flatItems.push({ key: compositeKey, en: `${item.en} — ${colEn}`, es: `${item.es} — ${colEs}` });
+        });
+      });
+    } else {
+      sec.items.forEach(item => {
+        if (!hiddenProducts.has(item.key)) flatItems.push(item);
+      });
+    }
+    if (flatItems.length === 0) return;
+
+    html += `<div class="cp-price-section">`;
+    html += `<div class="cp-price-section-title" data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</div>`;
+    html += `<div class="cp-price-list">`;
+
+    flatItems.forEach(item => {
+      const price = _cpPrices[item.key];
+      const val = (price != null && price > 0) ? price.toFixed(2) : '';
+      const fallback = driverPriceMap[item.key];
+      const placeholder = (fallback != null && fallback > 0) ? fallback.toFixed(2) : '0.00';
+
+      html += `<div class="cp-price-row">
+        <span class="cp-price-row-name" data-en="${item.en}" data-es="${item.es}">${L(item)}</span>
+        <input type="number" inputmode="decimal" step="0.01" min="0"
+          class="cp-price-input" data-key="${item.key}"
+          value="${val}" placeholder="$${placeholder}">
+      </div>`;
+    });
+
+    html += `</div></div>`;
+  });
+
+  container.innerHTML = html;
+
+  // Bind price inputs
+  container.querySelectorAll('.cp-price-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const key = inp.dataset.key;
+      const val = parseFloat(inp.value);
+      if (!isNaN(val) && val >= 0) {
+        _cpPrices[key] = val;
+      } else {
+        delete _cpPrices[key];
+      }
+      _cpDirty = true;
+    });
+    // Select all text on focus for quick editing
+    inp.addEventListener('focus', () => inp.select());
+  });
+}
+
+// ── Client Sales History ──
+async function _loadClientSalesHistory(clientId) {
+  const container = document.getElementById('cp-sales-history');
+  if (!container || !sb || !currentDriver) return;
+
+  try {
+    const { data: sales, error } = await sb
+      .from('driver_sales')
+      .select('id, receipt_number, total, payment_method, payment_status, created_at')
+      .eq('driver_id', currentDriver.id)
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+
+    if (!sales || sales.length === 0) {
+      container.innerHTML = `<div class="cp-row" style="justify-content:center;color:var(--tx-faint);font-size:.85rem"
+        data-en="No sales yet" data-es="Sin ventas aún">${lang === 'es' ? 'Sin ventas aún' : 'No sales yet'}</div>`;
+      return;
+    }
+
+    let html = '';
+    sales.forEach(sale => {
+      const dt = new Date(sale.created_at);
+      const dateStr = dt.toLocaleDateString(lang === 'es' ? 'es-US' : 'en-US', {
+        month: 'short', day: 'numeric', year: 'numeric'
+      });
+      const timeStr = dt.toLocaleTimeString(lang === 'es' ? 'es-US' : 'en-US', {
+        hour: 'numeric', minute: '2-digit'
+      });
+
+      const statusIcon = sale.payment_status === 'paid' ? '✓' : '○';
+      const statusCls = sale.payment_status === 'paid' ? 'cp-sale-paid' : 'cp-sale-unpaid';
+
+      html += `<div class="cp-sale-row" data-sale-id="${sale.id}">
+        <div class="cp-sale-main">
+          <div class="cp-sale-left">
+            <span class="cp-sale-date">${dateStr}</span>
+            <span class="cp-sale-meta">${sale.receipt_number || timeStr}</span>
+          </div>
+          <div class="cp-sale-right">
+            <span class="cp-sale-total">$${parseFloat(sale.total).toFixed(2)}</span>
+            <span class="cp-sale-status ${statusCls}">${statusIcon} ${sale.payment_status === 'paid' ? (lang === 'es' ? 'Pagado' : 'Paid') : (lang === 'es' ? 'Pendiente' : 'Unpaid')}</span>
+          </div>
+        </div>
+        <div class="cp-sale-detail" id="cp-sale-detail-${sale.id}" style="display:none"></div>
+      </div>`;
+    });
+
+    container.innerHTML = html;
+
+    // Bind tap to expand/collapse sale details
+    container.querySelectorAll('.cp-sale-row').forEach(row => {
+      row.addEventListener('click', () => _toggleSaleDetail(row.dataset.saleId));
+    });
+
+  } catch (e) {
+    console.error('Client sales history error:', e);
+    container.innerHTML = `<div class="cp-row" style="justify-content:center;color:var(--tx-faint);font-size:.85rem">Error</div>`;
+  }
+}
+
+async function _toggleSaleDetail(saleId) {
+  const detail = document.getElementById('cp-sale-detail-' + saleId);
+  if (!detail) return;
+
+  // Toggle visibility
+  if (detail.style.display !== 'none') {
+    detail.style.display = 'none';
+    return;
+  }
+
+  // Load items if not already loaded
+  if (!detail.dataset.loaded) {
+    try {
+      const { data: items } = await sb
+        .from('driver_sale_items')
+        .select('product_label, quantity, unit_price, line_total')
+        .eq('sale_id', saleId);
+
+      if (items && items.length > 0) {
+        let html = '';
+        items.forEach(it => {
+          html += `<div class="cp-sale-item">
+            <span class="cp-sale-item-name">${_esc(it.product_label)}</span>
+            <span class="cp-sale-item-qty">${it.quantity} × $${parseFloat(it.unit_price).toFixed(2)}</span>
+            <span class="cp-sale-item-total">$${parseFloat(it.line_total).toFixed(2)}</span>
+          </div>`;
+        });
+        detail.innerHTML = html;
+      } else {
+        detail.innerHTML = `<div class="cp-sale-item" style="color:var(--tx-faint)">${lang === 'es' ? 'Sin detalles' : 'No details'}</div>`;
+      }
+      detail.dataset.loaded = '1';
+    } catch (e) {
+      console.error('Load sale items error:', e);
+    }
+  }
+
+  detail.style.display = 'block';
+}
+
+// ── Template Action Sheet ──
+function _cpOpenTemplateSheet() {
+  const list = document.getElementById('cp-action-list');
+  let html = '';
+
+  // "Use Driver Prices" option
+  html += `<button class="cp-action-item" data-source="driver" data-en="My Default Prices" data-es="Mis Precios Base">${lang === 'es' ? 'Mis Precios Base' : 'My Default Prices'}</button>`;
+
+  // List other clients that have custom pricing
+  _clientsList.forEach(c => {
+    if (c.id === _cpClientId) return; // skip self
+    html += `<button class="cp-action-item" data-source="${c.id}">${_esc(c.business_name)}</button>`;
+  });
+
+  list.innerHTML = html;
+  document.getElementById('cp-action-sheet-overlay').classList.add('open');
+
+  // Bind clicks
+  list.querySelectorAll('.cp-action-item').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const source = btn.dataset.source;
+      _cpCloseTemplateSheet();
+      await _cpApplyTemplate(source);
+    });
+  });
+
+  applyLang();
+}
+
+function _cpCloseTemplateSheet() {
+  document.getElementById('cp-action-sheet-overlay').classList.remove('open');
+}
+
+async function _cpApplyTemplate(source) {
+  if (source === 'driver') {
+    // Copy from driver's standard prices
+    _cpPrices = {};
+    Object.entries(driverPriceMap).forEach(([key, price]) => {
+      if (price > 0) _cpPrices[key] = price;
+    });
+  } else {
+    // Copy from another client's prices
+    if (!sb || !currentDriver) return;
+    try {
+      const { data, error } = await sb
+        .from('client_prices')
+        .select('product_key, price')
+        .eq('client_id', source)
+        .eq('driver_id', currentDriver.id);
+      if (error) throw error;
+      _cpPrices = {};
+      if (data && data.length > 0) {
+        data.forEach(p => { _cpPrices[p.product_key] = parseFloat(p.price); });
+      } else {
+        // Client has no custom prices — copy driver defaults
+        Object.entries(driverPriceMap).forEach(([key, price]) => {
+          if (price > 0) _cpPrices[key] = price;
+        });
+        showToast(lang === 'es' ? 'Este cliente usa precios estándar — copiando los tuyos' : 'This client uses standard prices — copying yours');
+      }
+    } catch (e) {
+      console.error('Template load error:', e);
+      showToast(lang === 'es' ? 'Error al copiar precios' : 'Error copying prices', 'error');
+      return;
+    }
+  }
+
+  _cpDirty = true;
+  _cpRenderPriceEditor();
+  showToast(lang === 'es' ? 'Precios copiados — revisa y guarda' : 'Prices copied — review & save');
+}
+
+// ── Wire up Client Profile events ──
+function _initClientProfileEvents() {
+  document.getElementById('cp-back').addEventListener('click', () => {
+    if (_cpDirty) {
+      showAppConfirm(
+        lang === 'es' ? '¿Salir sin guardar los cambios de precios?' : 'Leave without saving price changes?',
+        () => closeClientProfile()
+      );
+    } else {
+      closeClientProfile();
+    }
+  });
+
+  document.getElementById('cp-edit-btn').addEventListener('click', () => {
+    const id = _cpClientId;
+    if (id) {
+      _editFromProfile = true;
+      openClientModal(id);
+    }
+  });
+
+  document.getElementById('cp-custom-toggle').addEventListener('change', (e) => {
+    _cpHasCustom = e.target.checked;
+    _cpTogglePricingUI(_cpHasCustom);
+    _cpDirty = true;
+    if (_cpHasCustom && Object.keys(_cpPrices).length === 0) {
+      // Pre-fill with driver's standard prices
+      Object.entries(driverPriceMap).forEach(([key, price]) => {
+        if (price > 0) _cpPrices[key] = price;
+      });
+      _cpRenderPriceEditor();
+    }
+  });
+
+  document.getElementById('cp-template-btn').addEventListener('click', _cpOpenTemplateSheet);
+  document.getElementById('cp-action-cancel').addEventListener('click', _cpCloseTemplateSheet);
+  document.getElementById('cp-action-sheet-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) _cpCloseTemplateSheet();
+  });
+  document.getElementById('cp-save-prices-btn').addEventListener('click', _saveClientPrices);
+}
+
+// ── Sales Tab: get price for a product, checking client prices first ──
+let _activeClientPrices = null; // cached prices for the selected sale client
+
+async function loadActiveClientPrices(clientId) {
+  _activeClientPrices = null;
+  if (!sb || !currentDriver || !clientId) return;
+  try {
+    const { data } = await sb
+      .from('client_prices')
+      .select('product_key, price')
+      .eq('client_id', clientId)
+      .eq('driver_id', currentDriver.id);
+    if (data && data.length > 0) {
+      _activeClientPrices = {};
+      data.forEach(p => { _activeClientPrices[p.product_key] = parseFloat(p.price); });
+    }
+  } catch (e) { console.error('Load active client prices error:', e); }
+}
+
+function getSalePrice(productKey) {
+  // Client-specific price takes precedence
+  if (_activeClientPrices && _activeClientPrices[productKey] != null) {
+    return _activeClientPrices[productKey];
+  }
+  // Fallback to driver's standard price
+  return driverPriceMap[productKey] || 0;
+}
 
 /* ═══════════════════════════════════
    CUSTOM SCROLLABLE TIME PICKER
@@ -3476,26 +4249,29 @@ async function loadInventoryTab() {
 
   banner.innerHTML = '';
   let skels = '';
-  for(let i=0; i<5; i++) {
-    skels += `<div class="inv-skeleton-row"><div class="inv-sk-left"><div class="inv-sk-line" style="width:${Math.floor(Math.random()*40 + 30)}%"></div><div class="inv-sk-line thin" style="width:60%"></div></div><div class="inv-sk-ring"></div></div>`;
+  for (let i = 0; i < 5; i++) {
+    skels += `<div class="inv-skeleton-row"><div class="inv-sk-left"><div class="inv-sk-line" style="width:${Math.floor(Math.random() * 40 + 30)}%"></div><div class="inv-sk-line thin" style="width:60%"></div></div><div class="inv-sk-ring"></div></div>`;
   }
   summary.innerHTML = skels;
+  summary.style.display = 'block';
   form.style.display = 'none';
 
   await loadInventoryData();
 
   if (inventoryLoaded) {
+    summary.style.display = 'block';
     renderInventoryBanner();
     renderInventorySummary();
     form.style.display = 'none';
   } else {
     banner.innerHTML = '';
     summary.innerHTML = '';
+    summary.style.display = 'none';
     form.style.display = 'block';
     renderManualLoadForm();
   }
   applyLang();
-  
+
   // Update sales ticker since inventory data is ready
   updateSalesTicker();
 }
@@ -3505,7 +4281,21 @@ async function loadInventoryData() {
   try {
     const today = getTodayStr();
 
-    // Step 1: Check for picked_up orders today
+    // Step 1: Load manual inventory adjustments
+    const { data: loadRows, error: e3 } = await sb
+      .from('driver_inventory')
+      .select('product_key, morning_load')
+      .eq('driver_id', currentDriver.id)
+      .eq('date', today);
+
+    const manualMap = {};
+    if (!e3 && loadRows) {
+      loadRows.forEach(row => {
+        manualMap[row.product_key] = row.morning_load;
+      });
+    }
+
+    // Step 2: Check for picked_up orders today
     const { data: pickedUpOrders, error: e1 } = await sb
       .from('driver_orders')
       .select('id, order_number')
@@ -3513,55 +4303,52 @@ async function loadInventoryData() {
       .eq('status', 'picked_up')
       .eq('pickup_date', today);
 
+    const loadMap = {};
+    const orderNums = [];
+
     if (!e1 && pickedUpOrders && pickedUpOrders.length > 0) {
+      pickedUpOrders.forEach(o => { if (o.order_number) orderNums.push('#' + o.order_number); });
       const orderIds = pickedUpOrders.map(o => o.id);
       const { data: orderItems, error: e2 } = await sb
         .from('driver_order_items')
         .select('product_key, quantity, adjusted_quantity')
         .in('order_id', orderIds);
 
-      if (!e2 && orderItems && orderItems.length > 0) {
-        // Aggregate by product_key (keep _nt separate)
-        const loadMap = {};
+      if (!e2 && orderItems) {
         orderItems.forEach(item => {
           const qty = (item.adjusted_quantity !== null && item.adjusted_quantity !== undefined)
             ? item.adjusted_quantity : item.quantity;
           loadMap[item.product_key] = (loadMap[item.product_key] || 0) + qty;
         });
-
-        // Get today's sold quantities
-        const soldMap = await getTodaySoldMap();
-
-        driverInventory = {};
-        Object.entries(loadMap).forEach(([key, loaded]) => {
-          const sold = soldMap[key] || 0;
-          driverInventory[key] = { loaded, sold, remaining: loaded - sold };
-        });
-
-        const orderNums = pickedUpOrders
-          .map(o => o.order_number ? '#' + o.order_number : null)
-          .filter(Boolean);
-        inventorySource = 'order:' + (orderNums.length > 0 ? orderNums.join(', ') : 'Order');
-        inventoryLoaded = true;
-        return;
       }
     }
 
-    // Step 2: Fall back to manual driver_inventory
-    const { data: loadRows, error: e3 } = await sb
-      .from('driver_inventory')
-      .select('product_key, morning_load')
-      .eq('driver_id', currentDriver.id)
-      .eq('date', today);
+    // Merge manual overrides into loadMap
+    let hasManual = false;
+    Object.keys(manualMap).forEach(key => {
+      loadMap[key] = manualMap[key]; // Manual override takes precedence
+      hasManual = true;
+    });
 
-    if (!e3 && loadRows && loadRows.length > 0) {
+    if (Object.keys(loadMap).length > 0) {
+      // Get today's sold quantities
       const soldMap = await getTodaySoldMap();
+
       driverInventory = {};
-      loadRows.forEach(row => {
-        const sold = soldMap[row.product_key] || 0;
-        driverInventory[row.product_key] = { loaded: row.morning_load, sold, remaining: row.morning_load - sold };
+      Object.entries(loadMap).forEach(([key, loaded]) => {
+        const sold = soldMap[key] || 0;
+        driverInventory[key] = { loaded, sold, remaining: loaded - sold };
       });
-      inventorySource = 'manual';
+
+      // Determine source string
+      if (orderNums.length > 0 && hasManual) {
+        inventorySource = 'order:' + orderNums.join(', ') + ' (+ Adjusted)';
+      } else if (orderNums.length > 0) {
+        inventorySource = 'order:' + orderNums.join(', ');
+      } else {
+        inventorySource = 'manual';
+      }
+      
       inventoryLoaded = true;
       return;
     }
@@ -3607,12 +4394,78 @@ function renderInventoryBanner() {
   if (!banner) return;
 
   const isOrder = inventorySource.indexOf('order:') === 0;
-  const label = isOrder
-    ? '📦 ' + inventorySource.replace('order:', lang === 'es' ? 'Cargado de Pedido ' : 'From Order ')
-    : '✏️ ' + (lang === 'es' ? 'Carga Manual' : 'Manual Entry');
-  const cls = isOrder ? 'inv-banner order' : 'inv-banner manual';
 
-  banner.innerHTML = `<div class="${cls}">${label}</div>`;
+  let sourceHtml = '';
+  if (isOrder) {
+    const orderLabel = inventorySource.replace('order:', lang === 'es' ? 'Cargado de Pedido ' : 'From Order ');
+    sourceHtml = `<div class="inv-banner order">📦 ${orderLabel}</div>`;
+  } else {
+    // Small pill badge for manual adjustments
+    sourceHtml = `<span class="inv-adjusted-badge"><i data-lucide="pencil"></i> ${lang === 'es' ? 'Ajustado' : 'Adjusted'}</span>`;
+  }
+
+  const addMoreEn = 'Edit Inventory';
+  const addMoreEs = 'Editar Inventario';
+
+  const clearEn = 'Clear';
+  const clearEs = 'Borrar';
+
+  banner.innerHTML = `<div class="inv-banner-row">${sourceHtml}
+    <div style="display: flex; gap: 4px; align-items: center;">
+      <button class="inv-clear-btn" id="inv-clear-btn" data-en="${clearEn}" data-es="${clearEs}">
+        ${lang === 'es' ? clearEs : clearEn}
+      </button>
+      <button class="inv-add-more-btn" id="inv-add-more-btn" style="margin-top: 0" data-en="${addMoreEn}" data-es="${addMoreEs}">
+        <i data-lucide="pencil"></i> ${lang === 'es' ? addMoreEs : addMoreEn}
+      </button>
+    </div>
+  </div>`;
+
+  document.getElementById('inv-add-more-btn')?.addEventListener('click', () => {
+    const form = document.getElementById('inv-load-form');
+    const summary = document.getElementById('inv-summary');
+    summary.style.display = 'none';
+    banner.querySelector('.inv-add-more-btn').style.display = 'none';
+    if(banner.querySelector('.inv-clear-btn')) banner.querySelector('.inv-clear-btn').style.display = 'none';
+    form.style.display = 'block';
+    renderManualLoadForm();
+  });
+
+  document.getElementById('inv-clear-btn')?.addEventListener('click', async () => {
+    const msg = lang === 'es' 
+      ? '¿Estás seguro de que quieres borrar tu inventario actual? Tendrás que cargarlo de nuevo.' 
+      : 'Are you sure you want to clear your current inventory? You will have to load it again.';
+    if (!confirm(msg)) return;
+
+    try {
+      const btn = document.getElementById('inv-clear-btn');
+      btn.disabled = true;
+      btn.textContent = '...';
+
+      const { error } = await sb.from('driver_inventory').delete().eq('driver_id', currentDriver.id);
+      if (error) throw error;
+
+      showToast(lang === 'es' ? 'Inventario borrado' : 'Inventory cleared', 'success');
+      
+      // Reset state
+      driverInventory = {};
+      inventorySource = '';
+      inventoryLoaded = false;
+      
+      // Reload inventory view
+      loadInventoryTab();
+    } catch (e) {
+      console.error('Error clearing inventory:', e);
+      showToast(lang === 'es' ? 'Error al borrar' : 'Error clearing inventory', 'error');
+      const btn = document.getElementById('inv-clear-btn');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = lang === 'es' ? clearEs : clearEn;
+      }
+    }
+  });
+
+  requestAnimationFrame(() => lucide.createIcons());
 }
 
 function renderInventorySummary() {
@@ -3630,13 +4483,17 @@ function renderInventorySummary() {
   Object.values(PRODUCTS).forEach(sec => {
     sec.items.forEach(item => {
       labelMap[item.key] = L(item);
+      // Add _nt label for standard items
+      if (sec.type !== 'redondo') {
+        labelMap[item.key + '_nt'] = L(item) + ' (NT)';
+      }
       if (item.cols) {
         item.cols.forEach(col => {
           const subKey = item.key + '_' + col;
           const isNT = col.endsWith('_nt');
           const base = isNT ? col.replace('_nt', '') : col;
           const colLabel = base.charAt(0).toUpperCase() + base.slice(1);
-          labelMap[subKey] = L(item) + ' — ' + colLabel + (isNT ? ' NT' : '');
+          labelMap[subKey] = L(item) + ' — ' + colLabel + (isNT ? ' (NT)' : '');
         });
       }
     });
@@ -3648,7 +4505,7 @@ function renderInventorySummary() {
     const pct = p.loaded > 0 ? Math.max(0, (p.remaining / p.loaded) * 100) : 0;
     const offset = 119.38 - (pct / 100) * 119.38; // 2 * PI * 19 = 119.38
     const ringColor = p.remaining <= 0 ? '#c0392b' : p.remaining < 3 ? '#d4a017' : '#2a9d5c';
-    
+
     const lblLoaded = lang === 'es' ? 'cargado' : 'loaded';
     const lblSold = lang === 'es' ? 'vendido' : 'sold';
     const lblLeft = lang === 'es' ? 'restante' : 'left';
@@ -3682,6 +4539,13 @@ function renderInventorySummary() {
       if (driverInventory[item.key]) {
         matching.push({ key: item.key, label: labelMap[item.key] || item.key, ...driverInventory[item.key] });
       }
+      // Check _nt variant for standard items
+      if (sec.type !== 'redondo') {
+        const ntKey = item.key + '_nt';
+        if (driverInventory[ntKey]) {
+          matching.push({ key: ntKey, label: labelMap[ntKey] || ntKey, ...driverInventory[ntKey] });
+        }
+      }
       if (item.cols) {
         item.cols.forEach(col => {
           const subKey = item.key + '_' + col;
@@ -3705,7 +4569,7 @@ function renderInventorySummary() {
       const catOffset = 87.96 - (catPct / 100) * 87.96;
       const catColor = catTotalRem <= 0 ? '#c0392b' : catPct < 25 ? '#d4a017' : '#2a9d5c';
 
-      html += `<div class="inv-category">`;
+      html += `<div class="inv-category collapsed">`;
       html += `<div class="inv-cat-title" onclick="toggleInvCategory(this)">
                  <span data-en="${sec.en}" data-es="${sec.es}">${L(sec)}</span>
                  <div class="inv-cat-title-right">
@@ -3751,7 +4615,7 @@ function renderInventorySummary() {
       const catOffset = 87.96 - (catPct / 100) * 87.96;
       const catColor = catTotalRem <= 0 ? '#c0392b' : catPct < 25 ? '#d4a017' : '#2a9d5c';
 
-      html += `<div class="inv-category">
+      html += `<div class="inv-category collapsed">
                  <div class="inv-cat-title" onclick="toggleInvCategory(this)">
                    <span>${lang === 'es' ? 'Otro' : 'Other'}</span>
                    <div class="inv-cat-title-right">
@@ -3794,7 +4658,7 @@ function renderInventorySummary() {
   container.innerHTML = html;
 }
 
-window.toggleInvCategory = function(el) {
+window.toggleInvCategory = function (el) {
   const cat = el.closest('.inv-category');
   if (cat) cat.classList.toggle('collapsed');
 };
@@ -3822,16 +4686,22 @@ function renderManualLoadForm() {
           const isNT = col.endsWith('_nt');
           const base = isNT ? col.replace('_nt', '') : col;
           const colLabel = base.charAt(0).toUpperCase() + base.slice(1);
-          const fullLabel = L(item) + ' — ' + colLabel + (isNT ? ' NT' : '');
+          const fullLabel = L(item) + ' — ' + colLabel + (isNT ? ' (NT)' : '');
           html += `<div class="inv-form-row">`;
           html += `<span class="inv-form-label">${_esc(fullLabel)}</span>`;
           html += `<input type="number" class="inv-form-input" data-pk="${subKey}" min="0" value="0" inputmode="numeric">`;
           html += `</div>`;
         });
       } else {
+        // Regular variant
         html += `<div class="inv-form-row">`;
         html += `<span class="inv-form-label" data-en="${item.en}" data-es="${item.es}">${L(item)}</span>`;
         html += `<input type="number" class="inv-form-input" data-pk="${item.key}" min="0" value="0" inputmode="numeric">`;
+        html += `</div>`;
+        // No-ticket variant
+        html += `<div class="inv-form-row">`;
+        html += `<span class="inv-form-label">${L(item)} (NT)</span>`;
+        html += `<input type="number" class="inv-form-input" data-pk="${item.key}_nt" min="0" value="0" inputmode="numeric">`;
         html += `</div>`;
       }
     });
@@ -3839,9 +4709,21 @@ function renderManualLoadForm() {
     html += `</div>`;
   });
 
-  html += `<button class="inv-save-btn" id="inv-save-btn" data-en="Save Inventory" data-es="Guardar Inventario">${lang === 'es' ? 'Guardar Inventario' : 'Save Inventory'}</button>`;
+  html += `<div class="inv-save-float" id="inv-save-float">
+    <button class="inv-save-btn" id="inv-save-btn" data-en="Save Inventory" data-es="Guardar Inventario">${lang === 'es' ? 'Guardar Inventario' : 'Save Inventory'}</button>
+  </div>`;
 
   container.innerHTML = html;
+
+  // Pre-fill with existing inventory values
+  if (inventoryLoaded && driverInventory) {
+    container.querySelectorAll('.inv-form-input').forEach(inp => {
+      const pk = inp.dataset.pk;
+      if (driverInventory[pk] && driverInventory[pk].loaded > 0) {
+        inp.value = driverInventory[pk].loaded;
+      }
+    });
+  }
 
   // Bind save
   document.getElementById('inv-save-btn').addEventListener('click', saveManualLoad);
@@ -3881,9 +4763,15 @@ async function saveManualLoad() {
       return;
     }
 
+    // Delete existing manual inventory for today to allow clean insert and removals (setting to 0)
+    await sb.from('driver_inventory')
+      .delete()
+      .eq('driver_id', currentDriver.id)
+      .eq('date', today);
+
     const { error } = await sb
       .from('driver_inventory')
-      .upsert(rows, { onConflict: 'driver_id,product_key,date' });
+      .insert(rows);
 
     if (error) throw error;
 
@@ -3897,6 +4785,7 @@ async function saveManualLoad() {
 
     showToast(lang === 'es' ? 'Inventario guardado' : 'Inventory saved', 'success');
     loadInventoryTab();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (e) {
     console.error('Save inventory error:', e);
     showToast(lang === 'es' ? 'Error al guardar' : 'Error saving inventory', 'error');
@@ -3911,7 +4800,7 @@ async function saveManualLoad() {
 let _driverRevenueChart = null;
 
 async function loadOverviewDashboard(timeframe) {
-  if (!sb || !currentDriver || !advancedFeaturesEnabled) return;
+  if (!sb || !currentDriver) return;
   if (!timeframe) timeframe = document.getElementById('overview-filter')?.value || 'this_month';
 
   const now = new Date();
@@ -4170,42 +5059,320 @@ function renderTopClients(salesData) {
    ═══════════════════════════════════ */
 async function checkAdvancedFeatures() {
   if (!currentDriver) return;
-  
+
   try {
     if (sb) {
       const { data, error } = await sb
         .from('drivers')
-        .select('advanced_features')
+        .select('scanner_enabled')
         .eq('id', currentDriver.id)
         .single();
-      
+
       if (!error && data) {
-        currentDriver.advanced_features = data.advanced_features;
-        // Optionally update the local storage session so it persists
+        currentDriver.scanner_enabled = data.scanner_enabled;
+        // Update local storage session so it persists
         const saved = localStorage.getItem('cecilia_driver');
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
-            parsed.advanced_features = data.advanced_features;
+            parsed.scanner_enabled = data.scanner_enabled;
             localStorage.setItem('cecilia_driver', JSON.stringify(parsed));
-          } catch(e) {}
+          } catch (e) { }
         }
       }
     }
   } catch (e) {
-    _log('Error checking advanced features:', e);
+    _log('Error checking scanner features:', e);
   }
-  
-  advancedFeaturesEnabled = !!currentDriver.advanced_features;
 
-  // Show or hide advanced tabs
-  document.querySelectorAll('.advanced-feature').forEach(el => {
-    el.style.display = advancedFeaturesEnabled ? '' : 'none';
+  // Show or hide scanner
+  const scannerEnabled = !!currentDriver.scanner_enabled;
+  document.querySelectorAll('.scanner-feature').forEach(el => {
+    el.style.display = scannerEnabled ? '' : 'none';
   });
 
-  // Load analytics dashboardif advanced features are on
-  if (advancedFeaturesEnabled) {
-    loadDriverClients(); // pre-load client names for leaderboard
-    loadOverviewDashboard();
+  // Wire up scanner events if scanner is enabled
+  if (scannerEnabled) {
+    _initDriverScanner();
   }
 }
+
+/* ═══════════════════════════════════
+   TICKET SCANNER (DRIVER)
+   ═══════════════════════════════════ */
+let _driverScannerInited = false;
+
+function _initDriverScanner() {
+  if (_driverScannerInited) return;
+  _driverScannerInited = true;
+
+  const scanBtn = document.getElementById('scan-ticket-btn');
+  const scanInput = document.getElementById('scan-ticket-input');
+  const scanClear = document.getElementById('scan-result-clear');
+  const scanReviewBtn = document.getElementById('scan-review-btn');
+  const scanReviewClose = document.getElementById('scan-review-close');
+  const scanReviewBackdrop = document.getElementById('scan-review-backdrop');
+
+  if (scanBtn && scanInput) {
+    scanBtn.onclick = () => scanInput.click();
+    scanInput.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      await _driverScanTicketFile(file);
+      scanInput.value = '';
+    };
+  }
+  if (scanClear) {
+    scanClear.onclick = () => _driverClearScanResults();
+  }
+  if (scanReviewBtn) {
+    scanReviewBtn.onclick = () => _driverOpenScanReview();
+  }
+  if (scanReviewClose) {
+    scanReviewClose.onclick = () => _driverCloseScanReview();
+  }
+  if (scanReviewBackdrop) {
+    scanReviewBackdrop.onclick = () => _driverCloseScanReview();
+  }
+}
+
+/* ── Image preprocessing (sharpen + contrast for OCR) ── */
+async function _preprocessTicketImage(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX_DIM = 1200;
+      let w = img.width, h = img.height;
+      if (w > MAX_DIM || h > MAX_DIM) {
+        const scale = MAX_DIM / Math.max(w, h);
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const imageData = ctx.getImageData(0, 0, w, h);
+      const d = imageData.data;
+      const factor = 1.8;
+      for (let i = 0; i < d.length; i += 4) {
+        const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        let val = ((gray / 255 - 0.5) * factor + 0.5) * 255;
+        val = Math.max(0, Math.min(255, val));
+        d[i] = d[i + 1] = d[i + 2] = val;
+      }
+      ctx.putImageData(imageData, 0, 0);
+      resolve(canvas.toDataURL('image/jpeg', 0.7));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+/* ── Scan a ticket file ── */
+async function _driverScanTicketFile(file) {
+  const btn = document.getElementById('scan-ticket-btn');
+  const banner = document.getElementById('scan-result-banner');
+  const bannerText = document.getElementById('scan-result-text');
+
+  if (btn) { btn.classList.add('scanning'); btn.querySelector('span').textContent = lang === 'es' ? 'Procesando...' : 'Processing...'; }
+
+  try {
+    const rawBase64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const base64 = await _preprocessTicketImage(rawBase64);
+
+    const resp = await fetch('/api/scan-ticket', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64 }),
+    });
+
+    const data = await resp.json();
+    if (!resp.ok || !data.success) throw new Error(data.message || 'Scan failed');
+
+    if (data.items.length === 0) {
+      if (banner && bannerText) {
+        banner.style.display = 'flex';
+        banner.className = 'scan-result-banner has-warnings';
+        bannerText.textContent = lang === 'es' ? 'No se encontraron productos en la imagen.' : 'No products found in image.';
+      }
+      return;
+    }
+
+    // Save current form state first
+    saveFormToOrder(activeOrderIdx);
+    const order = orders[activeOrderIdx];
+    let filled = 0, uncertain = 0, unmatched = 0;
+
+    data.items.forEach(item => {
+      if (!item.matched || !item.systemKey) { unmatched++; return; }
+      const key = item.systemKey;
+      const rawQty = parseFloat(item.qty) || 0;
+      if (rawQty <= 0) return;
+
+      const isBirthdayCake = key.startsWith('hb_');
+      const qty = isBirthdayCake ? rawQty : Math.round(rawQty * 12);
+
+      if (key in order.qty) {
+        order.qty[key] = qty;
+        filled++;
+      } else if ((key + '_inside') in order.qty) {
+        order.qty[key + '_inside'] = qty;
+        filled++;
+      } else {
+        unmatched++;
+        return;
+      }
+      if (!item.confident) uncertain++;
+    });
+
+    // Reload form from data
+    loadOrderToForm(activeOrderIdx);
+
+    // Re-apply scan highlights
+    data.items.forEach(item => {
+      if (!item.matched || !item.systemKey) return;
+      const key = item.systemKey;
+      const input = document.querySelector(`.qty-input[data-key="${key}"], .qty-input[data-key="${key}_inside"]`);
+      if (input && (parseFloat(item.qty) || 0) > 0) {
+        input.classList.add(item.confident !== false ? 'scan-filled' : 'scan-uncertain');
+      }
+    });
+
+    updateFooterCount();
+
+    // Store scan data in the order object
+    const currentOrder = orders[activeOrderIdx];
+    if (currentOrder) {
+      currentOrder.scanData = data.items.map(item => {
+        const key = item.systemKey;
+        const rawQty = parseFloat(item.qty) || 0;
+        const isBirthdayCake = key && key.startsWith('hb_');
+        return {
+          code: item.code,
+          description: item.description,
+          rawQty,
+          convertedQty: (key && rawQty > 0) ? (isBirthdayCake ? rawQty : Math.round(rawQty * 12)) : 0,
+          confident: item.confident,
+          matched: item.matched,
+          isBirthdayCake,
+        };
+      });
+    }
+
+    // Show result banner
+    if (banner && bannerText) {
+      banner.style.display = 'flex';
+      let msg = lang === 'es'
+        ? `${filled} producto(s) escaneado(s)`
+        : `${filled} product(s) scanned`;
+      if (uncertain > 0) msg += lang === 'es' ? `, ${uncertain} por revisar` : `, ${uncertain} to review`;
+      if (unmatched > 0) msg += lang === 'es' ? `, ${unmatched} sin coincidencia` : `, ${unmatched} unmatched`;
+
+      const hasMismatch = data.mismatch && data.mismatch.expected !== undefined;
+      if (hasMismatch) {
+        const m = data.mismatch;
+        const label = m.type === 'total_boxes' ? 'Total Boxes' : 'Total Units';
+        msg += lang === 'es'
+          ? ` ⚠️ ${label}: ticket=${m.expected}, escaneo=${m.computed}`
+          : ` ⚠️ ${label}: ticket=${m.expected}, scan=${m.computed}`;
+      }
+
+      bannerText.textContent = msg;
+      banner.className = (uncertain > 0 || unmatched > 0 || hasMismatch)
+        ? 'scan-result-banner has-warnings'
+        : 'scan-result-banner';
+    }
+
+  } catch (err) {
+    console.error('Ticket scan error:', err);
+    if (banner && bannerText) {
+      banner.style.display = 'flex';
+      banner.className = 'scan-result-banner has-warnings';
+      bannerText.textContent = err.message || (lang === 'es' ? 'Error al escanear' : 'Scan failed');
+    }
+  } finally {
+    if (btn) {
+      btn.classList.remove('scanning');
+      btn.querySelector('span').textContent = lang === 'es' ? 'Adjuntar Ticket' : 'Attach Ticket';
+    }
+  }
+}
+
+/* ── Clear scan results ── */
+function _driverClearScanResults() {
+  const banner = document.getElementById('scan-result-banner');
+  if (banner) banner.style.display = 'none';
+  // Remove scan highlights
+  document.querySelectorAll('.scan-filled, .scan-uncertain').forEach(el => {
+    el.classList.remove('scan-filled', 'scan-uncertain');
+  });
+  // Clear scan data from current order
+  const order = orders[activeOrderIdx];
+  if (order) order.scanData = null;
+}
+
+/* ── Open scan review sheet ── */
+function _driverOpenScanReview() {
+  const overlay = document.getElementById('scan-review-overlay');
+  const body = document.getElementById('scan-review-body');
+  const order = orders[activeOrderIdx];
+  const scanData = order && order.scanData;
+  if (!overlay || !body || !scanData || scanData.length === 0) return;
+
+  let html = '';
+  let totalItems = 0, uncertainCount = 0;
+
+  scanData.forEach(item => {
+    if (item.rawQty <= 0 && item.matched) return;
+    const isUncertain = !item.confident;
+    if (isUncertain) uncertainCount++;
+    if (item.matched && item.rawQty > 0) totalItems++;
+
+    const rowClass = isUncertain ? 'scan-review-row uncertain' : 'scan-review-row';
+    const badge = isUncertain ? '<span class="scan-review-badge">⚠</span>' : '';
+    const rawLabel = item.isBirthdayCake
+      ? ''
+      : `<span class="scan-review-raw">(${item.rawQty} on ticket)</span>`;
+
+    html += `<div class="${rowClass}">
+      <span class="scan-review-code">${item.code}</span>
+      <span class="scan-review-desc">${item.description}${badge}</span>
+      <span class="scan-review-qty">${item.convertedQty}${rawLabel}</span>
+    </div>`;
+  });
+
+  let summary = lang === 'es'
+    ? `${totalItems} producto(s)`
+    : `${totalItems} item(s)`;
+  if (uncertainCount > 0) {
+    summary += lang === 'es'
+      ? ` · ${uncertainCount} incierto(s)`
+      : ` · ${uncertainCount} uncertain`;
+  }
+  html += `<div class="scan-review-summary">${summary}</div>`;
+
+  body.innerHTML = html;
+  overlay.classList.add('open');
+  body.scrollTop = 0;
+  document.documentElement.dataset.scrollY = window.scrollY;
+  document.body.style.top = `-${window.scrollY}px`;
+  document.documentElement.classList.add('scroll-locked');
+}
+
+/* ── Close scan review sheet ── */
+function _driverCloseScanReview() {
+  const overlay = document.getElementById('scan-review-overlay');
+  if (overlay) overlay.classList.remove('open');
+  document.documentElement.classList.remove('scroll-locked');
+  const scrollY = document.documentElement.dataset.scrollY || '0';
+  document.body.style.top = '';
+  window.scrollTo(0, parseInt(scrollY));
+}
+

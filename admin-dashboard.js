@@ -3488,15 +3488,13 @@ async function renderOrderSheet() {
 
   // Actions
   let actionsHtml = '';
-  if (order.status === 'pending' || (order.status === 'sent' && canEditOrder(order))) {
+  if (order.status === 'pending') {
     // Fully editable: one "Save Changes" button that saves everything including payment
     actionsHtml += `<button class="btn-save" onclick="saveOrderChanges()" data-en="Save Changes" data-es="Guardar Cambios">${lang === 'es' ? 'Guardar Cambios' : 'Save Changes'}</button>`;
-  } else if (order.status === 'sent' || order.status === 'confirmed' || order.status === 'picked_up') {
+    actionsHtml += `<button class="btn-pickup" onclick="markAsPickedUp()" data-en="Mark as Picked Up" data-es="Marcar Recogido">&#10003; ${lang === 'es' ? 'Marcar Recogido' : 'Mark as Picked Up'}</button>`;
+  } else if (order.status === 'picked_up') {
     // Not fully editable, but payment is always editable
     actionsHtml += `<button class="btn-save" onclick="savePaymentOnly()" data-en="Update Payment" data-es="Actualizar Pago">${lang === 'es' ? 'Actualizar Pago' : 'Update Payment'}</button>`;
-  }
-  if (order.status === 'pending' || order.status === 'sent' || order.status === 'confirmed') {
-    actionsHtml += `<button class="btn-pickup" onclick="markAsPickedUp()" data-en="Mark as Picked Up" data-es="Marcar Recogido">&#10003; ${lang === 'es' ? 'Marcar Recogido' : 'Mark as Picked Up'}</button>`;
   }
   // Export bar
   actionsHtml += `<div class="export-bar">
@@ -3760,15 +3758,21 @@ window.confirmAndSend = async function() {
     await window.saveOrderChanges();
 
     const now = new Date();
+    const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
 
-    await sb.from('driver_orders').update({
+    const updateData = {
       status: 'picked_up',
       confirmed_at: now.toISOString(),
       picked_up_at: now.toISOString()
-    }).eq('id', detailOrder.id);
+    };
+    // Ensure pickup_date is set so inventory lookup works
+    if (!detailOrder.pickup_date) updateData.pickup_date = todayStr;
+
+    await sb.from('driver_orders').update(updateData).eq('id', detailOrder.id);
 
     detailOrder.status = 'picked_up';
     detailOrder.confirmed_at = now.toISOString();
+    if (!detailOrder.pickup_date) detailOrder.pickup_date = todayStr;
 
     showToast(lang === 'es' ? 'Pedido confirmado y marcado como recogido' : 'Order confirmed & marked as picked up', 'success');
 
@@ -3789,12 +3793,20 @@ window.markAsPickedUp = async function() {
     // Save any form adjustments first
     await window.saveOrderChanges();
 
-    await sb.from('driver_orders').update({
+    const now = new Date();
+    const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+
+    const updateData = {
       status: 'picked_up',
-      picked_up_at: new Date().toISOString()
-    }).eq('id', detailOrder.id);
+      picked_up_at: now.toISOString()
+    };
+    // Ensure pickup_date is set so inventory lookup works
+    if (!detailOrder.pickup_date) updateData.pickup_date = todayStr;
+
+    await sb.from('driver_orders').update(updateData).eq('id', detailOrder.id);
 
     detailOrder.status = 'picked_up';
+    if (!detailOrder.pickup_date) detailOrder.pickup_date = todayStr;
 
     showToast(lang === 'es' ? 'Pedido marcado como recogido' : 'Order marked as picked up', 'success');
 
@@ -4554,14 +4566,11 @@ function renderDriverTable() {
       ? (lang === 'es' ? 'Activo' : 'Active')
       : (lang === 'es' ? 'Desactivado' : 'Disabled');
     const balClass = d.balance > 0 ? 'has-balance' : 'no-balance';
-    const advBadge = d.advanced_features
-      ? `<span class="adv-badge" title="Advanced Features Enabled"><i data-lucide="zap" style="width:14px;height:14px;color:var(--yellow);margin-left:6px"></i></span>`
-      : '';
     const scanBadge = d.scanner_enabled
       ? `<span class="adv-badge" title="Scanner Enabled"><i data-lucide="camera" style="width:14px;height:14px;color:var(--red);margin-left:6px"></i></span>`
       : '';
     return `<tr onclick="showDriverProfile('${d.id}')">
-      <td class="driver-name" style="display:flex;align-items:center">${_esc(d.name)} ${advBadge}${scanBadge}</td>
+      <td class="driver-name" style="display:flex;align-items:center">${_esc(d.name)} ${scanBadge}</td>
       <td class="driver-code"><span class="code-masked" data-code="${_escAttr(d.code)}">••••••</span> <button class="code-eye-btn" onclick="event.stopPropagation();toggleCode(this)" title="Show code"><i data-lucide="eye"></i></button></td>
       <td class="driver-phone hide-mobile">${_esc(d.phone || '—')}</td>
       <td><span class="${statusClass}">${statusText}</span></td>
@@ -4628,9 +4637,7 @@ window.showEditDriver = async function(driverId) {
   document.getElementById('df-active').checked = driver.is_active;
   document.getElementById('df-active-label').textContent =
     driver.is_active ? (lang === 'es' ? 'Activo' : 'Active') : (lang === 'es' ? 'Desactivado' : 'Disabled');
-  // Advanced features toggle
-  document.getElementById('df-advanced-wrap').style.display = 'flex';
-  document.getElementById('df-advanced').checked = !!driver.advanced_features;
+  // (advanced_features toggle removed — now available to all drivers)
   // Scanner enabled toggle
   document.getElementById('df-scanner-wrap').style.display = 'flex';
   document.getElementById('df-scanner').checked = !!driver.scanner_enabled;
@@ -4910,16 +4917,14 @@ async function saveDriver() {
 
     if (editingDriverId) {
       // Update driver
-      const advFeatures = document.getElementById('df-advanced').checked;
       const scannerEnabled = document.getElementById('df-scanner').checked;
-      const { error } = await sb.from('drivers').update({ name, code, phone, is_active: isActive, advanced_features: advFeatures, scanner_enabled: scannerEnabled }).eq('id', editingDriverId);
+      const { error } = await sb.from('drivers').update({ name, code, phone, is_active: isActive, scanner_enabled: scannerEnabled }).eq('id', editingDriverId);
       if (error) throw error;
       driverId = editingDriverId;
     } else {
       // Insert new driver
-      const advFeatures = document.getElementById('df-advanced').checked;
       const scannerEnabled = document.getElementById('df-scanner').checked;
-      const { data: newDriver, error } = await sb.from('drivers').insert({ name, code, phone, is_active: isActive, advanced_features: advFeatures, scanner_enabled: scannerEnabled }).select('id').single();
+      const { data: newDriver, error } = await sb.from('drivers').insert({ name, code, phone, is_active: isActive, scanner_enabled: scannerEnabled }).select('id').single();
       if (error) throw error;
       driverId = newDriver.id;
     }
@@ -4988,93 +4993,87 @@ window.showDriverProfile = async function(driverId) {
   const { data: driver } = await sb.from('drivers').select('*').eq('id', driverId).single();
   if (!driver) return;
 
-  // Compute balance
-  const { data: unpaidOrders } = await sb.from('driver_orders')
-    .select('id, business_name, submitted_at, total_amount, payment_amount, payment_status, order_number')
+  // Fetch all orders for this driver to compute financials and recent activity
+  const { data: allOrders } = await sb.from('driver_orders')
+    .select('id, business_name, submitted_at, total_amount, payment_amount, payment_status, status, order_number')
     .eq('driver_id', driverId)
-    .in('payment_status', ['not_paid', 'partial'])
     .order('submitted_at', { ascending: false });
 
-  let totalBalance = 0;
-  if (unpaidOrders) {
-    unpaidOrders.forEach(o => {
-      totalBalance += Math.max(0, parseFloat(o.total_amount || 0) - parseFloat(o.payment_amount || 0));
+  let gross = 0;
+  let collected = 0;
+  let pending = 0;
+  let recentOrders = [];
+
+  if (allOrders) {
+    recentOrders = allOrders.slice(0, 3);
+    allOrders.forEach(o => {
+      const t = parseFloat(o.total_amount || 0);
+      const c = parseFloat(o.payment_amount || 0);
+      gross += t;
+      collected += c;
+      pending += Math.max(0, t - c);
     });
   }
 
   // Profile header
+  const initials = driver.name ? driver.name.substring(0, 2).toUpperCase() : 'DR';
   const statusBadge = driver.is_active
     ? `<span class="badge badge-sent">${lang === 'es' ? 'Activo' : 'Active'}</span>`
     : `<span class="badge badge-pending">${lang === 'es' ? 'Desactivado' : 'Disabled'}</span>`;
-  const balClass = totalBalance > 0 ? 'has-balance' : 'no-balance';
+  const ocrBadge = driver.scanner_enabled 
+    ? `<span class="badge badge-sent" style="background:rgba(200,16,46,0.1);color:var(--red);">OCR</span>`
+    : '';
 
   document.getElementById('driver-profile-header').innerHTML = `
-    <div class="profile-info">
-      <div class="profile-name">${_esc(driver.name)}</div>
-      <div class="profile-meta">
-        <span class="code-masked" data-code="${_escAttr(driver.code)}">••••••</span>
-        <button class="code-eye-btn" onclick="toggleCode(this)" title="Show code"><i data-lucide="eye"></i></button>
-        ${driver.phone ? `<span>${_esc(driver.phone)}</span>` : ''}
-        ${statusBadge}
-      </div>
+    <div class="apple-avatar">${initials}</div>
+    <div class="apple-contact-name">${_esc(driver.name)}</div>
+    <div class="apple-contact-code">
+      <span class="code-masked" data-code="${_escAttr(driver.code)}">••••••</span>
+      <button class="code-eye-btn" onclick="toggleCode(this)" title="Show code" style="vertical-align:middle;margin:-2px 0 0 2px;"><i data-lucide="eye"></i></button>
+      ${driver.phone ? ' • ' + _esc(driver.phone) : ''}
     </div>
-    <div class="profile-balance-card">
-      <div class="profile-balance-label">${lang === 'es' ? 'Saldo Pendiente' : 'Outstanding Balance'}</div>
-      <div class="profile-balance-amount ${balClass}">${formatCurrency(totalBalance)}</div>
-    </div>
+    <div class="apple-contact-badges">${statusBadge} ${ocrBadge}</div>
   `;
 
   // Balance breakdown
-  if (unpaidOrders && unpaidOrders.length > 0) {
-    document.getElementById('profile-balance-list').innerHTML = unpaidOrders.map(o => {
-      const remaining = Math.max(0, parseFloat(o.total_amount || 0) - parseFloat(o.payment_amount || 0));
-      return `<div class="balance-row" onclick="openOrderDetail('${o.id}')">
-        <div class="balance-row-info">
-          <span class="balance-row-date">${formatDate(o.submitted_at)} — #${o.order_number}</span>
-          <span class="balance-row-business">${_esc(o.business_name || (lang === 'es' ? 'Sin negocio' : 'No business'))}</span>
-        </div>
-        <div class="balance-row-amounts">
-          <span class="balance-row-total">${lang === 'es' ? 'Total:' : 'Total:'} ${formatCurrency(o.total_amount)}</span>
-          <span class="balance-row-remaining">${lang === 'es' ? 'Resta:' : 'Remaining:'} ${formatCurrency(remaining)}</span>
-        </div>
-      </div>`;
-    }).join('');
-  } else {
-    document.getElementById('profile-balance-list').innerHTML =
-      `<div class="empty-state">${lang === 'es' ? 'Sin saldo pendiente' : 'No outstanding balance'}</div>`;
-  }
+  document.getElementById('profile-balance-list').innerHTML = `
+    <div class="bal-col">
+      <span class="bal-label">${lang === 'es' ? 'Bruto' : 'Gross'}</span>
+      <span class="bal-value">${formatCurrency(gross)}</span>
+    </div>
+    <div class="bal-col">
+      <span class="bal-label">${lang === 'es' ? 'Cobrado' : 'Collected'}</span>
+      <span class="bal-value" style="color:var(--green)">${formatCurrency(collected)}</span>
+    </div>
+    <div class="bal-col">
+      <span class="bal-label">${lang === 'es' ? 'Pendiente' : 'Pending'}</span>
+      <span class="bal-value" style="color:var(--red)">${formatCurrency(pending)}</span>
+    </div>
+  `;
 
-  // Recent orders (last 10)
-  const { data: recentOrders } = await sb.from('driver_orders')
-    .select('id, business_name, submitted_at, total_amount, payment_status, status, order_number')
-    .eq('driver_id', driverId)
-    .order('submitted_at', { ascending: false })
-    .limit(10);
-
-  if (recentOrders && recentOrders.length > 0) {
+  // Recent orders (last 3)
+  if (recentOrders.length > 0) {
     document.getElementById('profile-recent-orders').innerHTML = recentOrders.map(o => {
-      let payBadge = '';
-      if (o.payment_status === 'paid') payBadge = `<span class="badge badge-paid">${lang === 'es' ? 'Pagado' : 'Paid'}</span>`;
-      else if (o.payment_status === 'partial') payBadge = `<span class="badge badge-partial">${lang === 'es' ? 'Parcial' : 'Partial'}</span>`;
-      else payBadge = `<span class="badge badge-unpaid">${lang === 'es' ? 'Sin Pagar' : 'Not Paid'}</span>`;
+      let payColor = '';
+      if (o.payment_status === 'paid') payColor = 'var(--green)';
+      else if (o.payment_status === 'partial') payColor = 'var(--orange)';
+      else payColor = 'var(--red)';
 
-      return `<div class="order-card" onclick="openOrderDetail('${o.id}')">
-        <div class="order-card-top">
-          <div class="order-card-info">
-            <div class="order-card-driver">${_esc(o.business_name || (lang === 'es' ? 'Sin negocio' : 'No business'))}</div>
-            <div class="order-card-meta">
-              <span class="order-card-number">#${o.order_number}</span>
-              <span class="order-card-time"><i data-lucide="clock" style="width:12px;height:12px"></i> ${formatTime(o.submitted_at)}</span>
-            </div>
+      return `<div class="apple-inset-row tap-row between" onclick="openOrderDetail('${o.id}')">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:${payColor}"></div>
+          <div>
+            <div style="font-weight:600;">${_esc(o.business_name || (lang === 'es' ? 'Sin negocio' : 'No business'))}</div>
+            <div style="font-size:0.8rem;color:var(--tx-muted);">${formatDate(o.submitted_at)} — #${o.order_number}</div>
           </div>
-          <div class="order-card-badges">${payBadge}</div>
         </div>
+        <div style="font-weight:600;">${formatCurrency(o.total_amount)}</div>
       </div>`;
     }).join('');
     lucide.createIcons();
   } else {
     document.getElementById('profile-recent-orders').innerHTML =
-      `<div class="empty-state">${lang === 'es' ? 'Sin pedidos' : 'No orders yet'}</div>`;
+      `<div class="apple-inset-row center-text tap-row" onclick="document.getElementById('filter-driver').value = profileDriverId; showSection('history');" style="color:var(--blue); cursor:pointer;">${lang === 'es' ? 'Ver Todo el Historial de Pedidos' : 'View All Order History'}</div>`;
   }
 
   // Price table (read-only)
@@ -5318,18 +5317,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   // close button is now inline on the HTML element; sheet backdrop handled by onclick on overlay
 
   // ── Driver management ──
-  document.getElementById('btn-add-driver').addEventListener('click', showAddDriver);
-  document.getElementById('btn-back-to-list').addEventListener('click', () => {
+  document.getElementById('btn-add-driver')?.addEventListener('click', showAddDriver);
+  document.getElementById('btn-back-to-list')?.addEventListener('click', () => {
     showDriversListView(); loadDriverList();
   });
-  document.getElementById('btn-cancel-driver').addEventListener('click', () => {
+  document.getElementById('btn-cancel-driver')?.addEventListener('click', () => {
     showDriversListView(); loadDriverList();
   });
-  document.getElementById('btn-save-driver').addEventListener('click', saveDriver);
-  document.getElementById('btn-back-from-profile').addEventListener('click', () => {
+  document.getElementById('btn-save-driver')?.addEventListener('click', saveDriver);
+  document.getElementById('btn-back-from-profile')?.addEventListener('click', () => {
     showDriversListView(); loadDriverList();
   });
-  document.getElementById('btn-edit-driver-from-profile').addEventListener('click', () => {
+  document.getElementById('btn-edit-driver-from-profile')?.addEventListener('click', () => {
     if (profileDriverId) showEditDriver(profileDriverId);
   });
   document.getElementById('driver-search').addEventListener('input', renderDriverTable);

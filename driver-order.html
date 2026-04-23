@@ -1,16 +1,22 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
+
 <head>
   <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Cecilia Bakery — Driver Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" as="style">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="preload"
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+    as="style">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -25,616 +31,777 @@
 </head>
 
 <body>
-<div class="bg-blob"></div>
+  <div class="bg-blob"></div>
 
-<!-- ═══════════════ SCREEN 1: CODE ENTRY ═══════════════ -->
-<div id="screen-login" class="screen login-screen active">
-  <div class="login-card">
-    <div class="corner-controls">
-      <button class="corner-btn lang-switch" id="login-lang-btn">EN</button>
-      <button class="corner-btn" id="login-theme-btn">
-        <i data-lucide="sun" style="width:14px;height:14px"></i>
-      </button>
+  <!-- ═══════════════ SCREEN 1: CODE ENTRY ═══════════════ -->
+  <div id="screen-login" class="screen login-screen active">
+    <div class="login-card">
+      <div class="corner-controls">
+        <button class="corner-btn lang-switch" id="login-lang-btn">EN</button>
+        <button class="corner-btn" id="login-theme-btn">
+          <i data-lucide="sun" style="width:14px;height:14px"></i>
+        </button>
+      </div>
+      <a href="/" class="login-logo-link"><img src="assets/logo.png" alt="Cecilia Bakery" class="login-logo"></a>
+      <h1 class="login-title" data-en="Driver Portal" data-es="Portal del Conductor">Driver Portal</h1>
+      <p class="login-subtitle" data-en="Enter your code to continue" data-es="Ingresa tu código para continuar">Enter
+        your code to continue</p>
+      <div class="login-input-wrap">
+        <input type="text" id="code-input" class="login-input" placeholder="Your code" autocomplete="off"
+          data-en-placeholder="Your code" data-es-placeholder="Tu código">
+      </div>
+      <button id="login-btn" class="login-btn" data-en="Enter" data-es="Entrar">Enter</button>
+      <div id="login-error" class="login-error"></div>
+      <div id="login-lockout" class="login-lockout"></div>
+      <a href="/" class="login-website-link" data-en="← Back to Website" data-es="← Volver al Sitio Web">← Back to
+        Website</a>
     </div>
-    <a href="/" class="login-logo-link"><img src="assets/logo.png" alt="Cecilia Bakery" class="login-logo"></a>
-    <h1 class="login-title" data-en="Driver Portal" data-es="Portal del Conductor">Driver Portal</h1>
-    <p class="login-subtitle" data-en="Enter your code to continue" data-es="Ingresa tu código para continuar">Enter your code to continue</p>
-    <div class="login-input-wrap">
-      <input type="text" id="code-input" class="login-input" placeholder="Your code" autocomplete="off"
-        data-en-placeholder="Your code" data-es-placeholder="Tu código">
-    </div>
-    <button id="login-btn" class="login-btn" data-en="Enter" data-es="Entrar">Enter</button>
-    <div id="login-error" class="login-error"></div>
-    <div id="login-lockout" class="login-lockout"></div>
-    <a href="/" class="login-website-link" data-en="← Back to Website" data-es="← Volver al Sitio Web">← Back to Website</a>
   </div>
-</div>
 
-<!-- ═══════════════ SCREEN 2: DASHBOARD ═══════════════ -->
-<div id="screen-dashboard" class="screen dash-screen">
+  <!-- ═══════════════ SCREEN 2: DASHBOARD ═══════════════ -->
+  <div id="screen-dashboard" class="screen dash-screen">
 
-  <!-- SIDEBAR (Desktop) -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand" style="cursor:pointer" onclick="document.querySelector('.sidebar-nav-item[data-section=overview]').click()">
-      <img src="assets/logo.png" alt="Cecilia" class="sidebar-logo">
-      <span class="sidebar-title">Cecilia Bakery</span>
-    </div>
-    <nav class="sidebar-nav">
-      <button class="sidebar-nav-item active" data-section="overview">
+    <!-- SIDEBAR (Desktop) -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand" style="cursor:pointer"
+        onclick="document.querySelector('.sidebar-nav-item[data-section=overview]').click()">
+        <img src="assets/logo.png" alt="Cecilia" class="sidebar-logo">
+        <span class="sidebar-title">Cecilia Bakery</span>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="sidebar-nav-item active" data-section="overview">
+          <i data-lucide="layout-dashboard"></i>
+          <span data-en="Overview" data-es="Resumen">Overview</span>
+        </button>
+        <button class="sidebar-nav-item" data-section="clients">
+          <i data-lucide="building-2"></i>
+          <span data-en="Clients" data-es="Clientes">Clients</span>
+        </button>
+        <button class="sidebar-nav-item" data-section="new-order">
+          <i data-lucide="plus-circle"></i>
+          <span data-en="New Order" data-es="Nuevo Pedido">New Order</span>
+        </button>
+        <button class="sidebar-nav-item" data-section="inventory">
+          <i data-lucide="clipboard-list"></i>
+          <span data-en="Inventory" data-es="Inventario">Inventory</span>
+        </button>
+        <button class="sidebar-nav-item" data-section="my-orders">
+          <i data-lucide="package"></i>
+          <span data-en="My Orders" data-es="Mis Pedidos">My Orders</span>
+        </button>
+        <button class="sidebar-nav-item" data-section="sales">
+          <i data-lucide="receipt"></i>
+          <span data-en="Sales" data-es="Ventas">Sales</span>
+        </button>
+        <button class="sidebar-nav-item" data-section="settings">
+          <i data-lucide="settings"></i>
+          <span data-en="Settings" data-es="Configuración">Settings</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- MOBILE HEADER -->
+    <header class="mobile-header" id="mobile-header">
+      <div id="header-left-slot" style="width: 80px; display: flex; align-items: center;">
+        <img src="assets/logo.png" alt="Cecilia" class="mobile-logo" id="mobile-logo" style="cursor:pointer"
+          onclick="document.querySelector('.bottom-nav-item[data-section=overview]').click()">
+        <button id="header-back-btn" class="header-back-btn" style="display:none;" onclick="document.querySelector('.bottom-nav-item[data-section=overview]').click()">
+          <i data-lucide="chevron-left"></i> <span data-en="Cancel" data-es="Cancelar">Cancel</span>
+        </button>
+      </div>
+      <span class="mobile-section-name" id="mobile-section-name" data-en="Overview" data-es="Resumen">Overview</span>
+      <div id="header-right-slot" style="width: 80px;"></div>
+    </header>
+
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content" id="main-content">
+      <!-- OVERVIEW -->
+      <div id="section-overview" class="dash-section active">
+
+        <!-- Welcome + Date Filter row -->
+        <div class="overview-header">
+          <h2 class="welcome-name" id="welcome-name">Welcome</h2>
+          <select id="overview-filter" class="overview-filter">
+            <option value="today" data-en="Today" data-es="Hoy">Today</option>
+            <option value="this_week" data-en="This Week" data-es="Esta Semana">This Week</option>
+            <option value="this_month" selected data-en="This Month" data-es="Este Mes">This Month</option>
+            <option value="last_month" data-en="Last Month" data-es="Mes Pasado">Last Month</option>
+            <option value="all_time" data-en="All Time" data-es="Todo el Tiempo">All Time</option>
+          </select>
+        </div>
+
+        <!-- Quick Action Grid -->
+        <div class="quick-actions" id="quick-actions">
+          <button class="quick-action-card" id="qa-new-order">
+            <div class="qa-icon"><i data-lucide="plus-circle"></i></div>
+            <span data-en="New Order" data-es="Nuevo Pedido">New Order</span>
+          </button>
+          <button class="quick-action-card" id="qa-log-sale">
+            <div class="qa-icon qa-sales"><i data-lucide="receipt"></i></div>
+            <span data-en="Log Sale" data-es="Registrar Venta">Log Sale</span>
+          </button>
+          <button class="quick-action-card" id="qa-inventory">
+            <div class="qa-icon qa-inventory"><i data-lucide="clipboard-list"></i></div>
+            <span data-en="Inventory" data-es="Inventario">Inventory</span>
+          </button>
+          <button class="quick-action-card" id="qa-clients">
+            <div class="qa-icon qa-clients"><i data-lucide="building-2"></i></div>
+            <span data-en="Add Client" data-es="Agregar Cliente">Add Client</span>
+          </button>
+        </div>
+
+        <!-- Outstanding Balance -->
+        <div class="balance-banner" id="balance-banner-overview" onclick="goToUnpaidOrders()" style="cursor:pointer">
+          <div>
+            <div class="balance-label" data-en="Outstanding Balance" data-es="Saldo Pendiente">Outstanding Balance</div>
+          </div>
+          <div class="balance-amount green" id="balance-amount">$0.00</div>
+          <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--tx-faint)"></i>
+        </div>
+
+        <!-- Stats Cards (Advanced) -->
+        <div class="ov-stats-grid" id="ov-stats-grid">
+          <div class="ov-stat-card">
+            <div class="ov-stat-icon"><i data-lucide="trending-up"></i></div>
+            <div class="ov-stat-info">
+              <span class="ov-stat-value" id="ov-stat-revenue">$0.00</span>
+              <span class="ov-stat-label" data-en="Sales Revenue" data-es="Ingresos">Sales Revenue</span>
+            </div>
+          </div>
+          <div class="ov-stat-card">
+            <div class="ov-stat-icon ov-stat-items"><i data-lucide="package"></i></div>
+            <div class="ov-stat-info">
+              <span class="ov-stat-value" id="ov-stat-items">0</span>
+              <span class="ov-stat-label" data-en="Items Sold" data-es="Productos Vendidos">Items Sold</span>
+            </div>
+          </div>
+          <div class="ov-stat-card">
+            <div class="ov-stat-icon ov-stat-sales"><i data-lucide="shopping-bag"></i></div>
+            <div class="ov-stat-info">
+              <span class="ov-stat-value" id="ov-stat-count">0</span>
+              <span class="ov-stat-label" data-en="Total Sales" data-es="Total Ventas">Total Sales</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Revenue Over Time Chart (Advanced) -->
+        <div class="ov-chart-wrap">
+          <h3 class="ov-chart-title" data-en="Revenue Over Time" data-es="Ingresos en el Tiempo">Revenue Over Time</h3>
+          <div class="ov-chart-container">
+            <canvas id="driverRevenueChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Best Sellers (Advanced) -->
+        <div class="ov-leaderboard-wrap">
+          <h3 class="ov-leaderboard-title" data-en="Best Sellers" data-es="Más Vendidos">Best Sellers</h3>
+          <div id="ov-best-sellers">
+            <div class="empty-state" data-en="No sales data yet" data-es="Sin datos de ventas">No sales data yet</div>
+          </div>
+        </div>
+
+        <!-- Top Clients (Advanced) -->
+        <div class="ov-leaderboard-wrap">
+          <h3 class="ov-leaderboard-title" data-en="Top Clients" data-es="Mejores Clientes">Top Clients</h3>
+          <div id="ov-top-clients">
+            <div class="empty-state" data-en="No sales data yet" data-es="Sin datos de ventas">No sales data yet</div>
+          </div>
+        </div>
+
+        <!-- Recent Orders (Always visible) -->
+        <h3 class="section-title" data-en="Recent Orders" data-es="Pedidos Recientes">Recent Orders</h3>
+        <div id="recent-orders">
+          <div class="empty-state" data-en="No orders yet" data-es="Aún no hay pedidos">No orders yet</div>
+        </div>
+      </div>
+
+      <!-- TOOLS HUB -->
+      <div id="section-tools" class="dash-section" style="display:none">
+        <div class="tools-tabs-container" style="padding:16px 16px 0;background:var(--bg)">
+          <div class="insights-pills" id="tools-nav-pills" style="margin-bottom:16px;display:flex">
+            <button class="insights-pill active" data-tool="sales" data-en="Sales" data-es="Ventas">Sales</button>
+            <button class="insights-pill" data-tool="inventory" data-en="Inventory" data-es="Inventario">Inventory</button>
+            <button class="insights-pill" data-tool="clients" data-en="Clients" data-es="Clientes">Clients</button>
+          </div>
+        </div>
+
+        <!-- SALES PANE -->
+        <div id="tool-pane-sales" class="tool-pane active">
+          <!-- Client Selector -->
+          <div class="sale-client-selector" id="sale-client-selector">
+            <label data-en="Client" data-es="Cliente">Client</label>
+            <select id="sale-client-dropdown" class="sale-client-dropdown">
+              <option value="" data-en="Select a client..." data-es="Seleccionar cliente...">Select a client...</option>
+            </select>
+          </div>
+          <div id="sale-no-clients" class="sale-no-clients" style="display:none">
+            <i data-lucide="building-2"></i>
+            <p data-en="Add clients first to start making sales."
+              data-es="Agrega clientes primero para comenzar a vender.">Add clients first to start making sales.</p>
+            <button class="sale-goto-clients-btn" id="sale-goto-clients-btn" data-en="Go to Clients"
+              data-es="Ir a Clientes">Go to Clients</button>
+          </div>
+
+          <!-- Today's Sales Summary -->
+          <div class="sale-today-banner" id="sale-today-banner" style="display:none">
+            <div class="sale-today-label" data-en="Today's Sales" data-es="Ventas de Hoy">Today's Sales</div>
+            <div class="sale-today-amount" id="sale-today-amount">$0.00</div>
+          </div>
+
+          <!-- Sales HUD Ticker -->
+          <div id="sales-ticker" class="sales-ticker" style="display:none; margin: 12px 16px 4px;"></div>
+
+          <!-- Product List -->
+          <div id="sale-products" class="sale-products"></div>
+        </div>
+
+        <!-- INVENTORY PANE -->
+        <div id="tool-pane-inventory" class="tool-pane" style="display:none">
+          <div id="inv-source-banner"></div>
+          <div id="inv-summary"></div>
+          <div id="inv-load-form" style="display:none"></div>
+        </div>
+
+        <!-- CLIENTS PANE -->
+        <div id="tool-pane-clients" class="tool-pane" style="display:none">
+          <div class="clients-header">
+            <button class="clients-add-btn" id="clients-add-btn" style="margin-top:0">
+              <i data-lucide="plus"></i>
+              <span data-en="Add Client" data-es="Agregar Cliente">Add Client</span>
+            </button>
+          </div>
+          <div id="clients-list">
+            <div class="empty-state clients-empty" data-en="No clients yet. Add your first client to start making sales."
+              data-es="Aún no hay clientes. Agrega tu primer cliente para comenzar a vender.">No clients yet. Add your
+              first client to start making sales.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SALE FOOTER BAR -->
+      <div class="sale-footer" id="sale-footer" style="display:none">
+        <div class="sale-footer-info">
+          <span class="sale-footer-label" data-en="Total:" data-es="Total:">Total:</span>
+          <strong class="sale-footer-total" id="sale-footer-total">$0.00</strong>
+        </div>
+        <button class="sale-footer-btn" id="sale-complete-btn" disabled data-en="Complete Sale"
+          data-es="Completar Venta">Complete Sale</button>
+      </div>
+
+      <!-- MY ORDERS -->
+      <div id="section-my-orders" class="dash-section" style="display:none">
+        <div class="balance-banner" id="balance-banner-orders" onclick="goToUnpaidOrders()" style="cursor:pointer">
+          <div>
+            <div class="balance-label" data-en="Outstanding Balance" data-es="Saldo Pendiente">Outstanding Balance</div>
+          </div>
+          <div class="balance-amount green" id="balance-amount-orders">$0.00</div>
+          <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--tx-faint)"></i>
+        </div>
+        <div class="orders-header-row">
+          <h3 class="section-title" data-en="My Orders" data-es="Mis Pedidos">My Orders</h3>
+          <div class="insights-pills" id="driver-orders-filter">
+            <button class="insights-pill active" data-filter="all" data-en="All" data-es="Todos">All</button>
+            <button class="insights-pill" data-filter="unpaid" data-en="Unpaid" data-es="Sin Pagar">Unpaid</button>
+            <button class="insights-pill" data-filter="paid" data-en="Paid" data-es="Pagados">Paid</button>
+            <button class="insights-pill" data-filter="sales" data-en="Sales" data-es="Ventas">Sales</button>
+          </div>
+        </div>
+        <div id="all-orders">
+          <div class="empty-state" data-en="No orders yet" data-es="Aún no hay pedidos">No orders yet</div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div id="section-settings" class="dash-section" style="display:none">
+        <h3 class="section-title" data-en="Settings" data-es="Configuración">Settings</h3>
+        <div class="settings-group">
+          <div class="settings-row">
+            <div class="settings-label"><i data-lucide="globe"></i> <span data-en="Language"
+                data-es="Idioma">Language</span></div>
+            <div class="lang-toggle">
+              <button class="lang-opt active" data-lang="en">EN</button>
+              <button class="lang-opt" data-lang="es">ES</button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label"><i data-lucide="type"></i> <span data-en="Text Size"
+                data-es="Tamaño de Texto">Text Size</span></div>
+            <div class="size-btns">
+              <button class="size-btn" data-size="-2">A-</button>
+              <button class="size-btn" data-size="2">A+</button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label"><i data-lucide="moon"></i> <span data-en="Dark Mode" data-es="Modo Oscuro">Dark
+                Mode</span></div>
+            <label class="toggle">
+              <input type="checkbox" id="theme-toggle">
+              <span class="toggle-track"></span>
+              <span class="toggle-thumb"></span>
+            </label>
+          </div>
+          <div class="settings-row settings-nav-row" id="my-products-btn">
+            <div class="settings-label"><i data-lucide="package"></i> <span data-en="My Products"
+                data-es="Mis Productos">My Products</span></div>
+            <svg class="settings-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </div>
+        </div>
+        <div class="settings-group">
+          <div class="settings-row">
+            <div class="settings-label"><i data-lucide="bell"></i> <span data-en="Notifications"
+                data-es="Notificaciones">Notifications</span></div>
+            <label class="toggle">
+              <input type="checkbox" id="notification-toggle" checked>
+              <span class="toggle-track"></span>
+              <span class="toggle-thumb"></span>
+            </label>
+          </div>
+        </div>
+        <a href="/" class="settings-website-link" data-en="Visit Website" data-es="Visitar Sitio Web">
+          <i data-lucide="external-link"></i> <span data-en="Visit Website" data-es="Visitar Sitio Web">Visit
+            Website</span>
+        </a>
+        <button class="logout-btn" id="logout-btn" data-en="Log Out" data-es="Cerrar Sesión">Log Out</button>
+      </div>
+
+      <!-- MY PRODUCTS SUB-VIEW -->
+      <div class="settings-subview" id="settings-products-view">
+        <div class="settings-subview-header">
+          <button class="settings-subview-back" id="mp-back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+          <span class="settings-subview-title" data-en="My Products" data-es="Mis Productos">My Products</span>
+          <span class="mp-counter" id="mp-counter"></span>
+        </div>
+        <div class="settings-subview-body" id="mp-body"></div>
+      </div>
+
+      <!-- NEW ORDER FORM -->
+      <div id="section-new-order" class="dash-section" style="display:none">
+        <!-- Order Tabs -->
+        <div class="order-tabs" id="order-tabs"></div>
+
+        <!-- Header Fields -->
+        <div class="form-fields">
+          <div class="form-field full">
+            <label data-en="Business / Delivery To" data-es="Negocio / Entregar a">Business / Delivery To</label>
+            <input type="text" id="field-business" data-en-placeholder="Where is this order going?"
+              data-es-placeholder="¿A dónde va este pedido?" placeholder="Where is this order going?">
+          </div>
+          <div class="form-field">
+            <label data-en="Date" data-es="Fecha">Date</label>
+            <input type="date" id="field-date">
+          </div>
+          <div class="form-field">
+            <label data-en="Time" data-es="Hora">Time</label>
+            <div class="time-display" id="field-time-display">
+              <span id="field-time-text" data-en-placeholder="Select time" data-es-placeholder="Seleccionar hora">Select
+                time</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </div>
+            <input type="hidden" id="field-time">
+          </div>
+          <div class="form-field full">
+            <label data-en="My Order #" data-es="Mi Pedido #">My Order #</label>
+            <input type="text" id="field-ref" data-en-placeholder="Your reference (optional)"
+              data-es-placeholder="Tu referencia (opcional)" placeholder="Your reference (optional)">
+          </div>
+        </div>
+
+        <!-- Search -->
+        <div class="form-search">
+          <i data-lucide="search"></i>
+          <input type="text" id="product-search" data-en-placeholder="Search products..."
+            data-es-placeholder="Buscar productos..." placeholder="Search products...">
+          <button class="form-search-clear" id="search-clear">✕</button>
+        </div>
+
+        <!-- Scan Ticket (only visible when scanner_enabled) -->
+        <div class="scan-ticket-wrap scanner-feature" id="scan-ticket-wrap" style="display:none">
+          <button class="scan-ticket-btn" id="scan-ticket-btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+            <span data-en="Attach Ticket" data-es="Adjuntar Ticket">Attach Ticket</span>
+          </button>
+          <input type="file" id="scan-ticket-input" accept="image/*" style="display:none">
+        </div>
+
+        <!-- Scan Result Banner -->
+        <div class="scan-result-banner" id="scan-result-banner" style="display:none">
+          <div class="scan-result-info">
+            <span class="scan-result-icon">✓</span>
+            <span class="scan-result-text" id="scan-result-text"></span>
+          </div>
+          <button class="scan-review-btn" id="scan-review-btn" type="button" data-en="Review"
+            data-es="Revisar">Review</button>
+          <button class="scan-result-clear" id="scan-result-clear" type="button" data-en="Clear"
+            data-es="Limpiar">Clear</button>
+        </div>
+
+        <!-- Product Sections (dynamically built by JS) -->
+        <div id="product-sections" style="padding-bottom:70px"></div>
+      </div>
+    </main>
+
+    <!-- BOTTOM TAB NAV (Mobile / PWA) -->
+    <nav class="bottom-nav" id="bottom-nav">
+      <button class="bottom-nav-item active" data-section="overview">
         <i data-lucide="layout-dashboard"></i>
         <span data-en="Overview" data-es="Resumen">Overview</span>
       </button>
-      <button class="sidebar-nav-item advanced-feature" data-section="clients" style="display:none">
-        <i data-lucide="building-2"></i>
-        <span data-en="Clients" data-es="Clientes">Clients</span>
-      </button>
-      <button class="sidebar-nav-item" data-section="new-order">
-        <i data-lucide="plus-circle"></i>
-        <span data-en="New Order" data-es="Nuevo Pedido">New Order</span>
-      </button>
-      <button class="sidebar-nav-item advanced-feature" data-section="inventory" style="display:none">
-        <i data-lucide="clipboard-list"></i>
-        <span data-en="Inventory" data-es="Inventario">Inventory</span>
-      </button>
-      <button class="sidebar-nav-item" data-section="my-orders">
+
+      <button class="bottom-nav-item" data-section="my-orders">
         <i data-lucide="package"></i>
-        <span data-en="My Orders" data-es="Mis Pedidos">My Orders</span>
+        <span data-en="Orders" data-es="Pedidos">Orders</span>
       </button>
-      <button class="sidebar-nav-item advanced-feature" data-section="sales" style="display:none">
-        <i data-lucide="receipt"></i>
-        <span data-en="Sales" data-es="Ventas">Sales</span>
+
+      <button class="bottom-nav-item bottom-nav-fab" data-section="new-order">
+        <div class="fab-circle">
+          <i data-lucide="plus"></i>
+        </div>
       </button>
-      <button class="sidebar-nav-item" data-section="settings">
+
+      <button class="bottom-nav-item" id="bottom-nav-tools" data-section="tools">
+        <i data-lucide="layers"></i>
+        <span data-en="Tools" data-es="Gestión">Tools</span>
+      </button>
+
+      <button class="bottom-nav-item" id="bottom-nav-settings" data-section="settings">
         <i data-lucide="settings"></i>
-        <span data-en="Settings" data-es="Configuración">Settings</span>
+        <span data-en="Settings" data-es="Ajustes">Settings</span>
       </button>
     </nav>
-  </aside>
+  </div>
 
-  <!-- MOBILE HEADER -->
-  <header class="mobile-header" id="mobile-header">
-    <img src="assets/logo.png" alt="Cecilia" class="mobile-logo" style="cursor:pointer" onclick="document.querySelector('.mobile-nav-item[data-section=overview]').click()">
-    <span class="mobile-section-name" id="mobile-section-name" data-en="Overview" data-es="Resumen">Overview</span>
-    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
-  </header>
-
-  <!-- MOBILE NAV DROPDOWN -->
-  <nav id="mobile-nav" class="mobile-nav">
-    <button class="mobile-nav-item active" data-section="overview">
-      <i data-lucide="layout-dashboard"></i>
-      <span data-en="Overview" data-es="Resumen">Overview</span>
-    </button>
-    <button class="mobile-nav-item advanced-feature" data-section="clients" style="display:none">
-      <i data-lucide="building-2"></i>
-      <span data-en="Clients" data-es="Clientes">Clients</span>
-    </button>
-    <button class="mobile-nav-item" data-section="new-order">
-      <i data-lucide="plus-circle"></i>
-      <span data-en="New Order" data-es="Nuevo Pedido">New Order</span>
-    </button>
-    <button class="mobile-nav-item advanced-feature" data-section="inventory" style="display:none">
-      <i data-lucide="clipboard-list"></i>
-      <span data-en="Inventory" data-es="Inventario">Inventory</span>
-    </button>
-    <button class="mobile-nav-item" data-section="my-orders">
-      <i data-lucide="package"></i>
-      <span data-en="My Orders" data-es="Mis Pedidos">My Orders</span>
-    </button>
-    <button class="mobile-nav-item advanced-feature" data-section="sales" style="display:none">
-      <i data-lucide="receipt"></i>
-      <span data-en="Sales" data-es="Ventas">Sales</span>
-    </button>
-    <button class="mobile-nav-item" data-section="settings">
-      <i data-lucide="settings"></i>
-      <span data-en="Settings" data-es="Configuración">Settings</span>
-    </button>
-  </nav>
-
-  <!-- MAIN CONTENT -->
-  <main class="main-content" id="main-content">
-    <!-- OVERVIEW -->
-    <div id="section-overview" class="dash-section active">
-
-      <!-- Welcome + Date Filter row -->
-      <div class="overview-header">
-        <h2 class="welcome-name" id="welcome-name">Welcome</h2>
-        <select id="overview-filter" class="overview-filter advanced-feature" style="display:none">
-          <option value="today" data-en="Today" data-es="Hoy">Today</option>
-          <option value="this_week" data-en="This Week" data-es="Esta Semana">This Week</option>
-          <option value="this_month" selected data-en="This Month" data-es="Este Mes">This Month</option>
-          <option value="last_month" data-en="Last Month" data-es="Mes Pasado">Last Month</option>
-          <option value="all_time" data-en="All Time" data-es="Todo el Tiempo">All Time</option>
-        </select>
-      </div>
-
-      <!-- Quick Action Grid -->
-      <div class="quick-actions" id="quick-actions">
-        <button class="quick-action-card" id="qa-new-order">
-          <div class="qa-icon"><i data-lucide="plus-circle"></i></div>
-          <span data-en="New Order" data-es="Nuevo Pedido">New Order</span>
-        </button>
-        <button class="quick-action-card advanced-feature" style="display:none" id="qa-log-sale">
-          <div class="qa-icon qa-sales"><i data-lucide="receipt"></i></div>
-          <span data-en="Log Sale" data-es="Registrar Venta">Log Sale</span>
-        </button>
-        <button class="quick-action-card advanced-feature" style="display:none" id="qa-inventory">
-          <div class="qa-icon qa-inventory"><i data-lucide="clipboard-list"></i></div>
-          <span data-en="Inventory" data-es="Inventario">Inventory</span>
-        </button>
-        <button class="quick-action-card advanced-feature" style="display:none" id="qa-clients">
-          <div class="qa-icon qa-clients"><i data-lucide="building-2"></i></div>
-          <span data-en="Add Client" data-es="Agregar Cliente">Add Client</span>
-        </button>
-      </div>
-
-      <!-- Outstanding Balance -->
-      <div class="balance-banner" id="balance-banner-overview" onclick="showBalanceBreakdown()" style="cursor:pointer">
-        <div><div class="balance-label" data-en="Outstanding Balance" data-es="Saldo Pendiente">Outstanding Balance</div></div>
-        <div class="balance-amount green" id="balance-amount">$0.00</div>
-        <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--tx-faint)"></i>
-      </div>
-
-      <!-- Stats Cards (Advanced) -->
-      <div class="ov-stats-grid advanced-feature" style="display:none" id="ov-stats-grid">
-        <div class="ov-stat-card">
-          <div class="ov-stat-icon"><i data-lucide="trending-up"></i></div>
-          <div class="ov-stat-info">
-            <span class="ov-stat-value" id="ov-stat-revenue">$0.00</span>
-            <span class="ov-stat-label" data-en="Sales Revenue" data-es="Ingresos">Sales Revenue</span>
-          </div>
+  <!-- CUSTOM TIME PICKER MODAL -->
+  <div class="tp-overlay" id="tp-overlay">
+    <div class="tp-modal">
+      <div class="tp-handle"></div>
+      <div class="tp-title" data-en="Select Time" data-es="Seleccionar Hora">Select Time</div>
+      <div class="tp-columns">
+        <div class="tp-col" id="tp-hour">
+          <div class="tp-col-inner" id="tp-hour-inner"></div>
         </div>
-        <div class="ov-stat-card">
-          <div class="ov-stat-icon ov-stat-items"><i data-lucide="package"></i></div>
-          <div class="ov-stat-info">
-            <span class="ov-stat-value" id="ov-stat-items">0</span>
-            <span class="ov-stat-label" data-en="Items Sold" data-es="Productos Vendidos">Items Sold</span>
-          </div>
+        <span class="tp-colon">:</span>
+        <div class="tp-col" id="tp-minute">
+          <div class="tp-col-inner" id="tp-minute-inner"></div>
         </div>
-        <div class="ov-stat-card">
-          <div class="ov-stat-icon ov-stat-sales"><i data-lucide="shopping-bag"></i></div>
-          <div class="ov-stat-info">
-            <span class="ov-stat-value" id="ov-stat-count">0</span>
-            <span class="ov-stat-label" data-en="Total Sales" data-es="Total Ventas">Total Sales</span>
-          </div>
+        <div class="tp-col" id="tp-period">
+          <div class="tp-col-inner" id="tp-period-inner"></div>
         </div>
       </div>
-
-      <!-- Revenue Over Time Chart (Advanced) -->
-      <div class="ov-chart-wrap advanced-feature" style="display:none">
-        <h3 class="ov-chart-title" data-en="Revenue Over Time" data-es="Ingresos en el Tiempo">Revenue Over Time</h3>
-        <div class="ov-chart-container">
-          <canvas id="driverRevenueChart"></canvas>
-        </div>
+      <div class="tp-actions">
+        <button class="tp-cancel" id="tp-cancel" data-en="Cancel" data-es="Cancelar">Cancel</button>
+        <button class="tp-confirm" id="tp-confirm" data-en="Confirm" data-es="Confirmar">Confirm</button>
       </div>
-
-      <!-- Best Sellers (Advanced) -->
-      <div class="ov-leaderboard-wrap advanced-feature" style="display:none">
-        <h3 class="ov-leaderboard-title" data-en="Best Sellers" data-es="Más Vendidos">Best Sellers</h3>
-        <div id="ov-best-sellers">
-          <div class="empty-state" data-en="No sales data yet" data-es="Sin datos de ventas">No sales data yet</div>
-        </div>
-      </div>
-
-      <!-- Top Clients (Advanced) -->
-      <div class="ov-leaderboard-wrap advanced-feature" style="display:none">
-        <h3 class="ov-leaderboard-title" data-en="Top Clients" data-es="Mejores Clientes">Top Clients</h3>
-        <div id="ov-top-clients">
-          <div class="empty-state" data-en="No sales data yet" data-es="Sin datos de ventas">No sales data yet</div>
-        </div>
-      </div>
-
-      <!-- Recent Orders (Always visible) -->
-      <h3 class="section-title" data-en="Recent Orders" data-es="Pedidos Recientes">Recent Orders</h3>
-      <div id="recent-orders">
-        <div class="empty-state" data-en="No orders yet" data-es="Aún no hay pedidos">No orders yet</div>
-      </div>
-    </div>
-
-    <!-- SALES -->
-    <div id="section-sales" class="dash-section" style="display:none">
-      <h3 class="section-title" data-en="New Sale" data-es="Nueva Venta">New Sale</h3>
-
-      <!-- Client Selector -->
-      <div class="sale-client-selector" id="sale-client-selector">
-        <label data-en="Client" data-es="Cliente">Client</label>
-        <select id="sale-client-dropdown" class="sale-client-dropdown">
-          <option value="" data-en="Select a client..." data-es="Seleccionar cliente...">Select a client...</option>
-        </select>
-      </div>
-      <div id="sale-no-clients" class="sale-no-clients" style="display:none">
-        <i data-lucide="building-2"></i>
-        <p data-en="Add clients first to start making sales." data-es="Agrega clientes primero para comenzar a vender.">Add clients first to start making sales.</p>
-        <button class="sale-goto-clients-btn" id="sale-goto-clients-btn" data-en="Go to Clients" data-es="Ir a Clientes">Go to Clients</button>
-      </div>
-
-      <!-- Today's Sales Summary -->
-      <div class="sale-today-banner" id="sale-today-banner" style="display:none">
-        <div class="sale-today-label" data-en="Today's Sales" data-es="Ventas de Hoy">Today's Sales</div>
-        <div class="sale-today-amount" id="sale-today-amount">$0.00</div>
-      </div>
-
-      <!-- Sales HUD Ticker -->
-      <div id="sales-ticker" class="sales-ticker" style="display:none; margin: 12px 16px 4px;"></div>
-
-      <!-- Product List -->
-      <div id="sale-products" class="sale-products"></div>
-    </div>
-
-    <!-- INVENTORY -->
-    <div id="section-inventory" class="dash-section" style="display:none">
-      <h3 class="section-title" data-en="Today's Inventory" data-es="Inventario de Hoy">Today's Inventory</h3>
-      <div id="inv-source-banner"></div>
-      <div id="inv-summary"></div>
-      <div id="inv-load-form" style="display:none"></div>
-    </div>
-
-    <!-- SALE FOOTER BAR -->
-    <div class="sale-footer" id="sale-footer" style="display:none">
-      <div class="sale-footer-info">
-        <span class="sale-footer-label" data-en="Total:" data-es="Total:">Total:</span>
-        <strong class="sale-footer-total" id="sale-footer-total">$0.00</strong>
-      </div>
-      <button class="sale-footer-btn" id="sale-complete-btn" disabled data-en="Complete Sale" data-es="Completar Venta">Complete Sale</button>
-    </div>
-
-    <!-- MY ORDERS -->
-    <div id="section-my-orders" class="dash-section" style="display:none">
-      <div class="balance-banner" id="balance-banner-orders" onclick="showBalanceBreakdown()" style="cursor:pointer">
-        <div><div class="balance-label" data-en="Outstanding Balance" data-es="Saldo Pendiente">Outstanding Balance</div></div>
-        <div class="balance-amount green" id="balance-amount-orders">$0.00</div>
-        <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--tx-faint)"></i>
-      </div>
-      <div class="orders-header-row">
-        <h3 class="section-title" data-en="My Orders" data-es="Mis Pedidos">My Orders</h3>
-        <div class="insights-pills" id="driver-orders-filter">
-          <button class="insights-pill active" data-filter="all" data-en="All" data-es="Todos">All</button>
-          <button class="insights-pill" data-filter="unpaid" data-en="Unpaid" data-es="Sin Pagar">Unpaid</button>
-          <button class="insights-pill" data-filter="paid" data-en="Paid" data-es="Pagados">Paid</button>
-        </div>
-      </div>
-      <div id="all-orders">
-        <div class="empty-state" data-en="No orders yet" data-es="Aún no hay pedidos">No orders yet</div>
-      </div>
-    </div>
-
-    <!-- CLIENTS -->
-    <div id="section-clients" class="dash-section" style="display:none">
-      <div class="clients-header">
-        <h3 class="section-title" data-en="My Clients" data-es="Mis Clientes">My Clients</h3>
-        <button class="clients-add-btn" id="clients-add-btn">
-          <i data-lucide="plus"></i>
-          <span data-en="Add Client" data-es="Agregar Cliente">Add Client</span>
-        </button>
-      </div>
-      <div id="clients-list">
-        <div class="empty-state clients-empty" data-en="No clients yet. Add your first client to start making sales." data-es="Aún no hay clientes. Agrega tu primer cliente para comenzar a vender.">No clients yet. Add your first client to start making sales.</div>
-      </div>
-    </div>
-
-    <!-- SETTINGS -->
-    <div id="section-settings" class="dash-section" style="display:none">
-      <h3 class="section-title" data-en="Settings" data-es="Configuración">Settings</h3>
-      <div class="settings-group">
-        <div class="settings-row">
-          <div class="settings-label"><i data-lucide="globe"></i> <span data-en="Language" data-es="Idioma">Language</span></div>
-          <div class="lang-toggle">
-            <button class="lang-opt active" data-lang="en">EN</button>
-            <button class="lang-opt" data-lang="es">ES</button>
-          </div>
-        </div>
-        <div class="settings-row">
-          <div class="settings-label"><i data-lucide="type"></i> <span data-en="Text Size" data-es="Tamaño de Texto">Text Size</span></div>
-          <div class="size-btns">
-            <button class="size-btn" data-size="-2">A-</button>
-            <button class="size-btn" data-size="2">A+</button>
-          </div>
-        </div>
-        <div class="settings-row">
-          <div class="settings-label"><i data-lucide="moon"></i> <span data-en="Dark Mode" data-es="Modo Oscuro">Dark Mode</span></div>
-          <label class="toggle">
-            <input type="checkbox" id="theme-toggle">
-            <span class="toggle-track"></span>
-            <span class="toggle-thumb"></span>
-          </label>
-        </div>
-        <div class="settings-row settings-nav-row" id="my-products-btn">
-          <div class="settings-label"><i data-lucide="package"></i> <span data-en="My Products" data-es="Mis Productos">My Products</span></div>
-          <svg class="settings-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </div>
-      </div>
-      <div class="settings-group">
-        <div class="settings-row">
-          <div class="settings-label"><i data-lucide="bell"></i> <span data-en="Notifications" data-es="Notificaciones">Notifications</span></div>
-          <label class="toggle">
-            <input type="checkbox" id="notification-toggle" checked>
-            <span class="toggle-track"></span>
-            <span class="toggle-thumb"></span>
-          </label>
-        </div>
-      </div>
-      <a href="/" class="settings-website-link" data-en="Visit Website" data-es="Visitar Sitio Web">
-        <i data-lucide="external-link"></i> <span data-en="Visit Website" data-es="Visitar Sitio Web">Visit Website</span>
-      </a>
-      <button class="logout-btn" id="logout-btn" data-en="Log Out" data-es="Cerrar Sesión">Log Out</button>
-    </div>
-
-    <!-- MY PRODUCTS SUB-VIEW -->
-    <div class="settings-subview" id="settings-products-view">
-      <div class="settings-subview-header">
-        <button class="settings-subview-back" id="mp-back">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="15 18 9 12 15 6"></polyline></svg>
-        </button>
-        <span class="settings-subview-title" data-en="My Products" data-es="Mis Productos">My Products</span>
-        <span class="mp-counter" id="mp-counter"></span>
-      </div>
-      <div class="settings-subview-body" id="mp-body"></div>
-    </div>
-
-    <!-- NEW ORDER FORM -->
-    <div id="section-new-order" class="dash-section" style="display:none">
-      <!-- Order Tabs -->
-      <div class="order-tabs" id="order-tabs"></div>
-
-      <!-- Header Fields -->
-      <div class="form-fields">
-        <div class="form-field full">
-          <label data-en="Business / Delivery To" data-es="Negocio / Entregar a">Business / Delivery To</label>
-          <input type="text" id="field-business" data-en-placeholder="Where is this order going?" data-es-placeholder="¿A dónde va este pedido?" placeholder="Where is this order going?">
-        </div>
-        <div class="form-field">
-          <label data-en="Date" data-es="Fecha">Date</label>
-          <input type="date" id="field-date">
-        </div>
-        <div class="form-field">
-          <label data-en="Time" data-es="Hora">Time</label>
-          <div class="time-display" id="field-time-display">
-            <span id="field-time-text" data-en-placeholder="Select time" data-es-placeholder="Seleccionar hora">Select time</span>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          </div>
-          <input type="hidden" id="field-time">
-        </div>
-        <div class="form-field full">
-          <label data-en="My Order #" data-es="Mi Pedido #">My Order #</label>
-          <input type="text" id="field-ref" data-en-placeholder="Your reference (optional)" data-es-placeholder="Tu referencia (opcional)" placeholder="Your reference (optional)">
-        </div>
-      </div>
-
-      <!-- Search -->
-      <div class="form-search">
-        <i data-lucide="search"></i>
-        <input type="text" id="product-search" data-en-placeholder="Search products..." data-es-placeholder="Buscar productos..." placeholder="Search products...">
-        <button class="form-search-clear" id="search-clear">✕</button>
-      </div>
-
-      <!-- Product Sections (dynamically built by JS) -->
-      <div id="product-sections" style="padding-bottom:70px"></div>
-    </div>
-  </main>
-</div>
-
-<!-- CUSTOM TIME PICKER MODAL -->
-<div class="tp-overlay" id="tp-overlay">
-  <div class="tp-modal">
-    <div class="tp-handle"></div>
-    <div class="tp-title" data-en="Select Time" data-es="Seleccionar Hora">Select Time</div>
-    <div class="tp-columns">
-      <div class="tp-col" id="tp-hour"><div class="tp-col-inner" id="tp-hour-inner"></div></div>
-      <span class="tp-colon">:</span>
-      <div class="tp-col" id="tp-minute"><div class="tp-col-inner" id="tp-minute-inner"></div></div>
-      <div class="tp-col" id="tp-period"><div class="tp-col-inner" id="tp-period-inner"></div></div>
-    </div>
-    <div class="tp-actions">
-      <button class="tp-cancel" id="tp-cancel" data-en="Cancel" data-es="Cancelar">Cancel</button>
-      <button class="tp-confirm" id="tp-confirm" data-en="Confirm" data-es="Confirmar">Confirm</button>
     </div>
   </div>
-</div>
 
-<!-- FOOTER BAR (only visible during order form) -->
-<div class="form-footer" id="form-footer" style="display:none">
-  <div class="form-footer-count"><span data-en="Items:" data-es="Artículos:">Items:</span> <strong id="footer-item-count">0</strong></div>
-  <button class="form-footer-btn" id="footer-continue-btn" disabled data-en="Continue" data-es="Continuar">Continue</button>
-</div>
-
-<!-- SUMMARY MODAL -->
-<div class="summary-overlay" id="summary-overlay">
-  <div class="summary-modal">
-    <div class="summary-handle"></div>
-    <div class="summary-nav">
-      <button class="summary-nav-btn" id="summary-prev">←</button>
-      <h3 class="summary-title" id="summary-title">Order 1 of 1</h3>
-      <button class="summary-nav-btn" id="summary-next">→</button>
+  <!-- FOOTER BAR (only visible during order form) -->
+  <div class="form-footer" id="form-footer" style="display:none">
+    <button class="form-footer-cancel" id="footer-cancel-btn" data-en="Cancel" data-es="Cancelar">Cancel</button>
+    <div class="form-footer-center">
+      <span class="form-footer-badge" id="footer-item-count">0</span>
+      <span class="form-footer-label" data-en="items" data-es="artículos">items</span>
     </div>
-    <div id="summary-content"></div>
-    <div class="summary-notes">
-      <label data-en="Notes" data-es="Notas">Notes</label>
-      <textarea id="summary-notes" data-en-placeholder="Any special instructions..." data-es-placeholder="Instrucciones especiales..." placeholder="Any special instructions..."></textarea>
-    </div>
-    <div class="summary-actions">
-      <button class="btn-back" id="summary-back" data-en="Go Back" data-es="Regresar">Go Back</button>
-      <button class="btn-submit" id="summary-submit" data-en="Submit All Orders" data-es="Enviar Todos los Pedidos">Submit All Orders</button>
-    </div>
+    <button class="form-footer-btn" id="footer-continue-btn" disabled data-en="Continue"
+      data-es="Continuar">Continue</button>
   </div>
-</div>
 
-<!-- ORDER DETAIL MODAL -->
-<div class="order-detail-overlay" id="order-detail-overlay">
-  <div class="order-detail-modal">
-    <div class="order-detail-header">
-      <button class="order-detail-back" id="order-detail-back"><i data-lucide="arrow-left"></i></button>
-      <h3 class="order-detail-title" id="order-detail-title">Order #1</h3>
-      <span class="order-detail-badge" id="order-detail-badge"></span>
-    </div>
-    <div class="order-detail-meta" id="order-detail-meta"></div>
-    <div class="order-detail-items" id="order-detail-items"></div>
-    <div class="order-detail-notes" id="order-detail-notes" style="display:none"></div>
-  </div>
-</div>
-
-<!-- BALANCE BREAKDOWN MODAL -->
-<div class="balance-modal-overlay" id="balance-modal-overlay">
-  <div class="balance-modal">
-    <div class="balance-modal-header">
-      <h3 data-en="Balance Breakdown" data-es="Desglose de Saldo">Balance Breakdown</h3>
-      <button class="balance-modal-close" id="balance-modal-close"><i data-lucide="x"></i></button>
-    </div>
-    <div class="balance-modal-total" id="balance-modal-total"></div>
-    <div class="balance-modal-list" id="balance-modal-list"></div>
-  </div>
-</div>
-
-<!-- Push Notification Opt-In Banner -->
-<div id="push-opt-in" class="push-opt-in" style="display:none">
-  <div class="push-opt-in-text">
-    <strong data-en="Enable Notifications" data-es="Activar Notificaciones">Enable Notifications</strong>
-    <span data-en="Get notified about order updates" data-es="Recibe notificaciones sobre pedidos">Get notified about order updates</span>
-  </div>
-  <button class="push-opt-in-btn" id="push-opt-in-btn"
-    data-en="Enable" data-es="Activar">Enable</button>
-  <button class="push-opt-in-dismiss" id="push-opt-in-dismiss">✕</button>
-</div>
-
-<!-- CLIENT MODAL -->
-<div class="client-modal-overlay" id="client-modal-overlay">
-  <div class="client-modal">
-    <div class="client-modal-header">
-      <h3 class="client-modal-title" id="client-modal-title" data-en="Add Client" data-es="Agregar Cliente">Add Client</h3>
-      <button class="client-modal-close" id="client-modal-close"><i data-lucide="x"></i></button>
-    </div>
-    <div class="client-modal-body">
-      <div class="client-form-field">
-        <label data-en="Business Name" data-es="Nombre del Negocio">Business Name</label>
-        <input type="text" id="client-field-business" data-en-placeholder="Required" data-es-placeholder="Requerido" placeholder="Required">
+  <!-- SUMMARY MODAL -->
+  <div class="summary-overlay" id="summary-overlay">
+    <div class="summary-modal">
+      <div class="summary-handle"></div>
+      <div class="summary-nav">
+        <button class="summary-nav-btn" id="summary-prev">←</button>
+        <h3 class="summary-title" id="summary-title">Order 1 of 1</h3>
+        <button class="summary-nav-btn" id="summary-next">→</button>
       </div>
-      <div class="client-form-field">
-        <label data-en="Contact Name" data-es="Nombre de Contacto">Contact Name</label>
-        <input type="text" id="client-field-contact" data-en-placeholder="Optional" data-es-placeholder="Opcional" placeholder="Optional">
-      </div>
-      <div class="client-form-field">
-        <label data-en="Phone" data-es="Teléfono">Phone</label>
-        <input type="tel" id="client-field-phone" data-en-placeholder="Optional" data-es-placeholder="Opcional" placeholder="Optional">
-      </div>
-      <div class="client-form-field">
-        <label data-en="Address" data-es="Dirección">Address</label>
-        <input type="text" id="client-field-address" data-en-placeholder="Optional" data-es-placeholder="Opcional" placeholder="Optional">
-      </div>
-      <div class="client-form-field">
+      <div id="summary-content"></div>
+      <div class="summary-notes">
         <label data-en="Notes" data-es="Notas">Notes</label>
-        <textarea id="client-field-notes" rows="3" data-en-placeholder="Any notes about this client..." data-es-placeholder="Notas sobre este cliente..."
-          placeholder="Any notes about this client..."></textarea>
+        <textarea id="summary-notes" data-en-placeholder="Any special instructions..."
+          data-es-placeholder="Instrucciones especiales..." placeholder="Any special instructions..."></textarea>
+      </div>
+      <div class="summary-actions">
+        <button class="btn-back" id="summary-back" data-en="Go Back" data-es="Regresar">Go Back</button>
+        <button class="btn-submit" id="summary-submit" data-en="Submit All Orders"
+          data-es="Enviar Todos los Pedidos">Submit All Orders</button>
       </div>
     </div>
-    <div class="client-modal-actions">
-      <button class="client-modal-cancel" id="client-modal-cancel" data-en="Cancel" data-es="Cancelar">Cancel</button>
-      <button class="client-modal-save" id="client-modal-save" data-en="Save" data-es="Guardar">Save</button>
+  </div>
+
+  <!-- ORDER DETAIL MODAL -->
+  <div class="order-detail-overlay" id="order-detail-overlay">
+    <div class="order-detail-modal">
+      <div class="order-detail-header">
+        <button class="order-detail-back" id="order-detail-back"><i data-lucide="arrow-left"></i></button>
+        <h3 class="order-detail-title" id="order-detail-title">Order #1</h3>
+        <span class="order-detail-badge" id="order-detail-badge"></span>
+      </div>
+      <div class="order-detail-meta" id="order-detail-meta"></div>
+      <div class="order-detail-items" id="order-detail-items"></div>
+      <div class="order-detail-notes" id="order-detail-notes" style="display:none"></div>
     </div>
   </div>
-</div>
 
-<!-- PAYMENT MODAL -->
-<div class="pay-modal-overlay" id="pay-modal-overlay">
-  <div class="pay-modal">
-    <div class="pay-modal-header">
-      <h3 class="pay-modal-title" data-en="Complete Sale" data-es="Completar Venta">Complete Sale</h3>
-      <button class="pay-modal-close" id="pay-modal-close"><i data-lucide="x"></i></button>
+  <!-- BALANCE BREAKDOWN MODAL REMOVED -->
+
+  <!-- Push Notification Opt-In Banner -->
+  <div id="push-opt-in" class="push-opt-in" style="display:none">
+    <div class="push-opt-in-text">
+      <strong data-en="Enable Notifications" data-es="Activar Notificaciones">Enable Notifications</strong>
+      <span data-en="Get notified about order updates" data-es="Recibe notificaciones sobre pedidos">Get notified about
+        order updates</span>
     </div>
-    <div class="pay-modal-body">
-      <div class="pay-modal-total-display" id="pay-modal-total-display">$0.00</div>
+    <button class="push-opt-in-btn" id="push-opt-in-btn" data-en="Enable" data-es="Activar">Enable</button>
+    <button class="push-opt-in-dismiss" id="push-opt-in-dismiss">✕</button>
+  </div>
 
-      <div class="pay-modal-field">
-        <label data-en="Payment Method" data-es="Método de Pago">Payment Method</label>
-        <div class="pay-toggle-group" id="pay-method-group">
-          <button class="pay-toggle-btn active" data-value="cash" data-en="Cash" data-es="Efectivo">Cash</button>
-          <button class="pay-toggle-btn" data-value="check" data-en="Check" data-es="Cheque">Check</button>
+  <!-- CLIENT MODAL -->
+  <div class="client-modal-overlay" id="client-modal-overlay">
+    <div class="client-modal">
+      <div class="client-modal-header">
+        <h3 class="client-modal-title" id="client-modal-title" data-en="Add Client" data-es="Agregar Cliente">Add Client
+        </h3>
+        <button class="client-modal-close" id="client-modal-close"><i data-lucide="x"></i></button>
+      </div>
+      <div class="client-modal-body">
+        <div class="client-form-field">
+          <label data-en="Business Name" data-es="Nombre del Negocio">Business Name</label>
+          <input type="text" id="client-field-business" data-en-placeholder="Required" data-es-placeholder="Requerido"
+            placeholder="Required">
+        </div>
+        <div class="client-form-field">
+          <label data-en="Contact Name" data-es="Nombre de Contacto">Contact Name</label>
+          <input type="text" id="client-field-contact" data-en-placeholder="Optional" data-es-placeholder="Opcional"
+            placeholder="Optional">
+        </div>
+        <div class="client-form-field">
+          <label data-en="Phone" data-es="Teléfono">Phone</label>
+          <input type="tel" id="client-field-phone" data-en-placeholder="Optional" data-es-placeholder="Opcional"
+            placeholder="Optional">
+        </div>
+        <div class="client-form-field">
+          <label data-en="Address" data-es="Dirección">Address</label>
+          <input type="text" id="client-field-address" data-en-placeholder="Optional" data-es-placeholder="Opcional"
+            placeholder="Optional">
+        </div>
+        <div class="client-form-field">
+          <label data-en="Notes" data-es="Notas">Notes</label>
+          <textarea id="client-field-notes" rows="3" data-en-placeholder="Any notes about this client..."
+            data-es-placeholder="Notas sobre este cliente..." placeholder="Any notes about this client..."></textarea>
         </div>
       </div>
+      <div class="client-modal-actions">
+        <button class="client-modal-cancel" id="client-modal-cancel" data-en="Cancel" data-es="Cancelar">Cancel</button>
+        <button class="client-modal-save" id="client-modal-save" data-en="Save" data-es="Guardar">Save</button>
+      </div>
+    </div>
+  </div>
 
-      <div class="pay-modal-field">
-        <label data-en="Payment Status" data-es="Estado de Pago">Payment Status</label>
-        <div class="pay-toggle-group" id="pay-status-group">
-          <button class="pay-toggle-btn active" data-value="paid" data-en="Paid" data-es="Pagado">Paid</button>
-          <button class="pay-toggle-btn" data-value="on_account" data-en="On Account" data-es="A Cuenta">On Account</button>
-          <button class="pay-toggle-btn" data-value="unpaid" data-en="Unpaid" data-es="Sin Pagar">Unpaid</button>
+  <!-- CLIENT PROFILE SHEET (Full-screen, Apple-style) -->
+  <div class="cp-overlay" id="cp-overlay">
+    <div class="cp-sheet">
+      <div class="cp-header">
+        <button class="cp-back" id="cp-back"><i data-lucide="chevron-left"></i><span data-en="Clients" data-es="Clientes">Clients</span></button>
+        <button class="cp-edit-btn" id="cp-edit-btn" data-en="Edit" data-es="Editar">Edit</button>
+      </div>
+      <div class="cp-body">
+        <!-- Client info card -->
+        <div class="cp-info-card">
+          <div class="cp-avatar" id="cp-avatar">AB</div>
+          <h2 class="cp-name" id="cp-name">Client Name</h2>
+          <div class="cp-subtitle" id="cp-subtitle"></div>
+        </div>
+
+        <!-- Info group (inset grouped list) -->
+        <div class="cp-group">
+          <div class="cp-group-label" data-en="Details" data-es="Detalles">Details</div>
+          <div class="cp-inset">
+            <div class="cp-row" id="cp-row-phone" style="display:none">
+              <span class="cp-row-icon"><i data-lucide="phone"></i></span>
+              <span class="cp-row-label" id="cp-phone-val"></span>
+            </div>
+            <div class="cp-row" id="cp-row-address" style="display:none">
+              <span class="cp-row-icon"><i data-lucide="map-pin"></i></span>
+              <span class="cp-row-label" id="cp-address-val"></span>
+            </div>
+            <div class="cp-row" id="cp-row-contact" style="display:none">
+              <span class="cp-row-icon"><i data-lucide="user"></i></span>
+              <span class="cp-row-label" id="cp-contact-val"></span>
+            </div>
+            <div class="cp-row" id="cp-row-notes" style="display:none">
+              <span class="cp-row-icon"><i data-lucide="file-text"></i></span>
+              <span class="cp-row-label cp-notes-text" id="cp-notes-val"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pricing section -->
+        <div class="cp-group">
+          <div class="cp-group-label" data-en="Pricing" data-es="Precios">Pricing</div>
+          <div class="cp-inset">
+            <div class="cp-row cp-row-toggle">
+              <span class="cp-row-label" data-en="Custom Pricing" data-es="Precios Personalizados">Custom Pricing</span>
+              <label class="cp-switch">
+                <input type="checkbox" id="cp-custom-toggle">
+                <span class="cp-switch-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="cp-pricing-hint" id="cp-pricing-hint" data-en="Enable to set prices specific to this client." data-es="Activa para establecer precios específicos para este cliente.">Enable to set prices specific to this client.</div>
+        </div>
+
+        <!-- Template button (visible when custom pricing ON) -->
+        <div class="cp-template-bar" id="cp-template-bar" style="display:none">
+          <button class="cp-template-btn" id="cp-template-btn">
+            <i data-lucide="copy"></i>
+            <span data-en="Copy prices from..." data-es="Copiar precios de...">Copy prices from...</span>
+          </button>
+        </div>
+
+        <!-- Price editor (visible when custom pricing ON) -->
+        <div id="cp-price-editor" style="display:none"></div>
+
+        <!-- Sales History -->
+        <div class="cp-group">
+          <div class="cp-group-label" data-en="Sales History" data-es="Historial de Ventas">Sales History</div>
+          <div id="cp-sales-history" class="cp-inset">
+            <div class="cp-row" style="justify-content:center;color:var(--tx-faint);font-size:.85rem" data-en="Loading..." data-es="Cargando...">Loading...</div>
+          </div>
         </div>
       </div>
-
-      <div class="pay-modal-field">
-        <label data-en="Notes (optional)" data-es="Notas (opcional)">Notes (optional)</label>
-        <textarea id="pay-notes" rows="2" data-en-placeholder="Any notes..." data-es-placeholder="Notas..." placeholder="Any notes..."></textarea>
-      </div>
     </div>
-    <div class="pay-modal-actions">
-      <button class="pay-modal-cancel" id="pay-modal-cancel" data-en="Cancel" data-es="Cancelar">Cancel</button>
-      <button class="pay-modal-confirm" id="pay-modal-confirm" data-en="Confirm Sale" data-es="Confirmar Venta">Confirm Sale</button>
+    <!-- Save pricing — floating at bottom -->
+    <div class="cp-save-float" id="cp-save-bar" style="display:none">
+      <button class="cp-save-btn" id="cp-save-prices-btn" data-en="Save Prices" data-es="Guardar Precios">Save Prices</button>
     </div>
   </div>
-</div>
 
-<div id="screen-receipt" class="screen receipt-screen">
-  <div class="receipt-actions" id="receipt-actions">
-    <button class="receipt-back-btn" id="receipt-back-btn" data-en="← Back" data-es="← Volver">← Back</button>
-    <button class="receipt-print-btn" id="receipt-print-btn" data-en="Print" data-es="Imprimir">Print</button>
-  </div>
-  <div class="receipt-paper" id="receipt-paper">
-    <!-- Populated by JS -->
-  </div>
-
-  <!-- iOS Print Instructions (shown after tapping Print on iPhone) -->
-  <div id="print-instructions" class="print-instructions" style="display:none">
-    <div class="print-step">
-      <div class="print-step-num">1</div>
-      <div class="print-step-text">
-        <strong data-en="Link Copied!" data-es="¡Link Copiado!">Link Copied!</strong>
-        <span data-en="Receipt link is on your clipboard" data-es="El link del recibo está en tu portapapeles">Receipt link is on your clipboard</span>
-      </div>
-      <span class="print-step-check">✓</span>
+  <!-- TEMPLATE ACTION SHEET -->
+  <div class="cp-action-sheet-overlay" id="cp-action-sheet-overlay">
+    <div class="cp-action-sheet" id="cp-action-sheet">
+      <div class="cp-action-title" data-en="Copy prices from" data-es="Copiar precios de">Copy prices from</div>
+      <div class="cp-action-list" id="cp-action-list"></div>
+      <button class="cp-action-cancel" id="cp-action-cancel" data-en="Cancel" data-es="Cancelar">Cancel</button>
     </div>
-    <div class="print-step">
-      <div class="print-step-num">2</div>
-      <div class="print-step-text">
-        <strong data-en="Open Woosim App" data-es="Abre la App Woosim">Open Woosim App</strong>
-        <span data-en="Tap the address bar and paste" data-es="Toca la barra de dirección y pega">Tap the address bar and paste</span>
-      </div>
-    </div>
-    <div class="print-step">
-      <div class="print-step-num">3</div>
-      <div class="print-step-text">
-        <strong data-en="Tap Print" data-es="Toca Imprimir">Tap Print</strong>
-        <span data-en="Tap the printer icon 🖨️" data-es="Toca el icono de impresora 🖨️">Tap the printer icon 🖨️</span>
-      </div>
-    </div>
-    <button class="print-copy-btn" id="print-copy-btn" data-en="📋 Copy Print Link Again" data-es="📋 Copiar Link de Nuevo">📋 Copy Print Link Again</button>
   </div>
-</div>
+
+  <!-- PAYMENT MODAL -->
+  <div class="pay-modal-overlay" id="pay-modal-overlay">
+    <div class="pay-modal">
+      <div class="pay-modal-header">
+        <h3 class="pay-modal-title" data-en="Complete Sale" data-es="Completar Venta">Complete Sale</h3>
+        <button class="pay-modal-close" id="pay-modal-close"><i data-lucide="x"></i></button>
+      </div>
+      <div class="pay-modal-body">
+        <div class="pay-modal-total-display" id="pay-modal-total-display">$0.00</div>
+
+        <div class="pay-modal-field">
+          <label data-en="Payment Method" data-es="Método de Pago">Payment Method</label>
+          <div class="pay-toggle-group" id="pay-method-group">
+            <button class="pay-toggle-btn active" data-value="cash" data-en="Cash" data-es="Efectivo">Cash</button>
+            <button class="pay-toggle-btn" data-value="check" data-en="Check" data-es="Cheque">Check</button>
+          </div>
+        </div>
+
+        <div class="pay-modal-field">
+          <label data-en="Payment Status" data-es="Estado de Pago">Payment Status</label>
+          <div class="pay-toggle-group" id="pay-status-group">
+            <button class="pay-toggle-btn active" data-value="paid" data-en="Paid" data-es="Pagado">Paid</button>
+            <button class="pay-toggle-btn" data-value="on_account" data-en="On Account" data-es="A Cuenta">On
+              Account</button>
+            <button class="pay-toggle-btn" data-value="unpaid" data-en="Unpaid" data-es="Sin Pagar">Unpaid</button>
+          </div>
+        </div>
+
+        <div class="pay-modal-field">
+          <label data-en="Notes (optional)" data-es="Notas (opcional)">Notes (optional)</label>
+          <textarea id="pay-notes" rows="2" data-en-placeholder="Any notes..." data-es-placeholder="Notas..."
+            placeholder="Any notes..."></textarea>
+        </div>
+      </div>
+      <div class="pay-modal-actions">
+        <button class="pay-modal-cancel" id="pay-modal-cancel" data-en="Cancel" data-es="Cancelar">Cancel</button>
+        <button class="pay-modal-confirm" id="pay-modal-confirm" data-en="Confirm Sale"
+          data-es="Confirmar Venta">Confirm Sale</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-receipt" class="screen receipt-screen">
+    <div class="receipt-actions" id="receipt-actions">
+      <button class="receipt-back-btn" id="receipt-back-btn" data-en="← Back" data-es="← Volver">← Back</button>
+      <div style="flex:1"></div>
+      <button class="receipt-delete-btn" id="receipt-delete-btn" data-en="Delete" data-es="Borrar" style="display:none; color: var(--red); background: none; border: none; padding: 10px; cursor: pointer; font-family: inherit; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+        <span data-en="Delete" data-es="Borrar">Delete</span>
+      </button>
+      <button class="receipt-share-btn" id="receipt-share-btn" data-en="Share" data-es="Compartir" style="background: none; border: none; color: var(--blue); padding: 10px; cursor: pointer; font-family: inherit; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+        <span data-en="Share" data-es="Compartir">Share</span>
+      </button>
+      <button class="receipt-print-btn" id="receipt-print-btn" data-en="Print" data-es="Imprimir">Print</button>
+    </div>
+    <div class="receipt-paper" id="receipt-paper">
+      <!-- Populated by JS -->
+    </div>
+  </div>
 
 
-<script src="/pull-to-refresh.js"></script>
-<script src="/swipe-dismiss.js"></script>
-<script type="module" src="/driver-order.js"></script>
-<script>
-// Register service worker silently (no update banner — auto-updates in background)
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js')
-    .then(reg => {
-      reg.addEventListener('updatefound', () => {
-        const nw = reg.installing;
-        if (!nw) return;
-        nw.addEventListener('statechange', () => {
-          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-            // Auto-activate the new SW without prompting the user
-            if (reg.waiting) reg.waiting.postMessage('skipWaiting');
+  <!-- Scan Review Sheet -->
+  <div class="scan-review-overlay" id="scan-review-overlay">
+    <div class="scan-review-backdrop" id="scan-review-backdrop"></div>
+    <div class="scan-review-sheet" id="scan-review-sheet">
+      <div class="scan-review-handle"><span></span></div>
+      <div class="scan-review-header">
+        <h3 data-en="Review Scan" data-es="Revisar Escaneo">Review Scan</h3>
+        <button class="scan-review-close" id="scan-review-close" type="button">✕</button>
+      </div>
+      <div class="scan-review-body" id="scan-review-body"></div>
+    </div>
+  </div>
+
+  <script src="/pull-to-refresh.js"></script>
+  <script src="/swipe-dismiss.js"></script>
+  <script type="module" src="/driver-order.js"></script>
+  <script>
+    // Register service worker silently (no update banner — auto-updates in background)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => {
+          reg.addEventListener('updatefound', () => {
+            const nw = reg.installing;
+            if (!nw) return;
+            nw.addEventListener('statechange', () => {
+              if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                // Auto-activate the new SW without prompting the user
+                if (reg.waiting) reg.waiting.postMessage('skipWaiting');
+              }
+            });
+          });
+          if (reg.waiting && navigator.serviceWorker.controller) {
+            reg.waiting.postMessage('skipWaiting');
           }
-        });
-      });
-      if (reg.waiting && navigator.serviceWorker.controller) {
-        reg.waiting.postMessage('skipWaiting');
-      }
-      reg.update().catch(() => {});
-    }).catch(() => {});
-}
-</script>
+          reg.update().catch(() => { });
+        }).catch(() => { });
+    }
+  </script>
   <script type="module" src="/src/speed-insights.js"></script>
 </body>
+
 </html>

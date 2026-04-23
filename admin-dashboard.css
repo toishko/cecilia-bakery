@@ -32,12 +32,16 @@
    RESET & BASE
    ═══════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-padding-top:80px}
+html{scroll-padding-top:80px; touch-action: manipulation;}
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--tx);
-  overflow-x:hidden;transition:background .3s ease,color .3s ease;
+  overflow-x:clip;transition:background .3s ease,color .3s ease;
   min-height:100vh;min-height:100dvh;overflow-wrap:break-word;
   padding-bottom:env(safe-area-inset-bottom);
-  -webkit-text-size-adjust:100%;text-size-adjust:100%}
+  -webkit-text-size-adjust:100%;text-size-adjust:100%; touch-action: manipulation;}
+/* Ensure inputs prevent iOS auto-zoom by enforcing 16px minimum */
+input[type="text"], input[type="number"], input[type="tel"], input[type="email"], select, textarea {
+  font-size: 16px !important;
+}
 html.scroll-locked,
 html.scroll-locked body {
   overflow: hidden !important;
@@ -210,7 +214,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
    MAIN CONTENT AREA
    ═══════════════════════════════════ */
 .main-content{flex:1;margin-left:var(--sidebar-w);padding:28px 32px;max-width:960px;width:100%;
-  overflow-x:hidden;box-sizing:border-box}
+  overflow-x:clip;box-sizing:border-box}
 .page-title{font-size:1.8rem;font-weight:300;margin-bottom:24px;color:var(--tx)}
 .page-title em{color:var(--red);font-style:italic}
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -556,7 +560,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .detail-overlay.open{display:flex}
 .detail-overlay.open .detail-modal{animation:slideUp .3s ease}
 .detail-modal{background:var(--bg-card);border-radius:20px 20px 0 0;width:100%;
-  max-width:640px;max-height:90vh;overflow-y:auto;overflow-x:hidden;padding:16px 12px 28px;
+  max-width:640px;max-height:90vh;overflow-y:auto;overflow-x:clip;padding:16px 12px 28px;
   box-shadow:0 -8px 40px rgba(0,0,0,.2)}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .detail-handle{width:40px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 12px}
@@ -2472,4 +2476,129 @@ body.is-pwa .app-toast{bottom:calc(72px + env(safe-area-inset-bottom))}
   padding-top: 12px;
   font-weight: 500;
   text-align: center;
+}
+
+/* ══════════════════════════════════════════════════════
+   APPLE SETTINGS UI (DRIVERS PROFILE/EDIT)
+   ══════════════════════════════════════════════════════ */
+.apple-view {
+  background: var(--bg-body); /* or #f2f2f7 in light mode */
+  min-height: 100%;
+}
+.apple-nav-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; background: var(--bg-card);
+  border-bottom: 1px solid var(--bd); position: sticky; top: 0; z-index: 10;
+}
+.apple-nav-btn {
+  background: none; border: none; font-size: 1rem; color: var(--blue);
+  display: flex; align-items: center; cursor: pointer; padding: 0; font-family: inherit;
+}
+.apple-nav-btn.action { font-weight: 600; }
+.apple-nav-title { font-weight: 600; font-size: 1.05rem; }
+
+.apple-view-content { padding: 24px 16px 60px; max-width: 600px; margin: 0 auto; }
+
+.apple-contact-header {
+  text-align: center; margin-bottom: 32px;
+}
+.apple-avatar {
+  width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; font-weight: 700; margin: 0 auto 12px;
+}
+.apple-contact-name { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
+.apple-contact-code { font-size: 0.95rem; color: var(--tx-muted); }
+.apple-contact-badges { margin-top: 8px; display: flex; justify-content: center; gap: 8px; }
+
+.apple-group-title {
+  font-size: 0.85rem; text-transform: uppercase; color: var(--tx-muted);
+  margin: 0 0 8px 16px; font-weight: 600; letter-spacing: 0.5px;
+}
+.apple-inset-group {
+  background: var(--bg-card); border-radius: 12px; overflow: hidden; margin-bottom: 24px;
+}
+.apple-inset-row {
+  display: flex; align-items: center; padding: 12px 16px;
+  border-bottom: 1px solid var(--bd); font-size: 0.95rem;
+}
+.apple-inset-row:last-child { border-bottom: none; }
+.apple-inset-row.between { justify-content: space-between; }
+.apple-inset-row.tap-row { cursor: pointer; transition: background 0.15s; }
+.apple-inset-row.tap-row:active { background: var(--bg-surface); }
+.apple-inset-row.center-text { justify-content: center; color: var(--blue); font-weight: 500; }
+
+.apple-inset-row.input-row { padding: 4px 16px; }
+.apple-inset-row.input-row label { width: 90px; color: var(--tx); font-weight: 500; flex-shrink: 0; }
+.apple-inset-row.input-row input {
+  flex: 1; border: none; background: transparent; padding: 10px 0;
+  font-size: 0.95rem; color: var(--tx); font-family: inherit; outline: none;
+}
+
+/* Balance columns inside an inset row */
+.balance-row-cols { display: flex; justify-content: space-around; padding: 16px; }
+.bal-col { text-align: center; }
+.bal-col .bal-label { display: block; font-size: 0.75rem; color: var(--tx-muted); text-transform: uppercase; margin-bottom: 4px; }
+.bal-col .bal-value { display: block; font-size: 1.2rem; font-weight: 700; }
+
+/* Custom toggle size for Apple Settings feel */
+.apple-toggle input { display: none; }
+.apple-toggle-track {
+  width: 50px; height: 30px; background: var(--bg-surface); border-radius: 15px;
+  position: relative; display: inline-block; cursor: pointer; transition: background 0.2s;
+}
+.apple-toggle-track::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 26px; height: 26px;
+  background: #fff; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: transform 0.2s;
+}
+.apple-toggle input:checked + .apple-toggle-track { background: var(--green); }
+.apple-toggle input:checked + .apple-toggle-track::after { transform: translateX(20px); }
+
+/* Override legacy form inputs for Apple view */
+#drivers-form-view .form-field label { display: none; }
+
+.apple-nav-bar {
+  margin-top: -28px;
+  margin-left: -32px;
+  margin-right: -32px;
+  padding: 12px 32px;
+  top: 0;
+}
+@media (max-width: 768px) {
+  .apple-nav-bar {
+    margin-top: -16px;
+    margin-left: -16px;
+    margin-right: -16px;
+    padding: 12px 16px;
+  }
+}
+.apple-nav-bar {
+  position: fixed !important;
+  top: 0 !important;
+  left: var(--sidebar-w) !important;
+  right: 0 !important;
+  z-index: 90 !important;
+  margin: 0 !important;
+  border-bottom: 1px solid var(--bd) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+[data-theme="dark"] .apple-nav-bar {
+  background: rgba(30, 13, 18, 0.85) !important;
+}
+
+.apple-view-content {
+  padding-top: 80px !important;
+}
+
+@media (max-width: 768px) {
+  .apple-nav-bar {
+    left: 0 !important;
+    top: 56px !important; /* height of mobile header approx */
+  }
+  .apple-view-content {
+    padding-top: 64px !important;
+  }
 }
