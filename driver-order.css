@@ -1706,6 +1706,11 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   body:has(input:focus, textarea:focus, select:focus) .bottom-nav {
     display: none !important;
   }
+  body:has(input:focus, textarea:focus, select:focus) .inv-save-float {
+    display: block !important;
+    position: fixed !important;
+    bottom: 0 !important;
+  }
 }
 .bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;
   background:var(--bg-card);border-top:1px solid var(--bd);
