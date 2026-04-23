@@ -350,9 +350,10 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   color:var(--tx-muted);cursor:pointer;font-family:inherit;font-size:.85rem;white-space:nowrap;
   transition:var(--transition)}
 .order-tab.active{background:var(--red);color:var(--tx-on-red);border-color:var(--red)}
-.order-tab-add{padding:8px 12px;border:1px dashed var(--bd);border-radius:8px;background:none;
-  color:var(--tx-muted);cursor:pointer;font-family:inherit;font-size:.85rem;transition:var(--transition)}
-.order-tab-add:hover{border-color:var(--red);color:var(--red)}
+.order-tab-add { display: inline-flex; align-items: center; gap: 6px; position: sticky; right: 0; padding: 8px 16px; border: 1px solid var(--bd); border-radius: 12px; background: rgba(250,250,248,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: var(--tx); font-weight: 600; cursor: pointer; font-family: inherit; font-size: .9rem; box-shadow: -4px 0 12px rgba(0,0,0,0.06); z-index: 10; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+[data-theme="dark"] .order-tab-add { background: rgba(14,5,7,0.85); box-shadow: -4px 0 12px rgba(0,0,0,0.4); border-color: var(--bd-hover); }
+.order-tab-add:hover { background: var(--bg-card); border-color: var(--red); color: var(--red); }
+.order-tab-add:active { transform: scale(0.95); }
 
 /* Delete button on order tabs */
 .order-tab-delete{display:inline-flex;align-items:center;justify-content:center;
@@ -1884,3 +1885,4 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 /* Immersive Mode */
 .immersive-mode .bottom-nav { display: none !important; }
 .immersive-mode .form-footer, .immersive-mode .sale-footer { bottom: 0 !important; border-bottom: none !important; padding-bottom: calc(12px + env(safe-area-inset-bottom)) !important; }
+.tab-count-badge{background:var(--tx);color:var(--bg);font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:2px}
