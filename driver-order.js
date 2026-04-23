@@ -2693,6 +2693,9 @@ function buildSaleProducts() {
       const maxInvReg = driverInventory[keyReg] ? Math.max(0, driverInventory[keyReg].remaining) : 0;
       const maxInvNT = driverInventory[keyNT] ? Math.max(0, driverInventory[keyNT].remaining) : 0;
 
+      const availReg = Math.max(0, maxInvReg - qtyReg);
+      const availNT = Math.max(0, maxInvNT - qtyNT);
+
       const lineTotalReg = hasPrice && qtyReg > 0 ? qtyReg * price : 0;
       const lineTotalNT = hasPrice && qtyNT > 0 ? qtyNT * price : 0;
       const lineTotal = lineTotalReg + lineTotalNT;
@@ -2710,13 +2713,13 @@ function buildSaleProducts() {
       html += `  <div class="sale-prod-controls">`;
       // Regular Group
       html += `    <div class="sale-qty-group">`;
-      html += `      <span class="sale-qty-lbl">Reg <small class="${maxInvReg===0?'out':''}">${maxInvReg}</small></span>`;
+      html += `      <span class="sale-qty-lbl">Reg <small class="sale-avail-lbl ${availReg===0?'out':''}" data-key="${keyReg}">${availReg}</small></span>`;
       html += `      <div class="sale-qty-wrap"><button class="sale-qty-btn" data-dir="-" data-key="${keyReg}">−</button><input type="number" class="sale-qty-input" data-key="${keyReg}" data-parent-key="${item.key}" value="${qtyReg}" min="0"><button class="sale-qty-btn" data-dir="+" data-key="${keyReg}">+</button></div>`;
       html += `    </div>`;
 
       // No-Ticket (NT) Group
       html += `    <div class="sale-qty-group">`;
-      html += `      <span class="sale-qty-lbl">NT <small class="${maxInvNT===0?'out':''}">${maxInvNT}</small></span>`;
+      html += `      <span class="sale-qty-lbl">NT <small class="sale-avail-lbl ${availNT===0?'out':''}" data-key="${keyNT}">${availNT}</small></span>`;
       html += `      <div class="sale-qty-wrap"><button class="sale-qty-btn" data-dir="-" data-key="${keyNT}">−</button><input type="number" class="sale-qty-input" data-key="${keyNT}" data-parent-key="${item.key}" value="${qtyNT}" min="0"><button class="sale-qty-btn" data-dir="+" data-key="${keyNT}">+</button></div>`;
       html += `    </div>`;
       html += `  </div>`;
@@ -2803,6 +2806,25 @@ function updateSaleRow(key) {
     lineEl.textContent = lineTotal > 0 ? '$' + lineTotal.toFixed(2) : '';
   }
   
+  // Update live inventory numbers on the badges
+  if (driverInventory) {
+    const maxReg = driverInventory[keyReg] ? Math.max(0, driverInventory[keyReg].remaining) : 0;
+    const availReg = Math.max(0, maxReg - qtyReg);
+    const lblReg = row.querySelector(`.sale-avail-lbl[data-key="${keyReg}"]`);
+    if (lblReg) {
+      lblReg.textContent = availReg;
+      lblReg.className = `sale-avail-lbl ${availReg === 0 ? 'out' : ''}`;
+    }
+
+    const maxNT = driverInventory[keyNT] ? Math.max(0, driverInventory[keyNT].remaining) : 0;
+    const availNT = Math.max(0, maxNT - qtyNT);
+    const lblNT = row.querySelector(`.sale-avail-lbl[data-key="${keyNT}"]`);
+    if (lblNT) {
+      lblNT.textContent = availNT;
+      lblNT.className = `sale-avail-lbl ${availNT === 0 ? 'out' : ''}`;
+    }
+  }
+
   row.classList.toggle('has-value', qtyReg > 0 || qtyNT > 0);
 }
 
