@@ -1078,6 +1078,7 @@
       backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
       opacity:0; pointer-events:none;
       transition:opacity .25s ease;
+      touch-action:none; overscroll-behavior:none;
     }
     .frost-modal-overlay.open { opacity:1; pointer-events:auto; }
     .frost-modal-sheet {
@@ -1086,6 +1087,7 @@
       border-radius:20px 20px 0 0;
       max-height:88vh; overflow-y:auto;
       -webkit-overflow-scrolling:touch;
+      overscroll-behavior:contain;
       transform:translateY(100%);
       transition:transform .3s cubic-bezier(.32,.72,0,1);
       padding:0 0 env(safe-area-inset-bottom);
@@ -2055,7 +2057,18 @@
       try {
         var state = JSON.parse(saved);
         // Restore box calc inputs for this card
-        if (state.boxCalc) {
+        if (state.calcByProductKey) {
+          Object.keys(state.calcByProductKey).forEach(function(productKey) {
+            var row = card.querySelector('.box-calc-item[data-product-key="' + productKey + '"]');
+            if (row) {
+              var inp = row.querySelector('.box-calc-input');
+              if (inp) {
+                inp.value = state.calcByProductKey[productKey];
+                calcBox(inp);
+              }
+            }
+          });
+        } else if (state.boxCalc) {
           Object.keys(state.boxCalc).forEach(function(inputId) {
             var inp = document.getElementById(inputId);
             if (inp) {
@@ -2135,7 +2148,21 @@
         if (!saved) return;
         try {
           var state = JSON.parse(saved);
-          if (state.boxCalc) {
+          if (state.calcByProductKey) {
+            var card = document.getElementById('staff-order-' + idx);
+            if (card) {
+              Object.keys(state.calcByProductKey).forEach(function(productKey) {
+                var row = card.querySelector('.box-calc-item[data-product-key="' + productKey + '"]');
+                if (row) {
+                  var inp = row.querySelector('.box-calc-input');
+                  if (inp) {
+                    inp.value = state.calcByProductKey[productKey];
+                    calcBox(inp);
+                  }
+                }
+              });
+            }
+          } else if (state.boxCalc) {
             Object.keys(state.boxCalc).forEach(function(inputId) {
               var inp = document.getElementById(inputId);
               if (inp) {
@@ -3785,7 +3812,7 @@
     });
   </script>
   <!-- Frost Packer Modal -->
-  <div class="frost-modal-overlay" id="frost-modal-overlay" onclick="frostCloseModal()"></div>
+  <div class="frost-modal-overlay" id="frost-modal-overlay" onclick="frostCloseModal()" ontouchmove="event.preventDefault()"></div>
   <div class="frost-modal-sheet" id="frost-modal-sheet">
     <div class="frost-modal-handle"></div>
     <div class="frost-modal-header">
