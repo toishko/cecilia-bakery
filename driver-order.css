@@ -1582,8 +1582,8 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .inv-form-input::-webkit-inner-spin-button,.inv-form-input::-webkit-outer-spin-button{
   -webkit-appearance:none;appearance:none}
 .inv-form-input:focus{border-color:var(--red);box-shadow:0 0 0 2px rgba(200,16,46,.1);outline:none}
-.inv-save-float{position:fixed;bottom:0;left:0;right:0;
-  padding:0 20px;padding-bottom:calc(6px + env(safe-area-inset-bottom));
+.inv-save-float{position:fixed;bottom:calc(65px + env(safe-area-inset-bottom));left:0;right:0;
+  padding:0 20px;
   z-index:200;pointer-events:none}
 .inv-save-btn{width:100%;padding:16px;border:none;border-radius:16px;background:var(--red);
   color:var(--tx-on-red);font-weight:700;font-family:inherit;font-size:1rem;cursor:pointer;
