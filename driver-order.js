@@ -4201,18 +4201,11 @@ async function loadInventoryTab() {
 
   await loadInventoryData();
 
-  if (inventoryLoaded) {
-    summary.style.display = 'block';
-    renderInventoryBanner();
-    renderInventorySummary();
-    form.style.display = 'none';
-  } else {
-    banner.innerHTML = '';
-    summary.innerHTML = '';
-    summary.style.display = 'none';
-    form.style.display = 'block';
-    renderManualLoadForm();
-  }
+  summary.style.display = 'block';
+  renderInventoryBanner();
+  renderInventorySummary();
+  form.style.display = 'none';
+
   applyLang();
 
   // Update sales ticker since inventory data is ready
@@ -4297,6 +4290,7 @@ async function loadInventoryData() {
     }
 
     // No inventory for today
+    inventorySource = '';
     inventoryLoaded = false;
   } catch (e) {
     console.error('Inventory load error:', e);
@@ -4339,12 +4333,16 @@ function renderInventoryBanner() {
   const isOrder = inventorySource.indexOf('order:') === 0;
 
   let sourceHtml = '';
-  if (isOrder) {
-    const orderLabel = inventorySource.replace('order:', lang === 'es' ? 'Cargado de Pedido ' : 'From Order ');
-    sourceHtml = `<div class="inv-banner order">📦 ${orderLabel}</div>`;
+  if (inventorySource) {
+    if (isOrder) {
+      const orderLabel = inventorySource.replace('order:', lang === 'es' ? 'Cargado de Pedido ' : 'From Order ');
+      sourceHtml = `<div class="inv-banner order">📦 ${orderLabel}</div>`;
+    } else {
+      // Small pill badge for manual adjustments
+      sourceHtml = `<span class="inv-adjusted-badge"><i data-lucide="pencil"></i> ${lang === 'es' ? 'Ajustado' : 'Adjusted'}</span>`;
+    }
   } else {
-    // Small pill badge for manual adjustments
-    sourceHtml = `<span class="inv-adjusted-badge"><i data-lucide="pencil"></i> ${lang === 'es' ? 'Ajustado' : 'Adjusted'}</span>`;
+    sourceHtml = `<span style="font-size:0.85rem; color:var(--tx-faint); font-weight:600;"><i data-lucide="package" style="width:14px; height:14px; margin-right:4px; vertical-align:middle; display:inline-block; margin-top:-2px"></i>${lang === 'es' ? 'Sin recoger pedidos' : 'No orders picked up yet'}</span>`;
   }
 
   const addMoreEn = 'Edit Inventory';
@@ -4355,9 +4353,10 @@ function renderInventoryBanner() {
 
   banner.innerHTML = `<div class="inv-banner-row">${sourceHtml}
     <div style="display: flex; gap: 4px; align-items: center;">
+      ${inventorySource ? `
       <button class="inv-clear-btn" id="inv-clear-btn" data-en="${clearEn}" data-es="${clearEs}">
         ${lang === 'es' ? clearEs : clearEn}
-      </button>
+      </button>` : ''}
       <button class="inv-add-more-btn" id="inv-add-more-btn" style="margin-top: 0" data-en="${addMoreEn}" data-es="${addMoreEs}">
         <i data-lucide="pencil"></i> ${lang === 'es' ? addMoreEs : addMoreEn}
       </button>
@@ -4417,7 +4416,7 @@ function renderInventorySummary() {
 
   const keys = Object.keys(driverInventory);
   if (keys.length === 0) {
-    container.innerHTML = `<div class="empty-state">${lang === 'es' ? 'Sin inventario hoy' : 'No inventory today'}</div>`;
+    container.innerHTML = `<div class="empty-state">${lang === 'es' ? 'Aún no se han recogido pedidos' : 'No orders picked up yet'}</div>`;
     return;
   }
 
