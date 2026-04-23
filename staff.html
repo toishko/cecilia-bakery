@@ -424,13 +424,30 @@
     /* ── Saved Calculations ── */
     .saved-date-card {
       background: var(--bg-card); border: 1px solid var(--bd);
-      border-radius: 14px; padding: 16px 20px; margin-bottom: 12px;
-      transition: box-shadow .2s;
+      border-radius: 18px; padding: 14px 16px; margin-bottom: 12px;
+      transition: box-shadow .2s, border-color .25s;
+      position: relative;
     }
     .saved-date-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.06); }
+    .saved-date-card.expanded {
+      border-color: var(--bd-hover);
+      box-shadow: var(--shadow-card-hover);
+    }
     .saved-date-header {
       display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .saved-date-card.expanded .saved-date-header {
+      position: sticky;
+      top: calc(60px + env(safe-area-inset-top));
+      z-index: 10;
+      background: var(--bg-nav);
+      backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6);
+      margin: -14px -16px 0 -16px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--bd);
+      border-radius: 18px 18px 0 0;
+      box-shadow: 0 4px 16px rgba(0,0,0,.03);
     }
     .saved-date-title {
       font-size: .95rem; font-weight: 700; color: var(--tx);
@@ -1954,8 +1971,8 @@
             detailHtml = '<div style="font-size:.82rem;color:var(--tx-muted);padding:8px 0">Item details not available \u2014 re-save to include items.</div>';
           }
 
-          html += '<div class="saved-date-card" style="cursor:pointer" onclick="toggleSavedDetail(' + ci + ')">' +
-            '<div class="saved-date-header">' +
+          html += '<div class="saved-date-card" id="saved-card-' + ci + '">' +
+            '<div class="saved-date-header" onclick="toggleSavedDetail(' + ci + ')">' +
               '<div style="display:flex;align-items:center;gap:8px">' +
                 '<svg class="saved-chevron" id="saved-chev-' + ci + '" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .25s;flex-shrink:0;color:var(--tx-faint)"><polyline points="6 9 12 15 18 9"/></svg>' +
                 '<div>' +
@@ -1988,10 +2005,22 @@
     function toggleSavedDetail(ci) {
       var detail = document.getElementById('saved-detail-' + ci);
       var chev = document.getElementById('saved-chev-' + ci);
+      var card = document.getElementById('saved-card-' + ci);
       if (!detail) return;
       var isOpen = detail.style.display !== 'none';
       detail.style.display = isOpen ? 'none' : '';
       if (chev) chev.style.transform = isOpen ? '' : 'rotate(180deg)';
+      if (card) {
+        if (isOpen) {
+          card.classList.remove('expanded');
+        } else {
+          card.classList.add('expanded');
+          // Scroll card into view
+          setTimeout(function() {
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 50);
+        }
+      }
     }
 
     /* ── In-app Toast Helper ── */
