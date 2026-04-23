@@ -86,7 +86,7 @@ function showSection(name) {
     activeSection = 'tools';
     activeTool = name;
   } else if (name === 'tools') {
-    activeTool = 'sales'; // Default
+    activeTool = 'inventory'; // Default
   }
 
   // Hide all sections, show target
