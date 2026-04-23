@@ -3990,7 +3990,21 @@ async function loadInventoryData() {
   try {
     const today = getTodayStr();
 
-    // Step 1: Check for picked_up orders today
+    // Step 1: Load manual inventory adjustments
+    const { data: loadRows, error: e3 } = await sb
+      .from('driver_inventory')
+      .select('product_key, morning_load')
+      .eq('driver_id', currentDriver.id)
+      .eq('date', today);
+
+    const manualMap = {};
+    if (!e3 && loadRows) {
+      loadRows.forEach(row => {
+        manualMap[row.product_key] = row.morning_load;
+      });
+    }
+
+    // Step 2: Check for picked_up orders today
     const { data: pickedUpOrders, error: e1 } = await sb
       .from('driver_orders')
       .select('id, order_number')
@@ -3998,55 +4012,52 @@ async function loadInventoryData() {
       .eq('status', 'picked_up')
       .eq('pickup_date', today);
 
+    const loadMap = {};
+    const orderNums = [];
+
     if (!e1 && pickedUpOrders && pickedUpOrders.length > 0) {
+      pickedUpOrders.forEach(o => { if (o.order_number) orderNums.push('#' + o.order_number); });
       const orderIds = pickedUpOrders.map(o => o.id);
       const { data: orderItems, error: e2 } = await sb
         .from('driver_order_items')
         .select('product_key, quantity, adjusted_quantity')
         .in('order_id', orderIds);
 
-      if (!e2 && orderItems && orderItems.length > 0) {
-        // Aggregate by product_key (keep _nt separate)
-        const loadMap = {};
+      if (!e2 && orderItems) {
         orderItems.forEach(item => {
           const qty = (item.adjusted_quantity !== null && item.adjusted_quantity !== undefined)
             ? item.adjusted_quantity : item.quantity;
           loadMap[item.product_key] = (loadMap[item.product_key] || 0) + qty;
         });
-
-        // Get today's sold quantities
-        const soldMap = await getTodaySoldMap();
-
-        driverInventory = {};
-        Object.entries(loadMap).forEach(([key, loaded]) => {
-          const sold = soldMap[key] || 0;
-          driverInventory[key] = { loaded, sold, remaining: loaded - sold };
-        });
-
-        const orderNums = pickedUpOrders
-          .map(o => o.order_number ? '#' + o.order_number : null)
-          .filter(Boolean);
-        inventorySource = 'order:' + (orderNums.length > 0 ? orderNums.join(', ') : 'Order');
-        inventoryLoaded = true;
-        return;
       }
     }
 
-    // Step 2: Fall back to manual driver_inventory
-    const { data: loadRows, error: e3 } = await sb
-      .from('driver_inventory')
-      .select('product_key, morning_load')
-      .eq('driver_id', currentDriver.id)
-      .eq('date', today);
+    // Merge manual overrides into loadMap
+    let hasManual = false;
+    Object.keys(manualMap).forEach(key => {
+      loadMap[key] = manualMap[key]; // Manual override takes precedence
+      hasManual = true;
+    });
 
-    if (!e3 && loadRows && loadRows.length > 0) {
+    if (Object.keys(loadMap).length > 0) {
+      // Get today's sold quantities
       const soldMap = await getTodaySoldMap();
+
       driverInventory = {};
-      loadRows.forEach(row => {
-        const sold = soldMap[row.product_key] || 0;
-        driverInventory[row.product_key] = { loaded: row.morning_load, sold, remaining: row.morning_load - sold };
+      Object.entries(loadMap).forEach(([key, loaded]) => {
+        const sold = soldMap[key] || 0;
+        driverInventory[key] = { loaded, sold, remaining: loaded - sold };
       });
-      inventorySource = 'manual';
+
+      // Determine source string
+      if (orderNums.length > 0 && hasManual) {
+        inventorySource = 'order:' + orderNums.join(', ') + ' (+ Adjusted)';
+      } else if (orderNums.length > 0) {
+        inventorySource = 'order:' + orderNums.join(', ');
+      } else {
+        inventorySource = 'manual';
+      }
+      
       inventoryLoaded = true;
       return;
     }
