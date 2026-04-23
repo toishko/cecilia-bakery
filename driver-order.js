@@ -3983,18 +3983,23 @@ function renderInventoryBanner() {
   if (!banner) return;
 
   const isOrder = inventorySource.indexOf('order:') === 0;
-  const sourceLabel = isOrder
-    ? '📦 ' + inventorySource.replace('order:', lang === 'es' ? 'Cargado de Pedido ' : 'From Order ')
-    : '✏️ ' + (lang === 'es' ? 'Carga Manual' : 'Manual Entry');
-  const cls = isOrder ? 'inv-banner order' : 'inv-banner manual';
+
+  let sourceHtml = '';
+  if (isOrder) {
+    const orderLabel = inventorySource.replace('order:', lang === 'es' ? 'Cargado de Pedido ' : 'From Order ');
+    sourceHtml = `<div class="inv-banner order">📦 ${orderLabel}</div>`;
+  } else {
+    // Small pill badge for manual adjustments
+    sourceHtml = `<span class="inv-adjusted-badge"><i data-lucide="pencil"></i> ${lang === 'es' ? 'Ajustado' : 'Adjusted'}</span>`;
+  }
 
   const addMoreEn = 'Add More';
   const addMoreEs = 'Agregar Más';
 
-  banner.innerHTML = `<div class="${cls}">${sourceLabel}</div>
+  banner.innerHTML = `<div class="inv-banner-row">${sourceHtml}
     <button class="inv-add-more-btn" id="inv-add-more-btn" data-en="${addMoreEn}" data-es="${addMoreEs}">
       <i data-lucide="plus-circle"></i> ${lang === 'es' ? addMoreEs : addMoreEn}
-    </button>`;
+    </button></div>`;
 
   document.getElementById('inv-add-more-btn')?.addEventListener('click', () => {
     const form = document.getElementById('inv-load-form');
