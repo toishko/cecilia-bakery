@@ -36,21 +36,23 @@ A push-to-talk voice ordering system integrated into the New Order form for both
 - [ ] Add voice styles to `admin-dashboard.css`
 
 ### Driver Portal
-- [ ] Transform bottom-nav `+` FAB → mic icon when on New Order screen (`driver-order.html`)
-- [ ] Add voice tooltip, recording overlay, confirmation card HTML
-- [ ] Feature flag check: add `voice_order_enabled` to `checkAdvancedFeatures()` (`driver-order.js`)
-- [ ] Voice ordering engine: MediaRecorder, state machine, API calls, conversation context
-- [ ] Apply actions to live order form quantities
-- [ ] TTS readback via SpeechSynthesis in detected language
-- [ ] Confirmation flow: "Confirm" applies, hold mic again for changes
-- [ ] Add voice styles to `driver-order.css`
+- [x] Transform bottom-nav `+` FAB → mic icon when on New Order screen (`driver-order.html`)
+- [x] Add voice tooltip, recording overlay, confirmation card HTML
+- [x] Feature flag check: add `voice_order_enabled` to `checkAdvancedFeatures()` (`driver-order.js`)
+- [x] Voice ordering engine: MediaRecorder, state machine, API calls, conversation context
+- [x] Apply actions to live order form quantities
+- [x] TTS readback via SpeechSynthesis in detected language
+- [x] Confirmation flow: "Confirm" applies, hold mic again for changes
+- [x] Add voice styles to `driver-order.css`
+- [ ] **Footer mic redesign**: Move mic FAB into form-footer (center position, between Cancel & Continue)
+- [ ] Move item count badge onto Continue button as inline counter ("Continue • 23")
 
 ### Polish
-- [ ] Pulse animation while recording
-- [ ] Processing spinner state
-- [ ] Product row highlight animation when voice sets quantities
+- [x] Pulse animation while recording
+- [x] Processing spinner state
+- [x] Product row highlight animation when voice sets quantities
 - [ ] Dark mode support for all voice UI
-- [ ] Tooltip auto-dismiss after first use
+- [x] Tooltip auto-dismiss after first use
 - [ ] Haptic feedback on mobile (if supported)
 
 ## Architecture
@@ -92,3 +94,4 @@ Client receives response
 - *2026-04-24:* Readback language auto-detected from what the driver actually spoke, not from the app language setting.
 - *2026-04-24:* Multi-turn conversation — AI remembers context between consecutive hold-to-talk interactions within the same order session.
 - *2026-04-24:* FAB transforms from `+` to mic on New Order screen (no separate floating button).
+- *2026-04-24:* **Footer mic redesign** — Bottom nav hides in immersive mode (New Order), so the mic FAB now lives in the form footer centered between Cancel and Continue. Item count badge moves onto the Continue button itself as an inline counter ("Continue • 23"). This keeps the mic always visible while ordering.

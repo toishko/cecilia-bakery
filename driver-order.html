@@ -494,11 +494,6 @@
       <button class="bottom-nav-item bottom-nav-fab" id="bottom-fab-btn" data-section="new-order">
         <div class="fab-circle">
           <i data-lucide="plus" id="fab-icon-plus"></i>
-          <svg id="fab-icon-mic" class="fab-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none" width="24" height="24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-        </div>
-        <!-- Voice tooltip -->
-        <div class="voice-tooltip voice-feature" id="voice-tooltip" style="display:none">
-          <span data-en="Hold to order by voice" data-es="Mantén para pedir por voz">Hold to order by voice</span>
         </div>
       </button>
 
@@ -541,12 +536,19 @@
   <!-- FOOTER BAR (only visible during order form) -->
   <div class="form-footer" id="form-footer" style="display:none">
     <button class="form-footer-cancel" id="footer-cancel-btn" data-en="Cancel" data-es="Cancelar">Cancel</button>
-    <div class="form-footer-center">
-      <span class="form-footer-badge" id="footer-item-count">0</span>
-      <span class="form-footer-label" data-en="items" data-es="artículos">items</span>
+
+    <!-- Voice mic FAB (centered, only visible when voice enabled) -->
+    <div class="footer-mic-wrap" style="position:relative">
+      <div class="voice-tooltip" id="voice-tooltip" style="display:none">
+        <span data-en="Hold to order by voice" data-es="Mantén para pedir por voz">Hold to order by voice</span>
+      </div>
+      <button class="footer-mic-fab voice-feature" id="footer-mic-btn" type="button" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+      </button>
     </div>
+
     <button class="form-footer-btn" id="footer-continue-btn" disabled data-en="Continue"
-      data-es="Continuar">Continue</button>
+      data-es="Continuar"><span class="footer-btn-text">Continue</span><span class="footer-btn-count" id="footer-item-count"></span></button>
   </div>
 
   <!-- SUMMARY MODAL -->

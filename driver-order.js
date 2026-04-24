@@ -1272,10 +1272,10 @@ function updateFooterCount() {
   document.querySelectorAll('.qty-input').forEach(inp => {
     total += parseInt(inp.value) || 0;
   });
-  document.getElementById('footer-item-count').textContent = total;
-  document.getElementById('footer-continue-btn').disabled = total === 0;
-
-  document.getElementById('footer-continue-btn').disabled = total === 0;
+  const countEl = document.getElementById('footer-item-count');
+  const btn = document.getElementById('footer-continue-btn');
+  if (countEl) countEl.textContent = total > 0 ? total : '';
+  if (btn) btn.disabled = total === 0;
 }
 
 
@@ -5357,20 +5357,16 @@ let _pendingActions = []; // actions waiting for confirmation
 let _voiceStream = null;
 let _voiceTooltipShown = false;
 
-/* Show/hide the mic icon on the FAB */
+/* Show/hide the footer mic button */
 function _showVoiceFab(onNewOrder) {
   const voiceEnabled = currentDriver && !!currentDriver.voice_order_enabled;
-  const plusIcon = document.getElementById('fab-icon-plus');
-  const micIcon = document.getElementById('fab-icon-mic');
+  const micBtn = document.getElementById('footer-mic-btn');
   const tooltip = document.getElementById('voice-tooltip');
-  const fabBtn = document.getElementById('bottom-fab-btn');
 
-  if (!plusIcon || !micIcon) return;
+  if (!micBtn) return;
 
   if (onNewOrder && voiceEnabled) {
-    plusIcon.style.display = 'none';
-    micIcon.style.display = 'block';
-    if (fabBtn) fabBtn.classList.add('voice-mode');
+    micBtn.style.display = 'flex';
 
     // Show tooltip once
     if (tooltip && !_voiceTooltipShown) {
@@ -5382,9 +5378,7 @@ function _showVoiceFab(onNewOrder) {
       }, 4000);
     }
   } else {
-    plusIcon.style.display = 'block';
-    micIcon.style.display = 'none';
-    if (fabBtn) fabBtn.classList.remove('voice-mode');
+    micBtn.style.display = 'none';
     if (tooltip) tooltip.style.display = 'none';
   }
 }
@@ -5393,15 +5387,13 @@ function _initVoiceOrdering() {
   if (_voiceInited) return;
   _voiceInited = true;
 
-  const fabBtn = document.getElementById('bottom-fab-btn');
-  if (!fabBtn) return;
+  const micBtn = document.getElementById('footer-mic-btn');
+  if (!micBtn) return;
 
   let holdTimer = null;
   let isVoiceHold = false;
 
-  // Override the default click-to-navigate for voice mode
-  fabBtn.addEventListener('pointerdown', (e) => {
-    if (!fabBtn.classList.contains('voice-mode')) return;
+  micBtn.addEventListener('pointerdown', (e) => {
     if (_voiceState === 'processing') return;
     e.preventDefault();
     e.stopPropagation();
@@ -5409,7 +5401,7 @@ function _initVoiceOrdering() {
     holdTimer = setTimeout(() => _startVoiceRecording(), 150);
   }, { capture: true });
 
-  fabBtn.addEventListener('pointerup', (e) => {
+  micBtn.addEventListener('pointerup', (e) => {
     if (!isVoiceHold) return;
     e.preventDefault();
     e.stopPropagation();
@@ -5418,7 +5410,7 @@ function _initVoiceOrdering() {
     if (_voiceState === 'recording') _stopVoiceRecording();
   }, { capture: true });
 
-  fabBtn.addEventListener('pointerleave', (e) => {
+  micBtn.addEventListener('pointerleave', (e) => {
     if (!isVoiceHold) return;
     clearTimeout(holdTimer);
     isVoiceHold = false;
@@ -5426,9 +5418,7 @@ function _initVoiceOrdering() {
   });
 
   // Prevent context menu on long press
-  fabBtn.addEventListener('contextmenu', (e) => {
-    if (fabBtn.classList.contains('voice-mode')) e.preventDefault();
-  });
+  micBtn.addEventListener('contextmenu', (e) => e.preventDefault());
 
   // Confirm button
   const confirmBtn = document.getElementById('voice-confirm-accept');
@@ -5448,8 +5438,8 @@ async function _startVoiceRecording() {
       overlay.style.display = 'flex';
       requestAnimationFrame(() => overlay.classList.add('active'));
     }
-    const fabBtn = document.getElementById('bottom-fab-btn');
-    if (fabBtn) fabBtn.classList.add('recording');
+    const micBtn = document.getElementById('footer-mic-btn');
+    if (micBtn) micBtn.classList.add('recording');
 
     // Update status
     const status = document.getElementById('voice-status');
@@ -5479,8 +5469,8 @@ async function _startVoiceRecording() {
     _voiceState = 'idle';
     const overlay = document.getElementById('voice-overlay');
     if (overlay) { overlay.classList.remove('active'); overlay.style.display = 'none'; }
-    const fabBtn = document.getElementById('bottom-fab-btn');
-    if (fabBtn) fabBtn.classList.remove('recording');
+    const micBtn = document.getElementById('footer-mic-btn');
+    if (micBtn) micBtn.classList.remove('recording');
     showToast(lang === 'es' ? 'Acceso al micrófono denegado' : 'Microphone access denied', 'error');
   }
 }
@@ -5494,8 +5484,8 @@ function _stopVoiceRecording() {
     _voiceStream = null;
   }
   _voiceState = 'processing';
-  const fabBtn = document.getElementById('bottom-fab-btn');
-  if (fabBtn) fabBtn.classList.remove('recording');
+  const micBtn = document.getElementById('footer-mic-btn');
+  if (micBtn) micBtn.classList.remove('recording');
 
   const status = document.getElementById('voice-status');
   if (status) status.textContent = lang === 'es' ? 'Procesando...' : 'Processing...';
