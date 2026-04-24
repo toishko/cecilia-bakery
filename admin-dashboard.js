@@ -9835,8 +9835,14 @@ function _noInitTimePicker(initialVal, cb) {
       } else {
         input.value = a.qty;
       }
-      input.dispatchEvent(new Event('input', { bubbles: true }));
+      _noUpdateRowHighlight(input);
     });
+
+    // Update footer count + persist to order state
+    _noUpdateFooterCount();
+    if (typeof adminNoActiveOrderIdx !== 'undefined') {
+      _noSaveFormToOrder(adminNoActiveOrderIdx);
+    }
 
     _pendingActions = [];
     _voiceState = 'idle';
