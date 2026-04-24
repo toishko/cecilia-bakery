@@ -3,6 +3,14 @@
 // sends to Google Gemini with the product catalog and order context,
 // and returns structured order actions with a readback.
 
+// Vercel function config — audio uploads need more time and body size
+module.exports.config = {
+  api: {
+    bodyParser: { sizeLimit: '10mb' },
+  },
+  maxDuration: 30,
+};
+
 // ── Rate limiter ──
 const rateMap = new Map();
 const RATE_WINDOW = 60_000;
@@ -273,7 +281,11 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error('Voice order error:', err);
-    return res.status(502).json({ success: false, message: 'Could not reach AI service.' });
+    console.error('Voice order error:', err.message, err.stack);
+    return res.status(502).json({
+      success: false,
+      message: 'Could not reach AI service.',
+      debug: err.message || 'Unknown error',
+    });
   }
 }

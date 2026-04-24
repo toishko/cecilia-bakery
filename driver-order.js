@@ -5647,7 +5647,14 @@ async function _processVoiceAudio() {
       }),
     });
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch (parseErr) {
+      const rawText = await res.text().catch(() => '');
+      console.error('Voice order: failed to parse response', res.status, rawText.substring(0, 200));
+      throw new Error('Server returned invalid response (HTTP ' + res.status + ')');
+    }
 
     // Hide processing
     document.getElementById('voice-processing').style.display = 'none';
@@ -5655,7 +5662,8 @@ async function _processVoiceAudio() {
     if (!data.success || !data.actions || data.actions.length === 0) {
       _voiceState = 'idle';
       document.getElementById('voice-screen-footer').style.display = 'flex';
-      showToast(data.message || (lang === 'es' ? 'No entendí, intenta de nuevo' : "Didn't catch that, try again"), 'error');
+      const detail = data.debug ? ` (${data.debug})` : '';
+      showToast((data.message || (lang === 'es' ? 'No entendí, intenta de nuevo' : "Didn't catch that, try again")) + detail, 'error');
       // Reset for retry
       _audioChunks = [];
       const timer = document.getElementById('voice-rec-timer');
@@ -5693,7 +5701,14 @@ async function _processVoiceAudio() {
     document.getElementById('voice-processing').style.display = 'none';
     document.getElementById('voice-screen-footer').style.display = 'flex';
     _voiceState = 'idle';
-    showToast(lang === 'es' ? 'Error procesando voz' : 'Voice processing error', 'error');
+    // Reset for retry
+    _audioChunks = [];
+    const timer = document.getElementById('voice-rec-timer');
+    if (timer) timer.textContent = '0:00';
+    const processBtn = document.getElementById('voice-process-btn');
+    if (processBtn) processBtn.style.display = 'none';
+    const errMsg = err.message || 'Unknown error';
+    showToast((lang === 'es' ? 'Error: ' : 'Error: ') + errMsg, 'error');
   }
 }
 
