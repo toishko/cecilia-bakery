@@ -1,7 +1,7 @@
 // Vercel Serverless Function — AI Voice Ordering
-// Accepts a text transcript from browser SpeechRecognition, sends it to Google Gemini
-// along with the product catalog and current order context, and returns structured
-// order actions (set/delete quantities) with a readback in the detected language.
+// Accepts audio (base64 webm/opus) OR text transcript from the driver,
+// sends to Google Gemini with the product catalog and order context,
+// and returns structured order actions with a readback.
 
 // ── Rate limiter ──
 const rateMap = new Map();
@@ -150,12 +150,27 @@ export default async function handler(req, res) {
   }
 
   // Validate request body
-  const { transcript, products, currentOrder, conversationHistory } = req.body || {};
-  if (!transcript || typeof transcript !== 'string' || !transcript.trim()) {
-    return res.status(400).json({ success: false, message: 'No transcript provided.' });
+  const { audio, transcript, products, currentOrder, conversationHistory } = req.body || {};
+  if (!audio && (!transcript || !transcript.trim())) {
+    return res.status(400).json({ success: false, message: 'No audio or transcript provided.' });
   }
   if (!products || !Array.isArray(products)) {
     return res.status(400).json({ success: false, message: 'No product catalog provided.' });
+  }
+
+  // Extract audio mime type and raw base64 if audio provided
+  let mimeType = 'audio/webm';
+  let rawBase64 = null;
+  if (audio && typeof audio === 'string') {
+    if (audio.startsWith('data:')) {
+      const match = audio.match(/^data:(audio\/[\w\-\+\.]+);base64,(.+)$/);
+      if (match) {
+        mimeType = match[1];
+        rawBase64 = match[2];
+      }
+    } else {
+      rawBase64 = audio;
+    }
   }
 
   try {
@@ -171,12 +186,17 @@ export default async function handler(req, res) {
     let response = null;
     let lastError = '';
     for (const model of MODELS) {
+      // Build parts — audio if available, text fallback
+      const parts = [];
+      if (rawBase64) {
+        parts.push({ text: systemPrompt + '\n\nListen to this audio recording from a bakery driver and extract their order. Transcribe what they said and parse it into order actions.' });
+        parts.push({ inlineData: { mimeType, data: rawBase64 } });
+      } else {
+        parts.push({ text: systemPrompt + '\n\nThe driver said the following (transcribed from speech):\n"' + transcript.trim() + '"\n\nParse this into order actions.' });
+      }
+
       const requestBody = JSON.stringify({
-        contents: [{
-          parts: [
-            { text: systemPrompt + '\n\nThe driver said the following (transcribed from speech):\n"' + transcript.trim() + '"\n\nParse this into order actions.' },
-          ],
-        }],
+        contents: [{ parts }],
         generationConfig: {
           temperature: 0.1,
           maxOutputTokens: 2000,

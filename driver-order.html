@@ -468,19 +468,22 @@
           </div>
         </div>
 
-        <!-- Transcript area -->
-        <div class="voice-transcript-area" id="voice-transcript-area">
-          <div class="voice-transcript-content" id="voice-transcript-content">
-            <p class="voice-placeholder" id="voice-placeholder" data-en="Start speaking your order..." data-es="Empieza a dictar tu pedido...">Start speaking your order...</p>
+        <!-- Recording display -->
+        <div class="voice-recording-area" id="voice-recording-area">
+          <div class="voice-recording-visual">
+            <div class="voice-rec-pulse" id="voice-rec-pulse">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="40" height="40"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+            </div>
+            <div class="voice-rec-timer" id="voice-rec-timer">0:00</div>
+            <div class="voice-rec-status" id="voice-rec-status" data-en="Listening..." data-es="Escuchando...">Listening...</div>
+            <p class="voice-rec-hint" data-en="Speak naturally — say product names and quantities" data-es="Habla naturalmente — di los productos y cantidades">Speak naturally — say product names and quantities</p>
           </div>
-          <!-- Live matched products -->
-          <div class="voice-live-items" id="voice-live-items"></div>
         </div>
 
         <!-- Processing indicator -->
         <div class="voice-processing" id="voice-processing" style="display:none">
           <div class="voice-processing-spinner"></div>
-          <span data-en="Parsing your order..." data-es="Procesando tu pedido...">Parsing your order...</span>
+          <span data-en="AI is parsing your order..." data-es="La IA está procesando tu pedido...">AI is parsing your order...</span>
         </div>
 
         <!-- Footer: mic toggle + process button -->

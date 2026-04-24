@@ -5356,16 +5356,18 @@ function _driverCloseScanReview() {
 
 /* ═══════════════════════════════════
    AI VOICE ORDERING (Driver)
-   Conversational flow with live typewriter
+   Audio recording → Gemini parsing
    ═══════════════════════════════════ */
 let _voiceInited = false;
-let _voiceState = 'idle'; // idle | listening | paused | parsing | confirming
+let _voiceState = 'idle'; // idle | recording | processing | confirming
 let _voiceConversation = []; // multi-turn history
 let _pendingActions = []; // actions waiting for confirmation
 let _voiceTooltipShown = false;
-let _recognition = null;
-let _voiceFinalTranscript = '';
-let _voiceInterimTranscript = '';
+let _mediaRecorder = null;
+let _audioChunks = [];
+let _voiceStream = null;
+let _recTimerInterval = null;
+let _recStartTime = 0;
 
 /* Show/hide the footer mic button */
 function _showVoiceFab(onNewOrder) {
@@ -5395,7 +5397,7 @@ function _showVoiceFab(onNewOrder) {
     if (screen) screen.style.display = 'none';
     const confirmOv = document.getElementById('voice-confirm-overlay');
     if (confirmOv) { confirmOv.classList.remove('active'); confirmOv.style.display = 'none'; }
-    if (_recognition) { try { _recognition.stop(); } catch(e) {} _recognition = null; }
+    _cancelRecording();
     _voiceState = 'idle';
   }
 }
@@ -5414,14 +5416,14 @@ function _initVoiceOrdering() {
     });
   }
 
-  // Voice screen mic toggles listening
+  // Voice screen mic toggles recording
   const screenMic = document.getElementById('voice-screen-mic');
   if (screenMic) {
     screenMic.addEventListener('click', () => {
-      if (_voiceState === 'listening') {
-        _stopListening();
+      if (_voiceState === 'recording') {
+        _stopRecording();
       } else if (_voiceState === 'idle' || _voiceState === 'paused') {
-        _startListening();
+        _startRecording();
       }
     });
   }
@@ -5436,8 +5438,7 @@ function _initVoiceOrdering() {
   const processBtn = document.getElementById('voice-process-btn');
   if (processBtn) {
     processBtn.addEventListener('click', () => {
-      _stopListening();
-      _processVoiceTranscript();
+      _processVoiceAudio();
     });
   }
 
@@ -5453,283 +5454,185 @@ function _openVoiceScreen() {
   const screen = document.getElementById('voice-screen');
   if (!screen) return;
 
-  // Reset state
-  _voiceFinalTranscript = '';
-  _voiceInterimTranscript = '';
-  const content = document.getElementById('voice-transcript-content');
-  const placeholder = document.getElementById('voice-placeholder');
-  const liveItems = document.getElementById('voice-live-items');
-  if (content) content.innerHTML = '';
-  if (liveItems) liveItems.innerHTML = '';
-  if (placeholder) {
-    placeholder.textContent = lang === 'es' ? 'Empieza a dictar tu pedido...' : 'Start speaking your order...';
-    placeholder.style.display = '';
-    if (content) content.appendChild(placeholder);
+  // Reset
+  _audioChunks = [];
+  const timer = document.getElementById('voice-rec-timer');
+  if (timer) timer.textContent = '0:00';
+  const status = document.getElementById('voice-rec-status');
+  if (status) {
+    status.textContent = lang === 'es' ? 'Escuchando...' : 'Listening...';
+    status.classList.remove('stopped');
   }
+  const pulse = document.getElementById('voice-rec-pulse');
+  if (pulse) pulse.classList.remove('stopped');
+  const processBtn = document.getElementById('voice-process-btn');
+  if (processBtn) processBtn.style.display = 'none';
 
   document.getElementById('voice-processing').style.display = 'none';
   document.getElementById('voice-screen-footer').style.display = 'flex';
-  const processBtn = document.getElementById('voice-process-btn');
-  if (processBtn) processBtn.style.display = 'none';
 
   screen.style.display = 'flex';
   applyLang();
 
-  // Auto-start listening after a brief moment
-  setTimeout(() => _startListening(), 400);
+  // Auto-start recording
+  setTimeout(() => _startRecording(), 400);
 }
 
 function _closeVoiceScreen() {
-  _stopListening();
+  _cancelRecording();
   const screen = document.getElementById('voice-screen');
   if (screen) screen.style.display = 'none';
   _voiceState = 'idle';
 }
 
-/* ── SpeechRecognition Engine ── */
-function _startListening() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    showToast(lang === 'es' ? 'Tu navegador no soporta reconocimiento de voz' : 'Your browser doesn\'t support speech recognition', 'error');
+/* ── Audio Recording ── */
+async function _startRecording() {
+  try {
+    _voiceStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 16000,
+      }
+    });
+  } catch (err) {
+    console.error('Mic permission error:', err);
+    showToast(lang === 'es' ? 'Permiso de micrófono denegado' : 'Microphone permission denied', 'error');
     return;
   }
 
-  _voiceState = 'listening';
+  // Pick the best codec
+  const mimeTypes = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4',
+    'audio/ogg;codecs=opus',
+  ];
+  let mimeType = '';
+  for (const mt of mimeTypes) {
+    if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
+  }
+
+  _audioChunks = [];
+  _mediaRecorder = new MediaRecorder(_voiceStream, mimeType ? { mimeType } : {});
+
+  _mediaRecorder.ondataavailable = (e) => {
+    if (e.data.size > 0) _audioChunks.push(e.data);
+  };
+
+  _mediaRecorder.onstop = () => {
+    // Recording stopped — chunks are ready
+  };
+
+  _mediaRecorder.start(500); // Collect in 500ms chunks for safety
+  _voiceState = 'recording';
 
   // Update UI
   const indicator = document.getElementById('voice-listening-ind');
   if (indicator) indicator.classList.add('active');
   const micBtn = document.getElementById('voice-screen-mic');
   if (micBtn) { micBtn.classList.add('listening'); micBtn.classList.remove('stopped'); }
-  const placeholder = document.getElementById('voice-placeholder');
-  if (placeholder) placeholder.style.display = 'none';
-
-  // Always use es-US — drivers speak Spanish/Spanglish and Google's
-  // Spanish model handles English product names well
-  _recognition = new SpeechRecognition();
-  _recognition.continuous = true;
-  _recognition.interimResults = true;
-  _recognition.lang = 'es-US';
-  _recognition.maxAlternatives = 1;
-
-  _recognition.onresult = (event) => {
-    let interim = '';
-
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const transcript = event.results[i][0].transcript;
-      if (event.results[i].isFinal) {
-        _voiceFinalTranscript += transcript + ' ';
-      } else {
-        interim += transcript;
-      }
-    }
-    _voiceInterimTranscript = interim;
-    _updateTranscriptDisplay();
-    _showProcessButton();
-  };
-
-  _recognition.onerror = (event) => {
-    console.warn('Speech recognition error:', event.error);
-    if (event.error === 'not-allowed') {
-      showToast(lang === 'es' ? 'Permiso de micrófono denegado' : 'Microphone permission denied', 'error');
-      _closeVoiceScreen();
-    }
-    // For 'no-speech', 'network', 'aborted' — let onend handle restart
-  };
-
-  _recognition.onend = () => {
-    // Seamless auto-restart if still in listening state
-    // Browser kills recognition after silence — we restart immediately
-    if (_voiceState === 'listening') {
-      try {
-        _recognition.start();
-      } catch(e) {
-        // If start fails, create a fresh instance after a brief delay
-        setTimeout(() => {
-          if (_voiceState === 'listening') _startListening();
-        }, 300);
-      }
-    }
-  };
-
-  try {
-    _recognition.start();
-  } catch (e) {
-    console.error('Failed to start speech recognition:', e);
-    showToast(lang === 'es' ? 'Error al iniciar micrófono' : 'Failed to start microphone', 'error');
+  const pulse = document.getElementById('voice-rec-pulse');
+  if (pulse) pulse.classList.remove('stopped');
+  const status = document.getElementById('voice-rec-status');
+  if (status) {
+    status.textContent = lang === 'es' ? 'Escuchando...' : 'Listening...';
+    status.classList.remove('stopped');
   }
+
+  // Start timer
+  _recStartTime = Date.now();
+  _recTimerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - _recStartTime) / 1000);
+    const mins = Math.floor(elapsed / 60);
+    const secs = elapsed % 60;
+    const timer = document.getElementById('voice-rec-timer');
+    if (timer) timer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+  }, 500);
+
+  // Show process button after a moment
+  setTimeout(() => {
+    const processBtn = document.getElementById('voice-process-btn');
+    if (processBtn && _voiceState === 'recording') processBtn.style.display = '';
+  }, 1000);
 }
 
-function _stopListening() {
-  if (_recognition) {
-    try { _recognition.abort(); } catch(e) {}
-    _recognition = null;
+function _stopRecording() {
+  if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
+    _mediaRecorder.stop();
   }
   _voiceState = 'paused';
 
+  // Stop timer
+  clearInterval(_recTimerInterval);
+
+  // Update UI to paused state
   const indicator = document.getElementById('voice-listening-ind');
   if (indicator) indicator.classList.remove('active');
   const micBtn = document.getElementById('voice-screen-mic');
   if (micBtn) { micBtn.classList.remove('listening'); micBtn.classList.add('stopped'); }
+  const pulse = document.getElementById('voice-rec-pulse');
+  if (pulse) pulse.classList.add('stopped');
+  const status = document.getElementById('voice-rec-status');
+  if (status) {
+    status.textContent = lang === 'es' ? 'Pausado' : 'Paused';
+    status.classList.add('stopped');
+  }
+
+  // Keep stream alive so they can resume
 }
 
-function _showProcessButton() {
-  const fullText = (_voiceFinalTranscript + _voiceInterimTranscript).trim();
-  const processBtn = document.getElementById('voice-process-btn');
-  if (processBtn) {
-    processBtn.style.display = fullText.length > 0 ? '' : 'none';
+function _cancelRecording() {
+  if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
+    try { _mediaRecorder.stop(); } catch(e) {}
   }
+  _mediaRecorder = null;
+  if (_voiceStream) {
+    _voiceStream.getTracks().forEach(t => t.stop());
+    _voiceStream = null;
+  }
+  clearInterval(_recTimerInterval);
+  _audioChunks = [];
 }
 
-function _updateTranscriptDisplay() {
-  const content = document.getElementById('voice-transcript-content');
-  if (!content) return;
-
-  let html = '';
-  if (_voiceFinalTranscript) {
-    html += `<span class="voice-final">${_voiceFinalTranscript}</span>`;
+/* ── Send audio to Gemini ── */
+async function _processVoiceAudio() {
+  // Stop recording if still going
+  if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
+    _mediaRecorder.stop();
   }
-  if (_voiceInterimTranscript) {
-    html += `<span class="voice-interim">${_voiceInterimTranscript}</span>`;
-  }
+  clearInterval(_recTimerInterval);
 
-  content.innerHTML = html || '<p class="voice-placeholder">' +
-    (lang === 'es' ? 'Escuchando...' : 'Listening...') + '</p>';
+  // Wait a beat for the last chunk
+  await new Promise(r => setTimeout(r, 300));
 
-  // Auto-scroll
-  const area = document.getElementById('voice-transcript-area');
-  if (area) area.scrollTop = area.scrollHeight;
-
-  // Live product matching
-  _updateLiveProductMatch();
-}
-
-/* ── Client-side fuzzy product matcher ── */
-const _PRODUCT_ALIASES = {
-  'tres leche': 'tl', 'tres lech': 'tl', '3 leche': 'tl', '3 lech': 'tl', 'three leche': 'tl',
-  'piña adentro': 'pina_inside', 'pina adentro': 'pina_inside', 'piña inside': 'pina_inside', 'pina inside': 'pina_inside',
-  'piña arriba': 'pina_top', 'pina arriba': 'pina_top', 'piña top': 'pina_top', 'pina top': 'pina_top',
-  'guayaba': 'pz_guava', 'guava': 'pz_guava',
-  'red velvet': 'pz_rv', 'rv': 'pz_rv',
-  'cheesecake': 'pz_cheese', 'cheese cake': 'pz_cheese', 'cheese': 'pz_cheese',
-  'carrot': 'pz_carrot', 'zanahoria': 'pz_carrot',
-  'chocoflan': 'pz_chocoflan', 'choco flan': 'pz_chocoflan',
-  'flan': 'pz_flan',
-  'happy birthday big': 'hb_big', 'hb big': 'hb_big', 'cumpleaños grande': 'hb_big', 'birthday big': 'hb_big',
-  'happy birthday small': 'hb_small', 'hb small': 'hb_small', 'cumpleaños pequeño': 'hb_small', 'birthday small': 'hb_small',
-  'family size': 'fam', 'familiar': 'fam', 'family': 'fam',
-  'cups': 'cups', 'basos': 'cups', 'vasos': 'cups',
-  'frosted': 'fr_guava', 'frostin': 'fr_guava', 'frosted pieces': 'fr_guava',
-  'redondo': 'red_tl_inside', 'redondo tres leche': 'red_tl_inside',
-  'pudin': 'pz_pudin', 'pudding': 'pz_pudin', 'pudin de pan': 'pz_pudin',
-  'cuadrao': 'sq_tl', 'square': 'sq_tl', 'cuadrado': 'sq_tl',
-};
-
-function _updateLiveProductMatch() {
-  const liveEl = document.getElementById('voice-live-items');
-  if (!liveEl) return;
-
-  const fullText = (_voiceFinalTranscript + ' ' + _voiceInterimTranscript).toLowerCase().trim();
-  if (!fullText) { liveEl.innerHTML = ''; return; }
-
-  const products = _getDriverProducts();
-  const matched = new Map(); // key → { label, qty }
-
-  // Try to extract "NUMBER PRODUCT" patterns
-  // Supports: "5 tres leche", "three dozen piña adentro", "media docena de guayaba"
-  const numWords = { 'un': 1, 'uno': 1, 'una': 1, 'one': 1, 'dos': 2, 'two': 2, 'tres': 3, 'three': 3,
-    'cuatro': 4, 'four': 4, 'cinco': 5, 'five': 5, 'seis': 6, 'six': 6, 'siete': 7, 'seven': 7,
-    'ocho': 8, 'eight': 8, 'nueve': 9, 'nine': 9, 'diez': 10, 'ten': 10, 'veinte': 20, 'twenty': 20,
-    'media': 0.5, 'half': 0.5 };
-
-  // Check each alias against the transcript
-  for (const [alias, key] of Object.entries(_PRODUCT_ALIASES)) {
-    const idx = fullText.indexOf(alias);
-    if (idx === -1) continue;
-
-    // Find the product label
-    const product = products.find(p => p.key === key);
-    if (!product) continue;
-
-    // Look for a number before the alias
-    const before = fullText.substring(Math.max(0, idx - 30), idx).trim();
-    let qty = 1;
-    let isDozen = false;
-
-    // Check for dozen
-    if (before.includes('docena') || before.includes('dozena') || before.includes('dozen')) {
-      isDozen = true;
-    }
-    if (fullText.substring(idx, idx + alias.length + 20).includes('docena') ||
-        fullText.substring(idx, idx + alias.length + 20).includes('dozen')) {
-      isDozen = true;
-    }
-
-    // Extract number
-    const numMatch = before.match(/(\d+)\s*$/);
-    if (numMatch) {
-      qty = parseInt(numMatch[1]);
-    } else {
-      // Check word numbers
-      const words = before.split(/\s+/);
-      const lastWord = words[words.length - 1];
-      if (numWords[lastWord] !== undefined) {
-        qty = numWords[lastWord];
-      }
-    }
-
-    if (isDozen) qty = Math.round(qty * 12);
-    if (qty < 1) qty = 1;
-
-    const label = lang === 'es' ? product.es : product.en;
-    matched.set(key, { label, qty });
-  }
-
-  // Also try matching product names directly (for products not in aliases)
-  for (const p of products) {
-    if (matched.has(p.key)) continue;
-    const nameEs = (p.es || '').toLowerCase();
-    const nameEn = (p.en || '').toLowerCase();
-    if (nameEs && nameEs.length > 3 && fullText.includes(nameEs)) {
-      matched.set(p.key, { label: lang === 'es' ? p.es : p.en, qty: 1 });
-    } else if (nameEn && nameEn.length > 3 && fullText.includes(nameEn)) {
-      matched.set(p.key, { label: lang === 'es' ? p.es : p.en, qty: 1 });
-    }
-  }
-
-  // Render
-  if (matched.size === 0) {
-    liveEl.innerHTML = '';
-    return;
-  }
-
-  let html = '';
-  for (const [key, { label, qty }] of matched) {
-    html += `<div class="voice-live-item">
-      <span class="voice-live-item-icon">✓</span>
-      <span class="voice-live-item-name">${label}</span>
-      <span class="voice-live-item-qty">×${qty}</span>
-    </div>`;
-  }
-  liveEl.innerHTML = html;
-}
-
-/* ── Send transcript to Gemini for parsing ── */
-async function _processVoiceTranscript() {
-  const fullText = (_voiceFinalTranscript + _voiceInterimTranscript).trim();
-  if (!fullText) {
-    showToast(lang === 'es' ? 'No escuché nada' : 'Didn\'t hear anything', 'error');
+  if (_audioChunks.length === 0) {
+    showToast(lang === 'es' ? 'No se grabó audio' : 'No audio recorded', 'error');
     _voiceState = 'idle';
     return;
   }
 
-  _voiceState = 'parsing';
+  _voiceState = 'processing';
 
   // Show processing state
   document.getElementById('voice-screen-footer').style.display = 'none';
   document.getElementById('voice-processing').style.display = 'flex';
 
+  const indicator = document.getElementById('voice-listening-ind');
+  if (indicator) indicator.classList.remove('active');
+
   try {
+    // Build audio blob
+    const blob = new Blob(_audioChunks, { type: _audioChunks[0]?.type || 'audio/webm' });
+
+    // Convert to base64
+    const reader = new FileReader();
+    const base64 = await new Promise((resolve, reject) => {
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
     const products = _getDriverProducts();
     const currentOrder = _getCurrentDriverOrderState();
 
@@ -5737,7 +5640,7 @@ async function _processVoiceTranscript() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        transcript: fullText,
+        audio: base64,
         products,
         currentOrder,
         conversationHistory: _voiceConversation,
@@ -5753,15 +5656,17 @@ async function _processVoiceTranscript() {
       _voiceState = 'idle';
       document.getElementById('voice-screen-footer').style.display = 'flex';
       showToast(data.message || (lang === 'es' ? 'No entendí, intenta de nuevo' : "Didn't catch that, try again"), 'error');
-      // Let them try again
-      _voiceFinalTranscript = '';
-      _voiceInterimTranscript = '';
-      _updateTranscriptDisplay();
+      // Reset for retry
+      _audioChunks = [];
+      const timer = document.getElementById('voice-rec-timer');
+      if (timer) timer.textContent = '0:00';
+      const processBtn = document.getElementById('voice-process-btn');
+      if (processBtn) processBtn.style.display = 'none';
       return;
     }
 
     // Add to conversation history
-    _voiceConversation.push({ role: 'user', transcript: fullText });
+    _voiceConversation.push({ role: 'user', transcript: data.understood_text || '' });
     _voiceConversation.push({ role: 'assistant', actions: data.actions });
 
     // Merge with pending actions
@@ -5770,6 +5675,12 @@ async function _processVoiceTranscript() {
     // Close voice screen, show confirmation card
     const screen = document.getElementById('voice-screen');
     if (screen) screen.style.display = 'none';
+
+    // Clean up stream
+    if (_voiceStream) {
+      _voiceStream.getTracks().forEach(t => t.stop());
+      _voiceStream = null;
+    }
 
     _showVoiceConfirmation(data);
 
@@ -5786,7 +5697,7 @@ async function _processVoiceTranscript() {
   }
 }
 
-/* ── Helper functions (unchanged) ── */
+/* ── Helper functions ── */
 function _getDriverProducts() {
   const products = [];
   Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
@@ -5898,8 +5809,6 @@ function _applyVoiceActions() {
   _pendingActions = [];
   _voiceConversation = [];
   _voiceState = 'idle';
-  _voiceFinalTranscript = '';
-  _voiceInterimTranscript = '';
 
   const overlay = document.getElementById('voice-confirm-overlay');
   if (overlay) { overlay.classList.remove('active'); setTimeout(() => overlay.style.display = 'none', 300); }
@@ -5916,4 +5825,3 @@ function _voiceSpeak(text, speechLang) {
   utter.pitch = 1.0;
   window.speechSynthesis.speak(utter);
 }
-
