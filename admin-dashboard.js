@@ -377,7 +377,16 @@ async function showSection(name) {
     if (todayPill) todayPill.classList.add('active');
     loadIncomingOrders();
   }
-  if (name === 'new-order') initAdminOrderForm();
+  if (name === 'new-order') {
+    initAdminOrderForm();
+    // Show voice FAB for admin — always available regardless of driver
+    const voiceFab = document.getElementById('admin-voice-fab');
+    if (voiceFab) voiceFab.style.display = 'flex';
+    if (typeof window._initAdminVoice === 'function') window._initAdminVoice();
+  } else {
+    const voiceFab = document.getElementById('admin-voice-fab');
+    if (voiceFab) voiceFab.style.display = 'none';
+  }
   if (name === 'history') loadHistoryOrders(true);
   if (name === 'drivers') {
     const subview = sessionStorage.getItem('driver_subview');
@@ -9959,17 +9968,4 @@ function _noInitTimePicker(initialVal, cb) {
     window.speechSynthesis.speak(utter);
   }
 
-  // Show/hide FAB when entering/leaving new-order section
-  const origShowSection = window.showSection;
-  window.showSection = async function(name) {
-    await origShowSection(name);
-    const fab = document.getElementById('admin-voice-fab');
-    if (fab) {
-      fab.style.display = (name === 'new-order') ? 'flex' : 'none';
-    }
-    // Init voice on first visit to new-order
-    if (name === 'new-order') {
-      window._initAdminVoice();
-    }
-  };
 })();
