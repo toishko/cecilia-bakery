@@ -5366,7 +5366,6 @@ let _voiceTooltipShown = false;
 let _recognition = null;
 let _voiceFinalTranscript = '';
 let _voiceInterimTranscript = '';
-let _voicePauseTimer = null;
 
 /* Show/hide the footer mic button */
 function _showVoiceFab(onNewOrder) {
@@ -5433,20 +5432,11 @@ function _initVoiceOrdering() {
     closeBtn.addEventListener('click', () => _closeVoiceScreen());
   }
 
-  // "Keep going" button
-  const noBtn = document.getElementById('voice-done-no');
-  if (noBtn) {
-    noBtn.addEventListener('click', () => {
-      document.getElementById('voice-done-prompt').style.display = 'none';
-      _startListening();
-    });
-  }
-
-  // "Yes, process" button
-  const yesBtn = document.getElementById('voice-done-yes');
-  if (yesBtn) {
-    yesBtn.addEventListener('click', () => {
-      document.getElementById('voice-done-prompt').style.display = 'none';
+  // Process Order button
+  const processBtn = document.getElementById('voice-process-btn');
+  if (processBtn) {
+    processBtn.addEventListener('click', () => {
+      _stopListening();
       _processVoiceTranscript();
     });
   }
@@ -5473,12 +5463,14 @@ function _openVoiceScreen() {
   if (liveItems) liveItems.innerHTML = '';
   if (placeholder) {
     placeholder.textContent = lang === 'es' ? 'Empieza a dictar tu pedido...' : 'Start speaking your order...';
+    placeholder.style.display = '';
     if (content) content.appendChild(placeholder);
   }
 
-  document.getElementById('voice-done-prompt').style.display = 'none';
   document.getElementById('voice-processing').style.display = 'none';
   document.getElementById('voice-screen-footer').style.display = 'flex';
+  const processBtn = document.getElementById('voice-process-btn');
+  if (processBtn) processBtn.style.display = 'none';
 
   screen.style.display = 'flex';
   applyLang();
@@ -5492,7 +5484,6 @@ function _closeVoiceScreen() {
   const screen = document.getElementById('voice-screen');
   if (screen) screen.style.display = 'none';
   _voiceState = 'idle';
-  clearTimeout(_voicePauseTimer);
 }
 
 /* ── SpeechRecognition Engine ── */
@@ -5504,7 +5495,6 @@ function _startListening() {
   }
 
   _voiceState = 'listening';
-  clearTimeout(_voicePauseTimer);
 
   // Update UI
   const indicator = document.getElementById('voice-listening-ind');
@@ -5513,16 +5503,16 @@ function _startListening() {
   if (micBtn) { micBtn.classList.add('listening'); micBtn.classList.remove('stopped'); }
   const placeholder = document.getElementById('voice-placeholder');
   if (placeholder) placeholder.style.display = 'none';
-  document.getElementById('voice-done-prompt').style.display = 'none';
 
+  // Always use es-US — drivers speak Spanish/Spanglish and Google's
+  // Spanish model handles English product names well
   _recognition = new SpeechRecognition();
   _recognition.continuous = true;
   _recognition.interimResults = true;
-  _recognition.lang = lang === 'es' ? 'es-US' : 'en-US';
+  _recognition.lang = 'es-US';
   _recognition.maxAlternatives = 1;
 
   _recognition.onresult = (event) => {
-    clearTimeout(_voicePauseTimer);
     let interim = '';
 
     for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -5535,13 +5525,7 @@ function _startListening() {
     }
     _voiceInterimTranscript = interim;
     _updateTranscriptDisplay();
-
-    // Start pause timer — if no new speech for 1.5s, prompt "done?"
-    _voicePauseTimer = setTimeout(() => {
-      if (_voiceState === 'listening') {
-        _onSpeechPause();
-      }
-    }, 1500);
+    _showProcessButton();
   };
 
   _recognition.onerror = (event) => {
@@ -5549,18 +5533,22 @@ function _startListening() {
     if (event.error === 'not-allowed') {
       showToast(lang === 'es' ? 'Permiso de micrófono denegado' : 'Microphone permission denied', 'error');
       _closeVoiceScreen();
-    } else if (event.error === 'no-speech') {
-      // Restart if no speech detected
-      if (_voiceState === 'listening') {
-        try { _recognition.start(); } catch(e) {}
-      }
     }
+    // For 'no-speech', 'network', 'aborted' — let onend handle restart
   };
 
   _recognition.onend = () => {
-    // Auto-restart if still in listening state (browser may stop after silence)
+    // Seamless auto-restart if still in listening state
+    // Browser kills recognition after silence — we restart immediately
     if (_voiceState === 'listening') {
-      try { _recognition.start(); } catch(e) {}
+      try {
+        _recognition.start();
+      } catch(e) {
+        // If start fails, create a fresh instance after a brief delay
+        setTimeout(() => {
+          if (_voiceState === 'listening') _startListening();
+        }, 300);
+      }
     }
   };
 
@@ -5574,11 +5562,10 @@ function _startListening() {
 
 function _stopListening() {
   if (_recognition) {
-    try { _recognition.stop(); } catch(e) {}
+    try { _recognition.abort(); } catch(e) {}
     _recognition = null;
   }
   _voiceState = 'paused';
-  clearTimeout(_voicePauseTimer);
 
   const indicator = document.getElementById('voice-listening-ind');
   if (indicator) indicator.classList.remove('active');
@@ -5586,16 +5573,12 @@ function _stopListening() {
   if (micBtn) { micBtn.classList.remove('listening'); micBtn.classList.add('stopped'); }
 }
 
-function _onSpeechPause() {
-  // Only prompt if we have transcript content
+function _showProcessButton() {
   const fullText = (_voiceFinalTranscript + _voiceInterimTranscript).trim();
-  if (!fullText) return;
-
-  _stopListening();
-
-  // Show "Done ordering?" prompt
-  const prompt = document.getElementById('voice-done-prompt');
-  if (prompt) prompt.style.display = 'flex';
+  const processBtn = document.getElementById('voice-process-btn');
+  if (processBtn) {
+    processBtn.style.display = fullText.length > 0 ? '' : 'none';
+  }
 }
 
 function _updateTranscriptDisplay() {
@@ -5744,7 +5727,6 @@ async function _processVoiceTranscript() {
 
   // Show processing state
   document.getElementById('voice-screen-footer').style.display = 'none';
-  document.getElementById('voice-done-prompt').style.display = 'none';
   document.getElementById('voice-processing').style.display = 'flex';
 
   try {

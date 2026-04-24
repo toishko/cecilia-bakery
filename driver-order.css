@@ -2060,31 +2060,20 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   color: var(--green, #1b7a4a); flex-shrink: 0;
 }
 
-.voice-done-prompt {
-  display: flex; align-items: center; justify-content: center;
-  gap: 12px; padding: 14px 16px;
-  background: var(--bg-card); border-top: 1px solid var(--bd);
-  animation: voiceDoneSlideUp 0.3s ease;
-}
-@keyframes voiceDoneSlideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-.voice-done-text { font-size: 0.9rem; font-weight: 600; color: var(--tx); }
-.voice-done-actions { display: flex; gap: 8px; }
-.voice-done-btn {
-  padding: 8px 16px; border-radius: 8px;
-  font-size: 0.82rem; font-weight: 700;
+/* Process Order button */
+.voice-process-btn {
+  flex: 1; padding: 14px 20px; border: none; border-radius: 14px;
+  font-size: 0.95rem; font-weight: 700;
   font-family: 'Outfit', sans-serif;
-  border: none; cursor: pointer; transition: all 0.15s;
+  background: var(--red); color: #fff;
+  cursor: pointer; transition: all 0.2s;
+  animation: voiceProcessBtnIn 0.3s ease;
 }
-.voice-done-no {
-  background: var(--bg-surface); color: var(--tx-muted);
-  border: 1px solid var(--bd);
+.voice-process-btn:active { transform: scale(0.96); }
+@keyframes voiceProcessBtnIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-.voice-done-no:active { transform: scale(0.95); }
-.voice-done-yes { background: var(--red); color: #fff; }
-.voice-done-yes:active { transform: scale(0.95); }
 
 .voice-processing {
   display: flex; flex-direction: column; align-items: center;
@@ -2100,6 +2089,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 
 .voice-screen-footer {
   display: flex; align-items: center; justify-content: center;
+  gap: 12px;
   padding: 16px;
   padding-bottom: calc(16px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--bd); background: var(--bg-card);

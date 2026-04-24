@@ -477,26 +477,19 @@
           <div class="voice-live-items" id="voice-live-items"></div>
         </div>
 
-        <!-- "Are you done?" prompt -->
-        <div class="voice-done-prompt" id="voice-done-prompt" style="display:none">
-          <span class="voice-done-text" data-en="Done ordering?" data-es="¿Terminaste?">Done ordering?</span>
-          <div class="voice-done-actions">
-            <button class="voice-done-btn voice-done-no" id="voice-done-no" data-en="Keep going" data-es="Seguir">Keep going</button>
-            <button class="voice-done-btn voice-done-yes" id="voice-done-yes" data-en="Yes, process" data-es="Sí, procesar">Yes, process</button>
-          </div>
-        </div>
-
         <!-- Processing indicator -->
         <div class="voice-processing" id="voice-processing" style="display:none">
           <div class="voice-processing-spinner"></div>
           <span data-en="Parsing your order..." data-es="Procesando tu pedido...">Parsing your order...</span>
         </div>
 
-        <!-- Bottom mic button (in voice screen) -->
+        <!-- Footer: mic toggle + process button -->
         <div class="voice-screen-footer" id="voice-screen-footer">
-          <button class="voice-screen-mic" id="voice-screen-mic" type="button">
+          <button class="voice-screen-mic listening" id="voice-screen-mic" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="28" height="28"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
           </button>
+          <button class="voice-process-btn" id="voice-process-btn" style="display:none"
+            data-en="Process Order →" data-es="Procesar Pedido →">Process Order →</button>
         </div>
       </div>
 
