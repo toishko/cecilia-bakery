@@ -10039,6 +10039,12 @@ function _noInitTimePicker(initialVal, cb) {
         return `<div class="voice-confirm-item"><span>${a.label || a.name || a.key}</span><span class="voice-qty">×${a.qty}</span></div>`;
       }).join('');
     }
+    // Hide elements that bleed through
+    document.querySelectorAll('#form-footer, #admin-voice-fab, .notif-fab').forEach(el => {
+      el.style.display = 'none';
+    });
+    // Lock scroll
+    document.body.style.overflow = 'hidden';
     overlay.style.display = 'flex';
     requestAnimationFrame(() => overlay.classList.add('active'));
   }
@@ -10060,6 +10066,10 @@ function _noInitTimePicker(initialVal, cb) {
 
     const overlay = document.getElementById('voice-confirm-overlay');
     if (overlay) { overlay.classList.remove('active'); setTimeout(() => overlay.style.display = 'none', 300); }
+
+    // Unlock scroll + restore elements
+    document.body.style.overflow = '';
+    _restoreHiddenElements();
 
     showToast(lang === 'es' ? 'Pedido aplicado' : 'Order applied', 'success');
   }
