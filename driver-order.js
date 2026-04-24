@@ -5468,9 +5468,11 @@ function _openVoiceScreen() {
   _voiceInterimTranscript = '';
   const content = document.getElementById('voice-transcript-content');
   const placeholder = document.getElementById('voice-placeholder');
+  const liveItems = document.getElementById('voice-live-items');
   if (content) content.innerHTML = '';
+  if (liveItems) liveItems.innerHTML = '';
   if (placeholder) {
-    placeholder.textContent = lang === 'es' ? 'Toca el micrófono y empieza a hablar...' : 'Tap the mic and start speaking...';
+    placeholder.textContent = lang === 'es' ? 'Empieza a dictar tu pedido...' : 'Start speaking your order...';
     if (content) content.appendChild(placeholder);
   }
 
@@ -5611,9 +5613,122 @@ function _updateTranscriptDisplay() {
   content.innerHTML = html || '<p class="voice-placeholder">' +
     (lang === 'es' ? 'Escuchando...' : 'Listening...') + '</p>';
 
-  // Auto-scroll to bottom
+  // Auto-scroll
   const area = document.getElementById('voice-transcript-area');
   if (area) area.scrollTop = area.scrollHeight;
+
+  // Live product matching
+  _updateLiveProductMatch();
+}
+
+/* ── Client-side fuzzy product matcher ── */
+const _PRODUCT_ALIASES = {
+  'tres leche': 'tl', 'tres lech': 'tl', '3 leche': 'tl', '3 lech': 'tl', 'three leche': 'tl',
+  'piña adentro': 'pina_inside', 'pina adentro': 'pina_inside', 'piña inside': 'pina_inside', 'pina inside': 'pina_inside',
+  'piña arriba': 'pina_top', 'pina arriba': 'pina_top', 'piña top': 'pina_top', 'pina top': 'pina_top',
+  'guayaba': 'pz_guava', 'guava': 'pz_guava',
+  'red velvet': 'pz_rv', 'rv': 'pz_rv',
+  'cheesecake': 'pz_cheese', 'cheese cake': 'pz_cheese', 'cheese': 'pz_cheese',
+  'carrot': 'pz_carrot', 'zanahoria': 'pz_carrot',
+  'chocoflan': 'pz_chocoflan', 'choco flan': 'pz_chocoflan',
+  'flan': 'pz_flan',
+  'happy birthday big': 'hb_big', 'hb big': 'hb_big', 'cumpleaños grande': 'hb_big', 'birthday big': 'hb_big',
+  'happy birthday small': 'hb_small', 'hb small': 'hb_small', 'cumpleaños pequeño': 'hb_small', 'birthday small': 'hb_small',
+  'family size': 'fam', 'familiar': 'fam', 'family': 'fam',
+  'cups': 'cups', 'basos': 'cups', 'vasos': 'cups',
+  'frosted': 'fr_guava', 'frostin': 'fr_guava', 'frosted pieces': 'fr_guava',
+  'redondo': 'red_tl_inside', 'redondo tres leche': 'red_tl_inside',
+  'pudin': 'pz_pudin', 'pudding': 'pz_pudin', 'pudin de pan': 'pz_pudin',
+  'cuadrao': 'sq_tl', 'square': 'sq_tl', 'cuadrado': 'sq_tl',
+};
+
+function _updateLiveProductMatch() {
+  const liveEl = document.getElementById('voice-live-items');
+  if (!liveEl) return;
+
+  const fullText = (_voiceFinalTranscript + ' ' + _voiceInterimTranscript).toLowerCase().trim();
+  if (!fullText) { liveEl.innerHTML = ''; return; }
+
+  const products = _getDriverProducts();
+  const matched = new Map(); // key → { label, qty }
+
+  // Try to extract "NUMBER PRODUCT" patterns
+  // Supports: "5 tres leche", "three dozen piña adentro", "media docena de guayaba"
+  const numWords = { 'un': 1, 'uno': 1, 'una': 1, 'one': 1, 'dos': 2, 'two': 2, 'tres': 3, 'three': 3,
+    'cuatro': 4, 'four': 4, 'cinco': 5, 'five': 5, 'seis': 6, 'six': 6, 'siete': 7, 'seven': 7,
+    'ocho': 8, 'eight': 8, 'nueve': 9, 'nine': 9, 'diez': 10, 'ten': 10, 'veinte': 20, 'twenty': 20,
+    'media': 0.5, 'half': 0.5 };
+
+  // Check each alias against the transcript
+  for (const [alias, key] of Object.entries(_PRODUCT_ALIASES)) {
+    const idx = fullText.indexOf(alias);
+    if (idx === -1) continue;
+
+    // Find the product label
+    const product = products.find(p => p.key === key);
+    if (!product) continue;
+
+    // Look for a number before the alias
+    const before = fullText.substring(Math.max(0, idx - 30), idx).trim();
+    let qty = 1;
+    let isDozen = false;
+
+    // Check for dozen
+    if (before.includes('docena') || before.includes('dozena') || before.includes('dozen')) {
+      isDozen = true;
+    }
+    if (fullText.substring(idx, idx + alias.length + 20).includes('docena') ||
+        fullText.substring(idx, idx + alias.length + 20).includes('dozen')) {
+      isDozen = true;
+    }
+
+    // Extract number
+    const numMatch = before.match(/(\d+)\s*$/);
+    if (numMatch) {
+      qty = parseInt(numMatch[1]);
+    } else {
+      // Check word numbers
+      const words = before.split(/\s+/);
+      const lastWord = words[words.length - 1];
+      if (numWords[lastWord] !== undefined) {
+        qty = numWords[lastWord];
+      }
+    }
+
+    if (isDozen) qty = Math.round(qty * 12);
+    if (qty < 1) qty = 1;
+
+    const label = lang === 'es' ? product.es : product.en;
+    matched.set(key, { label, qty });
+  }
+
+  // Also try matching product names directly (for products not in aliases)
+  for (const p of products) {
+    if (matched.has(p.key)) continue;
+    const nameEs = (p.es || '').toLowerCase();
+    const nameEn = (p.en || '').toLowerCase();
+    if (nameEs && nameEs.length > 3 && fullText.includes(nameEs)) {
+      matched.set(p.key, { label: lang === 'es' ? p.es : p.en, qty: 1 });
+    } else if (nameEn && nameEn.length > 3 && fullText.includes(nameEn)) {
+      matched.set(p.key, { label: lang === 'es' ? p.es : p.en, qty: 1 });
+    }
+  }
+
+  // Render
+  if (matched.size === 0) {
+    liveEl.innerHTML = '';
+    return;
+  }
+
+  let html = '';
+  for (const [key, { label, qty }] of matched) {
+    html += `<div class="voice-live-item">
+      <span class="voice-live-item-icon">✓</span>
+      <span class="voice-live-item-name">${label}</span>
+      <span class="voice-live-item-qty">×${qty}</span>
+    </div>`;
+  }
+  liveEl.innerHTML = html;
 }
 
 /* ── Send transcript to Gemini for parsing ── */
