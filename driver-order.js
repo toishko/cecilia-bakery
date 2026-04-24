@@ -5050,10 +5050,16 @@ async function checkAdvancedFeatures() {
   });
 
   // Show or hide voice ordering
+  // NOTE: Do NOT force display:'' on .voice-feature elements when enabled —
+  // that bleeds the mic/screen/overlay into non-order sections.
+  // Instead, just hide everything when disabled. _showVoiceFab() handles
+  // showing the footer mic only when on the New Order screen.
   const voiceEnabled = !!currentDriver.voice_order_enabled;
-  document.querySelectorAll('.voice-feature').forEach(el => {
-    el.style.display = voiceEnabled ? '' : 'none';
-  });
+  if (!voiceEnabled) {
+    document.querySelectorAll('.voice-feature').forEach(el => {
+      el.style.display = 'none';
+    });
+  }
 
   // Wire up scanner events if scanner is enabled
   if (scannerEnabled) {
@@ -5063,6 +5069,9 @@ async function checkAdvancedFeatures() {
   // Wire up voice ordering if voice is enabled
   if (voiceEnabled) {
     _initVoiceOrdering();
+    // Re-check mic visibility for current section
+    const isOnNewOrder = document.getElementById('section-new-order')?.classList.contains('active-section');
+    _showVoiceFab(!!isOnNewOrder);
   }
 }
 
@@ -5382,6 +5391,13 @@ function _showVoiceFab(onNewOrder) {
   } else {
     micBtn.style.display = 'none';
     if (tooltip) tooltip.style.display = 'none';
+    // Close voice screen & overlays if open
+    const screen = document.getElementById('voice-screen');
+    if (screen) screen.style.display = 'none';
+    const confirmOv = document.getElementById('voice-confirm-overlay');
+    if (confirmOv) { confirmOv.classList.remove('active'); confirmOv.style.display = 'none'; }
+    if (_recognition) { try { _recognition.stop(); } catch(e) {} _recognition = null; }
+    _voiceState = 'idle';
   }
 }
 
