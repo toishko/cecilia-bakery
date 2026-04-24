@@ -1,12 +1,12 @@
-# IMPLEMENTATION_VOICE_ORDERING — AI Conversational Voice Ordering
+# IMPLEMENTATION_VOICE_ORDERING — AI Push-to-Talk Order Entry
 
-> AI-powered voice ordering for the driver and admin order forms. Drivers tap the mic button, speak their order naturally in Spanish/Spanglish, see a live typewriter transcript, and Gemini AI parses products + quantities from the bakery's catalog, handles corrections, and reads back the order for confirmation.
+> AI-powered voice ordering for the driver and admin order forms. Drivers hold the mic button, speak their order in natural Spanish/Spanglish, and Gemini AI parses product names + quantities from the bakery's catalog, handles corrections, and reads back the order for confirmation.
 
 ---
 
 ## Overview
 
-A conversational voice ordering system integrated into the New Order form for drivers. A mic FAB in the form footer opens a full-screen voice panel with live SpeechRecognition typewriter. After the driver pauses speaking (~1.5s), the system asks "Done ordering?" — if yes, the text transcript is sent to Gemini for product parsing. The AI understands bakery-specific Spanish/Spanglish, fuzzy-matches products from the catalog, handles "dozen" math (×12), supports multi-turn corrections, and reads back the order aloud.
+A push-to-talk voice ordering system integrated into the New Order form for both drivers and admins. The existing bottom-nav `+` FAB transforms into a mic icon when on the New Order screen. Drivers hold the mic to speak, release to process. The AI understands bakery-specific Spanish/Spanglish, fuzzy-matches products from the catalog, handles "dozen" math (×12), supports multi-turn corrections without starting over, and reads back the order aloud in whichever language the driver spoke most.
 
 **Key design decisions:**
 - Tap mic → opens voice screen → SpeechRecognition starts immediately
@@ -21,72 +21,61 @@ A conversational voice ordering system integrated into the New Order form for dr
 ## Checklist
 
 ### Database
-- [ ] Add `voice_order_enabled BOOLEAN DEFAULT false` column to `drivers` table (migration `006` written — awaiting user approval to run)
+- [ ] Add `voice_order_enabled BOOLEAN DEFAULT false` column to `drivers` table (migration file required — user must approve)
 
 ### API
-- [x] Create `/api/voice-order.js` — Vercel serverless function
-  - [x] Accept text transcript + product catalog + current order + conversation history
-  - [x] System prompt: bakery Spanish, fuzzy matching, dozen ×12, corrections, language detection
-  - [x] Return structured actions JSON + readback in detected language
-  - [x] Rate limiting, origin validation, Gemini model fallback chain (2.5-flash → 2.0-flash → 1.5-flash)
+- [ ] Create `/api/voice-order.js` — Vercel serverless function
+  - [ ] Accept base64 audio + product catalog + current order + conversation history
+  - [ ] System prompt: bakery Spanish, fuzzy matching, dozen ×12, corrections, language detection
+  - [ ] Return structured actions JSON + readback in detected language
+  - [ ] Rate limiting, origin validation, Gemini model fallback chain
 
 ### Admin Dashboard
-- [x] Add "AI Voice Ordering" toggle in driver edit form Permissions section (`admin-dashboard.html`)
-- [x] Read/write `voice_order_enabled` in edit/save handlers (`admin-dashboard.js`)
-- [ ] Add voice screen + confirmation card to admin New Order form (always visible, no toggle gate)
+- [ ] Add "AI Voice Ordering" toggle in driver edit form Permissions section (`admin-dashboard.html`)
+- [ ] Read/write `voice_order_enabled` in edit/save handlers (`admin-dashboard.js`)
+- [ ] Add voice FAB + overlay + confirmation card to admin New Order form (always visible, no toggle gate)
 - [ ] Wire admin voice ordering logic (always enabled)
 - [ ] Add voice styles to `admin-dashboard.css`
 
 ### Driver Portal
-- [x] Mic FAB in form-footer (centered between Cancel and Continue)
-- [x] Full-screen voice panel: header, transcript area, listening dots, done prompt, processing spinner
-- [x] Confirmation card with parsed items
-- [x] Feature flag check: `voice_order_enabled` in `checkAdvancedFeatures()` (`driver-order.js`)
-- [x] SpeechRecognition engine: live typewriter, pause detection (1.5s), "Done ordering?" prompt
-- [x] Gemini API integration: text transcript → parsed order actions
-- [x] Apply actions to live order form quantities with highlight animation
+- [x] Transform bottom-nav `+` FAB → mic icon when on New Order screen (`driver-order.html`)
+- [x] Add voice tooltip, recording overlay, confirmation card HTML
+- [x] Feature flag check: add `voice_order_enabled` to `checkAdvancedFeatures()` (`driver-order.js`)
+- [x] Voice ordering engine: MediaRecorder, state machine, API calls, conversation context
+- [x] Apply actions to live order form quantities
 - [x] TTS readback via SpeechSynthesis in detected language
-- [x] Item count badge on Continue button as inline counter ("Continue • 23")
-- [x] Voice overlay pointer-events fix (invisible overlays were blocking bottom nav)
-- [x] Voice styles in `driver-order.css`
+- [x] Confirmation flow: "Confirm" applies, hold mic again for changes
+- [x] Add voice styles to `driver-order.css`
+- [ ] **Footer mic redesign**: Move mic FAB into form-footer (center position, between Cancel & Continue)
+- [ ] Move item count badge onto Continue button as inline counter ("Continue • 23")
 
 ### Polish
-- [x] Listening indicator dots animation
-- [x] Slide-in animation for voice screen
+- [x] Pulse animation while recording
 - [x] Processing spinner state
 - [x] Product row highlight animation when voice sets quantities
+- [ ] Dark mode support for all voice UI
 - [x] Tooltip auto-dismiss after first use
-- [ ] Dark mode contrast verification for all voice UI
 - [ ] Haptic feedback on mobile (if supported)
 
 ## Architecture
 
 ```
-Driver taps mic FAB in form footer
+Driver/Admin holds mic FAB
         │
         ▼
-Full-screen voice panel opens
+MediaRecorder captures audio (webm/opus)
         │
-        ▼ auto-starts
-SpeechRecognition (browser API)
-  ├── Live typewriter shows words as driver speaks
-  ├── Supports continuous + interim results
-  └── lang: es-US or en-US based on app language
-        │
-        ▼ ~1.5s pause detected
-"Done ordering?" prompt
-  ├── [Keep going] → resume SpeechRecognition
-  └── [Yes, process] → send transcript text
-        │
-        ▼
+        ▼ base64 audio
 POST /api/voice-order
-  ├── transcript (text string)
+  ├── audio data (inline)
   ├── product catalog [{key, en, es, category}]
   ├── current order state {key: qty}
-  └── conversation history [{role, content}]
+  ├── conversation history [{role, content}]
+  └── lang preference
         │
         ▼
-Gemini parses text + context
+Gemini processes audio + context
+  ├── Transcribes speech
   ├── Detects dominant language
   ├── Fuzzy-matches products
   ├── Handles "dozena" (×12)
@@ -95,10 +84,10 @@ Gemini parses text + context
         │
         ▼
 Client receives response
-  ├── Shows confirmation card with parsed items
+  ├── Shows confirmation card with items
   ├── TTS readback in detected language
   ├── User taps "Confirm" → applies to form
-  └── User taps mic again → new session with full context
+  └── User holds mic again → new audio + full context → repeat
 ```
 
 ## Notes & Decisions
