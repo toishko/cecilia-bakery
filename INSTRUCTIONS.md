@@ -104,6 +104,7 @@ After every task I complete, I must:
 | `docs/IMPLEMENTATION_futureplans.md` | Future features: analytics dashboard, wholesale portal, production tracking | 🔄 Analytics In Progress |
 | `docs/NOTES_PRODUCT_CATALOG.md` | Definitive product key reference + printed ticket code mappings | ✅ Active |
 | `docs/IMPLEMENTATION_STAFF_FROST_PACKER.md` | Staff Portal frosted box packer: Live Grid visualization redesign | 🔄 In Progress |
+| `docs/IMPLEMENTATION_VOICE_ORDERING.md` | AI voice ordering: push-to-talk, Gemini audio parsing, multi-turn conversation | 🔄 In Progress |
 
 ---
 

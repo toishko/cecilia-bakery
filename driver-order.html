@@ -454,6 +454,29 @@
         <!-- Product Sections (dynamically built by JS) -->
         <div id="product-sections" style="padding-bottom:70px"></div>
       </div>
+
+      <!-- AI Voice Ordering Overlay (only visible when voice_order_enabled) -->
+      <div class="voice-overlay voice-feature" id="voice-overlay" style="display:none">
+        <div class="voice-overlay-content">
+          <div class="voice-pulse" id="voice-pulse"></div>
+          <div class="voice-status" id="voice-status" data-en="Listening..." data-es="Escuchando...">Listening...</div>
+          <div class="voice-transcript" id="voice-transcript"></div>
+        </div>
+      </div>
+
+      <!-- Voice Confirmation Card -->
+      <div class="voice-confirm-overlay voice-feature" id="voice-confirm-overlay" style="display:none">
+        <div class="voice-confirm-card">
+          <div class="voice-confirm-handle"></div>
+          <h3 data-en="Voice Order" data-es="Pedido por Voz">Voice Order</h3>
+          <div class="voice-confirm-transcript" id="voice-confirm-transcript"></div>
+          <div class="voice-confirm-items" id="voice-confirm-items"></div>
+          <div class="voice-confirm-actions">
+            <button class="voice-confirm-btn" id="voice-confirm-accept" data-en="Confirm" data-es="Confirmar">Confirm</button>
+          </div>
+          <p class="voice-confirm-hint" data-en="Hold mic again to make changes" data-es="Mantén el micrófono para hacer cambios">Hold mic again to make changes</p>
+        </div>
+      </div>
     </main>
 
     <!-- BOTTOM TAB NAV (Mobile / PWA) -->
@@ -468,9 +491,14 @@
         <span data-en="Orders" data-es="Pedidos">Orders</span>
       </button>
 
-      <button class="bottom-nav-item bottom-nav-fab" data-section="new-order">
+      <button class="bottom-nav-item bottom-nav-fab" id="bottom-fab-btn" data-section="new-order">
         <div class="fab-circle">
-          <i data-lucide="plus"></i>
+          <i data-lucide="plus" id="fab-icon-plus"></i>
+          <svg id="fab-icon-mic" class="fab-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none" width="24" height="24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        </div>
+        <!-- Voice tooltip -->
+        <div class="voice-tooltip voice-feature" id="voice-tooltip" style="display:none">
+          <span data-en="Hold to order by voice" data-es="Mantén para pedir por voz">Hold to order by voice</span>
         </div>
       </button>
 

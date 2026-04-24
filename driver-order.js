@@ -158,6 +158,8 @@ function showSection(name) {
     document.body.classList.add('immersive-mode');
     if(mobileLogo) mobileLogo.style.display = 'none';
     if(headerBackBtn) headerBackBtn.style.display = 'none';
+    // Transform FAB: + → mic if voice enabled
+    _showVoiceFab(true);
   } else if (activeTool === 'sales') {
     footer.style.display = 'none';
     saleFooter.style.display = 'flex';
@@ -165,12 +167,14 @@ function showSection(name) {
     document.body.classList.remove('immersive-mode');
     if(mobileLogo) mobileLogo.style.display = 'none';
     if(headerBackBtn) headerBackBtn.style.display = 'inline-flex';
+    _showVoiceFab(false);
   } else {
     footer.style.display = 'none';
     saleFooter.style.display = 'none';
     document.body.classList.remove('immersive-mode');
     if(mobileLogo) mobileLogo.style.display = 'block';
     if(headerBackBtn) headerBackBtn.style.display = 'none';
+    _showVoiceFab(false);
   }
 
   // Execute loaders
@@ -5004,20 +5008,32 @@ async function checkAdvancedFeatures() {
 
   try {
     if (sb) {
-      const { data, error } = await sb
+      let data, error;
+      ({ data, error } = await sb
         .from('drivers')
-        .select('scanner_enabled')
+        .select('scanner_enabled, voice_order_enabled')
         .eq('id', currentDriver.id)
-        .single();
+        .single());
+
+      // Fallback if voice_order_enabled column doesn't exist yet
+      if (error && error.message && error.message.includes('voice_order_enabled')) {
+        ({ data, error } = await sb
+          .from('drivers')
+          .select('scanner_enabled')
+          .eq('id', currentDriver.id)
+          .single());
+      }
 
       if (!error && data) {
         currentDriver.scanner_enabled = data.scanner_enabled;
+        currentDriver.voice_order_enabled = data.voice_order_enabled || false;
         // Update local storage session so it persists
         const saved = localStorage.getItem('cecilia_driver');
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
             parsed.scanner_enabled = data.scanner_enabled;
+            parsed.voice_order_enabled = data.voice_order_enabled || false;
             localStorage.setItem('cecilia_driver', JSON.stringify(parsed));
           } catch (e) { }
         }
@@ -5033,9 +5049,20 @@ async function checkAdvancedFeatures() {
     el.style.display = scannerEnabled ? '' : 'none';
   });
 
+  // Show or hide voice ordering
+  const voiceEnabled = !!currentDriver.voice_order_enabled;
+  document.querySelectorAll('.voice-feature').forEach(el => {
+    el.style.display = voiceEnabled ? '' : 'none';
+  });
+
   // Wire up scanner events if scanner is enabled
   if (scannerEnabled) {
     _initDriverScanner();
+  }
+
+  // Wire up voice ordering if voice is enabled
+  if (voiceEnabled) {
+    _initVoiceOrdering();
   }
 }
 
@@ -5318,3 +5345,364 @@ function _driverCloseScanReview() {
   window.scrollTo(0, parseInt(scrollY));
 }
 
+/* ═══════════════════════════════════
+   AI VOICE ORDERING (Driver)
+   ═══════════════════════════════════ */
+let _voiceInited = false;
+let _voiceState = 'idle'; // idle | recording | processing | confirming
+let _mediaRecorder = null;
+let _audioChunks = [];
+let _voiceConversation = []; // multi-turn history
+let _pendingActions = []; // actions waiting for confirmation
+let _voiceStream = null;
+let _voiceTooltipShown = false;
+
+/* Show/hide the mic icon on the FAB */
+function _showVoiceFab(onNewOrder) {
+  const voiceEnabled = currentDriver && !!currentDriver.voice_order_enabled;
+  const plusIcon = document.getElementById('fab-icon-plus');
+  const micIcon = document.getElementById('fab-icon-mic');
+  const tooltip = document.getElementById('voice-tooltip');
+  const fabBtn = document.getElementById('bottom-fab-btn');
+
+  if (!plusIcon || !micIcon) return;
+
+  if (onNewOrder && voiceEnabled) {
+    plusIcon.style.display = 'none';
+    micIcon.style.display = 'block';
+    if (fabBtn) fabBtn.classList.add('voice-mode');
+
+    // Show tooltip once
+    if (tooltip && !_voiceTooltipShown) {
+      tooltip.style.display = 'block';
+      _voiceTooltipShown = true;
+      setTimeout(() => {
+        tooltip.style.opacity = '0';
+        setTimeout(() => { tooltip.style.display = 'none'; }, 500);
+      }, 4000);
+    }
+  } else {
+    plusIcon.style.display = 'block';
+    micIcon.style.display = 'none';
+    if (fabBtn) fabBtn.classList.remove('voice-mode');
+    if (tooltip) tooltip.style.display = 'none';
+  }
+}
+
+function _initVoiceOrdering() {
+  if (_voiceInited) return;
+  _voiceInited = true;
+
+  const fabBtn = document.getElementById('bottom-fab-btn');
+  if (!fabBtn) return;
+
+  let holdTimer = null;
+  let isVoiceHold = false;
+
+  // Override the default click-to-navigate for voice mode
+  fabBtn.addEventListener('pointerdown', (e) => {
+    if (!fabBtn.classList.contains('voice-mode')) return;
+    if (_voiceState === 'processing') return;
+    e.preventDefault();
+    e.stopPropagation();
+    isVoiceHold = true;
+    holdTimer = setTimeout(() => _startVoiceRecording(), 150);
+  }, { capture: true });
+
+  fabBtn.addEventListener('pointerup', (e) => {
+    if (!isVoiceHold) return;
+    e.preventDefault();
+    e.stopPropagation();
+    clearTimeout(holdTimer);
+    isVoiceHold = false;
+    if (_voiceState === 'recording') _stopVoiceRecording();
+  }, { capture: true });
+
+  fabBtn.addEventListener('pointerleave', (e) => {
+    if (!isVoiceHold) return;
+    clearTimeout(holdTimer);
+    isVoiceHold = false;
+    if (_voiceState === 'recording') _stopVoiceRecording();
+  });
+
+  // Prevent context menu on long press
+  fabBtn.addEventListener('contextmenu', (e) => {
+    if (fabBtn.classList.contains('voice-mode')) e.preventDefault();
+  });
+
+  // Confirm button
+  const confirmBtn = document.getElementById('voice-confirm-accept');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', () => _applyVoiceActions());
+  }
+}
+
+async function _startVoiceRecording() {
+  try {
+    _voiceState = 'recording';
+    _audioChunks = [];
+
+    // Show recording overlay
+    const overlay = document.getElementById('voice-overlay');
+    if (overlay) {
+      overlay.style.display = 'flex';
+      requestAnimationFrame(() => overlay.classList.add('active'));
+    }
+    const fabBtn = document.getElementById('bottom-fab-btn');
+    if (fabBtn) fabBtn.classList.add('recording');
+
+    // Update status
+    const status = document.getElementById('voice-status');
+    if (status) status.textContent = lang === 'es' ? 'Escuchando...' : 'Listening...';
+
+    _voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    // Check for MediaRecorder codec support
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : 'audio/webm';
+
+    _mediaRecorder = new MediaRecorder(_voiceStream, { mimeType });
+
+    _mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) _audioChunks.push(e.data);
+    };
+
+    _mediaRecorder.onstop = () => {
+      const blob = new Blob(_audioChunks, { type: 'audio/webm' });
+      _processVoiceAudio(blob);
+    };
+
+    _mediaRecorder.start();
+  } catch (err) {
+    console.error('Mic access denied:', err);
+    _voiceState = 'idle';
+    const overlay = document.getElementById('voice-overlay');
+    if (overlay) { overlay.classList.remove('active'); overlay.style.display = 'none'; }
+    const fabBtn = document.getElementById('bottom-fab-btn');
+    if (fabBtn) fabBtn.classList.remove('recording');
+    showToast(lang === 'es' ? 'Acceso al micrófono denegado' : 'Microphone access denied', 'error');
+  }
+}
+
+function _stopVoiceRecording() {
+  if (_mediaRecorder && _mediaRecorder.state === 'recording') {
+    _mediaRecorder.stop();
+  }
+  if (_voiceStream) {
+    _voiceStream.getTracks().forEach(t => t.stop());
+    _voiceStream = null;
+  }
+  _voiceState = 'processing';
+  const fabBtn = document.getElementById('bottom-fab-btn');
+  if (fabBtn) fabBtn.classList.remove('recording');
+
+  const status = document.getElementById('voice-status');
+  if (status) status.textContent = lang === 'es' ? 'Procesando...' : 'Processing...';
+  const pulse = document.getElementById('voice-pulse');
+  if (pulse) pulse.classList.add('processing');
+}
+
+function _getDriverProducts() {
+  // Build flat product list from PRODUCTS global
+  const products = [];
+  Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
+    sec.items.forEach(item => {
+      if (sec.type === 'redondo') {
+        (item.cols || []).forEach(col => {
+          const isNT = col.endsWith('_nt');
+          const colClean = col.replace('_nt', '');
+          const suffix = colClean === 'inside' ? (lang === 'es' ? ' Adentro' : ' Inside') : (lang === 'es' ? ' Arriba' : ' Top');
+          const ntSuffix = isNT ? (lang === 'es' ? ' (Sin Ticket)' : ' (No Ticket)') : '';
+          products.push({
+            key: item.key + '_' + col,
+            en: item.en + suffix.replace(' Adentro', ' Inside').replace(' Arriba', ' Top') + ntSuffix.replace('(Sin Ticket)', '(No Ticket)'),
+            es: item.es + suffix + ntSuffix,
+            category: sec.es || sec.en
+          });
+        });
+      } else {
+        products.push({
+          key: item.key,
+          en: item.en,
+          es: item.es,
+          category: sec.es || sec.en
+        });
+        // NT variant
+        products.push({
+          key: item.key + '_nt',
+          en: item.en + ' (No Ticket)',
+          es: item.es + ' (Sin Ticket)',
+          category: sec.es || sec.en
+        });
+      }
+    });
+  });
+  return products;
+}
+
+function _getCurrentDriverOrderState() {
+  const state = {};
+  document.querySelectorAll('#section-new-order .qty-input').forEach(inp => {
+    const val = parseInt(inp.value) || 0;
+    if (val > 0) state[inp.dataset.key] = val;
+  });
+  return state;
+}
+
+async function _processVoiceAudio(blob) {
+  try {
+    // Convert to base64
+    const reader = new FileReader();
+    const base64 = await new Promise((resolve, reject) => {
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
+    const products = _getDriverProducts();
+    const currentOrder = _getCurrentDriverOrderState();
+
+    const res = await fetch('/api/voice-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        audio: base64,
+        products,
+        currentOrder,
+        conversationHistory: _voiceConversation,
+      }),
+    });
+
+    const data = await res.json();
+
+    // Hide recording overlay
+    const overlay = document.getElementById('voice-overlay');
+    if (overlay) { overlay.classList.remove('active'); overlay.style.display = 'none'; }
+    const pulse = document.getElementById('voice-pulse');
+    if (pulse) pulse.classList.remove('processing');
+
+    if (!data.success || !data.actions || data.actions.length === 0) {
+      _voiceState = 'idle';
+      showToast(data.message || (lang === 'es' ? 'No entendí, intenta de nuevo' : "Didn't catch that, try again"), 'error');
+      return;
+    }
+
+    // Add to conversation history
+    _voiceConversation.push({ role: 'user', transcript: data.understood_text || '' });
+    _voiceConversation.push({ role: 'assistant', actions: data.actions });
+
+    // Merge with pending actions
+    _pendingActions = _mergeVoiceActions(_pendingActions, data.actions);
+
+    // Show confirmation card
+    _showVoiceConfirmation(data);
+
+    // TTS readback
+    if (data.readback) _voiceSpeak(data.readback, data.readback_lang || 'es');
+
+    _voiceState = 'confirming';
+  } catch (err) {
+    console.error('Voice order processing error:', err);
+    const overlay = document.getElementById('voice-overlay');
+    if (overlay) { overlay.classList.remove('active'); overlay.style.display = 'none'; }
+    const pulse = document.getElementById('voice-pulse');
+    if (pulse) pulse.classList.remove('processing');
+    _voiceState = 'idle';
+    showToast(lang === 'es' ? 'Error procesando voz' : 'Voice processing error', 'error');
+  }
+}
+
+function _mergeVoiceActions(existing, newActions) {
+  const map = new Map();
+  existing.forEach(a => map.set(a.key, a));
+  newActions.forEach(a => {
+    if (a.type === 'delete') {
+      map.set(a.key, { ...a, qty: 0 });
+    } else if (a.type === 'add') {
+      const prev = map.get(a.key);
+      const prevQty = prev ? (prev.qty || 0) : 0;
+      map.set(a.key, { ...a, type: 'set', qty: prevQty + (a.qty || 0) });
+    } else {
+      map.set(a.key, a);
+    }
+  });
+  return [...map.values()].filter(a => a.type === 'delete' || a.qty > 0);
+}
+
+function _showVoiceConfirmation(data) {
+  const overlay = document.getElementById('voice-confirm-overlay');
+  const itemsEl = document.getElementById('voice-confirm-items');
+  const transcriptEl = document.getElementById('voice-confirm-transcript');
+
+  if (transcriptEl) {
+    transcriptEl.textContent = data.understood_text ? `"${data.understood_text}"` : '';
+  }
+
+  if (itemsEl) {
+    let html = '';
+    _pendingActions.forEach(a => {
+      const icon = a.type === 'delete' ? '✕' : '✓';
+      const cls = a.type === 'delete' ? 'voice-item-delete' : 'voice-item-add';
+      const qtyText = a.type === 'delete' ? (lang === 'es' ? 'Borrado' : 'Removed') : `×${a.qty}`;
+      html += `<div class="voice-confirm-item ${cls}">
+        <span class="voice-item-icon">${icon}</span>
+        <span class="voice-item-name">${a.label || a.key}</span>
+        <span class="voice-item-qty">${qtyText}</span>
+      </div>`;
+    });
+    itemsEl.innerHTML = html;
+  }
+
+  if (overlay) {
+    overlay.style.display = 'flex';
+    requestAnimationFrame(() => overlay.classList.add('active'));
+  }
+}
+
+function _applyVoiceActions() {
+  // Apply all pending actions to the live order form
+  _pendingActions.forEach(a => {
+    const input = document.querySelector(`#section-new-order .qty-input[data-key="${a.key}"]`);
+    if (!input) return;
+
+    if (a.type === 'delete') {
+      input.value = '0';
+    } else {
+      input.value = a.qty;
+    }
+
+    // Trigger highlight animation
+    const row = input.closest('.prod-row');
+    if (row) {
+      row.classList.add('voice-highlight');
+      setTimeout(() => row.classList.remove('voice-highlight'), 1500);
+    }
+
+    // Update row highlight
+    updateRowHighlight(input);
+  });
+
+  // Update footer count
+  updateFooterCount();
+
+  // Clean up
+  _pendingActions = [];
+  _voiceConversation = [];
+  _voiceState = 'idle';
+
+  const overlay = document.getElementById('voice-confirm-overlay');
+  if (overlay) { overlay.classList.remove('active'); setTimeout(() => overlay.style.display = 'none', 300); }
+
+  showToast(lang === 'es' ? 'Pedido aplicado ✓' : 'Order applied ✓', 'success');
+}
+
+function _voiceSpeak(text, speechLang) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = speechLang === 'en' ? 'en-US' : 'es-MX';
+  utter.rate = 1.0;
+  utter.pitch = 1.0;
+  window.speechSynthesis.speak(utter);
+}
