@@ -1959,12 +1959,14 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   justify-content: center;
   flex-direction: column;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.3s ease;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
 .voice-overlay.active {
   opacity: 1;
+  pointer-events: auto;
 }
 .voice-overlay-content {
   display: flex;
@@ -2034,10 +2036,12 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   align-items: flex-end;
   justify-content: center;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.3s ease;
 }
 .voice-confirm-overlay.active {
   opacity: 1;
+  pointer-events: auto;
 }
 .voice-confirm-card {
   background: var(--bg-card);
