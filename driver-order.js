@@ -158,6 +158,8 @@ function showSection(name) {
     document.body.classList.add('immersive-mode');
     if(mobileLogo) mobileLogo.style.display = 'none';
     if(headerBackBtn) headerBackBtn.style.display = 'none';
+    // Transform FAB: + → mic if voice enabled
+    _showVoiceFab(true);
   } else if (activeTool === 'sales') {
     footer.style.display = 'none';
     saleFooter.style.display = 'flex';
@@ -165,12 +167,14 @@ function showSection(name) {
     document.body.classList.remove('immersive-mode');
     if(mobileLogo) mobileLogo.style.display = 'none';
     if(headerBackBtn) headerBackBtn.style.display = 'inline-flex';
+    _showVoiceFab(false);
   } else {
     footer.style.display = 'none';
     saleFooter.style.display = 'none';
     document.body.classList.remove('immersive-mode');
     if(mobileLogo) mobileLogo.style.display = 'block';
     if(headerBackBtn) headerBackBtn.style.display = 'none';
+    _showVoiceFab(false);
   }
 
   // Execute loaders
@@ -1348,10 +1352,10 @@ function updateFooterCount() {
   document.querySelectorAll('.qty-input').forEach(inp => {
     total += parseInt(inp.value) || 0;
   });
-  document.getElementById('footer-item-count').textContent = total;
-  document.getElementById('footer-continue-btn').disabled = total === 0;
-
-  document.getElementById('footer-continue-btn').disabled = total === 0;
+  const countEl = document.getElementById('footer-item-count');
+  const btn = document.getElementById('footer-continue-btn');
+  if (countEl) countEl.textContent = total > 0 ? total : '';
+  if (btn) btn.disabled = total === 0;
 }
 
 
@@ -5084,20 +5088,32 @@ async function checkAdvancedFeatures() {
 
   try {
     if (sb) {
-      const { data, error } = await sb
+      let data, error;
+      ({ data, error } = await sb
         .from('drivers')
-        .select('scanner_enabled')
+        .select('scanner_enabled, voice_order_enabled')
         .eq('id', currentDriver.id)
-        .single();
+        .single());
+
+      // Fallback if voice_order_enabled column doesn't exist yet
+      if (error && error.message && error.message.includes('voice_order_enabled')) {
+        ({ data, error } = await sb
+          .from('drivers')
+          .select('scanner_enabled')
+          .eq('id', currentDriver.id)
+          .single());
+      }
 
       if (!error && data) {
         currentDriver.scanner_enabled = data.scanner_enabled;
+        currentDriver.voice_order_enabled = data.voice_order_enabled || false;
         // Update local storage session so it persists
         const saved = localStorage.getItem('cecilia_driver');
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
             parsed.scanner_enabled = data.scanner_enabled;
+            parsed.voice_order_enabled = data.voice_order_enabled || false;
             localStorage.setItem('cecilia_driver', JSON.stringify(parsed));
           } catch (e) { }
         }
@@ -5113,9 +5129,29 @@ async function checkAdvancedFeatures() {
     el.style.display = scannerEnabled ? '' : 'none';
   });
 
+  // Show or hide voice ordering
+  // NOTE: Do NOT force display:'' on .voice-feature elements when enabled —
+  // that bleeds the mic/screen/overlay into non-order sections.
+  // Instead, just hide everything when disabled. _showVoiceFab() handles
+  // showing the footer mic only when on the New Order screen.
+  const voiceEnabled = !!currentDriver.voice_order_enabled;
+  if (!voiceEnabled) {
+    document.querySelectorAll('.voice-feature').forEach(el => {
+      el.style.display = 'none';
+    });
+  }
+
   // Wire up scanner events if scanner is enabled
   if (scannerEnabled) {
     _initDriverScanner();
+  }
+
+  // Wire up voice ordering if voice is enabled
+  if (voiceEnabled) {
+    _initVoiceOrdering();
+    // Re-check mic visibility for current section
+    const isOnNewOrder = document.getElementById('section-new-order')?.classList.contains('active-section');
+    _showVoiceFab(!!isOnNewOrder);
   }
 }
 
@@ -5398,3 +5434,489 @@ function _driverCloseScanReview() {
   window.scrollTo(0, parseInt(scrollY));
 }
 
+/* ═══════════════════════════════════
+   AI VOICE ORDERING (Driver)
+   Audio recording → Gemini parsing
+   ═══════════════════════════════════ */
+let _voiceInited = false;
+let _voiceState = 'idle'; // idle | recording | processing | confirming
+let _voiceConversation = []; // multi-turn history
+let _pendingActions = []; // actions waiting for confirmation
+let _voiceTooltipShown = false;
+let _mediaRecorder = null;
+let _audioChunks = [];
+let _voiceStream = null;
+let _recTimerInterval = null;
+let _recStartTime = 0;
+
+/* Show/hide the footer mic button */
+function _showVoiceFab(onNewOrder) {
+  const voiceEnabled = currentDriver && !!currentDriver.voice_order_enabled;
+  const micBtn = document.getElementById('footer-mic-btn');
+  const tooltip = document.getElementById('voice-tooltip');
+
+  if (!micBtn) return;
+
+  if (onNewOrder && voiceEnabled) {
+    micBtn.style.display = 'flex';
+
+    // Show tooltip once
+    if (tooltip && !_voiceTooltipShown) {
+      tooltip.style.display = 'block';
+      _voiceTooltipShown = true;
+      setTimeout(() => {
+        tooltip.style.opacity = '0';
+        setTimeout(() => { tooltip.style.display = 'none'; }, 500);
+      }, 4000);
+    }
+  } else {
+    micBtn.style.display = 'none';
+    if (tooltip) tooltip.style.display = 'none';
+    // Close voice screen & overlays if open
+    const screen = document.getElementById('voice-screen');
+    if (screen) screen.style.display = 'none';
+    const confirmOv = document.getElementById('voice-confirm-overlay');
+    if (confirmOv) { confirmOv.classList.remove('active'); confirmOv.style.display = 'none'; }
+    _cancelRecording();
+    _voiceState = 'idle';
+  }
+}
+
+function _initVoiceOrdering() {
+  if (_voiceInited) return;
+  _voiceInited = true;
+
+  // Footer mic button opens voice screen
+  const footerMic = document.getElementById('footer-mic-btn');
+  if (footerMic) {
+    footerMic.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      _openVoiceScreen();
+    });
+  }
+
+  // Voice screen mic toggles recording
+  const screenMic = document.getElementById('voice-screen-mic');
+  if (screenMic) {
+    screenMic.addEventListener('click', () => {
+      if (_voiceState === 'recording') {
+        _stopRecording();
+      } else if (_voiceState === 'idle' || _voiceState === 'paused') {
+        _startRecording();
+      }
+    });
+  }
+
+  // Close button
+  const closeBtn = document.getElementById('voice-close-btn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => _closeVoiceScreen());
+  }
+
+  // Process Order button
+  const processBtn = document.getElementById('voice-process-btn');
+  if (processBtn) {
+    processBtn.addEventListener('click', () => {
+      _processVoiceAudio();
+    });
+  }
+
+  // Confirm button on confirmation card
+  const confirmBtn = document.getElementById('voice-confirm-accept');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', () => _applyVoiceActions());
+  }
+}
+
+/* ── Voice Screen Management ── */
+function _openVoiceScreen() {
+  const screen = document.getElementById('voice-screen');
+  if (!screen) return;
+
+  // Reset
+  _audioChunks = [];
+  const timer = document.getElementById('voice-rec-timer');
+  if (timer) timer.textContent = '0:00';
+  const status = document.getElementById('voice-rec-status');
+  if (status) {
+    status.textContent = lang === 'es' ? 'Escuchando...' : 'Listening...';
+    status.classList.remove('stopped');
+  }
+  const pulse = document.getElementById('voice-rec-pulse');
+  if (pulse) pulse.classList.remove('stopped');
+  const processBtn = document.getElementById('voice-process-btn');
+  if (processBtn) processBtn.style.display = 'none';
+
+  document.getElementById('voice-processing').style.display = 'none';
+  document.getElementById('voice-screen-footer').style.display = 'flex';
+
+  screen.style.display = 'flex';
+  applyLang();
+
+  // Auto-start recording
+  setTimeout(() => _startRecording(), 400);
+}
+
+function _closeVoiceScreen() {
+  _cancelRecording();
+  const screen = document.getElementById('voice-screen');
+  if (screen) screen.style.display = 'none';
+  _voiceState = 'idle';
+}
+
+/* ── Audio Recording ── */
+async function _startRecording() {
+  try {
+    _voiceStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 16000,
+      }
+    });
+  } catch (err) {
+    console.error('Mic permission error:', err);
+    showToast(lang === 'es' ? 'Permiso de micrófono denegado' : 'Microphone permission denied', 'error');
+    return;
+  }
+
+  // Pick the best codec
+  const mimeTypes = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4',
+    'audio/ogg;codecs=opus',
+  ];
+  let mimeType = '';
+  for (const mt of mimeTypes) {
+    if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
+  }
+
+  _audioChunks = [];
+  _mediaRecorder = new MediaRecorder(_voiceStream, mimeType ? { mimeType } : {});
+
+  _mediaRecorder.ondataavailable = (e) => {
+    if (e.data.size > 0) _audioChunks.push(e.data);
+  };
+
+  _mediaRecorder.onstop = () => {
+    // Recording stopped — chunks are ready
+  };
+
+  _mediaRecorder.start(500); // Collect in 500ms chunks for safety
+  _voiceState = 'recording';
+
+  // Update UI
+  const indicator = document.getElementById('voice-listening-ind');
+  if (indicator) indicator.classList.add('active');
+  const micBtn = document.getElementById('voice-screen-mic');
+  if (micBtn) { micBtn.classList.add('listening'); micBtn.classList.remove('stopped'); }
+  const pulse = document.getElementById('voice-rec-pulse');
+  if (pulse) pulse.classList.remove('stopped');
+  const status = document.getElementById('voice-rec-status');
+  if (status) {
+    status.textContent = lang === 'es' ? 'Escuchando...' : 'Listening...';
+    status.classList.remove('stopped');
+  }
+
+  // Start timer
+  _recStartTime = Date.now();
+  _recTimerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - _recStartTime) / 1000);
+    const mins = Math.floor(elapsed / 60);
+    const secs = elapsed % 60;
+    const timer = document.getElementById('voice-rec-timer');
+    if (timer) timer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+  }, 500);
+
+  // Show process button after a moment
+  setTimeout(() => {
+    const processBtn = document.getElementById('voice-process-btn');
+    if (processBtn && _voiceState === 'recording') processBtn.style.display = '';
+  }, 1000);
+}
+
+function _stopRecording() {
+  if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
+    _mediaRecorder.stop();
+  }
+  _voiceState = 'paused';
+
+  // Stop timer
+  clearInterval(_recTimerInterval);
+
+  // Update UI to paused state
+  const indicator = document.getElementById('voice-listening-ind');
+  if (indicator) indicator.classList.remove('active');
+  const micBtn = document.getElementById('voice-screen-mic');
+  if (micBtn) { micBtn.classList.remove('listening'); micBtn.classList.add('stopped'); }
+  const pulse = document.getElementById('voice-rec-pulse');
+  if (pulse) pulse.classList.add('stopped');
+  const status = document.getElementById('voice-rec-status');
+  if (status) {
+    status.textContent = lang === 'es' ? 'Pausado' : 'Paused';
+    status.classList.add('stopped');
+  }
+
+  // Keep stream alive so they can resume
+}
+
+function _cancelRecording() {
+  if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
+    try { _mediaRecorder.stop(); } catch(e) {}
+  }
+  _mediaRecorder = null;
+  if (_voiceStream) {
+    _voiceStream.getTracks().forEach(t => t.stop());
+    _voiceStream = null;
+  }
+  clearInterval(_recTimerInterval);
+  _audioChunks = [];
+}
+
+/* ── Send audio to Gemini ── */
+async function _processVoiceAudio() {
+  // Stop recording if still going
+  if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
+    _mediaRecorder.stop();
+  }
+  clearInterval(_recTimerInterval);
+
+  // Wait a beat for the last chunk
+  await new Promise(r => setTimeout(r, 300));
+
+  if (_audioChunks.length === 0) {
+    showToast(lang === 'es' ? 'No se grabó audio' : 'No audio recorded', 'error');
+    _voiceState = 'idle';
+    return;
+  }
+
+  _voiceState = 'processing';
+
+  // Show processing state
+  document.getElementById('voice-screen-footer').style.display = 'none';
+  document.getElementById('voice-processing').style.display = 'flex';
+
+  const indicator = document.getElementById('voice-listening-ind');
+  if (indicator) indicator.classList.remove('active');
+
+  try {
+    // Build audio blob
+    const blob = new Blob(_audioChunks, { type: _audioChunks[0]?.type || 'audio/webm' });
+
+    // Convert to base64
+    const reader = new FileReader();
+    const base64 = await new Promise((resolve, reject) => {
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
+    const products = _getDriverProducts();
+    const currentOrder = _getCurrentDriverOrderState();
+
+    const res = await fetch('/api/voice-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        audio: base64,
+        products,
+        currentOrder,
+        conversationHistory: _voiceConversation,
+      }),
+    });
+
+    let data;
+    try {
+      data = await res.json();
+    } catch (parseErr) {
+      const rawText = await res.text().catch(() => '');
+      console.error('Voice order: failed to parse response', res.status, rawText.substring(0, 200));
+      throw new Error('Server returned invalid response (HTTP ' + res.status + ')');
+    }
+
+    // Hide processing
+    document.getElementById('voice-processing').style.display = 'none';
+
+    if (!data.success || !data.actions || data.actions.length === 0) {
+      _voiceState = 'idle';
+      document.getElementById('voice-screen-footer').style.display = 'flex';
+      const detail = data.debug ? ` (${data.debug})` : '';
+      showToast((data.message || (lang === 'es' ? 'No entendí, intenta de nuevo' : "Didn't catch that, try again")) + detail, 'error');
+      // Reset for retry
+      _audioChunks = [];
+      const timer = document.getElementById('voice-rec-timer');
+      if (timer) timer.textContent = '0:00';
+      const processBtn = document.getElementById('voice-process-btn');
+      if (processBtn) processBtn.style.display = 'none';
+      return;
+    }
+
+    // Add to conversation history
+    _voiceConversation.push({ role: 'user', transcript: data.understood_text || '' });
+    _voiceConversation.push({ role: 'assistant', actions: data.actions });
+
+    // Merge with pending actions
+    _pendingActions = _mergeVoiceActions(_pendingActions, data.actions);
+
+    // Close voice screen, show confirmation card
+    const screen = document.getElementById('voice-screen');
+    if (screen) screen.style.display = 'none';
+
+    // Clean up stream
+    if (_voiceStream) {
+      _voiceStream.getTracks().forEach(t => t.stop());
+      _voiceStream = null;
+    }
+
+    _showVoiceConfirmation(data);
+
+    // TTS readback
+    if (data.readback) _voiceSpeak(data.readback, data.readback_lang || 'es');
+
+    _voiceState = 'confirming';
+  } catch (err) {
+    console.error('Voice order processing error:', err);
+    document.getElementById('voice-processing').style.display = 'none';
+    document.getElementById('voice-screen-footer').style.display = 'flex';
+    _voiceState = 'idle';
+    // Reset for retry
+    _audioChunks = [];
+    const timer = document.getElementById('voice-rec-timer');
+    if (timer) timer.textContent = '0:00';
+    const processBtn = document.getElementById('voice-process-btn');
+    if (processBtn) processBtn.style.display = 'none';
+    const errMsg = err.message || 'Unknown error';
+    showToast((lang === 'es' ? 'Error: ' : 'Error: ') + errMsg, 'error');
+  }
+}
+
+/* ── Helper functions ── */
+function _getDriverProducts() {
+  const products = [];
+  Object.entries(PRODUCTS).forEach(([secKey, sec]) => {
+    sec.items.forEach(item => {
+      if (sec.type === 'redondo') {
+        (item.cols || []).forEach(col => {
+          const isNT = col.endsWith('_nt');
+          const colClean = col.replace('_nt', '');
+          const suffix = colClean === 'inside' ? (lang === 'es' ? ' Adentro' : ' Inside') : (lang === 'es' ? ' Arriba' : ' Top');
+          const ntSuffix = isNT ? (lang === 'es' ? ' (Sin Ticket)' : ' (No Ticket)') : '';
+          products.push({
+            key: item.key + '_' + col,
+            en: item.en + suffix.replace(' Adentro', ' Inside').replace(' Arriba', ' Top') + ntSuffix.replace('(Sin Ticket)', '(No Ticket)'),
+            es: item.es + suffix + ntSuffix,
+            category: sec.es || sec.en
+          });
+        });
+      } else {
+        products.push({ key: item.key, en: item.en, es: item.es, category: sec.es || sec.en });
+        products.push({
+          key: item.key + '_nt',
+          en: item.en + ' (No Ticket)',
+          es: item.es + ' (Sin Ticket)',
+          category: sec.es || sec.en
+        });
+      }
+    });
+  });
+  return products;
+}
+
+function _getCurrentDriverOrderState() {
+  const state = {};
+  document.querySelectorAll('#section-new-order .qty-input').forEach(inp => {
+    const val = parseInt(inp.value) || 0;
+    if (val > 0) state[inp.dataset.key] = val;
+  });
+  return state;
+}
+
+function _mergeVoiceActions(existing, newActions) {
+  const map = new Map();
+  existing.forEach(a => map.set(a.key, a));
+  newActions.forEach(a => {
+    if (a.type === 'delete') {
+      map.set(a.key, { ...a, qty: 0 });
+    } else if (a.type === 'add') {
+      const prev = map.get(a.key);
+      const prevQty = prev ? (prev.qty || 0) : 0;
+      map.set(a.key, { ...a, type: 'set', qty: prevQty + (a.qty || 0) });
+    } else {
+      map.set(a.key, a);
+    }
+  });
+  return [...map.values()].filter(a => a.type === 'delete' || a.qty > 0);
+}
+
+function _showVoiceConfirmation(data) {
+  const overlay = document.getElementById('voice-confirm-overlay');
+  const itemsEl = document.getElementById('voice-confirm-items');
+  const transcriptEl = document.getElementById('voice-confirm-transcript');
+
+  if (transcriptEl) {
+    transcriptEl.textContent = data.understood_text ? `"${data.understood_text}"` : '';
+  }
+
+  if (itemsEl) {
+    let html = '';
+    _pendingActions.forEach(a => {
+      const icon = a.type === 'delete' ? '✕' : '✓';
+      const cls = a.type === 'delete' ? 'voice-item-delete' : 'voice-item-add';
+      const qtyText = a.type === 'delete' ? (lang === 'es' ? 'Borrado' : 'Removed') : `×${a.qty}`;
+      html += `<div class="voice-confirm-item ${cls}">
+        <span class="voice-item-icon">${icon}</span>
+        <span class="voice-item-name">${a.label || a.key}</span>
+        <span class="voice-item-qty">${qtyText}</span>
+      </div>`;
+    });
+    itemsEl.innerHTML = html;
+  }
+
+  if (overlay) {
+    overlay.style.display = 'flex';
+    requestAnimationFrame(() => overlay.classList.add('active'));
+  }
+}
+
+function _applyVoiceActions() {
+  _pendingActions.forEach(a => {
+    const input = document.querySelector(`#section-new-order .qty-input[data-key="${a.key}"]`);
+    if (!input) return;
+
+    if (a.type === 'delete') {
+      input.value = '0';
+    } else {
+      input.value = a.qty;
+    }
+
+    const row = input.closest('.prod-row');
+    if (row) {
+      row.classList.add('voice-highlight');
+      setTimeout(() => row.classList.remove('voice-highlight'), 1500);
+    }
+    updateRowHighlight(input);
+  });
+
+  updateFooterCount();
+
+  _pendingActions = [];
+  _voiceConversation = [];
+  _voiceState = 'idle';
+
+  const overlay = document.getElementById('voice-confirm-overlay');
+  if (overlay) { overlay.classList.remove('active'); setTimeout(() => overlay.style.display = 'none', 300); }
+
+  showToast(lang === 'es' ? 'Pedido aplicado ✓' : 'Order applied ✓', 'success');
+}
+
+function _voiceSpeak(text, speechLang) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = speechLang === 'en' ? 'en-US' : 'es-MX';
+  utter.rate = 1.0;
+  utter.pitch = 1.0;
+  window.speechSynthesis.speak(utter);
+}

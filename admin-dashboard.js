@@ -592,12 +592,12 @@ async function checkSession() {
   return false;
 }
 
-function enterDashboard(user) {
+async function enterDashboard(user) {
   applyLang();
   showScreen('dashboard');
+  await loadDriversCache();
   const savedSection = sessionStorage.getItem('admin_section') || 'overview';
   showSection(savedSection);
-  loadDriversCache();
   setupRealtime();
   setupOnlineOrdersRealtime();
   updateOnlineOrdersBadge();
@@ -4569,8 +4569,11 @@ function renderDriverTable() {
     const scanBadge = d.scanner_enabled
       ? `<span class="adv-badge" title="Scanner Enabled"><i data-lucide="camera" style="width:14px;height:14px;color:var(--red);margin-left:6px"></i></span>`
       : '';
+    const voiceListBadge = d.voice_order_enabled
+      ? `<span class="adv-badge" title="Voice Ordering"><i data-lucide="mic" style="width:14px;height:14px;color:var(--blue);margin-left:6px"></i></span>`
+      : '';
     return `<tr onclick="showDriverProfile('${d.id}')">
-      <td class="driver-name" style="display:flex;align-items:center">${_esc(d.name)} ${scanBadge}</td>
+      <td class="driver-name" style="display:flex;align-items:center">${_esc(d.name)} ${scanBadge}${voiceListBadge}</td>
       <td class="driver-code"><span class="code-masked" data-code="${_escAttr(d.code)}">••••••</span> <button class="code-eye-btn" onclick="event.stopPropagation();toggleCode(this)" title="Show code"><i data-lucide="eye"></i></button></td>
       <td class="driver-phone hide-mobile">${_esc(d.phone || '—')}</td>
       <td><span class="${statusClass}">${statusText}</span></td>
@@ -4641,6 +4644,9 @@ window.showEditDriver = async function(driverId) {
   // Scanner enabled toggle
   document.getElementById('df-scanner-wrap').style.display = 'flex';
   document.getElementById('df-scanner').checked = !!driver.scanner_enabled;
+
+  // Voice ordering toggle
+  document.getElementById('df-voice').checked = !!driver.voice_order_enabled;
 
   // Fetch prices
   const { data: prices } = await sb.from('driver_prices').select('product_key, price, credit_value').eq('driver_id', driverId);
@@ -4918,13 +4924,24 @@ async function saveDriver() {
     if (editingDriverId) {
       // Update driver
       const scannerEnabled = document.getElementById('df-scanner').checked;
-      const { error } = await sb.from('drivers').update({ name, code, phone, is_active: isActive, scanner_enabled: scannerEnabled }).eq('id', editingDriverId);
+      const voiceEnabled = document.getElementById('df-voice').checked;
+      let { error } = await sb.from('drivers').update({ name, code, phone, is_active: isActive, scanner_enabled: scannerEnabled, voice_order_enabled: voiceEnabled }).eq('id', editingDriverId);
+      // Fallback if voice column doesn't exist yet
+      if (error && error.message && error.message.includes('voice_order_enabled')) {
+        ({ error } = await sb.from('drivers').update({ name, code, phone, is_active: isActive, scanner_enabled: scannerEnabled }).eq('id', editingDriverId));
+      }
       if (error) throw error;
       driverId = editingDriverId;
     } else {
       // Insert new driver
       const scannerEnabled = document.getElementById('df-scanner').checked;
-      const { data: newDriver, error } = await sb.from('drivers').insert({ name, code, phone, is_active: isActive, scanner_enabled: scannerEnabled }).select('id').single();
+      const voiceEnabled = document.getElementById('df-voice').checked;
+      let newDriver, error;
+      ({ data: newDriver, error } = await sb.from('drivers').insert({ name, code, phone, is_active: isActive, scanner_enabled: scannerEnabled, voice_order_enabled: voiceEnabled }).select('id').single());
+      // Fallback if voice column doesn't exist yet
+      if (error && error.message && error.message.includes('voice_order_enabled')) {
+        ({ data: newDriver, error } = await sb.from('drivers').insert({ name, code, phone, is_active: isActive, scanner_enabled: scannerEnabled }).select('id').single());
+      }
       if (error) throw error;
       driverId = newDriver.id;
     }
@@ -5023,6 +5040,9 @@ window.showDriverProfile = async function(driverId) {
   const ocrBadge = driver.scanner_enabled 
     ? `<span class="badge badge-sent" style="background:rgba(200,16,46,0.1);color:var(--red);">OCR</span>`
     : '';
+  const voiceBadge = driver.voice_order_enabled
+    ? `<span class="badge badge-sent" style="background:rgba(0,45,98,0.1);color:var(--blue);">🎤 Voice</span>`
+    : '';
 
   document.getElementById('driver-profile-header').innerHTML = `
     <div class="apple-avatar">${initials}</div>
@@ -5032,7 +5052,7 @@ window.showDriverProfile = async function(driverId) {
       <button class="code-eye-btn" onclick="toggleCode(this)" title="Show code" style="vertical-align:middle;margin:-2px 0 0 2px;"><i data-lucide="eye"></i></button>
       ${driver.phone ? ' • ' + _esc(driver.phone) : ''}
     </div>
-    <div class="apple-contact-badges">${statusBadge} ${ocrBadge}</div>
+    <div class="apple-contact-badges">${statusBadge} ${ocrBadge} ${voiceBadge}</div>
   `;
 
   // Balance breakdown
@@ -9640,4 +9660,316 @@ function _noInitTimePicker(initialVal, cb) {
   } else {
     doWire();
   }
+})();
+
+/* ═══════════════════════════════════
+   AI VOICE ORDERING (Admin — always enabled)
+   ═══════════════════════════════════ */
+(function() {
+  let _voiceInited = false;
+  let _voiceState = 'idle'; // idle | recording | processing | confirming
+  let _mediaRecorder = null;
+  let _audioChunks = [];
+  let _voiceConversation = []; // multi-turn history
+  let _pendingActions = []; // actions waiting for confirmation
+  let _voiceStream = null;
+
+  function _getAdminProducts() {
+    // Build flat product list from ADMIN_PRODUCTS (defined earlier in this file)
+    if (typeof ADMIN_PRODUCTS === 'undefined') return [];
+    const products = [];
+    ADMIN_PRODUCTS.forEach(sec => {
+      sec.items.forEach(item => {
+        products.push({
+          key: item.key,
+          en: item.en,
+          es: item.es,
+          category: sec.section
+        });
+      });
+    });
+    return products;
+  }
+
+  function _getCurrentOrderState() {
+    // Read current quantities from the live form
+    const state = {};
+    document.querySelectorAll('#section-new-order .qty-input').forEach(inp => {
+      const val = parseInt(inp.value) || 0;
+      if (val > 0) state[inp.dataset.key] = val;
+    });
+    return state;
+  }
+
+  window._initAdminVoice = function() {
+    if (_voiceInited) return;
+    _voiceInited = true;
+
+    const fab = document.getElementById('admin-voice-fab');
+    if (!fab) return;
+
+    // Pointer events for hold-to-talk
+    let holdTimer = null;
+
+    fab.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (_voiceState === 'processing') return;
+      holdTimer = setTimeout(() => _startRecording(), 150);
+    });
+
+    fab.addEventListener('pointerup', (e) => {
+      e.preventDefault();
+      clearTimeout(holdTimer);
+      if (_voiceState === 'recording') _stopRecording();
+    });
+
+    fab.addEventListener('pointerleave', (e) => {
+      clearTimeout(holdTimer);
+      if (_voiceState === 'recording') _stopRecording();
+    });
+
+    // Prevent context menu on long press
+    fab.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Confirm button
+    const confirmBtn = document.getElementById('voice-confirm-accept');
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', () => _applyAndClose());
+    }
+  };
+
+  async function _startRecording() {
+    try {
+      _voiceState = 'recording';
+      _audioChunks = [];
+
+      // Show overlay
+      const overlay = document.getElementById('voice-overlay');
+      if (overlay) {
+        overlay.style.display = 'flex';
+        requestAnimationFrame(() => overlay.classList.add('active'));
+      }
+      const fab = document.getElementById('admin-voice-fab');
+      if (fab) fab.classList.add('recording');
+
+      // Update status text
+      const status = document.getElementById('voice-status');
+      if (status) status.textContent = lang === 'es' ? 'Escuchando...' : 'Listening...';
+
+      _voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      _mediaRecorder = new MediaRecorder(_voiceStream, { mimeType: 'audio/webm;codecs=opus' });
+
+      _mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) _audioChunks.push(e.data);
+      };
+
+      _mediaRecorder.onstop = () => {
+        const blob = new Blob(_audioChunks, { type: 'audio/webm' });
+        _processAudio(blob);
+      };
+
+      _mediaRecorder.start();
+    } catch (err) {
+      console.error('Mic access denied:', err);
+      _voiceState = 'idle';
+      const overlay = document.getElementById('voice-overlay');
+      if (overlay) { overlay.classList.remove('active'); overlay.style.display = 'none'; }
+      const fab = document.getElementById('admin-voice-fab');
+      if (fab) fab.classList.remove('recording');
+      showToast(lang === 'es' ? 'Acceso al micrófono denegado' : 'Microphone access denied', 'error');
+    }
+  }
+
+  function _stopRecording() {
+    if (_mediaRecorder && _mediaRecorder.state === 'recording') {
+      _mediaRecorder.stop();
+    }
+    // Stop mic stream
+    if (_voiceStream) {
+      _voiceStream.getTracks().forEach(t => t.stop());
+      _voiceStream = null;
+    }
+    _voiceState = 'processing';
+    const fab = document.getElementById('admin-voice-fab');
+    if (fab) fab.classList.remove('recording');
+
+    // Update status
+    const status = document.getElementById('voice-status');
+    if (status) status.textContent = lang === 'es' ? 'Procesando...' : 'Processing...';
+    const pulse = document.getElementById('voice-pulse');
+    if (pulse) pulse.classList.add('processing');
+  }
+
+  async function _processAudio(blob) {
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      const base64 = await new Promise((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      const products = _getAdminProducts();
+      const currentOrder = _getCurrentOrderState();
+
+      const res = await fetch('/api/voice-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          audio: base64,
+          products,
+          currentOrder,
+          conversationHistory: _voiceConversation,
+        }),
+      });
+
+      const data = await res.json();
+
+      // Hide recording overlay
+      const overlay = document.getElementById('voice-overlay');
+      if (overlay) { overlay.classList.remove('active'); overlay.style.display = 'none'; }
+      const pulse = document.getElementById('voice-pulse');
+      if (pulse) pulse.classList.remove('processing');
+
+      if (!data.success || !data.actions || data.actions.length === 0) {
+        _voiceState = 'idle';
+        showToast(data.message || (lang === 'es' ? 'No entendí, intenta de nuevo' : "Didn't catch that, try again"), 'error');
+        return;
+      }
+
+      // Add to conversation history
+      _voiceConversation.push({ role: 'user', transcript: data.understood_text || '' });
+      _voiceConversation.push({ role: 'assistant', actions: data.actions });
+
+      // Accumulate actions
+      _pendingActions = _mergeActions(_pendingActions, data.actions);
+
+      // Show confirmation card
+      _showConfirmation(data);
+
+      // TTS readback
+      if (data.readback) _speak(data.readback, data.readback_lang || 'es');
+
+      _voiceState = 'confirming';
+    } catch (err) {
+      console.error('Voice order processing error:', err);
+      const overlay = document.getElementById('voice-overlay');
+      if (overlay) { overlay.classList.remove('active'); overlay.style.display = 'none'; }
+      const pulse = document.getElementById('voice-pulse');
+      if (pulse) pulse.classList.remove('processing');
+      _voiceState = 'idle';
+      showToast(lang === 'es' ? 'Error procesando voz' : 'Voice processing error', 'error');
+    }
+  }
+
+  function _mergeActions(existing, newActions) {
+    // Merge new actions into existing — newer actions for the same key override
+    const map = new Map();
+    existing.forEach(a => map.set(a.key, a));
+    newActions.forEach(a => {
+      if (a.type === 'delete') {
+        map.set(a.key, { ...a, qty: 0 });
+      } else if (a.type === 'add') {
+        const prev = map.get(a.key);
+        const prevQty = prev ? (prev.qty || 0) : 0;
+        map.set(a.key, { ...a, type: 'set', qty: prevQty + (a.qty || 0) });
+      } else {
+        map.set(a.key, a);
+      }
+    });
+    // Remove zero-qty sets
+    return [...map.values()].filter(a => a.type === 'delete' || a.qty > 0);
+  }
+
+  function _showConfirmation(data) {
+    const overlay = document.getElementById('voice-confirm-overlay');
+    const itemsEl = document.getElementById('voice-confirm-items');
+    const transcriptEl = document.getElementById('voice-confirm-transcript');
+
+    if (transcriptEl) {
+      transcriptEl.textContent = data.understood_text ? `"${data.understood_text}"` : '';
+    }
+
+    if (itemsEl) {
+      let html = '';
+      _pendingActions.forEach(a => {
+        const icon = a.type === 'delete' ? '✕' : '✓';
+        const cls = a.type === 'delete' ? 'voice-item-delete' : 'voice-item-add';
+        const qtyText = a.type === 'delete' ? (lang === 'es' ? 'Borrado' : 'Removed') : `×${a.qty}`;
+        html += `<div class="voice-confirm-item ${cls}">
+          <span class="voice-item-icon">${icon}</span>
+          <span class="voice-item-name">${a.label || a.key}</span>
+          <span class="voice-item-qty">${qtyText}</span>
+        </div>`;
+      });
+      itemsEl.innerHTML = html;
+    }
+
+    if (overlay) {
+      overlay.style.display = 'flex';
+      requestAnimationFrame(() => overlay.classList.add('active'));
+    }
+  }
+
+  function _applyAndClose() {
+    // Apply all pending actions to the live order form
+    _pendingActions.forEach(a => {
+      const input = document.querySelector(`#section-new-order .qty-input[data-key="${a.key}"]`);
+      if (!input) return;
+
+      if (a.type === 'delete') {
+        input.value = '0';
+      } else {
+        input.value = a.qty;
+      }
+
+      // Trigger highlight animation
+      const row = input.closest('.prod-row');
+      if (row) {
+        row.classList.add('voice-highlight');
+        setTimeout(() => row.classList.remove('voice-highlight'), 1500);
+      }
+
+      // Update row highlight state
+      if (typeof updateRowHighlight === 'function') updateRowHighlight(input);
+    });
+
+    // Update footer count
+    if (typeof _noUpdateFooterCount === 'function') _noUpdateFooterCount();
+
+    // Clean up
+    _pendingActions = [];
+    _voiceConversation = [];
+    _voiceState = 'idle';
+
+    const overlay = document.getElementById('voice-confirm-overlay');
+    if (overlay) { overlay.classList.remove('active'); setTimeout(() => overlay.style.display = 'none', 300); }
+
+    showToast(lang === 'es' ? 'Pedido aplicado' : 'Order applied', 'success');
+  }
+
+  function _speak(text, speechLang) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = speechLang === 'en' ? 'en-US' : 'es-MX';
+    utter.rate = 1.0;
+    utter.pitch = 1.0;
+    window.speechSynthesis.speak(utter);
+  }
+
+  // Show/hide FAB when entering/leaving new-order section
+  const origShowSection = window.showSection;
+  window.showSection = async function(name) {
+    await origShowSection(name);
+    const fab = document.getElementById('admin-voice-fab');
+    if (fab) {
+      fab.style.display = (name === 'new-order') ? 'flex' : 'none';
+    }
+    // Init voice on first visit to new-order
+    if (name === 'new-order') {
+      window._initAdminVoice();
+    }
+  };
 })();
