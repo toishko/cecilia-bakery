@@ -9776,19 +9776,34 @@ function _noInitTimePicker(initialVal, cb) {
       const status = document.getElementById('voice-status');
       if (status) status.textContent = lang === 'es' ? 'Escuchando...' : 'Listening...';
 
-      _voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      _mediaRecorder = new MediaRecorder(_voiceStream, { mimeType: 'audio/webm;codecs=opus' });
+      _voiceStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true }
+      });
+
+      // Pick the best supported codec
+      const mimeTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/ogg;codecs=opus',
+      ];
+      let mimeType = '';
+      for (const mt of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
+      }
+      _mediaRecorder = new MediaRecorder(_voiceStream, mimeType ? { mimeType } : {});
 
       _mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) _audioChunks.push(e.data);
       };
 
       _mediaRecorder.onstop = () => {
-        const blob = new Blob(_audioChunks, { type: 'audio/webm' });
+        const blobType = _mediaRecorder.mimeType || mimeType || 'audio/webm';
+        const blob = new Blob(_audioChunks, { type: blobType });
         _processAudio(blob);
       };
 
-      _mediaRecorder.start();
+      _mediaRecorder.start(500); // collect in 500ms chunks
     } catch (err) {
       console.error('Mic access denied:', err);
       _voiceState = 'idle';
@@ -9879,7 +9894,8 @@ function _noInitTimePicker(initialVal, cb) {
       const pulse = document.getElementById('voice-pulse');
       if (pulse) pulse.classList.remove('processing');
       _voiceState = 'idle';
-      showToast(lang === 'es' ? 'Error procesando voz' : 'Voice processing error', 'error');
+      const errMsg = err.message || 'Unknown error';
+      showToast((lang === 'es' ? 'Error: ' : 'Error: ') + errMsg, 'error');
     }
   }
 
