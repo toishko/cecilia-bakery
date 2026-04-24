@@ -5392,30 +5392,58 @@ function _initVoiceOrdering() {
 
   let holdTimer = null;
   let isVoiceHold = false;
+  let _recordingStartedAt = 0;
 
-  micBtn.addEventListener('pointerdown', (e) => {
-    if (_voiceState === 'processing') return;
+  function onHoldStart(e) {
+    if (_voiceState === 'processing' || _voiceState === 'starting') return;
     e.preventDefault();
     e.stopPropagation();
     isVoiceHold = true;
-    holdTimer = setTimeout(() => _startVoiceRecording(), 150);
-  }, { capture: true });
+    holdTimer = setTimeout(() => _startVoiceRecording(), 200);
+  }
 
-  micBtn.addEventListener('pointerup', (e) => {
+  function onHoldEnd(e) {
     if (!isVoiceHold) return;
     e.preventDefault();
     e.stopPropagation();
     clearTimeout(holdTimer);
     isVoiceHold = false;
-    if (_voiceState === 'recording') _stopVoiceRecording();
-  }, { capture: true });
+    if (_voiceState === 'recording') {
+      // Require minimum 600ms of actual recording
+      const elapsed = Date.now() - _recordingStartedAt;
+      if (elapsed < 600) {
+        // Too short — cancel instead of processing empty audio
+        _cancelVoiceRecording();
+        showToast(lang === 'es' ? 'Mantén presionado para grabar' : 'Hold down to record', 'info');
+      } else {
+        _stopVoiceRecording();
+      }
+    } else if (_voiceState === 'starting') {
+      // getUserMedia hasn't resolved yet — cancel
+      _voiceState = 'cancelling';
+    }
+  }
 
-  micBtn.addEventListener('pointerleave', (e) => {
+  function onHoldLeave(e) {
     if (!isVoiceHold) return;
     clearTimeout(holdTimer);
     isVoiceHold = false;
-    if (_voiceState === 'recording') _stopVoiceRecording();
-  });
+    if (_voiceState === 'recording') {
+      const elapsed = Date.now() - _recordingStartedAt;
+      if (elapsed < 600) {
+        _cancelVoiceRecording();
+      } else {
+        _stopVoiceRecording();
+      }
+    } else if (_voiceState === 'starting') {
+      _voiceState = 'cancelling';
+    }
+  }
+
+  // Pointer events (desktop + some mobile)
+  micBtn.addEventListener('pointerdown', onHoldStart, { capture: true });
+  micBtn.addEventListener('pointerup', onHoldEnd, { capture: true });
+  micBtn.addEventListener('pointerleave', onHoldLeave);
 
   // Prevent context menu on long press
   micBtn.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -5425,11 +5453,19 @@ function _initVoiceOrdering() {
   if (confirmBtn) {
     confirmBtn.addEventListener('click', () => _applyVoiceActions());
   }
+
+  // Store start time reference on the module scope
+  window._voiceRecordingStartedAt = _recordingStartedAt;
+  Object.defineProperty(window, '_voiceRecordingStartedAt', {
+    get: () => _recordingStartedAt,
+    set: (v) => { _recordingStartedAt = v; }
+  });
 }
 
 async function _startVoiceRecording() {
   try {
-    _voiceState = 'recording';
+    _voiceState = 'starting'; // intermediate state — not 'recording' yet
+
     _audioChunks = [];
 
     // Show recording overlay
@@ -5447,10 +5483,20 @@ async function _startVoiceRecording() {
 
     _voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
+    // If user released finger while we were awaiting permission, cancel
+    if (_voiceState === 'cancelling') {
+      _voiceStream.getTracks().forEach(t => t.stop());
+      _voiceStream = null;
+      _voiceState = 'idle';
+      if (overlay) { overlay.classList.remove('active'); overlay.style.display = 'none'; }
+      if (micBtn) micBtn.classList.remove('recording');
+      return;
+    }
+
     // Check for MediaRecorder codec support
     const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
       ? 'audio/webm;codecs=opus'
-      : 'audio/webm';
+      : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4');
 
     _mediaRecorder = new MediaRecorder(_voiceStream, { mimeType });
 
@@ -5459,11 +5505,21 @@ async function _startVoiceRecording() {
     };
 
     _mediaRecorder.onstop = () => {
-      const blob = new Blob(_audioChunks, { type: 'audio/webm' });
+      const blob = new Blob(_audioChunks, { type: mimeType });
+      if (blob.size < 1000) {
+        // Too small to be real audio — probably empty
+        _voiceState = 'idle';
+        const ov = document.getElementById('voice-overlay');
+        if (ov) { ov.classList.remove('active'); ov.style.display = 'none'; }
+        return;
+      }
       _processVoiceAudio(blob);
     };
 
-    _mediaRecorder.start();
+    _mediaRecorder.start(250); // collect data every 250ms for smoother chunks
+    _voiceState = 'recording'; // NOW it's truly recording
+    window._voiceRecordingStartedAt = Date.now();
+
   } catch (err) {
     console.error('Mic access denied:', err);
     _voiceState = 'idle';
@@ -5473,6 +5529,24 @@ async function _startVoiceRecording() {
     if (micBtn) micBtn.classList.remove('recording');
     showToast(lang === 'es' ? 'Acceso al micrófono denegado' : 'Microphone access denied', 'error');
   }
+}
+
+function _cancelVoiceRecording() {
+  if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
+    _mediaRecorder.onstop = null; // prevent processing
+    _mediaRecorder.stop();
+  }
+  if (_voiceStream) {
+    _voiceStream.getTracks().forEach(t => t.stop());
+    _voiceStream = null;
+  }
+  _voiceState = 'idle';
+  const overlay = document.getElementById('voice-overlay');
+  if (overlay) { overlay.classList.remove('active'); overlay.style.display = 'none'; }
+  const micBtn = document.getElementById('footer-mic-btn');
+  if (micBtn) micBtn.classList.remove('recording');
+  const pulse = document.getElementById('voice-pulse');
+  if (pulse) pulse.classList.remove('processing');
 }
 
 function _stopVoiceRecording() {
