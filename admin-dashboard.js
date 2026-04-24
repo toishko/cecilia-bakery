@@ -9524,6 +9524,18 @@ function _noInitTimePicker(initialVal, cb) {
     const screen = document.getElementById('admin-voice-screen');
     if (!screen) return;
     screen.style.display = 'flex';
+
+    // Hide elements that bleed through
+    const fab = document.getElementById('admin-voice-fab');
+    if (fab) fab.style.display = 'none';
+    const formFooter = document.getElementById('form-footer');
+    if (formFooter) formFooter.style.display = 'none';
+    // Hide any fixed notification bells or bottom nav
+    document.querySelectorAll('.bottom-nav, .notif-fab, .mobile-header').forEach(el => {
+      el.dataset.voiceHidden = el.style.display || '';
+      el.style.display = 'none';
+    });
+
     // Reset UI
     const timer = document.getElementById('admin-rec-timer');
     if (timer) timer.textContent = '0:00';
@@ -9551,6 +9563,24 @@ function _noInitTimePicker(initialVal, cb) {
     const screen = document.getElementById('admin-voice-screen');
     if (screen) screen.style.display = 'none';
     _voiceState = 'idle';
+    _restoreHiddenElements();
+  }
+
+  function _restoreHiddenElements() {
+    // Restore FAB
+    const fab = document.getElementById('admin-voice-fab');
+    if (fab) fab.style.display = 'flex';
+    // Restore form footer if a driver is selected
+    const driverSelect = document.getElementById('no-driver-select');
+    if (driverSelect && driverSelect.value) {
+      const formFooter = document.getElementById('form-footer');
+      if (formFooter) formFooter.style.display = 'flex';
+    }
+    // Restore previously hidden elements
+    document.querySelectorAll('[data-voice-hidden]').forEach(el => {
+      el.style.display = el.dataset.voiceHidden || '';
+      delete el.dataset.voiceHidden;
+    });
   }
 
   async function _startRecording() {
@@ -9700,9 +9730,10 @@ function _noInitTimePicker(initialVal, cb) {
         throw new Error('Server returned invalid response (HTTP ' + res.status + ')');
       }
 
-      // Hide voice screen
+      // Hide voice screen + restore hidden elements
       const screen = document.getElementById('admin-voice-screen');
       if (screen) screen.style.display = 'none';
+      _restoreHiddenElements();
 
       if (!data.success || !data.actions || data.actions.length === 0) {
         _voiceState = 'idle';
@@ -9724,6 +9755,7 @@ function _noInitTimePicker(initialVal, cb) {
       console.error('Voice order processing error:', err);
       const screen = document.getElementById('admin-voice-screen');
       if (screen) screen.style.display = 'none';
+      _restoreHiddenElements();
       _voiceState = 'idle';
       showToast('Error: ' + (err.message || 'Unknown error'), 'error');
     }
