@@ -314,10 +314,12 @@ async function showSection(name) {
   const target = document.getElementById('section-' + name);
   if (target) target.style.display = 'block';
 
-  // Hide the new-order footer bar if navigating away
+  // Hide the new-order footer bar if navigating away + restore bottom nav
   if (name !== 'new-order') {
     const ff = document.getElementById('form-footer');
     if (ff) ff.style.display = 'none';
+    const bnav = document.querySelector('.bottom-nav');
+    if (bnav && window.innerWidth <= 768) bnav.style.display = 'flex';
   }
 
   // Update desktop sidebar + old mobile nav active states
@@ -8337,6 +8339,9 @@ async function initAdminOrderForm() {
     } else {
       document.getElementById('no-order-container').style.display = 'none';
       document.getElementById('form-footer').style.display = 'none';
+      // Restore bottom nav
+      const bnav = document.querySelector('.bottom-nav');
+      if (bnav && window.innerWidth <= 768) bnav.style.display = 'flex';
     }
   };
 
@@ -8478,6 +8483,9 @@ function _noShowFormContainer() {
   _noBuildProductSections();
   _noLoadOrderToForm(adminNoActiveOrderIdx);
   document.getElementById('form-footer').style.display = 'flex';
+  // Hide bottom nav so it doesn't double up behind the form footer
+  const bnav = document.querySelector('.bottom-nav');
+  if (bnav) bnav.style.display = 'none';
   _noUpdateFooterCount();
 }
 
@@ -9305,6 +9313,9 @@ async function _noSubmitAllOrders() {
     if (driverSelect) driverSelect.value = '';
     document.getElementById('no-order-container').style.display = 'none';
     document.getElementById('form-footer').style.display = 'none';
+    // Restore bottom nav
+    const bnav2 = document.querySelector('.bottom-nav');
+    if (bnav2 && window.innerWidth <= 768) bnav2.style.display = 'flex';
 
     // Navigate to Driver Orders so admin can see the new order
     showSection('incoming');

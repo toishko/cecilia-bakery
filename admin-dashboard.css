@@ -2840,7 +2840,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 /* ── Mobile adjustments ── */
 @media (max-width: 768px) {
   .voice-fab {
-    bottom: 80px;
+    bottom: calc(80px + env(safe-area-inset-bottom));
     right: 16px;
     width: 52px;
     height: 52px;
