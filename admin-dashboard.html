@@ -674,12 +674,37 @@
       </div>
     </div>
 
-<!-- ── VOICE ORDERING OVERLAY (Admin — always available) ── -->
-<div class="voice-overlay" id="voice-overlay" style="display:none">
-  <div class="voice-overlay-content">
-    <div class="voice-pulse" id="voice-pulse"></div>
-    <div class="voice-status" id="voice-status" data-en="Listening..." data-es="Escuchando...">Listening...</div>
-    <div class="voice-transcript" id="voice-transcript"></div>
+<!-- ── VOICE ORDERING SCREEN (Admin — same as driver) ── -->
+<div class="voice-screen" id="admin-voice-screen" style="display:none">
+  <div class="voice-screen-header">
+    <button class="voice-close-btn" id="admin-voice-close" type="button">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <span class="voice-screen-title" data-en="Voice Order" data-es="Pedido por Voz">Voice Order</span>
+    <div class="voice-listening-indicator" id="admin-voice-ind">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+  <div class="voice-recording-area">
+    <div class="voice-recording-visual">
+      <div class="voice-rec-pulse" id="admin-rec-pulse">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="40" height="40"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+      </div>
+      <div class="voice-rec-timer" id="admin-rec-timer">0:00</div>
+      <div class="voice-rec-status" id="admin-rec-status" data-en="Listening..." data-es="Escuchando...">Listening...</div>
+      <p class="voice-rec-hint" data-en="Speak naturally — say product names and quantities" data-es="Habla naturalmente — di los productos y cantidades">Speak naturally — say product names and quantities</p>
+    </div>
+  </div>
+  <div class="voice-processing" id="admin-voice-processing" style="display:none">
+    <div class="voice-processing-spinner"></div>
+    <span data-en="AI is parsing your order..." data-es="La IA está procesando tu pedido...">AI is parsing your order...</span>
+  </div>
+  <div class="voice-screen-footer" id="admin-voice-footer">
+    <button class="voice-screen-mic listening" id="admin-voice-mic" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="28" height="28"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+    </button>
+    <button class="voice-process-btn" id="admin-voice-process" style="display:none"
+      data-en="Process Order →" data-es="Procesar Pedido →">Process Order →</button>
   </div>
 </div>
 
@@ -693,7 +718,7 @@
     <div class="voice-confirm-actions">
       <button class="voice-confirm-btn" id="voice-confirm-accept" data-en="Confirm" data-es="Confirmar">Confirm</button>
     </div>
-    <p class="voice-confirm-hint" data-en="Hold mic again to make changes" data-es="Mantén el micrófono para hacer cambios">Hold mic again to make changes</p>
+    <p class="voice-confirm-hint" data-en="Tap mic again to add more items" data-es="Toca el micrófono para agregar más">Tap mic again to add more items</p>
   </div>
 </div>
 

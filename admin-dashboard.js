@@ -9683,36 +9683,28 @@ function _noInitTimePicker(initialVal, cb) {
 })();
 
 /* ═══════════════════════════════════
-   AI VOICE ORDERING (Admin — always enabled)
+   AI VOICE ORDERING (Admin — same UX as driver)
    ═══════════════════════════════════ */
 (function() {
   let _voiceInited = false;
-  let _voiceState = 'idle'; // idle | recording | processing | confirming
+  let _voiceState = 'idle'; // idle | recording | paused | processing | confirming
   let _mediaRecorder = null;
   let _audioChunks = [];
-  let _voiceConversation = []; // multi-turn history
-  let _pendingActions = []; // actions waiting for confirmation
+  let _voiceConversation = [];
+  let _pendingActions = [];
   let _voiceStream = null;
+  let _recTimerInterval = null;
+  let _recStartTime = 0;
 
   function _getAdminProducts() {
-    // Build flat product list from ADMIN_PRODUCTS (defined earlier in this file)
-    if (typeof ADMIN_PRODUCTS === 'undefined') return [];
     const products = [];
-    ADMIN_PRODUCTS.forEach(sec => {
-      sec.items.forEach(item => {
-        products.push({
-          key: item.key,
-          en: item.en,
-          es: item.es,
-          category: sec.section
-        });
-      });
+    document.querySelectorAll('#section-new-order .qty-input').forEach(inp => {
+      products.push({ key: inp.dataset.key, name: inp.dataset.name || inp.dataset.key });
     });
     return products;
   }
 
   function _getCurrentOrderState() {
-    // Read current quantities from the live form
     const state = {};
     document.querySelectorAll('#section-new-order .qty-input').forEach(inp => {
       const val = parseInt(inp.value) || 0;
@@ -9728,64 +9720,76 @@ function _noInitTimePicker(initialVal, cb) {
     const fab = document.getElementById('admin-voice-fab');
     if (!fab) return;
 
-    // Pointer events for hold-to-talk
-    let holdTimer = null;
-
-    fab.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
+    // FAB opens voice screen and starts recording
+    fab.addEventListener('click', () => {
       if (_voiceState === 'processing') return;
-      holdTimer = setTimeout(() => _startRecording(), 150);
+      _openVoiceScreen();
     });
 
-    fab.addEventListener('pointerup', (e) => {
-      e.preventDefault();
-      clearTimeout(holdTimer);
-      if (_voiceState === 'recording') _stopRecording();
-    });
+    // Close button
+    const closeBtn = document.getElementById('admin-voice-close');
+    if (closeBtn) closeBtn.addEventListener('click', () => _closeVoiceScreen());
 
-    fab.addEventListener('pointerleave', (e) => {
-      clearTimeout(holdTimer);
-      if (_voiceState === 'recording') _stopRecording();
-    });
+    // Mic toggle (pause/resume)
+    const micBtn = document.getElementById('admin-voice-mic');
+    if (micBtn) micBtn.addEventListener('click', () => _toggleRecording());
 
-    // Prevent context menu on long press
-    fab.addEventListener('contextmenu', e => e.preventDefault());
+    // Process button
+    const processBtn = document.getElementById('admin-voice-process');
+    if (processBtn) processBtn.addEventListener('click', () => _processRecording());
 
     // Confirm button
     const confirmBtn = document.getElementById('voice-confirm-accept');
-    if (confirmBtn) {
-      confirmBtn.addEventListener('click', () => _applyAndClose());
-    }
+    if (confirmBtn) confirmBtn.addEventListener('click', () => _applyAndClose());
   };
+
+  function _openVoiceScreen() {
+    const screen = document.getElementById('admin-voice-screen');
+    if (!screen) return;
+    screen.style.display = 'flex';
+    // Reset UI
+    const timer = document.getElementById('admin-rec-timer');
+    if (timer) timer.textContent = '0:00';
+    const status = document.getElementById('admin-rec-status');
+    if (status) status.textContent = lang === 'es' ? 'Escuchando...' : 'Listening...';
+    const ind = document.getElementById('admin-voice-ind');
+    if (ind) ind.classList.add('active');
+    const pulse = document.getElementById('admin-rec-pulse');
+    if (pulse) pulse.classList.add('recording');
+    const micBtn = document.getElementById('admin-voice-mic');
+    if (micBtn) micBtn.classList.add('listening');
+    const processBtn = document.getElementById('admin-voice-process');
+    if (processBtn) processBtn.style.display = 'none';
+    const processing = document.getElementById('admin-voice-processing');
+    if (processing) processing.style.display = 'none';
+    const footer = document.getElementById('admin-voice-footer');
+    if (footer) footer.style.display = 'flex';
+
+    _audioChunks = [];
+    _startRecording();
+  }
+
+  function _closeVoiceScreen() {
+    _stopEverything();
+    const screen = document.getElementById('admin-voice-screen');
+    if (screen) screen.style.display = 'none';
+    _voiceState = 'idle';
+  }
 
   async function _startRecording() {
     try {
       _voiceState = 'recording';
       _audioChunks = [];
-
-      // Show overlay
-      const overlay = document.getElementById('voice-overlay');
-      if (overlay) {
-        overlay.style.display = 'flex';
-        requestAnimationFrame(() => overlay.classList.add('active'));
-      }
-      const fab = document.getElementById('admin-voice-fab');
-      if (fab) fab.classList.add('recording');
-
-      // Update status text
-      const status = document.getElementById('voice-status');
-      if (status) status.textContent = lang === 'es' ? 'Escuchando...' : 'Listening...';
+      _recStartTime = Date.now();
 
       _voiceStream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true }
       });
 
-      // Pick the best supported codec
+      // Pick best supported codec
       const mimeTypes = [
-        'audio/webm;codecs=opus',
-        'audio/webm',
-        'audio/mp4',
-        'audio/ogg;codecs=opus',
+        'audio/webm;codecs=opus', 'audio/webm',
+        'audio/mp4', 'audio/ogg;codecs=opus',
       ];
       let mimeType = '';
       for (const mt of mimeTypes) {
@@ -9797,47 +9801,100 @@ function _noInitTimePicker(initialVal, cb) {
         if (e.data.size > 0) _audioChunks.push(e.data);
       };
 
-      _mediaRecorder.onstop = () => {
-        const blobType = _mediaRecorder.mimeType || mimeType || 'audio/webm';
-        const blob = new Blob(_audioChunks, { type: blobType });
-        _processAudio(blob);
-      };
+      _mediaRecorder.start(500);
 
-      _mediaRecorder.start(500); // collect in 500ms chunks
+      // Start timer
+      _recTimerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - _recStartTime) / 1000);
+        const m = Math.floor(elapsed / 60);
+        const s = elapsed % 60;
+        const timer = document.getElementById('admin-rec-timer');
+        if (timer) timer.textContent = `${m}:${String(s).padStart(2, '0')}`;
+
+        // Show process button after 2s of recording
+        if (elapsed >= 2) {
+          const pb = document.getElementById('admin-voice-process');
+          if (pb) pb.style.display = 'inline-flex';
+        }
+      }, 1000);
+
     } catch (err) {
       console.error('Mic access denied:', err);
       _voiceState = 'idle';
-      const overlay = document.getElementById('voice-overlay');
-      if (overlay) { overlay.classList.remove('active'); overlay.style.display = 'none'; }
-      const fab = document.getElementById('admin-voice-fab');
-      if (fab) fab.classList.remove('recording');
+      _closeVoiceScreen();
       showToast(lang === 'es' ? 'Acceso al micrófono denegado' : 'Microphone access denied', 'error');
     }
   }
 
-  function _stopRecording() {
-    if (_mediaRecorder && _mediaRecorder.state === 'recording') {
-      _mediaRecorder.stop();
+  function _toggleRecording() {
+    if (_voiceState === 'recording') {
+      // Pause
+      if (_mediaRecorder && _mediaRecorder.state === 'recording') _mediaRecorder.pause();
+      clearInterval(_recTimerInterval);
+      _voiceState = 'paused';
+      const status = document.getElementById('admin-rec-status');
+      if (status) status.textContent = lang === 'es' ? 'Pausado' : 'Paused';
+      const pulse = document.getElementById('admin-rec-pulse');
+      if (pulse) pulse.classList.remove('recording');
+      const ind = document.getElementById('admin-voice-ind');
+      if (ind) ind.classList.remove('active');
+      const micBtn = document.getElementById('admin-voice-mic');
+      if (micBtn) micBtn.classList.remove('listening');
+    } else if (_voiceState === 'paused') {
+      // Resume
+      if (_mediaRecorder && _mediaRecorder.state === 'paused') _mediaRecorder.resume();
+      _voiceState = 'recording';
+      _recTimerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - _recStartTime) / 1000);
+        const m = Math.floor(elapsed / 60);
+        const s = elapsed % 60;
+        const timer = document.getElementById('admin-rec-timer');
+        if (timer) timer.textContent = `${m}:${String(s).padStart(2, '0')}`;
+      }, 1000);
+      const status = document.getElementById('admin-rec-status');
+      if (status) status.textContent = lang === 'es' ? 'Escuchando...' : 'Listening...';
+      const pulse = document.getElementById('admin-rec-pulse');
+      if (pulse) pulse.classList.add('recording');
+      const ind = document.getElementById('admin-voice-ind');
+      if (ind) ind.classList.add('active');
+      const micBtn = document.getElementById('admin-voice-mic');
+      if (micBtn) micBtn.classList.add('listening');
     }
+  }
+
+  function _processRecording() {
+    if (!_mediaRecorder || _audioChunks.length === 0) {
+      showToast(lang === 'es' ? 'Nada grabado' : 'Nothing recorded', 'error');
+      return;
+    }
+
+    clearInterval(_recTimerInterval);
+    _voiceState = 'processing';
+
+    // Show processing UI
+    const footer = document.getElementById('admin-voice-footer');
+    if (footer) footer.style.display = 'none';
+    const processing = document.getElementById('admin-voice-processing');
+    if (processing) processing.style.display = 'flex';
+
+    // Stop recorder — onstop fires _processAudio
+    _mediaRecorder.onstop = () => {
+      const blobType = _mediaRecorder.mimeType || 'audio/webm';
+      const blob = new Blob(_audioChunks, { type: blobType });
+      _processAudio(blob);
+    };
+
+    if (_mediaRecorder.state !== 'inactive') _mediaRecorder.stop();
+
     // Stop mic stream
     if (_voiceStream) {
       _voiceStream.getTracks().forEach(t => t.stop());
       _voiceStream = null;
     }
-    _voiceState = 'processing';
-    const fab = document.getElementById('admin-voice-fab');
-    if (fab) fab.classList.remove('recording');
-
-    // Update status
-    const status = document.getElementById('voice-status');
-    if (status) status.textContent = lang === 'es' ? 'Procesando...' : 'Processing...';
-    const pulse = document.getElementById('voice-pulse');
-    if (pulse) pulse.classList.add('processing');
   }
 
   async function _processAudio(blob) {
     try {
-      // Convert to base64
       const reader = new FileReader();
       const base64 = await new Promise((resolve, reject) => {
         reader.onloadend = () => resolve(reader.result);
@@ -9859,48 +9916,43 @@ function _noInitTimePicker(initialVal, cb) {
         }),
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        throw new Error('Server returned invalid response (HTTP ' + res.status + ')');
+      }
 
-      // Hide recording overlay
-      const overlay = document.getElementById('voice-overlay');
-      if (overlay) { overlay.classList.remove('active'); overlay.style.display = 'none'; }
-      const pulse = document.getElementById('voice-pulse');
-      if (pulse) pulse.classList.remove('processing');
+      // Hide voice screen
+      const screen = document.getElementById('admin-voice-screen');
+      if (screen) screen.style.display = 'none';
 
       if (!data.success || !data.actions || data.actions.length === 0) {
         _voiceState = 'idle';
-        showToast(data.message || (lang === 'es' ? 'No entendí, intenta de nuevo' : "Didn't catch that, try again"), 'error');
+        const detail = data.debug ? ` (${data.debug})` : '';
+        showToast((data.message || (lang === 'es' ? 'No entendí, intenta de nuevo' : "Didn't catch that, try again")) + detail, 'error');
         return;
       }
 
-      // Add to conversation history
       _voiceConversation.push({ role: 'user', transcript: data.understood_text || '' });
       _voiceConversation.push({ role: 'assistant', actions: data.actions });
 
-      // Accumulate actions
       _pendingActions = _mergeActions(_pendingActions, data.actions);
-
-      // Show confirmation card
       _showConfirmation(data);
 
-      // TTS readback
       if (data.readback) _speak(data.readback, data.readback_lang || 'es');
 
       _voiceState = 'confirming';
     } catch (err) {
       console.error('Voice order processing error:', err);
-      const overlay = document.getElementById('voice-overlay');
-      if (overlay) { overlay.classList.remove('active'); overlay.style.display = 'none'; }
-      const pulse = document.getElementById('voice-pulse');
-      if (pulse) pulse.classList.remove('processing');
+      const screen = document.getElementById('admin-voice-screen');
+      if (screen) screen.style.display = 'none';
       _voiceState = 'idle';
-      const errMsg = err.message || 'Unknown error';
-      showToast((lang === 'es' ? 'Error: ' : 'Error: ') + errMsg, 'error');
+      showToast('Error: ' + (err.message || 'Unknown error'), 'error');
     }
   }
 
   function _mergeActions(existing, newActions) {
-    // Merge new actions into existing — newer actions for the same key override
     const map = new Map();
     existing.forEach(a => map.set(a.key, a));
     newActions.forEach(a => {
@@ -9914,75 +9966,59 @@ function _noInitTimePicker(initialVal, cb) {
         map.set(a.key, a);
       }
     });
-    // Remove zero-qty sets
     return [...map.values()].filter(a => a.type === 'delete' || a.qty > 0);
   }
 
   function _showConfirmation(data) {
     const overlay = document.getElementById('voice-confirm-overlay');
-    const itemsEl = document.getElementById('voice-confirm-items');
-    const transcriptEl = document.getElementById('voice-confirm-transcript');
-
-    if (transcriptEl) {
-      transcriptEl.textContent = data.understood_text ? `"${data.understood_text}"` : '';
+    if (!overlay) return;
+    const transcript = document.getElementById('voice-confirm-transcript');
+    if (transcript) transcript.textContent = data.understood_text || '';
+    const itemsDiv = document.getElementById('voice-confirm-items');
+    if (itemsDiv) {
+      itemsDiv.innerHTML = _pendingActions.map(a => {
+        if (a.type === 'delete') {
+          return `<div class="voice-confirm-item"><span>🗑️ ${a.name || a.key}</span></div>`;
+        }
+        return `<div class="voice-confirm-item"><span>${a.name || a.key}</span><span class="voice-qty">×${a.qty}</span></div>`;
+      }).join('');
     }
-
-    if (itemsEl) {
-      let html = '';
-      _pendingActions.forEach(a => {
-        const icon = a.type === 'delete' ? '✕' : '✓';
-        const cls = a.type === 'delete' ? 'voice-item-delete' : 'voice-item-add';
-        const qtyText = a.type === 'delete' ? (lang === 'es' ? 'Borrado' : 'Removed') : `×${a.qty}`;
-        html += `<div class="voice-confirm-item ${cls}">
-          <span class="voice-item-icon">${icon}</span>
-          <span class="voice-item-name">${a.label || a.key}</span>
-          <span class="voice-item-qty">${qtyText}</span>
-        </div>`;
-      });
-      itemsEl.innerHTML = html;
-    }
-
-    if (overlay) {
-      overlay.style.display = 'flex';
-      requestAnimationFrame(() => overlay.classList.add('active'));
-    }
+    overlay.style.display = 'flex';
+    requestAnimationFrame(() => overlay.classList.add('active'));
   }
 
   function _applyAndClose() {
-    // Apply all pending actions to the live order form
     _pendingActions.forEach(a => {
       const input = document.querySelector(`#section-new-order .qty-input[data-key="${a.key}"]`);
       if (!input) return;
-
       if (a.type === 'delete') {
-        input.value = '0';
+        input.value = '';
       } else {
         input.value = a.qty;
       }
-
-      // Trigger highlight animation
-      const row = input.closest('.prod-row');
-      if (row) {
-        row.classList.add('voice-highlight');
-        setTimeout(() => row.classList.remove('voice-highlight'), 1500);
-      }
-
-      // Update row highlight state
-      if (typeof updateRowHighlight === 'function') updateRowHighlight(input);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
     });
 
-    // Update footer count
-    if (typeof _noUpdateFooterCount === 'function') _noUpdateFooterCount();
-
-    // Clean up
     _pendingActions = [];
-    _voiceConversation = [];
     _voiceState = 'idle';
 
     const overlay = document.getElementById('voice-confirm-overlay');
     if (overlay) { overlay.classList.remove('active'); setTimeout(() => overlay.style.display = 'none', 300); }
 
     showToast(lang === 'es' ? 'Pedido aplicado' : 'Order applied', 'success');
+  }
+
+  function _stopEverything() {
+    clearInterval(_recTimerInterval);
+    if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
+      _mediaRecorder.onstop = null;
+      _mediaRecorder.stop();
+    }
+    if (_voiceStream) {
+      _voiceStream.getTracks().forEach(t => t.stop());
+      _voiceStream = null;
+    }
+    _audioChunks = [];
   }
 
   function _speak(text, speechLang) {
@@ -9996,3 +10032,4 @@ function _noInitTimePicker(initialVal, cb) {
   }
 
 })();
+
