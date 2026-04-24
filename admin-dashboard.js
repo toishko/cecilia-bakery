@@ -9813,12 +9813,18 @@ function _noInitTimePicker(initialVal, cb) {
     if (fab) fab.style.display = 'flex';
     // Restore form footer if a driver is selected
     const driverSelect = document.getElementById('no-driver-select');
-    if (driverSelect && driverSelect.value) {
+    const formFooterVisible = driverSelect && driverSelect.value;
+    if (formFooterVisible) {
       const formFooter = document.getElementById('form-footer');
       if (formFooter) formFooter.style.display = 'flex';
     }
-    // Restore previously hidden elements
+    // Restore previously hidden elements — but keep bottom nav hidden if form footer is up
     document.querySelectorAll('[data-voice-hidden]').forEach(el => {
+      if (formFooterVisible && el.classList.contains('bottom-nav')) {
+        // Don't restore bottom nav — form footer occupies that space
+        delete el.dataset.voiceHidden;
+        return;
+      }
       el.style.display = el.dataset.voiceHidden || '';
       delete el.dataset.voiceHidden;
     });
