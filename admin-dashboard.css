@@ -1224,6 +1224,8 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   .detail-meta{grid-template-columns:1fr}
   /* Toast above bottom nav */
   .app-toast{bottom:calc(72px + env(safe-area-inset-bottom))}
+  /* Hide page-title in New Order — mobile header already shows "New Order" */
+  #section-new-order .page-title{display:none}
 }
 
 /* PWA standalone mode: always hide sidebar, show bottom nav */
