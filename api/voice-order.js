@@ -171,10 +171,15 @@ export default async function handler(req, res) {
   let rawBase64 = null;
   if (audio && typeof audio === 'string') {
     if (audio.startsWith('data:')) {
-      const match = audio.match(/^data:(audio\/[\w\-\+\.]+);base64,(.+)$/);
-      if (match) {
-        mimeType = match[1];
-        rawBase64 = match[2];
+      // Data URL: data:audio/webm;codecs=opus;base64,AAAA...
+      // Split on ';base64,' to separate MIME from data
+      const base64Idx = audio.indexOf(';base64,');
+      if (base64Idx !== -1) {
+        // Extract MIME type (strip codec params — Gemini only needs base type)
+        const fullMime = audio.substring(5, base64Idx); // after "data:"
+        // Use just the base mime (e.g., "audio/webm" from "audio/webm;codecs=opus")
+        mimeType = fullMime.split(';')[0] || 'audio/webm';
+        rawBase64 = audio.substring(base64Idx + 8); // after ";base64,"
       }
     } else {
       rawBase64 = audio;
