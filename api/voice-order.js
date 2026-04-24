@@ -1,5 +1,5 @@
 // Vercel Serverless Function — AI Voice Ordering
-// Accepts base64 audio (webm/opus) from push-to-talk mic, sends it to Google Gemini
+// Accepts a text transcript from browser SpeechRecognition, sends it to Google Gemini
 // along with the product catalog and current order context, and returns structured
 // order actions (set/delete quantities) with a readback in the detected language.
 
@@ -119,7 +119,7 @@ READBACK RULES:
 - Include the quantity in a human-friendly way (e.g., "3 dozena" if they said dozen, but always use the calculated number in the actions).
 - If you made a correction, mention what you changed.
 
-If the audio is unclear, silent, or not related to ordering, return:
+If the transcript is unclear, empty, or not related to ordering, return:
 { "actions": [], "readback": "No entendí, intenta de nuevo", "readback_lang": "es", "understood_text": "" }`;
 }
 
@@ -150,23 +150,12 @@ export default async function handler(req, res) {
   }
 
   // Validate request body
-  const { audio, products, currentOrder, conversationHistory } = req.body || {};
-  if (!audio || typeof audio !== 'string') {
-    return res.status(400).json({ success: false, message: 'No audio provided.' });
+  const { transcript, products, currentOrder, conversationHistory } = req.body || {};
+  if (!transcript || typeof transcript !== 'string' || !transcript.trim()) {
+    return res.status(400).json({ success: false, message: 'No transcript provided.' });
   }
   if (!products || !Array.isArray(products)) {
     return res.status(400).json({ success: false, message: 'No product catalog provided.' });
-  }
-
-  // Extract raw base64 and mime type from audio
-  let mimeType = 'audio/webm';
-  let rawBase64 = audio;
-  if (audio.startsWith('data:')) {
-    const match = audio.match(/^data:(audio\/[\w\-\+\.]+);base64,(.+)$/);
-    if (match) {
-      mimeType = match[1];
-      rawBase64 = match[2];
-    }
   }
 
   try {
@@ -185,8 +174,7 @@ export default async function handler(req, res) {
       const requestBody = JSON.stringify({
         contents: [{
           parts: [
-            { text: systemPrompt + '\n\nListen to this audio recording from a bakery driver and extract their order.' },
-            { inlineData: { mimeType, data: rawBase64 } },
+            { text: systemPrompt + '\n\nThe driver said the following (transcribed from speech):\n"' + transcript.trim() + '"\n\nParse this into order actions.' },
           ],
         }],
         generationConfig: {

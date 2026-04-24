@@ -9,10 +9,12 @@
 A push-to-talk voice ordering system integrated into the New Order form for both drivers and admins. The existing bottom-nav `+` FAB transforms into a mic icon when on the New Order screen. Drivers hold the mic to speak, release to process. The AI understands bakery-specific Spanish/Spanglish, fuzzy-matches products from the catalog, handles "dozen" math (×12), supports multi-turn corrections without starting over, and reads back the order aloud in whichever language the driver spoke most.
 
 **Key design decisions:**
-- Uses Google Gemini for both audio transcription AND order parsing in one API call (same key/billing as ticket scanner)
-- Audio captured via `MediaRecorder` API (webm/opus) — works on ALL browsers/devices
-- Multi-turn conversational loop: hold mic → AI shows parsed order → hold mic again for changes → AI has full context
-- Readback language = whichever language the driver spoke most (Spanish, English, or Spanglish)
+- Tap mic → opens voice screen → SpeechRecognition starts immediately
+- Live typewriter shows transcript as driver speaks
+- ~1.5s pause → AI asks "Are you done?" — if not, resume listening
+- When done, sends text transcript to Gemini for product parsing (not raw audio — faster + cheaper)
+- Gemini handles Spanglish fuzzy matching, "dozena" ×12, corrections
+- Readback language = whichever language the driver spoke most
 - Feature gated per driver via `voice_order_enabled` toggle (same pattern as `scanner_enabled`)
 - Always available for admins on the admin dashboard
 
@@ -89,9 +91,9 @@ Client receives response
 ```
 
 ## Notes & Decisions
-- *2026-04-24:* Feature created. Using Gemini audio input (not browser Web Speech API) for reliability across all devices.
+- *2026-04-24:* Feature created. Using Gemini for product parsing from text transcripts.
 - *2026-04-24:* "Dozena"/"dozen" = multiply by 12. The order form records individual piece quantities.
 - *2026-04-24:* Readback language auto-detected from what the driver actually spoke, not from the app language setting.
-- *2026-04-24:* Multi-turn conversation — AI remembers context between consecutive hold-to-talk interactions within the same order session.
-- *2026-04-24:* FAB transforms from `+` to mic on New Order screen (no separate floating button).
-- *2026-04-24:* **Footer mic redesign** — Bottom nav hides in immersive mode (New Order), so the mic FAB now lives in the form footer centered between Cancel and Continue. Item count badge moves onto the Continue button itself as an inline counter ("Continue • 23"). This keeps the mic always visible while ordering.
+- *2026-04-24:* Multi-turn conversation — AI remembers context between consecutive interactions within the same order session.
+- *2026-04-24:* Footer mic redesign — mic lives in form footer between Cancel and Continue.
+- *2026-04-24:* **Conversational flow redesign** — Changed from hold-to-talk with audio upload to tap-to-start with live SpeechRecognition typewriter. Browser handles speech-to-text for live display; Gemini handles product parsing from transcript text. Much faster (no audio upload) and gives real-time visual feedback.
