@@ -9476,7 +9476,25 @@ function _noInitTimePicker(initialVal, cb) {
   function _getAdminProducts() {
     const products = [];
     document.querySelectorAll('#section-new-order .qty-input').forEach(inp => {
-      products.push({ key: inp.dataset.key, name: inp.dataset.name || inp.dataset.key });
+      const key = inp.dataset.key;
+      // Get product name from the adjacent .prod-name element
+      const row = inp.closest('.prod-row');
+      const nameEl = row ? row.querySelector('.prod-name') : null;
+      const name = nameEl ? nameEl.textContent.trim() : key;
+      // Get category from the section header
+      const section = inp.closest('.acc-section');
+      const catEl = section ? section.querySelector('.acc-title') : null;
+      const category = catEl ? catEl.textContent.trim() : '';
+      // Determine if it's a No Ticket variant
+      const isNT = key.endsWith('_nt');
+      const baseName = isNT ? name.replace(/\s*\(?(No Tkt|Sin Ticket|NT)\)?/gi, '').trim() : name;
+      const ntSuffix = isNT ? ' (No Ticket)' : '';
+      products.push({
+        key,
+        en: baseName + ntSuffix,
+        es: baseName + (isNT ? ' (Sin Ticket)' : ''),
+        category
+      });
     });
     return products;
   }
@@ -9787,9 +9805,9 @@ function _noInitTimePicker(initialVal, cb) {
     if (itemsDiv) {
       itemsDiv.innerHTML = _pendingActions.map(a => {
         if (a.type === 'delete') {
-          return `<div class="voice-confirm-item"><span>🗑️ ${a.name || a.key}</span></div>`;
+          return `<div class="voice-confirm-item"><span>🗑️ ${a.label || a.name || a.key}</span></div>`;
         }
-        return `<div class="voice-confirm-item"><span>${a.name || a.key}</span><span class="voice-qty">×${a.qty}</span></div>`;
+        return `<div class="voice-confirm-item"><span>${a.label || a.name || a.key}</span><span class="voice-qty">×${a.qty}</span></div>`;
       }).join('');
     }
     overlay.style.display = 'flex';

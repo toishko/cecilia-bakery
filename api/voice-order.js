@@ -93,8 +93,17 @@ CRITICAL RULES:
    - When they reference a product they already mentioned, match it even if they use a shortened name.
    - Example: after ordering "tres leche", if they say "borra los tres lech y ponme 5 dozena" = delete tres leche, then set tres leche to 60 (5 × 12)
 5. NO TICKET variants: If the driver says "sin ticket", "no ticket", "NT", or "sin tkt", the product key should end with "_nt". For example, "tres leche sin ticket" = key "tl_nt".
-6. AMBIGUITY — If the product name is ambiguous (e.g., "piña" could be inside or top, or pieces), and you cannot determine from context, pick the most common variant OR ask in the readback.
-7. Return actions that ONLY reference product keys from the catalog below. Never invent keys.
+6. LÍNEA / LINE HANDLING — CRITICAL for frosted pieces (fr_* keys):
+   - A full box of frosted pieces = 56 pieces = 8 lines (líneas) × 7 pieces per line.
+   - When the driver says "línea", "linea", "line", or "lines", multiply by 7 to get the piece count.
+   - Example: "5 líneas de piña" or "5 lines of pineapple frosting" = 5 × 7 = 35 pieces → key "fr_pina", qty 35
+   - Example: "una línea de chocolate" = 1 × 7 = 7 pieces → key "fr_choco", qty 7
+   - Example: "media caja de frosted piña" = 28 pieces (half of 56) → key "fr_pina", qty 28
+   - Example: "una caja de frosted guava" = 56 pieces → key "fr_guava", qty 56
+   - If they say a raw number WITHOUT "línea", use the number as-is (it's individual pieces).
+   - "Linina" is a common mispronunciation/slang of "línea" — treat it the same.
+7. AMBIGUITY — If the product name is ambiguous (e.g., "piña" could be inside or top, or pieces), and you cannot determine from context, pick the most common variant OR ask in the readback.
+8. Return actions that ONLY reference product keys from the catalog below. Never invent keys.
 
 PRODUCT CATALOG:
 ${catalogLines}
