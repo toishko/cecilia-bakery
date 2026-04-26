@@ -3499,12 +3499,12 @@ async function renderOrderSheet() {
 
   // Actions
   let actionsHtml = '';
-  if (order.status === 'pending') {
+  if (order.status === 'pending' || order.status === 'sent') {
     // Fully editable: one "Save Changes" button that saves everything including payment
     actionsHtml += `<button class="btn-save" onclick="saveOrderChanges()" data-en="Save Changes" data-es="Guardar Cambios">${lang === 'es' ? 'Guardar Cambios' : 'Save Changes'}</button>`;
     actionsHtml += `<button class="btn-pickup" onclick="markAsPickedUp()" data-en="Mark as Picked Up" data-es="Marcar Recogido">&#10003; ${lang === 'es' ? 'Marcar Recogido' : 'Mark as Picked Up'}</button>`;
-  } else if (order.status === 'picked_up') {
-    // Not fully editable, but payment is always editable
+  } else {
+    // Not fully editable, but payment is ALWAYS editable for any status
     actionsHtml += `<button class="btn-save" onclick="savePaymentOnly()" data-en="Update Payment" data-es="Actualizar Pago">${lang === 'es' ? 'Actualizar Pago' : 'Update Payment'}</button>`;
   }
   // Export bar
@@ -3853,6 +3853,9 @@ window.savePaymentOnly = async function() {
     await sb.from('driver_orders').update(updateData).eq('id', detailOrder.id);
 
     showToast(lang === 'es' ? 'Pago actualizado' : 'Payment updated', 'success');
+
+    // Re-render the sheet to reflect updated payment state
+    await renderOrderSheet();
 
     if (currentSection === 'incoming') loadIncomingOrders();
     if (currentSection === 'history') loadHistoryOrders(true);
