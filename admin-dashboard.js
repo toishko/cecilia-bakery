@@ -152,7 +152,7 @@ window.showSection = showSection;
 /* ── Section → Group mapping for bottom nav ── */
 const _sectionGroupMap = {
   overview: 'dashboard',
-  incoming: 'orders', 'online-orders': 'orders', history: 'orders',
+  incoming: 'orders', 'online-orders': 'orders', history: 'orders', compiler: 'orders',
   insights: 'insights',
   drivers: 'manage', products: 'manage', 'new-order': 'manage', wholesale: 'manage',
   settings: 'settings', staff: 'settings'
@@ -174,6 +174,7 @@ const _actionSheetConfig = {
     items: [
       { icon: 'truck', en: 'Driver Orders', es: 'Pedidos Conductores', section: 'incoming', badgeId: 'as-incoming-badge' },
       { icon: 'globe', en: 'Online Orders', es: 'Pedidos en Línea', section: 'online-orders', badgeId: 'as-online-badge' },
+      { icon: 'layers', en: 'Order Compiler', es: 'Compilador Pedidos', section: 'compiler' },
       { icon: 'clock', en: 'History', es: 'Historial', section: 'history' }
     ]
   },
@@ -390,6 +391,7 @@ async function showSection(name) {
     if (voiceFab) voiceFab.style.display = 'none';
   }
   if (name === 'history') loadHistoryOrders(true);
+  if (name === 'compiler') initOrderCompiler();
   if (name === 'drivers') {
     const subview = sessionStorage.getItem('driver_subview');
     if (subview === 'form') {
@@ -411,6 +413,7 @@ window.__adminRefresh = async function () {
     insights:  loadInsights,
     'online-orders': loadOnlineOrders,
     incoming:  loadIncomingOrders,
+    compiler:  initOrderCompiler,
     'new-order': initAdminOrderForm,
     drivers:   loadDriverList,
     history:   () => loadHistoryOrders(true),
@@ -8241,16 +8244,16 @@ function _b2bOpenModal(product) {
     if (isEdit) {
       ({ error } = await sb.from('b2b_products').update(payload).eq('id', product.id));
     } else {
+      payload.id = crypto.randomUUID();
+      payload.product_key = 'b2b_' + payload.id;
       payload.sort_order = 999;
-      // Insert and get back the new row so we can set product_key
+      // Insert complete payload including product_key to satisfy NOT NULL constraint
       var insertRes = await sb.from('b2b_products').insert(payload).select('id').single();
       error = insertRes.error;
-      // Auto-generate product_key = 'b2b_' + uuid
+      // Auto-insert driver_prices for ALL active drivers at $0
       if (!error && insertRes.data) {
         var newId = insertRes.data.id;
-        var pKey = 'b2b_' + newId;
-        await sb.from('b2b_products').update({ product_key: pKey }).eq('id', newId);
-        // Auto-insert driver_prices for ALL active drivers at $0
+        var pKey = payload.product_key;
         try {
           var { data: drivers } = await sb.from('drivers').select('id').eq('is_active', true);
           if (drivers && drivers.length > 0) {
@@ -9463,7 +9466,7 @@ async function _noSubmitAllOrders() {
     }
 
     const batchId = crypto.randomUUID();
-    const editableUntil = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    const editableUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
     for (let i = 0; i < adminNoOrders.length; i++) {
       const o = adminNoOrders[i];
@@ -10107,4 +10110,601 @@ function _noInitTimePicker(initialVal, cb) {
   }
 
 })();
+
+/* ═══════════════════════════════════
+   ORDER COMPILER MODULE
+   ═══════════════════════════════════ */
+let compilerSelectedOrders = [];
+let compilerPriceToggle = true;
+
+async function initOrderCompiler() {
+  const select = document.getElementById('compiler-driver-select');
+  const dateInput = document.getElementById('compiler-date-input');
+  
+  // Set default date to today
+  if (dateInput && !dateInput.value) {
+    dateInput.value = getTodayStr();
+  }
+
+  // Populate drivers select
+  if (select) {
+    // If cache is empty, load it
+    if (!driversCache || driversCache.length === 0) {
+      try {
+        const { data, error } = await sb.from('drivers').select('*').order('name');
+        if (!error && data) {
+          driversCache = data;
+        }
+      } catch (e) {
+        console.error('Error fetching drivers for compiler:', e);
+      }
+    }
+    
+    // Render driver select options
+    let html = `<option value="" data-en="— Select Driver —" data-es="— Seleccionar Conductor —">${lang === 'es' ? '— Seleccionar Conductor —' : '— Select Driver —'}</option>`;
+    driversCache.forEach(d => {
+      html += `<option value="${d.id}">${_esc(d.name)} (${_esc(d.code)})</option>`;
+    });
+    select.innerHTML = html;
+  }
+
+  // Event Listeners (ensure we only attach once)
+  const loadDayBtn = document.getElementById('compiler-btn-load-day');
+  if (loadDayBtn && !loadDayBtn._hasListener) {
+    loadDayBtn.addEventListener('click', loadCompilerDay);
+    loadDayBtn._hasListener = true;
+  }
+
+  const searchAddBtn = document.getElementById('compiler-btn-search-add');
+  if (searchAddBtn && !searchAddBtn._hasListener) {
+    searchAddBtn.addEventListener('click', () => {
+      const searchVal = document.getElementById('compiler-order-search')?.value?.trim();
+      if (searchVal) executeCompilerSearch(searchVal);
+    });
+    searchAddBtn._hasListener = true;
+  }
+
+  // Search input live suggestions
+  const searchInput = document.getElementById('compiler-order-search');
+  if (searchInput && !searchInput._hasListener) {
+    searchInput.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      if (val.length >= 2) {
+        showCompilerSearchSuggestions(val);
+      } else {
+        document.getElementById('compiler-search-results').style.display = 'none';
+      }
+    });
+    searchInput._hasListener = true;
+  }
+
+  const waBtn = document.getElementById('compiler-btn-whatsapp');
+  if (waBtn && !waBtn._hasListener) {
+    waBtn.addEventListener('click', whatsappShareCompiler);
+    waBtn._hasListener = true;
+  }
+
+  const printBtn = document.getElementById('compiler-btn-print');
+  if (printBtn && !printBtn._hasListener) {
+    printBtn.addEventListener('click', printCompilerSummary);
+    printBtn._hasListener = true;
+  }
+
+  // Initial render
+  renderCompilerView();
+}
+window.initOrderCompiler = initOrderCompiler;
+
+async function loadCompilerDay() {
+  const driverId = document.getElementById('compiler-driver-select')?.value;
+  const date = document.getElementById('compiler-date-input')?.value;
+
+  if (!driverId || !date) {
+    showToast(lang === 'es' ? 'Seleccione Conductor y Fecha' : 'Select Driver and Date', 'error');
+    return;
+  }
+
+  try {
+    showToast(lang === 'es' ? 'Cargando pedidos...' : 'Loading orders...', 'info', 1000);
+    // Fetch orders for this driver on this day
+    const { data: orders, error } = await sb
+      .from('driver_orders')
+      .select('*')
+      .eq('driver_id', driverId)
+      .eq('pickup_date', date);
+
+    if (error) throw error;
+
+    if (!orders || orders.length === 0) {
+      showToast(lang === 'es' ? 'No se encontraron pedidos' : 'No orders found', 'warning');
+      compilerSelectedOrders = [];
+      renderCompilerView();
+      return;
+    }
+
+    // Fetch items for each order
+    const populatedOrders = [];
+    for (const order of orders) {
+      const { data: items, error: itemsErr } = await sb
+        .from('driver_order_items')
+        .select('*')
+        .eq('order_id', order.id);
+
+      if (!itemsErr && items) {
+        order.items = items;
+        populatedOrders.push(order);
+      }
+    }
+
+    compilerSelectedOrders = populatedOrders;
+    showToast(lang === 'es' ? `${orders.length} pedidos compilados` : `${orders.length} orders compiled`, 'success');
+    renderCompilerView();
+  } catch (e) {
+    console.error('Compiler auto-compile error:', e);
+    showToast(lang === 'es' ? 'Error al compilar' : 'Compilation error', 'error');
+  }
+}
+window.loadCompilerDay = loadCompilerDay;
+
+async function showCompilerSearchSuggestions(term) {
+  const resultsContainer = document.getElementById('compiler-search-results');
+  if (!resultsContainer) return;
+
+  try {
+    let query = sb.from('driver_orders').select('*').order('submitted_at', { ascending: false }).limit(10);
+    if (term.startsWith('#')) {
+      const num = parseInt(term.replace('#', ''));
+      if (!isNaN(num)) query = query.eq('order_number', num);
+    } else {
+      const safeTerm = term.replace(/%/g, '\\%').replace(/_/g, '\\_');
+      query = query.or(`business_name.ilike.%${safeTerm}%,driver_ref.ilike.%${safeTerm}%`);
+    }
+
+    const { data, error } = await query;
+    if (error || !data || data.length === 0) {
+      resultsContainer.innerHTML = `<div style="padding:8px; font-size:0.85rem; color:var(--tx-muted); text-align:center;">${lang === 'es' ? 'No se encontraron resultados' : 'No results found'}</div>`;
+      resultsContainer.style.display = 'block';
+      return;
+    }
+
+    let html = '';
+    data.forEach(order => {
+      const driverName = getDriverName(order.driver_id);
+      const bizName = order.business_name || '';
+      const orderNum = order.order_number ? `#${order.order_number}` : '';
+      const ref = order.driver_ref ? ` (Ref: ${order.driver_ref})` : '';
+      const date = order.pickup_date || '';
+      
+      html += `
+        <div class="search-suggestion-item" style="padding:10px; border-bottom:1px solid var(--bd); cursor:pointer; font-size:0.85rem; transition: background 0.2s;" onclick="addCompilerOrderById('${order.id}'); document.getElementById('compiler-search-results').style.display='none';">
+          <div style="font-weight:600; color:var(--tx);">${orderNum} — ${bizName}</div>
+          <div style="font-size:0.75rem; color:var(--tx-muted); margin-top:2px;">${driverName} · ${date}${ref}</div>
+        </div>`;
+    });
+    resultsContainer.innerHTML = html;
+    resultsContainer.style.display = 'block';
+  } catch (e) {
+    console.error('Search suggestions error:', e);
+  }
+}
+window.showCompilerSearchSuggestions = showCompilerSearchSuggestions;
+
+async function addCompilerOrderById(orderId) {
+  // Check if already in compilation list
+  if (compilerSelectedOrders.some(o => o.id === orderId)) {
+    showToast(lang === 'es' ? 'El pedido ya está en la lista' : 'Order already in compilation', 'warning');
+    return;
+  }
+
+  try {
+    const { data: order, error } = await sb
+      .from('driver_orders')
+      .select('*')
+      .eq('id', orderId)
+      .single();
+
+    if (error || !order) throw new Error('Order not found');
+
+    const { data: items, error: itemsErr } = await sb
+      .from('driver_order_items')
+      .select('*')
+      .eq('order_id', orderId);
+
+    if (itemsErr) throw itemsErr;
+
+    order.items = items || [];
+    compilerSelectedOrders.push(order);
+    document.getElementById('compiler-order-search').value = '';
+    showToast(lang === 'es' ? 'Pedido agregado' : 'Order added', 'success');
+    renderCompilerView();
+  } catch (e) {
+    console.error('Add compiler order error:', e);
+    showToast(lang === 'es' ? 'Error al agregar pedido' : 'Error adding order', 'error');
+  }
+}
+window.addCompilerOrderById = addCompilerOrderById;
+
+function removeCompilerOrder(orderId) {
+  compilerSelectedOrders = compilerSelectedOrders.filter(o => o.id !== orderId);
+  renderCompilerView();
+  showToast(lang === 'es' ? 'Pedido removido' : 'Order removed', 'info');
+}
+window.removeCompilerOrder = removeCompilerOrder;
+
+async function executeCompilerSearch(term) {
+  try {
+    let query = sb.from('driver_orders').select('id').limit(1);
+    if (term.startsWith('#')) {
+      const num = parseInt(term.replace('#', ''));
+      if (!isNaN(num)) query = query.eq('order_number', num);
+    } else {
+      const safeTerm = term.replace(/%/g, '\\%').replace(/_/g, '\\_');
+      query = query.or(`business_name.ilike.%${safeTerm}%,driver_ref.ilike.%${safeTerm}%`);
+    }
+
+    const { data, error } = await query;
+    if (error || !data || data.length === 0) {
+      showToast(lang === 'es' ? 'No se encontró el pedido' : 'Order not found', 'error');
+      return;
+    }
+    addCompilerOrderById(data[0].id);
+  } catch (e) {
+    console.error('Execute search error:', e);
+  }
+}
+window.executeCompilerSearch = executeCompilerSearch;
+
+function toggleCompilerPrices() {
+  const toggle = document.getElementById('compiler-price-toggle');
+  compilerPriceToggle = toggle ? toggle.checked : true;
+  
+  // Toggle the display of price elements in the view
+  document.querySelectorAll('.compiler-price-dependent').forEach(el => {
+    el.style.display = compilerPriceToggle ? '' : 'none';
+  });
+}
+window.toggleCompilerPrices = toggleCompilerPrices;
+
+function renderCompilerView() {
+  const selectedContainer = document.getElementById('compiler-selected-list');
+  const summarySection = document.getElementById('compiler-summary-section');
+  const itemsContainer = document.getElementById('compiler-items-list');
+  const countBadge = document.getElementById('compiler-orders-badge');
+  const statCount = document.getElementById('compiler-stat-count');
+  const statQty = document.getElementById('compiler-stat-qty');
+  const statTotal = document.getElementById('compiler-stat-total');
+
+  if (!selectedContainer) return;
+
+  if (countBadge) countBadge.textContent = compilerSelectedOrders.length;
+  if (statCount) statCount.textContent = compilerSelectedOrders.length;
+
+  if (compilerSelectedOrders.length === 0) {
+    selectedContainer.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;" data-en="No orders in current compilation. Select a driver above or lookup an order." data-es="No hay pedidos en la compilación. Seleccione un conductor o busque un pedido.">${lang === 'es' ? 'No hay pedidos en la compilación. Seleccione un conductor o busque un pedido.' : 'No orders in current compilation. Select a driver above or lookup an order.'}</div>`;
+    if (summarySection) summarySection.style.display = 'none';
+    return;
+  }
+
+  // Render selected order cards
+  let selectedHtml = '';
+  compilerSelectedOrders.forEach(order => {
+    const driverName = getDriverName(order.driver_id);
+    const bizName = order.business_name || (lang === 'es' ? 'Negocio Sin Nombre' : 'Unnamed Business');
+    const orderNum = order.order_number ? `#${order.order_number}` : '';
+    const initials = _getInitials(driverName) || '??';
+    const ref = order.driver_ref ? `#${order.driver_ref}` : '';
+    const date = order.pickup_date || '';
+
+    selectedHtml += `
+      <div class="order-card-avatar" style="padding:12px; border-radius:14px; position:relative; background:var(--bg-card); border:1px solid var(--bd);">
+        <div class="oca-avatar">${initials}</div>
+        <div class="oca-body">
+          <div class="oca-name" style="font-size:0.9rem;">${_esc(bizName)}</div>
+          <div class="oca-time" style="font-size:0.75rem;">${orderNum} · ${date} ${ref ? '· ' + _esc(ref) : ''}</div>
+        </div>
+        <button onclick="removeCompilerOrder('${order.id}')" style="position:absolute; top:12px; right:12px; background:none; border:none; cursor:pointer; color:var(--tx-muted); font-size:1rem; padding:4px;">✕</button>
+      </div>`;
+  });
+  selectedContainer.innerHTML = selectedHtml;
+
+  // Compile items
+  const compiled = {};
+  let totalQty = 0;
+  let totalAmount = 0;
+
+  compilerSelectedOrders.forEach(order => {
+    (order.items || []).forEach(item => {
+      const qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
+      if (qty <= 0) return;
+
+      const key = item.product_key;
+      const price = parseFloat(item.price_at_order || 0);
+
+      if (!compiled[key]) {
+        compiled[key] = {
+          product_key: key,
+          product_label: item.product_label,
+          quantity: 0,
+          originalQuantity: 0,
+          adjustedQuantity: 0,
+          price: price,
+          category: PRODUCT_CAT[key] ? PRODUCT_CAT[key].en : 'Other'
+        };
+      }
+
+      compiled[key].quantity += qty;
+      compiled[key].originalQuantity += item.quantity;
+      if (item.adjusted_quantity !== null && item.adjusted_quantity !== undefined) {
+        compiled[key].adjustedQuantity += item.adjusted_quantity;
+      } else {
+        compiled[key].adjustedQuantity += item.quantity;
+      }
+      totalQty += qty;
+      totalAmount += (qty * price);
+    });
+  });
+
+  if (statQty) statQty.textContent = totalQty.toLocaleString();
+  if (statTotal) statTotal.textContent = formatCurrency(totalAmount);
+
+  // Group by category
+  const grouped = {};
+  Object.values(compiled).forEach(item => {
+    const cat = item.category;
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(item);
+  });
+
+  // Sort categories
+  const sortedCats = Object.keys(grouped).sort((a, b) => {
+    const ai = CAT_ORDER_EN.indexOf(a);
+    const bi = CAT_ORDER_EN.indexOf(b);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
+
+  // Render compiled categories & products
+  let itemsHtml = '';
+  sortedCats.forEach(cat => {
+    const displayCat = lang === 'es' && PRODUCT_CAT[grouped[cat][0].product_key] ? PRODUCT_CAT[grouped[cat][0].product_key].es : cat;
+    itemsHtml += `
+      <div style="margin-bottom:16px;">
+        <div style="font-size:0.75rem; font-weight:800; color:var(--red); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px; border-bottom:1px solid var(--bd); padding-bottom:4px;">${displayCat}</div>
+        <div style="display:flex; flex-direction:column; gap:6px;">`;
+
+    grouped[cat].forEach(item => {
+      const lineTotal = item.quantity * item.price;
+      const highlightAdjusted = item.adjustedQuantity !== item.originalQuantity 
+        ? `<span style="font-size:0.75rem; color:var(--yellow); margin-left:6px;">(${lang === 'es' ? 'Ajustado' : 'Adjusted'} ${item.originalQuantity} ➔ ${item.quantity})</span>` 
+        : '';
+
+      itemsHtml += `
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem; padding:4px 0;">
+          <div style="color:var(--tx);">${_esc(item.product_label)}${highlightAdjusted}</div>
+          <div style="display:flex; align-items:center; gap:24px;">
+            <div style="font-weight:600; color:var(--tx); min-width:60px; text-align:right;">${item.quantity} ${_esc(lang === 'es' ? 'uds' : 'pcs')}</div>
+            <div class="compiler-price-dependent" style="min-width:140px; text-align:right; color:var(--tx-muted); display:${compilerPriceToggle ? 'block' : 'none'};">
+              <span style="font-size:0.8rem; margin-right:12px;">@ ${formatCurrency(item.price)}</span>
+              <span style="font-weight:600; color:var(--tx);">${formatCurrency(lineTotal)}</span>
+            </div>
+          </div>
+        </div>`;
+    });
+
+    itemsHtml += `
+        </div>
+      </div>`;
+  });
+
+  if (itemsContainer) itemsContainer.innerHTML = itemsHtml;
+  if (summarySection) summarySection.style.display = 'block';
+  
+  // Re-apply price toggle styling
+  toggleCompilerPrices();
+}
+window.renderCompilerView = renderCompilerView;
+
+function printCompilerSummary() {
+  if (compilerSelectedOrders.length === 0) return;
+
+  const printWindow = window.open('', '_blank');
+  const isEs = lang === 'es';
+  
+  // Compile items same way
+  const compiled = {};
+  let totalQty = 0;
+  let totalAmount = 0;
+
+  compilerSelectedOrders.forEach(order => {
+    (order.items || []).forEach(item => {
+      const qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
+      if (qty <= 0) return;
+      const key = item.product_key;
+      const price = parseFloat(item.price_at_order || 0);
+
+      if (!compiled[key]) {
+        compiled[key] = {
+          product_label: item.product_label,
+          quantity: 0,
+          price: price,
+          category: PRODUCT_CAT[key] ? PRODUCT_CAT[key].en : 'Other'
+        };
+      }
+      compiled[key].quantity += qty;
+      totalQty += qty;
+      totalAmount += (qty * price);
+    });
+  });
+
+  const grouped = {};
+  Object.values(compiled).forEach(item => {
+    const cat = item.category;
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(item);
+  });
+
+  const sortedCats = Object.keys(grouped).sort((a, b) => {
+    const ai = CAT_ORDER_EN.indexOf(a);
+    const bi = CAT_ORDER_EN.indexOf(b);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
+
+  let ordersListHtml = compilerSelectedOrders.map(o => {
+    const num = o.order_number ? `#${o.order_number}` : '';
+    const biz = o.business_name || '';
+    const driver = getDriverName(o.driver_id);
+    return `<li><strong>${num} ${biz}</strong> (${driver})</li>`;
+  }).join('');
+
+  let itemsHtml = '';
+  sortedCats.forEach(cat => {
+    const displayCat = isEs && PRODUCT_CAT[grouped[cat][0].product_key] ? PRODUCT_CAT[grouped[cat][0].product_key].es : cat;
+    itemsHtml += `
+      <h3>${displayCat}</h3>
+      <table style="width:100%; border-collapse:collapse; margin-bottom:12px;">
+        <thead>
+          <tr style="border-bottom:2px solid #333; text-align:left;">
+            <th style="padding:6px 0;">${isEs ? 'Producto' : 'Product'}</th>
+            <th style="padding:6px 0; text-align:right;">${isEs ? 'Cantidad' : 'Quantity'}</th>
+            ${compilerPriceToggle ? `
+            <th style="padding:6px 0; text-align:right;">${isEs ? 'Precio' : 'Price'}</th>
+            <th style="padding:6px 0; text-align:right;">Total</th>` : ''}
+          </tr>
+        </thead>
+        <tbody>`;
+
+    grouped[cat].forEach(item => {
+      itemsHtml += `
+        <tr style="border-bottom:1px solid #ddd;">
+          <td style="padding:6px 0;">${item.product_label}</td>
+          <td style="padding:6px 0; text-align:right; font-weight:bold;">${item.quantity}</td>
+          ${compilerPriceToggle ? `
+          <td style="padding:6px 0; text-align:right;">${formatCurrency(item.price)}</td>
+          <td style="padding:6px 0; text-align:right; font-weight:bold;">${formatCurrency(item.quantity * item.price)}</td>` : ''}
+        </tr>`;
+    });
+
+    itemsHtml += `
+        </tbody>
+      </table>`;
+  });
+
+  const title = isEs ? 'Hoja de Compilación de Carga' : 'Compiled Loading Load Sheet';
+  const subTitle = isEs ? 'Panadería Cecilia — Resumen Compilado' : 'Cecilia Bakery — Compiled Summary';
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          body { font-family: 'Outfit', sans-serif; padding: 20px; color: #111; }
+          h1 { font-size: 1.6rem; margin-bottom: 6px; }
+          h2 { font-size: 1.1rem; color: #666; margin-top: 0; margin-bottom: 20px; }
+          h3 { font-size: 0.95rem; border-bottom: 2px solid #c8102e; padding-bottom: 4px; margin-top: 24px; color: #c8102e; text-transform: uppercase; }
+          ul { padding-left: 20px; margin-bottom: 20px; }
+          .summary-card { background: #f9f9f9; padding: 14px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; }
+          @media print {
+            body { padding: 0; }
+            button { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h1>${title}</h1>
+          <button onclick="window.print()" style="padding:8px 16px; background:#c8102e; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">${isEs ? 'Imprimir' : 'Print'}</button>
+        </div>
+        <h2>${subTitle} (${new Date().toLocaleDateString()})</h2>
+
+        <div class="summary-card">
+          <p style="margin:4px 0;"><strong>${isEs ? 'Pedidos Incluidos:' : 'Included Orders:'}</strong></p>
+          <ul style="margin:6px 0 0 0;">${ordersListHtml}</ul>
+          <p style="margin:10px 0 0 0;"><strong>${isEs ? 'Total de Productos:' : 'Total Pieces:'}</strong> ${totalQty}</p>
+          ${compilerPriceToggle ? `<p style="margin:4px 0 0 0;"><strong>${isEs ? 'Monto Total:' : 'Grand Total:'}</strong> ${formatCurrency(totalAmount)}</p>` : ''}
+        </div>
+
+        ${itemsHtml}
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
+window.printCompilerSummary = printCompilerSummary;
+
+function whatsappShareCompiler() {
+  if (compilerSelectedOrders.length === 0) return;
+
+  const isEs = lang === 'es';
+  const compiled = {};
+  let totalQty = 0;
+  let totalAmount = 0;
+
+  compilerSelectedOrders.forEach(order => {
+    (order.items || []).forEach(item => {
+      const qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
+      if (qty <= 0) return;
+      const key = item.product_key;
+      const price = parseFloat(item.price_at_order || 0);
+
+      if (!compiled[key]) {
+        compiled[key] = {
+          product_label: item.product_label,
+          quantity: 0,
+          price: price,
+          category: PRODUCT_CAT[key] ? PRODUCT_CAT[key].en : 'Other'
+        };
+      }
+      compiled[key].quantity += qty;
+      totalQty += qty;
+      totalAmount += (qty * price);
+    });
+  });
+
+  const grouped = {};
+  Object.values(compiled).forEach(item => {
+    const cat = item.category;
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(item);
+  });
+
+  const sortedCats = Object.keys(grouped).sort((a, b) => {
+    const ai = CAT_ORDER_EN.indexOf(a);
+    const bi = CAT_ORDER_EN.indexOf(b);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
+
+  let text = `*${isEs ? 'Resumen Compilado de Carga' : 'Compiled Loading Load Sheet'}*\n`;
+  text += `_Cecilia Bakery — ${new Date().toLocaleDateString()}_\n\n`;
+  
+  text += `*${isEs ? 'Pedidos Incluidos:' : 'Included Orders:'}*\n`;
+  compilerSelectedOrders.forEach(o => {
+    const num = o.order_number ? `#${o.order_number}` : '';
+    const biz = o.business_name || '';
+    const driver = getDriverName(o.driver_id);
+    text += `• ${num} ${biz} (${driver})\n`;
+  });
+  text += `\n`;
+
+  sortedCats.forEach(cat => {
+    const displayCat = isEs && PRODUCT_CAT[grouped[cat][0].product_key] ? PRODUCT_CAT[grouped[cat][0].product_key].es : cat;
+    text += `*${displayCat.toUpperCase()}*\n`;
+    grouped[cat].forEach(item => {
+      if (compilerPriceToggle) {
+        text += `• ${item.product_label} x${item.quantity} (@ ${formatCurrency(item.price)}) = ${formatCurrency(item.quantity * item.price)}\n`;
+      } else {
+        text += `• ${item.product_label} x${item.quantity}\n`;
+      }
+    });
+    text += `\n`;
+  });
+
+  text += `*${isEs ? 'Total Piezas:' : 'Total Pieces:'}* ${totalQty}\n`;
+  if (compilerPriceToggle) {
+    text += `*${isEs ? 'Monto Total:' : 'Grand Total:'}* ${formatCurrency(totalAmount)}\n`;
+  }
+
+  // Open WhatsApp Link
+  const encodedText = encodeURIComponent(text);
+  window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+}
+window.whatsappShareCompiler = whatsappShareCompiler;
 
