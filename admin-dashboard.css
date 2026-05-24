@@ -3268,3 +3268,29 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
     max-width: 90px;
   }
 }
+
+/* ── Premium Tab Badges ── */
+.insights-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 99px;
+  background: var(--red);
+  color: #fff;
+  transition: all 0.25s ease;
+}
+.insights-pill.active .tab-badge {
+  background: #fff;
+  color: var(--red);
+}
+

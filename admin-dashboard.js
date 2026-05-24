@@ -374,11 +374,21 @@ async function showSection(name) {
   }
   if (name === 'online-orders') { loadOnlineOrders(); markAllOnlineOrdersSeen(); }
   if (name === 'incoming') {
-    // Always reset Driver Orders filter to Today on navigation
-    document.querySelectorAll('#driver-orders-filter .insights-pill').forEach(p => p.classList.remove('active'));
-    const todayPill = document.querySelector('#driver-orders-filter .insights-pill[data-filter="today"]');
-    if (todayPill) todayPill.classList.add('active');
-    loadIncomingOrders();
+    // Smart default: If there are no today's orders, but there are unpaid orders, default to Unpaid!
+    await loadIncomingOrders();
+    const todayStr = getTodayStr();
+    const hasToday = incomingOrders.some(o => (o.submitted_at || '').startsWith(todayStr));
+    const hasUnpaid = incomingOrders.some(o => o.payment_status === 'not_paid');
+    
+    let targetFilter = 'today';
+    if (!hasToday && hasUnpaid) {
+      targetFilter = 'unpaid';
+    }
+    
+    document.querySelectorAll('#driver-orders-filter .insights-pill').forEach(p => {
+      p.classList.toggle('active', p.dataset.filter === targetFilter);
+    });
+    renderIncomingOrders();
   }
   if (name === 'new-order') {
     initAdminOrderForm();
@@ -2736,8 +2746,11 @@ function renderNeedsAttention() {
   const badge = document.getElementById('action-queue-badge');
   const fab = document.getElementById('action-queue-fab');
 
-  // Active driver orders (not completed/cancelled)
-  const allActiveDriver = incomingOrders.filter(o => o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent');
+  // Active driver orders (not completed/cancelled, including picked_up unpaid)
+  const allActiveDriver = incomingOrders.filter(o =>
+    (o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent') ||
+    (o.status === 'picked_up' && (o.payment_status === 'not_paid' || o.payment_status === 'partial'))
+  );
   const allActiveOnline = _cachedOnlineOrders.filter(o => o.delivery_status === 'pending' || o.delivery_status === 'preparing' || o.delivery_status === 'ready');
 
   // Badge always shows UNPAID count (the most urgent)
@@ -2875,26 +2888,71 @@ async function loadIncomingOrders() {
   } catch (e) { console.error('Incoming orders error:', e); }
 }
 
+function _updateTabBadge(id, count) {
+  const badge = document.getElementById(id);
+  if (!badge) return;
+  badge.textContent = count;
+  badge.style.display = count > 0 ? 'inline-flex' : 'none';
+}
+
 function renderIncomingOrders() {
   const activeFilter = document.querySelector('#driver-orders-filter .insights-pill.active')?.dataset.filter || 'all';
   let filtered = [...incomingOrders];
 
+  // Update tab badges dynamically
+  const todayStr = getTodayStr();
+  const allCount = incomingOrders.length;
+  const todayCount = incomingOrders.filter(o => (o.submitted_at || '').startsWith(todayStr)).length;
+  const unpaidCount = incomingOrders.filter(o => o.payment_status === 'not_paid').length;
+  const partialCount = incomingOrders.filter(o => o.payment_status === 'partial').length;
+
+  _updateTabBadge('badge-incoming-all', allCount);
+  _updateTabBadge('badge-incoming-today', todayCount);
+  _updateTabBadge('badge-incoming-unpaid', unpaidCount);
+  _updateTabBadge('badge-incoming-partial', partialCount);
+
   if (activeFilter === 'today') {
-    const today = getTodayStr();
-    filtered = filtered.filter(o => (o.submitted_at || '').startsWith(today));
+    filtered = filtered.filter(o => (o.submitted_at || '').startsWith(todayStr));
   } else if (activeFilter === 'unpaid') {
     filtered = filtered.filter(o => o.payment_status === 'not_paid');
   } else if (activeFilter === 'partial') {
     filtered = filtered.filter(o => o.payment_status === 'partial');
   }
 
+  const container = document.getElementById('incoming-orders-list');
+  if (!container) return;
+
+  if (filtered.length === 0) {
+    let emptyHtml = '';
+    if (activeFilter === 'today') {
+      const unpaidOrders = incomingOrders.filter(o => o.payment_status === 'not_paid').length;
+      if (unpaidOrders > 0) {
+        emptyHtml = `<div class="empty-state" style="padding: 40px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+          <div style="font-size: 2.5rem; margin-bottom: 4px; animation: bounce 2s infinite;">🚚</div>
+          <h3 style="font-family: 'Outfit', sans-serif; margin: 0; font-weight: 700; font-size: 1.1rem; color: var(--tx);">${lang === 'es' ? 'Sin Pedidos Hoy' : 'No Orders Today'}</h3>
+          <p style="color: var(--tx-muted); font-size: 0.8rem; margin: 0 0 8px; text-align: center; max-width: 250px;">${lang === 'es' ? 'No se han registrado pedidos hoy.' : 'No orders have been submitted today.'}</p>
+          <button class="insights-pill active" style="margin-top: 4px; box-shadow: 0 2px 12px rgba(200, 16, 46, 0.25);" onclick="const t = document.querySelector('#driver-orders-filter .insights-pill[data-filter=unpaid]'); if(t) t.click()">
+            ${lang === 'es' ? `Ver ${unpaidOrders} Pedidos Sin Pagar` : `View ${unpaidOrders} Unpaid Orders`}
+          </button>
+        </div>`;
+      } else {
+        emptyHtml = `<div class="empty-state" data-en="No driver orders today" data-es="No hay pedidos hoy">${lang === 'es' ? 'No hay pedidos hoy' : 'No driver orders today'}</div>`;
+      }
+    } else {
+      emptyHtml = `<div class="empty-state" data-en="No orders found" data-es="No se encontraron pedidos">${lang === 'es' ? 'No se encontraron pedidos' : 'No orders found'}</div>`;
+    }
+    container.innerHTML = emptyHtml;
+    return;
+  }
+
   renderOrderCards(filtered, 'incoming-orders-list', true);
 }
 
 function updateIncomingBadge() {
-  // Badge counts ALL non-completed active driver orders
+  // Badge counts ALL non-completed active driver orders (including picked_up unpaid)
   const activeCount = incomingOrders.filter(o =>
-    o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent'
+    (o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent') ||
+    (o.status === 'picked_up' && (o.payment_status === 'not_paid' || o.payment_status === 'partial'))
   ).length;
   const badges = [document.getElementById('incoming-badge'), document.getElementById('incoming-badge-mobile')];
   badges.forEach(badge => {
@@ -2910,9 +2968,10 @@ function updateIncomingBadge() {
 
 /* Unified badge helper for the bottom nav "Orders" tab */
 function _updateOrdersBottomBadge() {
-  // Match the sidebar badge: all active driver orders (no "unseen" filter)
+  // Match the sidebar badge: all active driver orders (including picked_up unpaid)
   const driverCount = incomingOrders.filter(o =>
-    o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent'
+    (o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent') ||
+    (o.status === 'picked_up' && (o.payment_status === 'not_paid' || o.payment_status === 'partial'))
   ).length;
   const onlineCount = typeof _cachedOnlineOrders !== 'undefined'
     ? _cachedOnlineOrders.filter(o => o.delivery_status === 'pending' || o.delivery_status === 'preparing' || o.delivery_status === 'ready').length : 0;

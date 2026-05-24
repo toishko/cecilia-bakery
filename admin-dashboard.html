@@ -284,10 +284,22 @@
       <div class="insights-hero-top" style="margin-bottom: 24px;">
         <h2 class="insights-title" data-en="Driver Orders" data-es="Pedidos">Driver Orders</h2>
         <div class="insights-time-selector" id="driver-orders-filter">
-          <button class="insights-pill" data-filter="all" data-en="All" data-es="Todos">All</button>
-          <button class="insights-pill active" data-filter="today" data-en="Today" data-es="Hoy">Today</button>
-          <button class="insights-pill" data-filter="unpaid" data-en="Unpaid" data-es="Deuda">Unpaid</button>
-          <button class="insights-pill" data-filter="partial" data-en="Partial" data-es="Parcial">Partial</button>
+          <button class="insights-pill" data-filter="all">
+            <span data-en="All" data-es="Todos">All</span>
+            <span class="tab-badge" id="badge-incoming-all" style="display:none">0</span>
+          </button>
+          <button class="insights-pill active" data-filter="today">
+            <span data-en="Today" data-es="Hoy">Today</span>
+            <span class="tab-badge" id="badge-incoming-today" style="display:none">0</span>
+          </button>
+          <button class="insights-pill" data-filter="unpaid">
+            <span data-en="Unpaid" data-es="Deuda">Unpaid</span>
+            <span class="tab-badge" id="badge-incoming-unpaid" style="display:none">0</span>
+          </button>
+          <button class="insights-pill" data-filter="partial">
+            <span data-en="Partial" data-es="Parcial">Partial</span>
+            <span class="tab-badge" id="badge-incoming-partial" style="display:none">0</span>
+          </button>
         </div>
       </div>
       <div id="incoming-orders-list">
