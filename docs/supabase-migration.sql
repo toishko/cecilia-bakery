@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS driver_orders (
   total_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
   submitted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   confirmed_at TIMESTAMPTZ,
-  editable_until TIMESTAMPTZ NOT NULL DEFAULT (now() + INTERVAL '30 minutes'),
+  editable_until TIMESTAMPTZ NOT NULL DEFAULT (now() + INTERVAL '24 hours'),
   admin_editable_until TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

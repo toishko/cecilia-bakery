@@ -1536,6 +1536,280 @@
               </div>
             </div>
           </div>
+
+          <!-- SECTION: Compiler -->
+          <div class="staff-section" id="section-compiler">
+            <style>
+            .staff-compiler-workspace {
+              display: flex;
+              flex-direction: column;
+              gap: 16px;
+            }
+            @media (min-width: 1024px) {
+              .staff-compiler-workspace {
+                display: grid;
+                grid-template-columns: 360px 1fr;
+                gap: 24px;
+                align-items: start;
+              }
+              .staff-compiler-left {
+                position: sticky;
+                top: 24px;
+              }
+            }
+            .compiler-custom-chk {
+              position: relative; width: 20px; height: 20px; flex-shrink: 0; cursor: pointer;
+            }
+            .compiler-custom-chk input {
+              position: absolute; opacity: 0; width: 0; height: 0;
+            }
+            .compiler-custom-chk .chk-box {
+              display: block; width: 20px; height: 20px;
+              border: 2px solid var(--bd); border-radius: 6px;
+              background: var(--bg-card);
+              transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+              position: relative;
+            }
+            .compiler-custom-chk .chk-box::after {
+              content: ''; position: absolute; top: 3px; left: 6px;
+              width: 5px; height: 10px; border: solid #fff;
+              border-width: 0 2px 2px 0;
+              transform: rotate(45deg) scale(0);
+              transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            .compiler-custom-chk input:checked + .chk-box {
+              background: var(--red); border-color: var(--red); transform: scale(1.08);
+            }
+            .compiler-custom-chk input:checked + .chk-box::after {
+              transform: rotate(45deg) scale(1);
+            }
+            .compiler-row-flat {
+              display: flex; align-items: center; gap: 10px;
+              padding: 10px 6px; border-bottom: 1px solid var(--bd);
+              cursor: pointer; transition: background 0.15s ease;
+              border-left: 3px solid transparent;
+            }
+            .compiler-row-flat:last-child { border-bottom: none; }
+            .compiler-row-flat:hover { background: rgba(200,16,46,0.02); }
+            .compiler-row-flat.selected {
+              background: rgba(200,16,46,0.04); border-left-color: var(--red);
+            }
+            .compiler-row-name {
+              font-weight: 600; font-size: 0.8rem; color: var(--tx);
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;
+            }
+            .compiler-row-badges { display: flex; gap: 4px; flex-shrink: 0; }
+            .compiler-badge {
+              font-size: 8px; padding: 2px 6px; border-radius: 10px;
+              font-weight: 700; line-height: 1.4;
+            }
+            .compiler-badge.paid { background: rgba(27,122,74,0.06); color: var(--green); border: 1px solid rgba(27,122,74,0.12); }
+            .compiler-badge.unpaid { background: rgba(200,16,46,0.06); color: var(--red); border: 1px solid rgba(200,16,46,0.12); }
+            .compiler-badge.confirmed { background: rgba(59,130,246,0.06); color: #3b82f6; border: 1px solid rgba(59,130,246,0.12); }
+            .compiler-badge.pending { background: rgba(234,179,8,0.06); color: #ca8a04; border: 1px solid rgba(234,179,8,0.12); }
+            .compiler-row-meta {
+              font-size: 0.68rem; color: var(--tx-muted); white-space: nowrap;
+              text-align: right; margin-left: auto;
+            }
+            .compiler-row-qty {
+              font-weight: 700; font-size: 0.75rem; color: var(--tx-muted);
+              white-space: nowrap; flex-shrink: 0; min-width: 36px; text-align: right;
+            }
+            .compiler-checklist-flat {
+              max-height: 280px; overflow-y: auto; padding: 0; margin-top: 4px;
+            }
+            .compiler-checklist-flat::-webkit-scrollbar { width: 4px; }
+            .compiler-checklist-flat::-webkit-scrollbar-thumb {
+              background: var(--bd); border-radius: 2px;
+            }
+            .compiler-stat-strip {
+              display: flex; align-items: center;
+              background: var(--bg-card); border: 1px solid var(--bd);
+              border-radius: 10px; overflow: hidden; margin-bottom: 16px;
+            }
+            .compiler-stat-item {
+              display: flex; flex-direction: column; align-items: center;
+              justify-content: center; padding: 12px 10px; flex: 1;
+              border-right: 1px solid var(--bd);
+            }
+            .compiler-stat-item:last-child { border-right: none; }
+            .compiler-stat-val {
+              font-size: 1.2rem; font-weight: 700; color: var(--tx);
+              font-variant-numeric: tabular-nums;
+            }
+            .compiler-stat-lbl {
+              font-size: 0.62rem; font-weight: 500; color: var(--tx-muted);
+              text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px;
+            }
+            .compiler-order-chip {
+              display: inline-flex; align-items: center; gap: 6px;
+              padding: 6px 12px; background: var(--bg-card);
+              border: 1px solid var(--bd); border-radius: 8px;
+              font-size: 0.78rem; transition: all 0.15s ease;
+            }
+            .compiler-chip-num { font-weight: 700; color: var(--red); }
+            .compiler-chip-biz {
+              color: var(--tx); font-weight: 500;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px;
+            }
+            .compiler-chip-qty { font-size: 0.68rem; color: var(--tx-muted); font-weight: 600; }
+            .compiler-chip-remove {
+              background: none; border: none; cursor: pointer;
+              color: var(--tx-faint); font-size: 0.85rem; padding: 0 2px;
+              transition: color 0.15s; line-height: 1;
+            }
+            .compiler-chip-remove:hover { color: var(--red); }
+            .compiler-cat-header {
+              font-family: 'Cormorant Garamond', serif; font-size: 0.95rem;
+              font-weight: 600; color: var(--red-dk, #9B0B22);
+              text-transform: uppercase; letter-spacing: 0.06em;
+              margin-bottom: 6px; padding-bottom: 4px; border-bottom: 2px solid var(--bd);
+            }
+            .compiler-item-row {
+              display: flex; justify-content: space-between; align-items: baseline;
+              padding: 5px 0; border-bottom: 1px dashed rgba(200,16,46,0.10);
+              font-size: 0.85rem;
+            }
+            .compiler-item-row:last-child { border-bottom: none; }
+            .compiler-item-name { color: var(--tx); flex: 1; min-width: 0; }
+            .compiler-item-qty {
+              font-weight: 700; color: var(--tx); min-width: 45px;
+              text-align: right; font-variant-numeric: tabular-nums;
+            }
+            .compiler-item-price {
+              min-width: 110px; text-align: right; color: var(--tx-muted);
+              font-size: 0.78rem; font-variant-numeric: tabular-nums;
+            }
+            .compiler-item-price .line-total { font-weight: 600; color: var(--tx); }
+            .compiler-cat-group { margin-bottom: 16px; }
+            </style>
+
+            <div class="staff-eyebrow" data-en="Order Compiler" data-es="Compilador">Order Compiler</div>
+            <h2 class="staff-page-title" style="margin-bottom:16px;" data-en="Sum Multiple Orders" data-es="Sumar Pedidos Múltiples">Sum Multiple Orders</h2>
+            
+            <!-- Pricing toggle -->
+            <div class="settings-card" style="margin-bottom:16px; padding:12px 16px;">
+              <div class="settings-row" style="border:none; padding:0;">
+                <span class="settings-row-label" data-en="Show Pricing" data-es="Mostrar Precios" style="font-weight:600;">Show Pricing</span>
+                <div class="settings-row-actions">
+                  <label class="staff-toggle">
+                    <input type="checkbox" id="staff-compiler-price-toggle" checked onchange="toggleStaffCompilerPrices()">
+                    <div class="staff-toggle-track"></div>
+                    <div class="staff-toggle-thumb"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="staff-compiler-workspace">
+              <!-- Left Column: Settings and inputs (40% desktop) -->
+              <div class="staff-compiler-left">
+                <!-- Compiler filters / loading -->
+                <div class="settings-card" style="margin-bottom:16px;">
+                  <div class="settings-card-title" data-en="Select Driver & Date" data-es="Seleccionar Conductor y Fecha">Select Driver & Date</div>
+                  <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:12px;">
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                      <label style="font-size:0.75rem; font-weight:600; color:var(--tx-muted);" data-en="Driver" data-es="Conductor">Driver</label>
+                      <select id="staff-compiler-driver-select" style="padding: 10px; border-radius: 8px; border: 1px solid var(--bd-input); background: var(--bg-input); color: var(--tx); font-family: inherit; font-size: 16px; width:100%;">
+                        <option value="" data-en="— Select Driver —" data-es="— Seleccionar Conductor —">— Select Driver —</option>
+                      </select>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                      <label style="font-size:0.75rem; font-weight:600; color:var(--tx-muted);" data-en="Pickup Date" data-es="Fecha de Recogida">Pickup Date</label>
+                      <input type="date" id="staff-compiler-date-input" style="padding: 10px; border-radius: 8px; border: 1px solid var(--bd-input); background: var(--bg-input); color: var(--tx); font-family: inherit; font-size: 16px; width:100%;" />
+                    </div>
+                  </div>
+                  <button onclick="loadStaffCompilerDay()" style="width:100%; padding:12px; border-radius:8px; background:var(--red); color:#fff; border:none; font-weight:600; cursor:pointer; font-size:0.9rem;" data-en="Compile Orders" data-es="Compilar Pedidos">Compile Orders</button>
+                  
+                  <!-- Live Driver Orders checklist -->
+                  <div id="staff-compiler-recent-orders-wrap" style="display:none; margin-top:16px; border-top:1px solid var(--bd); padding-top:12px;">
+                    <label style="font-size:0.75rem; font-weight:600; color:var(--red); display:block; margin-bottom:8px;" data-en="Select Orders to Combine" data-es="Seleccionar Pedidos a Combinar">Select Orders to Combine</label>
+                    
+                    <!-- Filter and Sort Controls -->
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:8px; border-bottom:1px solid var(--bd); padding-bottom:10px;">
+                      <div class="queue-filter-tabs" id="staff-compiler-filter-tabs" style="border:none; padding:0; display:flex; gap:6px; margin:0; overflow-x:auto;">
+                        <button class="queue-filter-pill active" data-compiler-filter="all" data-en="All" data-es="Todos" style="padding:4px 10px; font-size:0.75rem;">All</button>
+                        <button class="queue-filter-pill" data-compiler-filter="unpaid" data-en="Unpaid" data-es="Deuda" style="padding:4px 10px; font-size:0.75rem;">Unpaid</button>
+                        <button class="queue-filter-pill" data-compiler-filter="paid" data-en="Paid" data-es="Pagados" style="padding:4px 10px; font-size:0.75rem;">Paid</button>
+                      </div>
+                      
+                      <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+                        <span style="font-size:0.7rem; font-weight:600; color:var(--tx-muted); text-transform:uppercase;" data-en="Sort:" data-es="Orden:">Sort:</span>
+                        <select id="staff-compiler-sort-select" style="padding:4px 8px; border-radius:6px; border:1px solid var(--bd-input); background:var(--bg-input); color:var(--tx); font-family:inherit; font-size:12px; cursor:pointer;">
+                          <option value="date-desc" data-en="📅 Newest" data-es="📅 Recientes">📅 Newest</option>
+                          <option value="date-asc" data-en="📅 Oldest" data-es="📅 Antiguos">📅 Oldest</option>
+                          <option value="biz-asc" data-en="🏢 Business (A-Z)" data-es="🏢 Negocio (A-Z)">🏢 Business (A-Z)</option>
+                          <option value="pieces-desc" data-en="📦 Pieces (High)" data-es="📦 Cantidad (Mayor)">📦 Pieces (High)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="compiler-checklist-flat">
+                      <div id="staff-compiler-recent-orders-list">
+                        <!-- Populated dynamically with checkboxes -->
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Manual order search & add -->
+                  <div style="margin-top:16px; border-top:1px solid var(--bd); padding-top:12px;">
+                    <label style="font-size:0.75rem; font-weight:600; color:var(--red); display:block; margin-bottom:6px;" data-en="Lookup & Add Specific Order" data-es="Buscar y Agregar Pedido">Lookup & Add Specific Order</label>
+                    <div style="display:flex; gap:8px;">
+                      <input type="text" id="staff-compiler-order-search" placeholder="Search #number, ref, or business..." data-en-placeholder="Search #number, ref, or business..." data-es-placeholder="Buscar #número, ref, o negocio..." style="flex:1; padding: 10px; border-radius: 8px; border: 1px solid var(--bd-input); background: var(--bg-input); color: var(--tx); font-family: inherit; font-size: 16px;" />
+                      <button onclick="executeStaffCompilerSearch()" style="padding:10px 16px; border-radius:8px; background:none; border:1px solid var(--bd); color:var(--tx); font-weight:600; cursor:pointer;" data-en="Add" data-es="Agregar">Add</button>
+                    </div>
+                    <div id="staff-compiler-search-results" style="display:none; background: var(--bg-card); border: 1px solid var(--bd); border-radius: 8px; margin-top:8px; max-height:160px; overflow-y:auto; padding:6px; box-shadow: var(--shadow-card); z-index:10; position:relative;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column: Results pane (60% desktop) -->
+              <div class="staff-compiler-right">
+                <!-- Selected compiled orders list -->
+                <div class="settings-card-title" style="margin:0 0 8px 0; display:flex; align-items:center; justify-content:space-between;" data-en="Included Orders" data-es="Pedidos Incluidos">
+                  <span data-en="Included Orders" data-es="Pedidos Incluidos">Included Orders</span>
+                  <span id="staff-compiler-orders-count-badge" style="background:var(--red); color:#fff; padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:700;">0</span>
+                </div>
+                
+                <div id="staff-compiler-selected-list" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px;">
+                  <div class="saved-empty" data-en="No orders in compilation yet." data-es="Aún no hay pedidos en la compilación.">No orders in compilation yet.</div>
+                </div>
+
+                <!-- Summary section -->
+                <div id="staff-compiler-summary-section" style="display:none;">
+                  <div class="compiler-stat-strip">
+                    <div class="compiler-stat-item">
+                      <span class="compiler-stat-val" id="staff-compiler-stat-count">0</span>
+                      <span class="compiler-stat-lbl" data-en="Orders" data-es="Pedidos">Orders</span>
+                    </div>
+                    <div class="compiler-stat-item">
+                      <span class="compiler-stat-val" id="staff-compiler-stat-qty">0</span>
+                      <span class="compiler-stat-lbl" data-en="Pieces" data-es="Piezas">Pieces</span>
+                    </div>
+                    <div class="compiler-stat-item staff-compiler-price-dependent">
+                      <span class="compiler-stat-val" id="staff-compiler-stat-total">$0.00</span>
+                      <span class="compiler-stat-lbl" data-en="Total" data-es="Total">Total</span>
+                    </div>
+                  </div>
+
+                  <!-- Itemized load sheet -->
+                  <div style="background:var(--bg-card); border:1px solid var(--bd); border-radius:12px; padding:16px; margin-bottom:20px;">
+                    <div class="compiler-cat-header" style="margin-top:0; border-bottom:none; padding-bottom:0; margin-bottom:12px;" data-en="Itemized Load Sheet" data-es="Hoja de Carga Detallada">Itemized Load Sheet</div>
+                    <div id="staff-compiler-items-list">
+                      <!-- Categories will build dynamically here -->
+                    </div>
+                  </div>
+
+                  <!-- Action buttons -->
+                  <div style="display:flex; gap:10px; margin-bottom:40px;">
+                    <button onclick="whatsappShareStaffCompiler()" style="flex:1; padding:12px; border-radius:8px; background:#1B7A4A; color:#fff; border:none; font-weight:600; cursor:pointer; font-size:0.9rem;" data-en="WhatsApp Share" data-es="Compartir WhatsApp">WhatsApp Share</button>
+                    <button onclick="printStaffCompilerSummary()" style="flex:1; padding:12px; border-radius:8px; background:none; border:1px solid var(--bd); color:var(--tx); font-weight:600; cursor:pointer; font-size:0.9rem;" data-en="Print loading list" data-es="Imprimir carga">Print loading list</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
     </div>
@@ -1550,6 +1824,10 @@
     <button class="bottom-nav-item" data-section="saved" onclick="staffShowSection('saved')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
       <span data-en="Saved" data-es="Guardadas">Saved</span>
+    </button>
+    <button class="bottom-nav-item" data-section="compiler" onclick="staffShowSection('compiler')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      <span data-en="Compiler" data-es="Compilador">Compiler</span>
     </button>
     <button class="bottom-nav-item" data-section="calculator" onclick="staffShowSection('calculator')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
@@ -1651,6 +1929,7 @@
       });
       localStorage.setItem('cb-staff-section', name);
       if (name === 'saved') renderSavedCalcs();
+      if (name === 'compiler') initStaffOrderCompiler();
     }
 
     /* ── Per-Order Save (explicit button inside each order card) ── */
@@ -4051,54 +4330,791 @@
           if (bodyDragActive) {
             bodyDragActive = false;
             isDragging = false;
-            sheet.style.transition = '';
-            sheet.style.transform = '';
-            overlay.style.transition = '';
-            overlay.style.opacity = '';
-          }
-        }
-      }, { passive: false });
+    }
+  })();
 
-      scrollBody.addEventListener('touchend', function(e) {
-        if (bodyDragActive && isDragging) {
-          finishDrag();
-        }
-        bodyDragActive = false;
-      }, { passive: true });
+  /* ═══════════════════════════════════
+     STAFF PORTAL ORDER COMPILER MODULE
+     ═══════════════════════════════════ */
+  var staffCompilerSelectedOrders = [];
+  var staffCompilerActiveDriverOrders = []; // Cache recent orders for selected driver
+  var staffCompilerPriceToggle = true;
+  var staffCompilerFilter = 'all';
+  var staffCompilerSort = 'date-desc';
+
+  function staffFormatCurrency(v) {
+    return '$' + parseFloat(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  async function initStaffOrderCompiler() {
+    var select = document.getElementById('staff-compiler-driver-select');
+    var dateInput = document.getElementById('staff-compiler-date-input');
+
+    // Set default date to today in local timezone (YYYY-MM-DD)
+    if (dateInput && !dateInput.value) {
+      var d = new Date();
+      var month = '' + (d.getMonth() + 1);
+      var day = '' + d.getDate();
+      var year = d.getFullYear();
+      if (month.length < 2) month = '0' + month;
+      if (day.length < 2) day = '0' + day;
+      dateInput.value = [year, month, day].join('-');
     }
 
-    function finishDrag() {
-      isDragging = false;
-      var dy = currentY - startY;
-      var dt = Date.now() - startTime;
-      var velocity = dy / Math.max(dt, 1);
-
-      var threshold = sheet.offsetHeight * 0.3;
-      var shouldDismiss = (dy > threshold) || (dy > 40 && velocity > 0.4);
-
-      if (shouldDismiss) {
-        sheet.style.transition = 'transform .32s cubic-bezier(.36,.66,.04,1)';
-        sheet.style.transform = 'translateY(100%)';
-        overlay.style.transition = 'opacity .32s ease';
-        overlay.style.opacity = '0';
-        setTimeout(function() {
-          frostCloseModal();
-          sheet.style.transition = '';
-          sheet.style.transform = '';
-          overlay.style.transition = '';
-          overlay.style.opacity = '';
-        }, 340);
-      } else {
-        sheet.style.transition = 'transform .4s cubic-bezier(.34,1.56,.64,1)';
-        sheet.style.transform = 'translateY(0)';
-        overlay.style.transition = 'opacity .3s ease';
-        overlay.style.opacity = '1';
-        setTimeout(function() {
-          sheet.style.transition = '';
-          overlay.style.transition = '';
-          overlay.style.opacity = '';
-        }, 420);
+    // Populate drivers select
+    if (select) {
+      var sb = await getSupabaseClient();
+      if (sb) {
+        try {
+          var { data, error } = await sb.from('drivers').select('*').order('name');
+          if (!error && data) {
+            var html = '<option value="" data-en="— Select Driver —" data-es="— Seleccionar Conductor —">' + (staffLang === 'es' ? '— Seleccionar Conductor —' : '— Select Driver —') + '</option>';
+            data.forEach(function(d) {
+              html += '<option value="' + d.id + '">' + _esc(d.name) + ' (' + _esc(d.code) + ')</option>';
+            });
+            select.innerHTML = html;
+          }
+        } catch(e) {
+          console.error(e);
+        }
       }
+    }
+
+    // Driver select change event
+    var driverSelect = document.getElementById('staff-compiler-driver-select');
+    if (driverSelect && !driverSelect._hasChangeList) {
+      driverSelect.addEventListener('change', function(e) {
+        var driverId = e.target.value;
+        if (driverId) {
+          loadStaffDriverCompilerChecklist(driverId);
+        } else {
+          var wrap = document.getElementById('staff-compiler-recent-orders-wrap');
+          if (wrap) wrap.style.display = 'none';
+          staffCompilerSelectedOrders = [];
+          renderStaffCompilerView();
+        }
+      });
+      driverSelect._hasChangeList = true;
+    }
+
+    // Date select change event
+    if (dateInput && !dateInput._hasChangeListener) {
+      dateInput.addEventListener('change', function(e) {
+        var selectedDate = e.target.value;
+        
+        // Auto-check orders matching the new selected date in our active cache
+        staffCompilerSelectedOrders = staffCompilerActiveDriverOrders.filter(function(order) {
+          return order.pickup_date === selectedDate;
+        });
+
+        renderStaffCompilerChecklist();
+        renderStaffCompilerView();
+      });
+      dateInput._hasChangeListener = true;
+    }
+
+    // Filter tabs click
+    var filterTabs = document.getElementById('staff-compiler-filter-tabs');
+    if (filterTabs && !filterTabs._hasListener) {
+      filterTabs.addEventListener('click', function(e) {
+        var btn = e.target.closest('.queue-filter-pill');
+        if (!btn) return;
+        
+        filterTabs.querySelectorAll('.queue-filter-pill').forEach(function(p) {
+          p.classList.remove('active');
+        });
+        btn.classList.add('active');
+        
+        staffCompilerFilter = btn.dataset.compilerFilter;
+        renderStaffCompilerChecklist();
+      });
+      filterTabs._hasListener = true;
+    }
+
+    // Sort select change
+    var sortSelect = document.getElementById('staff-compiler-sort-select');
+    if (sortSelect && !sortSelect._hasListener) {
+      sortSelect.addEventListener('change', function(e) {
+        staffCompilerSort = e.target.value;
+        renderStaffCompilerChecklist();
+      });
+      sortSelect._hasListener = true;
+    }
+
+    // Search input live suggestions
+    var searchInput = document.getElementById('staff-compiler-order-search');
+    if (searchInput && !searchInput._hasListener) {
+      searchInput.addEventListener('input', function(e) {
+        var val = e.target.value.trim();
+        if (val.length >= 2) {
+          showStaffCompilerSearchSuggestions(val);
+        } else {
+          document.getElementById('staff-compiler-search-results').style.display = 'none';
+        }
+      });
+      searchInput._hasListener = true;
+    }
+
+    renderStaffCompilerView();
+  }
+  window.initStaffOrderCompiler = initStaffOrderCompiler;
+
+  async function loadStaffDriverCompilerChecklist(driverId) {
+    var wrap = document.getElementById('staff-compiler-recent-orders-wrap');
+    if (!wrap) return;
+
+    var sb = await getSupabaseClient();
+    if (!sb) return;
+
+    try {
+      var { data, error } = await sb
+        .from('driver_orders')
+        .select('*, items:driver_order_items(*)')
+        .eq('driver_id', driverId)
+        .order('pickup_date', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+
+      staffCompilerActiveDriverOrders = data || [];
+
+      if (staffCompilerActiveDriverOrders.length === 0) {
+        wrap.style.display = 'none';
+        document.getElementById('staff-compiler-recent-orders-list').innerHTML = '';
+        return;
+      }
+
+      var dateInput = document.getElementById('staff-compiler-date-input');
+      var currentDate = dateInput ? dateInput.value : '';
+
+      // Auto-select matching current date initially
+      staffCompilerSelectedOrders = staffCompilerActiveDriverOrders.filter(function(order) {
+        return order.pickup_date === currentDate;
+      });
+
+      // Render the checklist feed
+      renderStaffCompilerChecklist();
+
+      // Render the summary loading sheet
+      renderStaffCompilerView();
+    } catch (e) {
+      console.error('Error loading staff compiler checklist:', e);
+      wrap.style.display = 'none';
+    }
+  }
+  window.loadStaffDriverCompilerChecklist = loadStaffDriverCompilerChecklist;
+
+  function renderStaffCompilerChecklist() {
+    var listContainer = document.getElementById('staff-compiler-recent-orders-list');
+    var wrap = document.getElementById('staff-compiler-recent-orders-wrap');
+    if (!listContainer || !wrap || staffCompilerActiveDriverOrders.length === 0) return;
+
+    // 1. Filter
+    var filtered = staffCompilerActiveDriverOrders.slice();
+    if (staffCompilerFilter === 'unpaid') {
+      filtered = filtered.filter(function(order) {
+        return order.payment_status === 'not_paid' || order.payment_status === 'partial';
+      });
+    } else if (staffCompilerFilter === 'paid') {
+      filtered = filtered.filter(function(order) {
+        return order.payment_status === 'paid';
+      });
+    }
+
+    // 2. Sort
+    filtered.sort(function(a, b) {
+      if (staffCompilerSort === 'date-desc') {
+        return new Date(b.pickup_date || 0) - new Date(a.pickup_date || 0);
+      } else if (staffCompilerSort === 'date-asc') {
+        return new Date(a.pickup_date || 0) - new Date(b.pickup_date || 0);
+      } else if (staffCompilerSort === 'biz-asc') {
+        return (a.business_name || '').localeCompare(b.business_name || '');
+      } else if (staffCompilerSort === 'pieces-desc') {
+        var qtyA = (a.items || []).reduce(function(sum, item) {
+          var qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
+          return sum + qty;
+        }, 0);
+        var qtyB = (b.items || []).reduce(function(sum, item) {
+          var qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
+          return sum + qty;
+        }, 0);
+        return qtyB - qtyA;
+      }
+      return 0;
+    });
+
+    if (filtered.length === 0) {
+      listContainer.innerHTML = '<div style="padding:16px; font-size:0.8rem; color:var(--tx-muted); text-align:center;">' + (staffLang === 'es' ? 'No se encontraron pedidos' : 'No orders found') + '</div>';
+      wrap.style.display = 'block';
+      return;
+    }
+
+    var html = '';
+    filtered.forEach(function(order) {
+      var orderNum = order.order_number ? '#' + order.order_number : '';
+      var biz = order.business_name || (staffLang === 'es' ? 'Negocio Sin Nombre' : 'Unnamed Business');
+      var date = order.pickup_date || '';
+      var ref = order.driver_ref ? ' \u00b7 Ref: ' + order.driver_ref : '';
+      
+      var totalQty = (order.items || []).reduce(function(sum, item) {
+        var qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
+        return sum + qty;
+      }, 0);
+
+      var isSelected = staffCompilerSelectedOrders.some(function(o) { return o.id === order.id; });
+      var isChecked = isSelected ? 'checked' : '';
+
+      // Badge classes
+      var isPaid = order.payment_status === 'paid';
+      var payBadgeClass = isPaid ? 'compiler-badge paid' : 'compiler-badge unpaid';
+      var payBadgeText = isPaid ? (staffLang === 'es' ? 'Pagado' : 'Paid') : (staffLang === 'es' ? 'Deuda' : 'Unpaid');
+
+      var isConfirmed = order.status === 'confirmed';
+      var statusBadgeClass = isConfirmed ? 'compiler-badge confirmed' : 'compiler-badge pending';
+      var statusBadgeText = isConfirmed ? (staffLang === 'es' ? 'Confirmado' : 'Confirmed') : (staffLang === 'es' ? 'Pendiente' : 'Pending');
+
+      var rowClass = isSelected ? 'compiler-row-flat selected' : 'compiler-row-flat';
+
+      html += `
+        <label class="${rowClass}">
+          <span class="compiler-custom-chk">
+            <input type="checkbox" class="staff-compiler-order-chk" data-id="${order.id}" ${isChecked} onchange="syncStaffCompilerChecklistSelection()" />
+            <span class="chk-box"></span>
+          </span>
+          <span class="compiler-row-name">${orderNum} \u2014 ${_esc(biz)}</span>
+          <span class="compiler-row-badges">
+            <span class="${payBadgeClass}">${payBadgeText}</span>
+            <span class="${statusBadgeClass}">${statusBadgeText}</span>
+          </span>
+          <span class="compiler-row-meta">${date}${_esc(ref)}</span>
+          <span class="compiler-row-qty">${totalQty} uds</span>
+        </label>`;
+    });
+
+    listContainer.innerHTML = html;
+    wrap.style.display = 'block';
+  }
+  window.renderStaffCompilerChecklist = renderStaffCompilerChecklist;
+
+  function syncStaffCompilerChecklistSelection() {
+    var checkedIds = Array.from(document.querySelectorAll('.staff-compiler-order-chk:checked')).map(function(el) { return el.dataset.id; });
+    
+    // We want to combine the checked active driver orders with any manually searched and appended ones that aren't in active list
+    var activeChecked = staffCompilerActiveDriverOrders.filter(function(order) { return checkedIds.includes(order.id); });
+    var searchAppended = staffCompilerSelectedOrders.filter(function(order) {
+      return !staffCompilerActiveDriverOrders.some(function(ao) { return ao.id === order.id; });
+    });
+    
+    staffCompilerSelectedOrders = [].concat(activeChecked, searchAppended);
+    renderStaffCompilerView();
+  }
+  window.syncStaffCompilerChecklistSelection = syncStaffCompilerChecklistSelection;
+
+  async function loadStaffCompilerDay() {
+    var driverId = document.getElementById('staff-compiler-driver-select')?.value;
+    var date = document.getElementById('staff-compiler-date-input')?.value;
+
+    if (!driverId || !date) {
+      staffToast(staffLang === 'es' ? 'Seleccione Conductor y Fecha' : 'Select Driver and Date', 'error');
+      return;
+    }
+
+    staffToast(staffLang === 'es' ? 'Cargando pedidos...' : 'Loading orders...', 'info');
+    await loadStaffDriverCompilerChecklist(driverId);
+  }
+  window.loadStaffCompilerDay = loadStaffCompilerDay;
+
+  async function showStaffCompilerSearchSuggestions(term) {
+    var resultsContainer = document.getElementById('staff-compiler-search-results');
+    if (!resultsContainer) return;
+
+    var sb = await getSupabaseClient();
+    if (!sb) return;
+
+    try {
+      var query = sb.from('driver_orders').select('*').order('submitted_at', { ascending: false }).limit(10);
+      if (term.startsWith('#')) {
+        var num = parseInt(term.replace('#', ''));
+        if (!isNaN(num)) query = query.eq('order_number', num);
+      } else {
+        var safeTerm = term.replace(/%/g, '\\%').replace(/_/g, '\\_');
+        query = query.or('business_name.ilike.%' + safeTerm + '%,driver_ref.ilike.%' + safeTerm + '%');
+      }
+
+      var { data, error } = await query;
+      if (error || !data || data.length === 0) {
+        resultsContainer.innerHTML = '<div style="padding:8px; font-size:0.85rem; color:var(--tx-muted); text-align:center;">' + (staffLang === 'es' ? 'No se encontraron resultados' : 'No results found') + '</div>';
+        resultsContainer.style.display = 'block';
+        return;
+      }
+
+      var html = '';
+      data.forEach(function(order) {
+        var driverName = getDriverName(order.driver_id);
+        var bizName = order.business_name || '';
+        var orderNum = order.order_number ? '#' + order.order_number : '';
+        var ref = order.driver_ref ? ' (Ref: ' + order.driver_ref + ')' : '';
+        var date = order.pickup_date || '';
+        
+        html += `
+          <div style="padding:10px; border-bottom:1px solid var(--bd); cursor:pointer; font-size:0.85rem;" onclick="addStaffCompilerOrderById('${order.id}'); document.getElementById('staff-compiler-search-results').style.display='none';">
+            <div style="font-weight:600; color:var(--tx);">${orderNum} — ${bizName}</div>
+            <div style="font-size:0.75rem; color:var(--tx-muted); margin-top:2px;">${driverName} · ${date}${ref}</div>
+          </div>`;
+      });
+      resultsContainer.innerHTML = html;
+      resultsContainer.style.display = 'block';
+    } catch(e) {
+      console.error(e);
+    }
+  }
+  window.showStaffCompilerSearchSuggestions = showStaffCompilerSearchSuggestions;
+
+  async function addStaffCompilerOrderById(orderId) {
+    if (staffCompilerSelectedOrders.some(function(o) { return o.id === orderId; })) {
+      staffToast(staffLang === 'es' ? 'El pedido ya está en la lista' : 'Order already in compilation', 'error');
+      return;
+    }
+
+    var sb = await getSupabaseClient();
+    if (!sb) return;
+
+    try {
+      var { data: order, error } = await sb
+        .from('driver_orders')
+        .select('*')
+        .eq('id', orderId)
+        .single();
+
+      if (error || !order) throw new Error('Order not found');
+
+      var { data: items, error: itemsErr } = await sb
+        .from('driver_order_items')
+        .select('*')
+        .eq('order_id', orderId);
+
+      if (itemsErr) throw itemsErr;
+
+      order.items = items || [];
+      staffCompilerSelectedOrders.push(order);
+      document.getElementById('staff-compiler-order-search').value = '';
+      staffToast(staffLang === 'es' ? 'Pedido agregado' : 'Order added', 'success');
+      renderStaffCompilerView();
+    } catch(e) {
+      console.error(e);
+      staffToast(staffLang === 'es' ? 'Error al agregar' : 'Error adding', 'error');
+    }
+  }
+  window.addStaffCompilerOrderById = addStaffCompilerOrderById;
+
+  function removeStaffCompilerOrder(orderId) {
+    staffCompilerSelectedOrders = staffCompilerSelectedOrders.filter(function(o) { return o.id !== orderId; });
+    var chk = document.querySelector('.staff-compiler-order-chk[data-id="' + orderId + '"]');
+    if (chk) chk.checked = false;
+    renderStaffCompilerView();
+    staffToast(staffLang === 'es' ? 'Pedido removido' : 'Order removed', 'info');
+  }
+  window.removeStaffCompilerOrder = removeStaffCompilerOrder;
+
+  async function executeStaffCompilerSearch() {
+    var term = document.getElementById('staff-compiler-order-search')?.value?.trim();
+    if (!term) return;
+
+    var sb = await getSupabaseClient();
+    if (!sb) return;
+
+    try {
+      var query = sb.from('driver_orders').select('id').limit(1);
+      if (term.startsWith('#')) {
+        var num = parseInt(term.replace('#', ''));
+        if (!isNaN(num)) query = query.eq('order_number', num);
+      } else {
+        var safeTerm = term.replace(/%/g, '\\%').replace(/_/g, '\\_');
+        query = query.or('business_name.ilike.%' + safeTerm + '%,driver_ref.ilike.%' + safeTerm + '%');
+      }
+
+      var { data, error } = await query;
+      if (error || !data || data.length === 0) {
+        staffToast(staffLang === 'es' ? 'Pedido no encontrado' : 'Order not found', 'error');
+        return;
+      }
+      addStaffCompilerOrderById(data[0].id);
+    } catch(e) {
+      console.error(e);
+    }
+  }
+  window.executeStaffCompilerSearch = executeStaffCompilerSearch;
+
+  function toggleStaffCompilerPrices() {
+    var toggle = document.getElementById('staff-compiler-price-toggle');
+    staffCompilerPriceToggle = toggle ? toggle.checked : true;
+    
+    document.querySelectorAll('.staff-compiler-price-dependent').forEach(function(el) {
+      el.style.display = staffCompilerPriceToggle ? '' : 'none';
+    });
+  }
+  window.toggleStaffCompilerPrices = toggleStaffCompilerPrices;
+
+  function renderStaffCompilerView() {
+    var selectedContainer = document.getElementById('staff-compiler-selected-list');
+    var summarySection = document.getElementById('staff-compiler-summary-section');
+    var itemsContainer = document.getElementById('staff-compiler-items-list');
+    var countBadge = document.getElementById('staff-compiler-orders-count-badge');
+    var statCount = document.getElementById('staff-compiler-stat-count');
+    var statQty = document.getElementById('staff-compiler-stat-qty');
+    var statTotal = document.getElementById('staff-compiler-stat-total');
+
+    if (!selectedContainer) return;
+
+    if (countBadge) countBadge.textContent = staffCompilerSelectedOrders.length;
+    if (statCount) statCount.textContent = staffCompilerSelectedOrders.length;
+
+    if (staffCompilerSelectedOrders.length === 0) {
+      selectedContainer.innerHTML = '<div class="saved-empty">' + (staffLang === 'es' ? 'Aún no hay pedidos en la compilación.' : 'No orders in compilation yet.') + '</div>';
+      if (summarySection) summarySection.style.display = 'none';
+      return;
+    }
+
+    // Render chips
+    var html = '';
+    staffCompilerSelectedOrders.forEach(function(order) {
+      var bizName = order.business_name || (staffLang === 'es' ? 'Negocio Sin Nombre' : 'Unnamed Business');
+      var orderNum = order.order_number ? '#' + order.order_number : '';
+      var totalQty = (order.items || []).reduce(function(sum, item) {
+        var qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
+        return sum + qty;
+      }, 0);
+
+      html += `
+        <div class="compiler-order-chip">
+          <span class="compiler-chip-num">${orderNum}</span>
+          <span class="compiler-chip-biz">${_esc(bizName)}</span>
+          <span class="compiler-chip-qty">${totalQty} uds</span>
+          <button class="compiler-chip-remove" onclick="removeStaffCompilerOrder('${order.id}')">✕</button>
+        </div>`;
+    });
+    selectedContainer.innerHTML = html;
+
+    // Summation math
+    var compiled = {};
+    var totalQty = 0;
+    var totalAmount = 0;
+
+    staffCompilerSelectedOrders.forEach(function(order) {
+      (order.items || []).forEach(function(item) {
+        var qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
+        if (qty <= 0) return;
+
+        var key = item.product_key;
+        var price = parseFloat(item.price_at_order || 0);
+
+        if (!compiled[key]) {
+          compiled[key] = {
+            product_key: key,
+            product_label: item.product_label,
+            quantity: 0,
+            originalQuantity: 0,
+            adjustedQuantity: 0,
+            price: price,
+            category: 'Other'
+          };
+          
+          // Lookup category
+          var catLabel = 'Other';
+          if (typeof PRODUCT_CAT !== 'undefined' && PRODUCT_CAT[key]) {
+            catLabel = PRODUCT_CAT[key].en;
+          }
+          compiled[key].category = catLabel;
+        }
+
+        compiled[key].quantity += qty;
+        compiled[key].originalQuantity += item.quantity;
+        if (item.adjusted_quantity !== null && item.adjusted_quantity !== undefined) {
+          compiled[key].adjustedQuantity += item.adjusted_quantity;
+        } else {
+          compiled[key].adjustedQuantity += item.quantity;
+        }
+        totalQty += qty;
+        totalAmount += (qty * price);
+      });
+    });
+
+    if (statQty) statQty.textContent = totalQty.toLocaleString();
+    if (statTotal) statTotal.textContent = staffFormatCurrency(totalAmount);
+
+    var grouped = {};
+    Object.values(compiled).forEach(function(item) {
+      var cat = item.category;
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(item);
+    });
+
+    var sortedCats = Object.keys(grouped).sort(function(a, b) {
+      var ai = CAT_ORDER_EN.indexOf(a);
+      var bi = CAT_ORDER_EN.indexOf(b);
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
+
+    var itemsHtml = '';
+    sortedCats.forEach(function(cat) {
+      var catData = grouped[cat][0];
+      var displayCat = cat;
+      if (staffLang === 'es' && typeof PRODUCT_CAT !== 'undefined' && PRODUCT_CAT[catData.product_key]) {
+        displayCat = PRODUCT_CAT[catData.product_key].es;
+      }
+      
+      itemsHtml += `
+        <div class="compiler-cat-group">
+          <div class="compiler-cat-header">${displayCat}</div>
+          <div>`;
+
+      grouped[cat].forEach(function(item) {
+        var lineTotal = item.quantity * item.price;
+        var highlightAdjusted = item.adjustedQuantity !== item.originalQuantity 
+          ? `<span style="font-size:0.7rem; color:var(--yellow); margin-left:6px;">(${staffLang === 'es' ? 'Ajustado' : 'Adjusted'} ${item.originalQuantity} ➔ ${item.quantity})</span>` 
+          : '';
+
+        itemsHtml += `
+          <div class="compiler-item-row">
+            <span class="compiler-item-name">${_esc(item.product_label)}${highlightAdjusted}</span>
+            <span class="compiler-item-qty">${item.quantity} uds</span>
+            <span class="compiler-item-price staff-compiler-price-dependent" style="display:${staffCompilerPriceToggle ? 'inline' : 'none'};">
+              <span style="margin-right:8px;">@ ${staffFormatCurrency(item.price)}</span>
+              <span class="line-total">${staffFormatCurrency(lineTotal)}</span>
+            </span>
+          </div>`;
+      });
+
+      itemsHtml += `
+          </div>
+        </div>`;
+    });
+
+    if (itemsContainer) itemsContainer.innerHTML = itemsHtml;
+    if (summarySection) summarySection.style.display = 'block';
+    
+    toggleStaffCompilerPrices();
+  }
+  window.renderStaffCompilerView = renderStaffCompilerView;
+
+  function printStaffCompilerSummary() {
+    if (staffCompilerSelectedOrders.length === 0) return;
+
+    var printWindow = window.open('', '_blank');
+    var isEs = staffLang === 'es';
+    
+    var compiled = {};
+    var totalQty = 0;
+    var totalAmount = 0;
+
+    staffCompilerSelectedOrders.forEach(function(order) {
+      (order.items || []).forEach(function(item) {
+        var qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
+        if (qty <= 0) return;
+        var key = item.product_key;
+        var price = parseFloat(item.price_at_order || 0);
+
+        if (!compiled[key]) {
+          compiled[key] = {
+            product_label: item.product_label,
+            quantity: 0,
+            price: price,
+            category: 'Other'
+          };
+          if (typeof PRODUCT_CAT !== 'undefined' && PRODUCT_CAT[key]) {
+            compiled[key].category = PRODUCT_CAT[key].en;
+          }
+        }
+        compiled[key].quantity += qty;
+        totalQty += qty;
+        totalAmount += (qty * price);
+      });
+    });
+
+    var grouped = {};
+    Object.values(compiled).forEach(function(item) {
+      var cat = item.category;
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(item);
+    });
+
+    var sortedCats = Object.keys(grouped).sort(function(a, b) {
+      var ai = CAT_ORDER_EN.indexOf(a);
+      var bi = CAT_ORDER_EN.indexOf(b);
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
+
+    var ordersListHtml = staffCompilerSelectedOrders.map(function(o) {
+      var num = o.order_number ? '#' + o.order_number : '';
+      var biz = o.business_name || '';
+      var driver = getDriverName(o.driver_id);
+      return `<li><strong>${num} ${biz}</strong> (${driver})</li>`;
+    }).join('');
+
+    var itemsHtml = '';
+    sortedCats.forEach(function(cat) {
+      var catData = grouped[cat][0];
+      var displayCat = cat;
+      if (isEs && typeof PRODUCT_CAT !== 'undefined' && PRODUCT_CAT[catData.product_key]) {
+        displayCat = PRODUCT_CAT[catData.product_key].es;
+      }
+      
+      itemsHtml += `
+        <h3>${displayCat}</h3>
+        <table style="width:100%; border-collapse:collapse; margin-bottom:12px;">
+          <thead>
+            <tr style="border-bottom:2px solid #333; text-align:left;">
+              <th style="padding:6px 0;">${isEs ? 'Producto' : 'Product'}</th>
+              <th style="padding:6px 0; text-align:right;">${isEs ? 'Cantidad' : 'Quantity'}</th>
+              ${staffCompilerPriceToggle ? `
+              <th style="padding:6px 0; text-align:right;">${isEs ? 'Precio' : 'Price'}</th>
+              <th style="padding:6px 0; text-align:right;">Total</th>` : ''}
+            </tr>
+          </thead>
+          <tbody>`;
+
+      grouped[cat].forEach(function(item) {
+        itemsHtml += `
+          <tr style="border-bottom:1px solid #ddd;">
+            <td style="padding:6px 0;">${item.product_label}</td>
+            <td style="padding:6px 0; text-align:right; font-weight:bold;">${item.quantity}</td>
+            ${staffCompilerPriceToggle ? `
+            <td style="padding:6px 0; text-align:right;">${staffFormatCurrency(item.price)}</td>
+            <td style="padding:6px 0; text-align:right; font-weight:bold;">${staffFormatCurrency(item.quantity * item.price)}</td>` : ''}
+          </tr>`;
+      });
+
+      itemsHtml += `
+          </tbody>
+        </table>`;
+    });
+
+    var title = isEs ? 'Hoja de Compilación de Carga' : 'Compiled Loading Load Sheet';
+    var subTitle = isEs ? 'Panadería Cecilia — Resumen Compilado de Personal' : 'Cecilia Bakery — Staff Compiled Summary';
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${title}</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; color: #111; }
+            h1 { font-size: 1.6rem; margin-bottom: 6px; }
+            h2 { font-size: 1.1rem; color: #666; margin-top: 0; margin-bottom: 20px; }
+            h3 { font-size: 0.95rem; border-bottom: 2px solid #c8102e; padding-bottom: 4px; margin-top: 24px; color: #c8102e; text-transform: uppercase; }
+            ul { padding-left: 20px; margin-bottom: 20px; }
+            .summary-card { background: #f9f9f9; padding: 14px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; }
+            @media print {
+              body { padding: 0; }
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h1>${title}</h1>
+            <button onclick="window.print()" style="padding:8px 16px; background:#c8102e; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">${isEs ? 'Imprimir' : 'Print'}</button>
+          </div>
+          <h2>${subTitle} (${new Date().toLocaleDateString()})</h2>
+
+          <div class="summary-card">
+            <p style="margin:4px 0;"><strong>${isEs ? 'Pedidos Incluidos:' : 'Included Orders:'}</strong></p>
+            <ul style="margin:6px 0 0 0;">${ordersListHtml}</ul>
+            <p style="margin:10px 0 0 0;"><strong>${isEs ? 'Total de Productos:' : 'Total Pieces:'}</strong> ${totalQty}</p>
+            ${staffCompilerPriceToggle ? `<p style="margin:4px 0 0 0;"><strong>${isEs ? 'Monto Total:' : 'Grand Total:'}</strong> ${staffFormatCurrency(totalAmount)}</p>` : ''}
+          </div>
+
+          ${itemsHtml}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+  window.printStaffCompilerSummary = printStaffCompilerSummary;
+
+  function whatsappShareStaffCompiler() {
+    if (staffCompilerSelectedOrders.length === 0) return;
+
+    var isEs = staffLang === 'es';
+    var compiled = {};
+    var totalQty = 0;
+    var totalAmount = 0;
+
+    staffCompilerSelectedOrders.forEach(function(order) {
+      (order.items || []).forEach(function(item) {
+        var qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
+        if (qty <= 0) return;
+        var key = item.product_key;
+        var price = parseFloat(item.price_at_order || 0);
+
+        if (!compiled[key]) {
+          compiled[key] = {
+            product_label: item.product_label,
+            quantity: 0,
+            price: price,
+            category: 'Other'
+          };
+          if (typeof PRODUCT_CAT !== 'undefined' && PRODUCT_CAT[key]) {
+            compiled[key].category = PRODUCT_CAT[key].en;
+          }
+        }
+        compiled[key].quantity += qty;
+        totalQty += qty;
+        totalAmount += (qty * price);
+      });
+    });
+
+    var grouped = {};
+    Object.values(compiled).forEach(function(item) {
+      var cat = item.category;
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(item);
+    });
+
+    var sortedCats = Object.keys(grouped).sort(function(a, b) {
+      var ai = CAT_ORDER_EN.indexOf(a);
+      var bi = CAT_ORDER_EN.indexOf(b);
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
+
+    var text = `*${isEs ? 'Resumen de Carga (Compilado)' : 'Staff Compiled Loading Load Sheet'}*\n`;
+    text += `_Cecilia Bakery — ${new Date().toLocaleDateString()}_\n\n`;
+    
+    text += `*${isEs ? 'Pedidos Incluidos:' : 'Included Orders:'}*\n`;
+    staffCompilerSelectedOrders.forEach(function(o) {
+      var num = o.order_number ? '#' + o.order_number : '';
+      var biz = o.business_name || '';
+      var driver = getDriverName(o.driver_id);
+      text += `• ${num} ${biz} (${driver})\n`;
+    });
+    text += `\n`;
+
+    sortedCats.forEach(function(cat) {
+      var catData = grouped[cat][0];
+      var displayCat = cat;
+      if (isEs && typeof PRODUCT_CAT !== 'undefined' && PRODUCT_CAT[catData.product_key]) {
+        displayCat = PRODUCT_CAT[catData.product_key].es;
+      }
+      text += `*${displayCat.toUpperCase()}*\n`;
+      grouped[cat].forEach(function(item) {
+        if (staffCompilerPriceToggle) {
+          text += `• ${item.product_label} x${item.quantity} (@ ${staffFormatCurrency(item.price)}) = ${staffFormatCurrency(item.quantity * item.price)}\n`;
+        } else {
+          text += `• ${item.product_label} x${item.quantity}\n`;
+        }
+      });
+      text += `\n`;
+    });
+
+    text += `*${isEs ? 'Total Piezas:' : 'Total Pieces:'}* ${totalQty}\n`;
+    if (staffCompilerPriceToggle) {
+      text += `*${isEs ? 'Monto Total:' : 'Grand Total:'}* ${staffFormatCurrency(totalAmount)}\n`;
+    }
+
+    var encodedText = encodeURIComponent(text);
+    window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+  }
+  window.whatsappShareStaffCompiler = whatsappShareStaffCompiler;
+
     }
   })();
   </script>

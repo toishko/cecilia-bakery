@@ -23,7 +23,7 @@
 - [x] Multi-order support (tabs, add/delete orders)
 - [x] Summary modal (left/right navigation, per-order display)
 - [x] My Orders page (history, payment badges, system order #)
-- [x] 30-min edit window (edit + add new orders)
+- [x] 24-hr edit window (edit + add new orders)
 - [x] EN/ES + light/dark theme
 - [x] In-app toast notifications (replaced browser alerts)
 - [x] Verified

@@ -10115,7 +10115,10 @@ function _noInitTimePicker(initialVal, cb) {
    ORDER COMPILER MODULE
    ═══════════════════════════════════ */
 let compilerSelectedOrders = [];
+let compilerActiveDriverOrders = []; // Cache recent orders for selected driver
 let compilerPriceToggle = true;
+let compilerFilter = 'all';
+let compilerSort = 'date-desc';
 
 async function initOrderCompiler() {
   const select = document.getElementById('compiler-driver-select');
@@ -10146,6 +10149,63 @@ async function initOrderCompiler() {
       html += `<option value="${d.id}">${_esc(d.name)} (${_esc(d.code)})</option>`;
     });
     select.innerHTML = html;
+  }
+
+  // Driver select change event
+  const driverSelect = document.getElementById('compiler-driver-select');
+  if (driverSelect && !driverSelect._hasChangeList) {
+    driverSelect.addEventListener('change', (e) => {
+      const driverId = e.target.value;
+      if (driverId) {
+        loadDriverCompilerChecklist(driverId);
+      } else {
+        const wrap = document.getElementById('compiler-recent-orders-wrap');
+        if (wrap) wrap.style.display = 'none';
+        compilerSelectedOrders = [];
+        renderCompilerView();
+      }
+    });
+    driverSelect._hasChangeList = true;
+  }
+
+  // Date select change event
+  if (dateInput && !dateInput._hasChangeListener) {
+    dateInput.addEventListener('change', (e) => {
+      const selectedDate = e.target.value;
+      
+      // Auto-check orders matching the new selected date in our active cache
+      compilerSelectedOrders = compilerActiveDriverOrders.filter(order => order.pickup_date === selectedDate);
+      
+      renderCompilerChecklist();
+      renderCompilerView();
+    });
+    dateInput._hasChangeListener = true;
+  }
+
+  // Filter tabs click
+  const filterTabs = document.getElementById('compiler-filter-tabs');
+  if (filterTabs && !filterTabs._hasListener) {
+    filterTabs.addEventListener('click', (e) => {
+      const btn = e.target.closest('.queue-filter-pill');
+      if (!btn) return;
+      
+      filterTabs.querySelectorAll('.queue-filter-pill').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      
+      compilerFilter = btn.dataset.compilerFilter;
+      renderCompilerChecklist();
+    });
+    filterTabs._hasListener = true;
+  }
+
+  // Sort select change
+  const sortSelect = document.getElementById('compiler-sort-select');
+  if (sortSelect && !sortSelect._hasListener) {
+    sortSelect.addEventListener('change', (e) => {
+      compilerSort = e.target.value;
+      renderCompilerChecklist();
+    });
+    sortSelect._hasListener = true;
   }
 
   // Event Listeners (ensure we only attach once)
@@ -10195,6 +10255,138 @@ async function initOrderCompiler() {
 }
 window.initOrderCompiler = initOrderCompiler;
 
+async function loadDriverCompilerChecklist(driverId) {
+  const wrap = document.getElementById('compiler-recent-orders-wrap');
+  if (!wrap) return;
+
+  try {
+    const { data, error } = await sb
+      .from('driver_orders')
+      .select('*, items:driver_order_items(*)')
+      .eq('driver_id', driverId)
+      .order('pickup_date', { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+
+    compilerActiveDriverOrders = data || [];
+
+    if (compilerActiveDriverOrders.length === 0) {
+      wrap.style.display = 'none';
+      document.getElementById('compiler-recent-orders-list').innerHTML = '';
+      return;
+    }
+
+    const currentDate = document.getElementById('compiler-date-input')?.value || getTodayStr();
+    // Auto-select matching current date initially
+    compilerSelectedOrders = compilerActiveDriverOrders.filter(order => order.pickup_date === currentDate);
+
+    // Render the interactive checklist
+    renderCompilerChecklist();
+    
+    // Render the summary loading sheet
+    renderCompilerView();
+  } catch (e) {
+    console.error('Error loading compiler checklist:', e);
+    wrap.style.display = 'none';
+  }
+}
+window.loadDriverCompilerChecklist = loadDriverCompilerChecklist;
+
+function renderCompilerChecklist() {
+  const listContainer = document.getElementById('compiler-recent-orders-list');
+  const wrap = document.getElementById('compiler-recent-orders-wrap');
+  if (!listContainer || !wrap || compilerActiveDriverOrders.length === 0) return;
+
+  // 1. Filter
+  let filtered = [...compilerActiveDriverOrders];
+  if (compilerFilter === 'unpaid') {
+    filtered = filtered.filter(order => order.payment_status === 'not_paid' || order.payment_status === 'partial');
+  } else if (compilerFilter === 'paid') {
+    filtered = filtered.filter(order => order.payment_status === 'paid');
+  }
+
+  // 2. Sort
+  filtered.sort((a, b) => {
+    if (compilerSort === 'date-desc') {
+      return new Date(b.pickup_date || 0) - new Date(a.pickup_date || 0);
+    } else if (compilerSort === 'date-asc') {
+      return new Date(a.pickup_date || 0) - new Date(b.pickup_date || 0);
+    } else if (compilerSort === 'biz-asc') {
+      return (a.business_name || '').localeCompare(b.business_name || '');
+    } else if (compilerSort === 'pieces-desc') {
+      const qtyA = (a.items || []).reduce((sum, item) => sum + (item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity), 0);
+      const qtyB = (b.items || []).reduce((sum, item) => sum + (item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity), 0);
+      return qtyB - qtyA;
+    }
+    return 0;
+  });
+
+  if (filtered.length === 0) {
+    listContainer.innerHTML = `<div style="padding:16px; font-size:0.85rem; color:var(--tx-muted); text-align:center;">${lang === 'es' ? 'No se encontraron pedidos con este filtro' : 'No orders found matching this filter'}</div>`;
+    wrap.style.display = 'block';
+    return;
+  }
+
+  let html = '';
+  filtered.forEach(order => {
+    const orderNum = order.order_number ? `#${order.order_number}` : '';
+    const biz = order.business_name || (lang === 'es' ? 'Negocio Sin Nombre' : 'Unnamed Business');
+    const date = order.pickup_date || '';
+    const ref = order.driver_ref ? ` · Ref: ${order.driver_ref}` : '';
+    
+    const totalQty = (order.items || []).reduce((sum, item) => {
+      const qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
+      return sum + qty;
+    }, 0);
+
+    const isSelected = compilerSelectedOrders.some(o => o.id === order.id);
+    const isChecked = isSelected ? 'checked' : '';
+
+    // Badge classes
+    const isPaid = order.payment_status === 'paid';
+    const payBadgeClass = isPaid ? 'compiler-badge paid' : 'compiler-badge unpaid';
+    const payBadgeText = isPaid ? (lang === 'es' ? 'Pagado' : 'Paid') : (lang === 'es' ? 'Deuda' : 'Unpaid');
+
+    const isConfirmed = order.status === 'confirmed';
+    const statusBadgeClass = isConfirmed ? 'compiler-badge confirmed' : 'compiler-badge pending';
+    const statusBadgeText = isConfirmed ? (lang === 'es' ? 'Confirmado' : 'Confirmed') : (lang === 'es' ? 'Pendiente' : 'Pending');
+
+    const rowClass = isSelected ? 'compiler-row-flat selected' : 'compiler-row-flat';
+
+    html += `
+      <label class="${rowClass}">
+        <span class="compiler-custom-chk">
+          <input type="checkbox" class="compiler-order-chk" data-id="${order.id}" ${isChecked} onchange="syncCompilerChecklistSelection()" />
+          <span class="chk-box"></span>
+        </span>
+        <span class="compiler-row-name">${orderNum} — ${_esc(biz)}</span>
+        <span class="compiler-row-badges">
+          <span class="${payBadgeClass}">${payBadgeText}</span>
+          <span class="${statusBadgeClass}">${statusBadgeText}</span>
+        </span>
+        <span class="compiler-row-meta">${date}${_esc(ref)}</span>
+        <span class="compiler-row-qty">${totalQty} ${_esc(lang === 'es' ? 'uds' : 'pcs')}</span>
+      </label>`;
+  });
+
+  listContainer.innerHTML = html;
+  wrap.style.display = 'block';
+}
+window.renderCompilerChecklist = renderCompilerChecklist;
+
+function syncCompilerChecklistSelection() {
+  const checkedIds = Array.from(document.querySelectorAll('.compiler-order-chk:checked')).map(el => el.dataset.id);
+  
+  // We want to combine the checked active driver orders with any manually searched and appended ones that aren't in active list
+  const activeChecked = compilerActiveDriverOrders.filter(order => checkedIds.includes(order.id));
+  const searchAppended = compilerSelectedOrders.filter(order => !compilerActiveDriverOrders.some(ao => ao.id === order.id));
+  
+  compilerSelectedOrders = [...activeChecked, ...searchAppended];
+  renderCompilerView();
+}
+window.syncCompilerChecklistSelection = syncCompilerChecklistSelection;
+
 async function loadCompilerDay() {
   const driverId = document.getElementById('compiler-driver-select')?.value;
   const date = document.getElementById('compiler-date-input')?.value;
@@ -10204,45 +10396,8 @@ async function loadCompilerDay() {
     return;
   }
 
-  try {
-    showToast(lang === 'es' ? 'Cargando pedidos...' : 'Loading orders...', 'info', 1000);
-    // Fetch orders for this driver on this day
-    const { data: orders, error } = await sb
-      .from('driver_orders')
-      .select('*')
-      .eq('driver_id', driverId)
-      .eq('pickup_date', date);
-
-    if (error) throw error;
-
-    if (!orders || orders.length === 0) {
-      showToast(lang === 'es' ? 'No se encontraron pedidos' : 'No orders found', 'warning');
-      compilerSelectedOrders = [];
-      renderCompilerView();
-      return;
-    }
-
-    // Fetch items for each order
-    const populatedOrders = [];
-    for (const order of orders) {
-      const { data: items, error: itemsErr } = await sb
-        .from('driver_order_items')
-        .select('*')
-        .eq('order_id', order.id);
-
-      if (!itemsErr && items) {
-        order.items = items;
-        populatedOrders.push(order);
-      }
-    }
-
-    compilerSelectedOrders = populatedOrders;
-    showToast(lang === 'es' ? `${orders.length} pedidos compilados` : `${orders.length} orders compiled`, 'success');
-    renderCompilerView();
-  } catch (e) {
-    console.error('Compiler auto-compile error:', e);
-    showToast(lang === 'es' ? 'Error al compilar' : 'Compilation error', 'error');
-  }
+  showToast(lang === 'es' ? 'Cargando pedidos...' : 'Loading orders...', 'info', 1000);
+  await loadDriverCompilerChecklist(driverId);
 }
 window.loadCompilerDay = loadCompilerDay;
 
@@ -10385,24 +10540,22 @@ function renderCompilerView() {
     return;
   }
 
-  // Render selected order cards
+  // Render selected order chips
   let selectedHtml = '';
   compilerSelectedOrders.forEach(order => {
-    const driverName = getDriverName(order.driver_id);
     const bizName = order.business_name || (lang === 'es' ? 'Negocio Sin Nombre' : 'Unnamed Business');
     const orderNum = order.order_number ? `#${order.order_number}` : '';
-    const initials = _getInitials(driverName) || '??';
-    const ref = order.driver_ref ? `#${order.driver_ref}` : '';
-    const date = order.pickup_date || '';
+    const totalQty = (order.items || []).reduce((sum, item) => {
+      const qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
+      return sum + qty;
+    }, 0);
 
     selectedHtml += `
-      <div class="order-card-avatar" style="padding:12px; border-radius:14px; position:relative; background:var(--bg-card); border:1px solid var(--bd);">
-        <div class="oca-avatar">${initials}</div>
-        <div class="oca-body">
-          <div class="oca-name" style="font-size:0.9rem;">${_esc(bizName)}</div>
-          <div class="oca-time" style="font-size:0.75rem;">${orderNum} · ${date} ${ref ? '· ' + _esc(ref) : ''}</div>
-        </div>
-        <button onclick="removeCompilerOrder('${order.id}')" style="position:absolute; top:12px; right:12px; background:none; border:none; cursor:pointer; color:var(--tx-muted); font-size:1rem; padding:4px;">✕</button>
+      <div class="compiler-order-chip">
+        <span class="compiler-chip-num">${orderNum}</span>
+        <span class="compiler-chip-biz">${_esc(bizName)}</span>
+        <span class="compiler-chip-qty">${totalQty} ${_esc(lang === 'es' ? 'uds' : 'pcs')}</span>
+        <button class="compiler-chip-remove" onclick="removeCompilerOrder('${order.id}')">✕</button>
       </div>`;
   });
   selectedContainer.innerHTML = selectedHtml;
@@ -10467,9 +10620,9 @@ function renderCompilerView() {
   sortedCats.forEach(cat => {
     const displayCat = lang === 'es' && PRODUCT_CAT[grouped[cat][0].product_key] ? PRODUCT_CAT[grouped[cat][0].product_key].es : cat;
     itemsHtml += `
-      <div style="margin-bottom:16px;">
-        <div style="font-size:0.75rem; font-weight:800; color:var(--red); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px; border-bottom:1px solid var(--bd); padding-bottom:4px;">${displayCat}</div>
-        <div style="display:flex; flex-direction:column; gap:6px;">`;
+      <div class="compiler-cat-group">
+        <div class="compiler-cat-header">${displayCat}</div>
+        <div>`;
 
     grouped[cat].forEach(item => {
       const lineTotal = item.quantity * item.price;
@@ -10478,15 +10631,13 @@ function renderCompilerView() {
         : '';
 
       itemsHtml += `
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem; padding:4px 0;">
-          <div style="color:var(--tx);">${_esc(item.product_label)}${highlightAdjusted}</div>
-          <div style="display:flex; align-items:center; gap:24px;">
-            <div style="font-weight:600; color:var(--tx); min-width:60px; text-align:right;">${item.quantity} ${_esc(lang === 'es' ? 'uds' : 'pcs')}</div>
-            <div class="compiler-price-dependent" style="min-width:140px; text-align:right; color:var(--tx-muted); display:${compilerPriceToggle ? 'block' : 'none'};">
-              <span style="font-size:0.8rem; margin-right:12px;">@ ${formatCurrency(item.price)}</span>
-              <span style="font-weight:600; color:var(--tx);">${formatCurrency(lineTotal)}</span>
-            </div>
-          </div>
+        <div class="compiler-item-row">
+          <span class="compiler-item-name">${_esc(item.product_label)}${highlightAdjusted}</span>
+          <span class="compiler-item-qty">${item.quantity} ${_esc(lang === 'es' ? 'uds' : 'pcs')}</span>
+          <span class="compiler-item-price compiler-price-dependent" style="display:${compilerPriceToggle ? 'inline' : 'none'};">
+            <span style="margin-right:10px;">@ ${formatCurrency(item.price)}</span>
+            <span class="line-total">${formatCurrency(lineTotal)}</span>
+          </span>
         </div>`;
     });
 

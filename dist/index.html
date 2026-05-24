@@ -3,15 +3,29 @@
 
 <head>
   <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon-BpSHa_mf.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32-BDwECeW8.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon-BmFFWq1i.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Cecilia Bakery — Los Mejores Bizcochos Dominicanos</title>
+  <title>Cecilia Bakery | Best Dominican Cakes in West New York, NJ</title>
+  <meta name="description" content="Cecilia Bakery — West New York's best Dominican bakery. Fresh tres leches, birthday cakes, square cakes, and more. Order online or visit us at 6101 Park Ave, West New York, NJ.">
   <link rel="manifest" href="/assets/manifest-website-WBBbkk13.json">
   <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0E0507" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Cecilia">
-  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://ceciliabakery.com">
+  <meta property="og:title" content="Cecilia Bakery | Best Dominican Cakes in West New York, NJ">
+  <meta property="og:description" content="West New York's best Dominican bakery. Fresh tres leches, birthday cakes, square cakes and more. Order online for pickup.">
+  <meta property="og:image" content="https://ceciliabakery.com/assets/icon-512.png">
+  <meta property="og:site_name" content="Cecilia Bakery">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Cecilia Bakery | Best Dominican Cakes in West New York, NJ">
+  <meta name="twitter:description" content="West New York's best Dominican bakery. Fresh tres leches, birthday cakes, square cakes and more. Order online for pickup.">
+  <meta name="twitter:image" content="https://ceciliabakery.com/assets/icon-512.png">
+  <link rel="canonical" href="https://ceciliabakery.com/">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" as="style">
@@ -814,6 +828,96 @@
       padding-bottom: 170px;
     }
 
+    /* ── DELIVERY SECTION ── */
+    .delivery-section {
+      padding: 60px 24px;
+      background: var(--bg-surface);
+      overflow: hidden;
+    }
+    .delivery-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      text-align: center;
+      gap: 48px;
+    }
+    .delivery-text {
+      flex: 1;
+      min-width: 280px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .delivery-badge {
+      display: inline-block;
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--red);
+      background: rgba(200, 16, 46, .08);
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+    .delivery-heading {
+      font-family: var(--f-display, 'Playfair Display', serif);
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 700;
+      color: var(--tx);
+      line-height: 1.2;
+      margin: 0 0 14px;
+    }
+    .delivery-subtext {
+      font-size: 1rem;
+      color: var(--tx-muted);
+      line-height: 1.6;
+      margin: 0 0 24px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .delivery-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--red);
+      color: #fff;
+      font-size: .95rem;
+      font-weight: 600;
+      padding: 14px 28px;
+      border-radius: 12px;
+      text-decoration: none;
+      transition: background .25s ease, transform .15s ease;
+      box-shadow: 0 4px 16px rgba(200, 16, 46, .25);
+    }
+    .delivery-cta:hover {
+      background: var(--red-dk);
+      transform: translateY(-2px);
+    }
+    .delivery-dd-icon {
+      flex-shrink: 0;
+    }
+    .delivery-image {
+      display: none;
+      flex: 1;
+      max-width: 420px;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .delivery-image img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 16px;
+    }
+    [data-theme="dark"] .delivery-section {
+      background: var(--bg-surface);
+    }
+
     .sec-wholesale {
       clip-path: polygon(0 60px, 100% 0, 100% calc(100% - 60px), 0 100%);
       padding-top: 170px;
@@ -1163,6 +1267,80 @@
       color: rgba(255, 255, 255, .8);
     }
 
+    /* ── Category card skeleton loading ── */
+    .cat-skeleton {
+      background: var(--bg-card);
+      border: 2px solid var(--bd);
+      padding: 40px 36px;
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+    .cat-skeleton.cat-skeleton-featured {
+      grid-column: span 2;
+      background: var(--red);
+      border-color: transparent;
+    }
+    .cat-skeleton-bar {
+      border-radius: 3px;
+      animation: skeletonPulse 1.4s ease-in-out infinite;
+    }
+    .cat-skeleton .cat-skeleton-bar {
+      background: var(--bg-surface);
+    }
+    .cat-skeleton.cat-skeleton-featured .cat-skeleton-bar {
+      background: rgba(255,255,255,.15);
+    }
+    .cat-skeleton-icon {
+      width: 2rem;
+      height: 2rem;
+    }
+    .cat-skeleton-count {
+      width: 70px;
+      height: 18px;
+    }
+    .cat-skeleton-label {
+      width: 100px;
+      height: 12px;
+      margin-bottom: 10px;
+    }
+    .cat-skeleton-name {
+      width: 140px;
+      height: 24px;
+      margin-bottom: 10px;
+    }
+    .cat-skeleton-desc {
+      width: 100%;
+      max-width: 260px;
+      height: 14px;
+      margin-bottom: 6px;
+    }
+    .cat-skeleton-arrow {
+      width: 80px;
+      height: 14px;
+      margin-top: 16px;
+    }
+    .cat-skeleton-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .cat-skeleton-bottom {
+      margin-top: 32px;
+    }
+    @keyframes skeletonPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .4; }
+    }
+    @media(max-width:500px) {
+      .cat-skeleton.cat-skeleton-featured {
+        grid-column: span 1;
+      }
+    }
+
     /* View all CTA row */
     .menu-preview-cta {
       margin-top: 40px;
@@ -1486,6 +1664,27 @@
       color: var(--tx-footer-head);
     }
 
+    .footer-address-link {
+      color: var(--tx-on-footer);
+      text-decoration: none;
+      transition: color 0.2s;
+      display: block;
+      line-height: 1.6;
+    }
+    .footer-address-link:hover {
+      color: #fff;
+    }
+
+    .footer-phone {
+      color: var(--tx-on-footer);
+      text-decoration: none;
+      font-size: 0.9rem;
+      display: block;
+      margin-top: 8px;
+      transition: color 0.2s;
+    }
+    .footer-phone:hover { color: #fff; }
+
     .footer-bottom {
       margin-top: 30px;
       font-size: .76rem;
@@ -1624,6 +1823,127 @@
 
     .d4 {
       transition-delay: .4s
+    }
+
+    /* ════════════════════════════════════════
+   CUSTOM CAKE CONTACT MODAL
+   ════════════════════════════════════════ */
+    .custom-cake-contact-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-overlay);
+      z-index: 1001;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    .custom-cake-contact-overlay.open { display: flex; }
+    .custom-cake-contact-card {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-card);
+      border: 1px solid var(--bd);
+      border-radius: 20px;
+      padding: 40px 28px 32px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+      animation: ccModalIn .3s ease;
+    }
+    @keyframes ccModalIn {
+      from { opacity: 0; transform: scale(.92) translateY(16px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .custom-cake-contact-close {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 28px;
+      color: var(--fg);
+      cursor: pointer;
+      line-height: 1;
+      opacity: .6;
+      transition: opacity .2s;
+    }
+    .custom-cake-contact-close:hover { opacity: 1; }
+    .custom-cake-contact-icon {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 16px;
+      background: var(--red);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .custom-cake-contact-icon .icon {
+      width: 28px;
+      height: 28px;
+      stroke: #fff;
+      color: #fff;
+    }
+    .custom-cake-contact-title {
+      font-family: var(--ff-display);
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin: 0 0 8px;
+      color: var(--fg);
+    }
+    .custom-cake-contact-desc {
+      font-size: .92rem;
+      color: var(--fg-muted);
+      margin: 0 0 24px;
+      line-height: 1.5;
+    }
+    .custom-cake-contact-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .custom-cake-contact-btn {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 20px;
+      border-radius: 14px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: transform .15s, box-shadow .15s;
+      cursor: pointer;
+    }
+    .custom-cake-contact-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,.15);
+    }
+    .custom-cake-contact-btn .icon {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .custom-cake-contact-btn-call {
+      background: var(--red);
+      color: #fff;
+    }
+    .custom-cake-contact-btn-call .icon { stroke: #fff; }
+    .custom-cake-contact-btn-whatsapp {
+      background: #25D366;
+      color: #fff;
+    }
+    .custom-cake-contact-btn-label {
+      display: block;
+      font-size: .95rem;
+      text-align: left;
+    }
+    .custom-cake-contact-btn-number {
+      display: block;
+      font-size: .82rem;
+      opacity: .85;
+      text-align: left;
     }
 
     /* ════════════════════════════════════════
@@ -2115,6 +2435,27 @@
     }
 
     /* ═══════════════════════════════════════
+   ACCOUNT ICON IN NAV
+═══════════════════════════════════════ */
+    .nav-account-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(200,16,46,0.08);
+      color: var(--red);
+      text-decoration: none;
+      transition: background 0.2s;
+      flex-shrink: 0;
+      margin-right: 8px;
+    }
+    .nav-account-btn:hover {
+      background: rgba(200,16,46,0.15);
+    }
+
+/* ═══════════════════════════════════════
    CART ICON IN NAV
 ═══════════════════════════════════════ */
     .cart-nav-btn {
@@ -3546,6 +3887,46 @@
       }
     }
   </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Bakery",
+    "name": "Cecilia Bakery",
+    "description": "West New York's best Dominican bakery. Fresh tres leches, birthday cakes, square cakes and more.",
+    "url": "https://ceciliabakery.com",
+    "telephone": "+12018697633",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "6101 Park Ave",
+      "addressLocality": "West New York",
+      "addressRegion": "NJ",
+      "postalCode": "07093",
+      "addressCountry": "US"
+    },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": "40.7857",
+      "longitude": "-74.0143"
+    },
+    "openingHoursSpecification": {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": [
+        "Monday","Tuesday","Wednesday",
+        "Thursday","Friday","Saturday","Sunday"
+      ],
+      "opens": "08:30",
+      "closes": "17:00"
+    },
+    "servesCuisine": "Dominican",
+    "priceRange": "$$",
+    "image": "https://ceciliabakery.com/assets/icon-512.png",
+    "sameAs": [
+      "https://www.facebook.com/ReposteriaCeciliaBakery/",
+      "https://instagram.com/ceciliabakerynj",
+      "https://www.doordash.com/store/cecilia-bakery-west-new-york-1330281/1890116/"
+    ]
+  }
+  </script>
   <script type="module" crossorigin src="/assets/speed-insights-BO5mr9gH.js"></script>
 </head>
 
@@ -3567,6 +3948,12 @@
         <span></span><span></span><span></span>
       </button>
       <div class="nav-sep"></div>
+      <a href="/account" class="nav-account-btn" aria-label="My Account">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      </a>
       <button class="cart-nav-btn" onclick="openCart()" aria-label="View cart">
         <span class="cart-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -3584,12 +3971,12 @@
   <div class="mobile-drawer-overlay" id="mobile-drawer-overlay" onclick="closeMobileMenu()"></div>
   <div class="mobile-drawer" id="mobile-drawer">
     <ul class="mobile-drawer-links">
-      <li><a href="index.html" class="active" onclick="closeMobileMenu()" data-en="<i data-lucide='home' class='icon'></i> Home" data-es="<i data-lucide='home' class='icon'></i> Inicio"><i data-lucide='home' class='icon'></i> Home</a></li>
-      <li><a href="menu.html" onclick="closeMobileMenu()" data-en="<i data-lucide='book-open' class='icon'></i> Menu" data-es="<i data-lucide='book-open' class='icon'></i> Menú"><i data-lucide='book-open' class='icon'></i> Menu</a></li>
-      <li><a href="index.html#story" onclick="closeMobileMenu()" data-en="<i data-lucide='heart' class='icon'></i> Our Story" data-es="<i data-lucide='heart' class='icon'></i> Nuestra Historia"><i data-lucide='heart' class='icon'></i> Our Story</a></li>
-      <li><a href="index.html#wholesale" onclick="closeMobileMenu()" data-en="<i data-lucide='store' class='icon'></i> Wholesale" data-es="<i data-lucide='store' class='icon'></i> Mayoreo"><i data-lucide='store' class='icon'></i> Wholesale</a></li>
+      <li><a href="/" class="active" onclick="closeMobileMenu()" data-en="<i data-lucide='home' class='icon'></i> Home" data-es="<i data-lucide='home' class='icon'></i> Inicio"><i data-lucide='home' class='icon'></i> Home</a></li>
+      <li><a href="/menu" onclick="closeMobileMenu()" data-en="<i data-lucide='book-open' class='icon'></i> Menu" data-es="<i data-lucide='book-open' class='icon'></i> Menú"><i data-lucide='book-open' class='icon'></i> Menu</a></li>
+      <li><a href="/#story" onclick="closeMobileMenu()" data-en="<i data-lucide='heart' class='icon'></i> Our Story" data-es="<i data-lucide='heart' class='icon'></i> Nuestra Historia"><i data-lucide='heart' class='icon'></i> Our Story</a></li>
+      <li><a href="/#wholesale" onclick="closeMobileMenu()" data-en="<i data-lucide='store' class='icon'></i> Wholesale" data-es="<i data-lucide='store' class='icon'></i> Mayoreo"><i data-lucide='store' class='icon'></i> Wholesale</a></li>
 
-      <li><a href="index.html#experience" onclick="closeMobileMenu()" data-en="<i data-lucide='cake' class='icon'></i> Order a Custom Cake" data-es="<i data-lucide='cake' class='icon'></i> Ordenar un Bizcocho"><i data-lucide='cake' class='icon'></i> Order a Custom Cake</a></li>
+      <li><a href="/#experience" onclick="closeMobileMenu()" data-en="<i data-lucide='cake' class='icon'></i> Order a Custom Cake" data-es="<i data-lucide='cake' class='icon'></i> Ordenar un Bizcocho"><i data-lucide='cake' class='icon'></i> Order a Custom Cake</a></li>
 
     </ul>
     <div class="mobile-drawer-controls">
@@ -3622,8 +4009,8 @@
     </p>
 
     <div class="hero-actions">
-      <a href="menu.html" class="btn btn-red" data-en="See the Menu" data-es="Ver el Menú">See the Menu</a>
-      <button class="btn btn-ghost" onclick="openChat()" data-en="Custom Cake Order"
+      <a href="/menu" class="btn btn-red" data-en="See the Menu" data-es="Ver el Menú">See the Menu</a>
+      <button class="btn btn-ghost" onclick="openCustomCakeContact()" data-en="Custom Cake Order"
         data-es="Ordenar un Bizcocho">Custom Cake Order</button>
     </div>
 
@@ -3642,7 +4029,7 @@
 
   <!-- ── TICKER ── -->
   <div class="ticker" aria-hidden="true">
-    <div class="ticker-inner">
+    <div class="ticker-inner" id="product-ticker-inner">
       <span class="ti">Tres Leches<span class="ti-dot"> ·</span></span>
       <span class="ti">Tres Leche Piña<span class="ti-dot"> ·</span></span>
       <span class="ti">Cuatro Leche<span class="ti-dot"> ·</span></span>
@@ -3772,99 +4159,74 @@
       </p>
     </div>
 
-    <div class="cat-preview-grid">
+    <div class="cat-preview-grid" id="cat-preview-grid">
 
-      <!-- Tres Leches — featured, spans 2 cols -->
-      <a href="menu.html#tres-leches" class="cat-card cat-featured reveal">
-        <div class="cat-card-top">
-          <span class="cat-emoji"><i data-lucide="star" class="icon"></i></span>
-          <span class="cat-count" data-en="5 flavors" data-es="5 sabores">5 flavors</span>
+      <!-- Skeleton loading state (shown while fetching from Supabase) -->
+      <div class="cat-skeleton cat-skeleton-featured" id="cat-skeleton-0">
+        <div class="cat-skeleton-top">
+          <div class="cat-skeleton-bar cat-skeleton-icon"></div>
+          <div class="cat-skeleton-bar cat-skeleton-count"></div>
         </div>
-        <div class="cat-card-bottom">
-          <div class="cat-label" data-en="Our Signature" data-es="Nuestra Firma">Our Signature</div>
-          <div class="cat-name">Tres Leches</div>
-          <p class="cat-desc"
-            data-en="The cake that started it all. Soaked in three milks, impossibly moist, unmistakably ours."
-            data-es="El bizcocho que lo comenzó todo. Empapado en tres leches, increíblemente húmedo, inconfundiblemente nuestro.">
-            The cake that started it all. Soaked in three milks, impossibly moist, unmistakably ours.
-          </p>
-          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        <div class="cat-skeleton-bottom">
+          <div class="cat-skeleton-bar cat-skeleton-label"></div>
+          <div class="cat-skeleton-bar cat-skeleton-name"></div>
+          <div class="cat-skeleton-bar cat-skeleton-desc"></div>
+          <div class="cat-skeleton-bar cat-skeleton-arrow"></div>
         </div>
-      </a>
-
-      <!-- Birthday Cakes -->
-      <a href="menu.html#birthday" class="cat-card reveal d1">
-        <div class="cat-card-top">
-          <span class="cat-emoji"><i data-lucide="cake" class="icon"></i></span>
-          <span class="cat-count" data-en="5 flavors · 2 sizes" data-es="5 sabores · 2 tamaños">5 flavors · 2
-            sizes</span>
+      </div>
+      <div class="cat-skeleton" id="cat-skeleton-1">
+        <div class="cat-skeleton-top">
+          <div class="cat-skeleton-bar cat-skeleton-icon"></div>
+          <div class="cat-skeleton-bar cat-skeleton-count"></div>
         </div>
-        <div class="cat-card-bottom">
-          <div class="cat-label" data-en="Celebration Cakes" data-es="Bizcochos de Celebración">Celebration Cakes</div>
-          <div class="cat-name" data-en="Birthday Cakes" data-es="Cumpleaños">Birthday Cakes</div>
-          <p class="cat-desc" data-en="Custom cakes for every celebration. Big or small, with your message."
-            data-es="Bizcochos personalizados para cada celebración. Grande o pequeño, con tu mensaje.">
-            Custom cakes for every celebration. Big or small, with your message.
-          </p>
-          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        <div class="cat-skeleton-bottom">
+          <div class="cat-skeleton-bar cat-skeleton-label"></div>
+          <div class="cat-skeleton-bar cat-skeleton-name"></div>
+          <div class="cat-skeleton-bar cat-skeleton-desc"></div>
+          <div class="cat-skeleton-bar cat-skeleton-arrow"></div>
         </div>
-      </a>
-
-      <!-- Square Cakes -->
-      <a href="menu.html#square" class="cat-card reveal d2">
-        <div class="cat-card-top">
-          <span class="cat-emoji"><i data-lucide="square" class="icon"></i></span>
-          <span class="cat-count" data-en="4 options" data-es="4 opciones">4 options</span>
+      </div>
+      <div class="cat-skeleton" id="cat-skeleton-2">
+        <div class="cat-skeleton-top">
+          <div class="cat-skeleton-bar cat-skeleton-icon"></div>
+          <div class="cat-skeleton-bar cat-skeleton-count"></div>
         </div>
-        <div class="cat-card-bottom">
-          <div class="cat-label" data-en="Dominican Classics" data-es="Clásicos Dominicanos">Dominican Classics</div>
-          <div class="cat-name" data-en="Square Cakes" data-es="Cuadrados">Square Cakes</div>
-          <p class="cat-desc" data-en="Pudin, Maiz, Plain, and Raisin — baked fresh daily."
-            data-es="Pudin, Maiz, Plain y Pasas — horneados frescos cada día.">
-            Pudin, Maiz, Plain, and Raisin — baked fresh daily.
-          </p>
-          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        <div class="cat-skeleton-bottom">
+          <div class="cat-skeleton-bar cat-skeleton-label"></div>
+          <div class="cat-skeleton-bar cat-skeleton-name"></div>
+          <div class="cat-skeleton-bar cat-skeleton-desc"></div>
+          <div class="cat-skeleton-bar cat-skeleton-arrow"></div>
         </div>
-      </a>
-
-      <!-- Piezas -->
-      <a href="menu.html#piezas" class="cat-card reveal d1">
-        <div class="cat-card-top">
-          <span class="cat-emoji"><i data-lucide='cake-slice' class='icon'></i></span>
-          <span class="cat-count" data-en="11 options" data-es="11 opciones">11 options</span>
+      </div>
+      <div class="cat-skeleton" id="cat-skeleton-3">
+        <div class="cat-skeleton-top">
+          <div class="cat-skeleton-bar cat-skeleton-icon"></div>
+          <div class="cat-skeleton-bar cat-skeleton-count"></div>
         </div>
-        <div class="cat-card-bottom">
-          <div class="cat-label" data-en="By the Slice" data-es="Por Pieza">By the Slice</div>
-          <div class="cat-name" data-en="Slices" data-es="Piezas">Slices</div>
-          <p class="cat-desc" data-en="Red Velvet, Cheesecake, Chocoflan, Crema Guava, and more — individual slices."
-            data-es="Red Velvet, Cheesecake, Chocoflan, Crema Guava y más — piezas individuales.">
-            Red Velvet, Cheesecake, Chocoflan, Crema Guava, and more — individual slices.
-          </p>
-          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        <div class="cat-skeleton-bottom">
+          <div class="cat-skeleton-bar cat-skeleton-label"></div>
+          <div class="cat-skeleton-bar cat-skeleton-name"></div>
+          <div class="cat-skeleton-bar cat-skeleton-desc"></div>
+          <div class="cat-skeleton-bar cat-skeleton-arrow"></div>
         </div>
-      </a>
-
-      <!-- Basos -->
-      <a href="menu.html#basos" class="cat-card reveal d2">
-        <div class="cat-card-top">
-          <span class="cat-emoji"><i data-lucide='cup-soda' class='icon'></i></span>
-          <span class="cat-count" data-en="3 flavors" data-es="3 sabores">3 flavors</span>
+      </div>
+      <div class="cat-skeleton" id="cat-skeleton-4">
+        <div class="cat-skeleton-top">
+          <div class="cat-skeleton-bar cat-skeleton-icon"></div>
+          <div class="cat-skeleton-bar cat-skeleton-count"></div>
         </div>
-        <div class="cat-card-bottom">
-          <div class="cat-label" data-en="Individual Cups" data-es="Vasos Individuales">Individual Cups</div>
-          <div class="cat-name" data-en="Cups" data-es="Basos">Cups</div>
-          <p class="cat-desc" data-en="Your favorite flavors in a cup. Perfect for events and offices."
-            data-es="Tus sabores favoritos en vaso. Perfecto para eventos y oficinas.">
-            Your favorite flavors in a cup. Perfect for events and offices.
-          </p>
-          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        <div class="cat-skeleton-bottom">
+          <div class="cat-skeleton-bar cat-skeleton-label"></div>
+          <div class="cat-skeleton-bar cat-skeleton-name"></div>
+          <div class="cat-skeleton-bar cat-skeleton-desc"></div>
+          <div class="cat-skeleton-bar cat-skeleton-arrow"></div>
         </div>
-      </a>
+      </div>
 
     </div>
 
     <!-- Custom order strip -->
-    <div class="custom-order-strip reveal" onclick="openChat()">
+    <div class="custom-order-strip reveal" onclick="openCustomCakeContact()">
       <div class="custom-order-strip-left">
         <div class="strip-label" data-en="Something special?" data-es="¿Algo especial?">Something special?</div>
         <div class="strip-title" data-en="Order a Custom Cake" data-es="Pide un Bizcocho Personalizado">Order a Custom
@@ -3874,7 +4236,7 @@
         data-es="Cuéntanos la ocasión, el sabor y el tamaño — nosotros nos encargamos del resto.">
         Tell us the occasion, flavor, and size — we'll take care of the rest.
       </p>
-      <span class="cat-arrow" style="flex-shrink:0" data-en="Chat with us →" data-es="Chatea con nosotros →">Chat with
+      <span class="cat-arrow" style="flex-shrink:0" data-en="Contact us →" data-es="Contáctenos →">Contact
         us →</span>
     </div>
 
@@ -3883,9 +4245,33 @@
         data-es="Explora todo lo que hacemos — todas las categorías en un solo lugar.">
         Browse everything we make — all categories in one place.
       </p>
-      <a href="menu.html" class="btn btn-red" data-en="View Full Menu" data-es="Ver Menú Completo">View Full Menu</a>
+      <a href="/menu" class="btn btn-red" data-en="View Full Menu" data-es="Ver Menú Completo">View Full Menu</a>
     </div>
 
+  </section>
+
+  <!-- ── DELIVERY ── -->
+  <section class="delivery-section" id="delivery">
+    <div class="delivery-inner">
+      <div class="delivery-text">
+        <span class="delivery-badge">DELIVERY</span>
+        <h2 class="delivery-heading">Can't make it in?<br>We'll come to you.</h2>
+        <p class="delivery-subtext">Order your favorite Cecilia Bakery treats delivered straight to your door through DoorDash.</p>
+        <a href="https://www.doordash.com/store/cecilia-bakery-west-new-york-1330281/1890116/?pickup=false"
+           target="_blank" rel="noopener noreferrer" class="delivery-cta">
+          <svg class="delivery-dd-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+            <path d="M23.07 9.38c-2.09-2.08-4.98-3.38-8.2-3.38H.58C.26 6 0 6.25 0 6.56c0 4.7 1.88 8.92 4.89 11.93A16.5 16.5 0 0 0 12.17 22c3.22 0 6.11-1.3 8.2-3.38a11.7 11.7 0 0 0 3.47-8.31c0-0.1-.04-.2-.08-.28a.56.56 0 0 0-.15-.2c-.12-.14-.3-.27-.54-.45zm-8.2 8.25a7.14 7.14 0 0 1-5.1-2.12A7.14 7.14 0 0 1 7.65 10.4h7.22c1.37 0 2.6.56 3.5 1.46a4.94 4.94 0 0 1 0 6.98 4.9 4.9 0 0 1-3.5 1.46v-.67z"/>
+          </svg>
+          Order on DoorDash
+        </a>
+      </div>
+      <div class="delivery-image">
+        <img src="https://dykztphptnytbihpavpa.supabase.co/storage/v1/object/public/product-images/82dddf5f-8b09-42e9-9c2f-eb5de3b33d3a/1711638352988-4E2DBC64-delivery-hero.png"
+             alt="Cecilia Bakery delivery"
+             onerror="this.style.display='none'"
+             loading="lazy">
+      </div>
+    </div>
   </section>
 
   <!-- ── WHOLESALE ── -->
@@ -3906,7 +4292,7 @@
           We supply supermarkets, restaurants, grocery stores, and more across the region — delivering fresh Dominican
           cakes on a consistent schedule. If you sell food people love, let's talk.
         </p>
-        <a href="#experience" class="btn btn-red reveal d3" data-en="Become a Partner"
+        <a href="/wholesale" class="btn btn-red reveal d3" data-en="Become a Partner"
           data-es="Conviértete en Socio">Become a Partner</a>
       </div>
       <div class="ws-grid reveal d2">
@@ -3958,8 +4344,8 @@
         Place a custom order, chat with us directly, or call — we're here for you.
       </p>
       <div class="exp-actions">
-        <button class="btn btn-white" onclick="openChat()" data-en="<i data-lucide='message-circle' class='icon'></i> Chat & Order Now"
-          data-es="<i data-lucide='message-circle' class='icon'></i> Chatea y Ordena"><i data-lucide='message-circle' class='icon'></i> Chat & Order Now</button>
+        <button class="btn btn-white" onclick="openCustomCakeContact()" data-en="<i data-lucide='cake' class='icon'></i> Custom Cake Order"
+          data-es="<i data-lucide='cake' class='icon'></i> Ordenar Bizcocho"><i data-lucide='cake' class='icon'></i> Custom Cake Order</button>
         <a href="tel:+12018697633" class="btn btn-outline-white"><i data-lucide='phone' class='icon'></i> (201) 869-7633</a>
       </div>
     </div>
@@ -3979,30 +4365,40 @@
       </div>
       <div class="footer-col">
         <h4 data-en="Menu" data-es="Menú">Menu</h4>
-        <a href="menu.html">Tres Leches</a>
-        <a href="menu.html" data-en="Birthday Cakes" data-es="Cumpleaños">Birthday Cakes</a>
-        <a href="menu.html" data-en="Square Cakes" data-es="Cuadrados">Square Cakes</a>
-        <a href="menu.html" data-en="Slices" data-es="Piezas">Slices</a>
-        <a href="menu.html" data-en="Cups" data-es="Basos">Cups</a>
+        <ul id="footer-menu-links" style="list-style:none;margin:0;padding:0;">
+          <li><a href="/menu" data-en="View Menu" data-es="Ver Menú">View Menu</a></li>
+        </ul>
       </div>
       <div class="footer-col">
         <h4 data-en="Company" data-es="Empresa">Company</h4>
         <a href="#story" data-en="Our Story" data-es="Historia">Our Story</a>
         <a href="#wholesale" data-en="Wholesale" data-es="Mayoreo">Wholesale</a>
         <a href="#experience" data-en="Contact" data-es="Contacto">Contact</a>
-        <a href="https://instagram.com/ceciliabakerynj" target="_blank" rel="noopener">Instagram</a>
       </div>
       <div class="footer-col">
         <h4 data-en="Portals" data-es="Portales">Portals</h4>
-        <a href="driver-order.html" data-en="Driver Portal" data-es="Portal de Conductores">Driver Portal</a>
+        <a href="/driver-order" data-en="Driver Portal" data-es="Portal de Conductores">Driver Portal</a>
+        <a href="/staff" data-en="Staff Login" data-es="Acceso de Personal">Staff Login</a>
+        <a href="/wholesale-portal" data-en="Wholesale Portal" data-es="Portal Mayoreo">Wholesale Portal</a>
+        <a href="/wholesale" data-en="Become a Partner" data-es="Conviértete en Socio">Become a Partner</a>
+      </div>
+      <div class="footer-col">
+        <h4 data-en="Connect" data-es="Conectar">Connect</h4>
+        <a href="https://instagram.com/ceciliabakerynj" target="_blank" rel="noopener" class="footer-col-link">Instagram</a>
+        <a href="https://www.facebook.com/ReposteriaCeciliaBakery/" target="_blank" rel="noopener" class="footer-col-link">Facebook</a>
+        <a href="https://www.doordash.com/store/cecilia-bakery-west-new-york-1330281/1890116/" target="_blank" rel="noopener" class="footer-col-link">Order on DoorDash</a>
+        <a href="https://wa.me/12018697633" target="_blank" rel="noopener" class="footer-col-link">WhatsApp Us</a>
       </div>
       <div class="footer-col">
         <h4 data-en="Visit Us" data-es="Visítanos">Visit Us</h4>
         <address>
-          <span>6101 Park Ave</span>
-          <span>West New York, NJ 07093</span>
-          <span class="footer-hours" data-en="Mon–Sat · 8:30am – 6:00pm" data-es="Lun–Sáb · 8:30am – 6:00pm">Mon–Sat ·
-            8:30am – 6:00pm</span>
+          <a href="https://maps.google.com/?q=6101+Park+Ave,+West+New+York,+NJ+07093"
+             target="_blank" rel="noopener" class="footer-address-link">
+            6101 Park Ave<br>West New York, NJ 07093
+          </a>
+          <a href="tel:+12018697633" class="footer-phone">(201) 869-7633</a>
+          <span class="footer-hours" data-en="Every day · 8:30am – 5:00pm" data-es="Todos los días · 8:30am – 5:00pm">Every day ·
+            8:30am – 5:00pm</span>
         </address>
       </div>
 
@@ -4019,48 +4415,45 @@
       <div class="footer-bottom-center">
         <span class="toisko-credit" data-en='Digital Experience by <a href="https://systems.toisko.com" target="_blank" rel="noopener">Toisko Systems</a>' data-es='Experiencia Digital por <a href="https://systems.toisko.com" target="_blank" rel="noopener">Toisko Systems</a>'>Digital Experience by <a href="https://systems.toisko.com" target="_blank" rel="noopener">Toisko Systems</a></span>
         <div class="footer-legal">
-          <a href="/terms.html">Terms</a>
-          <a href="/privacy.html">Privacy</a>
-          <a href="/refunds.html">Refunds</a>
+          <a href="/terms">Terms</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/refunds">Refunds</a>
         </div>
       </div>
     </div>
   </footer>
 
-  <!-- FAB -->
-  <button class="chat-fab" onclick="openChat()" aria-label="Chat with us" title="Chat & Order">
-    <i data-lucide='message-circle' class='icon'></i><div class="fab-badge">1</div>
-  </button>
-
-  <!-- CHAT -->
-  <div class="chat-overlay" id="chat-overlay" onclick="closeChatOutside(event)">
-    <div class="chat-window">
-      <div class="chat-header">
-        <div class="chat-header-left">
-          <div class="chat-avatar"></div>
+  <!-- CUSTOM CAKE CONTACT MODAL -->
+  <div class="custom-cake-contact-overlay" id="custom-cake-contact-modal" onclick="closeCustomCakeContactOutside(event)">
+    <div class="custom-cake-contact-card">
+      <button class="custom-cake-contact-close" onclick="closeCustomCakeContact()" aria-label="Close">&times;</button>
+      <div class="custom-cake-contact-icon">
+        <i data-lucide="cake" class="icon"></i>
+      </div>
+      <h3 class="custom-cake-contact-title" data-en="Custom Cake Order" data-es="Pedido de Bizcocho Personalizado">Custom Cake Order</h3>
+      <p class="custom-cake-contact-desc" data-en="Tell us the occasion, flavor, size, and any special message — we'll handle the rest."
+        data-es="Cuéntanos la ocasión, el sabor, el tamaño y cualquier mensaje especial — nosotros nos encargamos del resto.">
+        Tell us the occasion, flavor, size, and any special message — we'll handle the rest.
+      </p>
+      <div class="custom-cake-contact-actions">
+        <a href="tel:+12018697633" class="custom-cake-contact-btn custom-cake-contact-btn-call" onclick="closeCustomCakeContact()">
+          <i data-lucide="phone" class="icon"></i>
           <div>
-            <div class="chat-name">Cecilia Bakery</div>
-            <div class="chat-status">
-              <span class="status-dot"></span>
-              <span id="chat-status-text">Online — ready to help</span>
-            </div>
+            <span class="custom-cake-contact-btn-label" data-en="Call Us" data-es="Llámanos">Call Us</span>
+            <span class="custom-cake-contact-btn-number">(201) 869-7633</span>
           </div>
-        </div>
-        <button class="chat-close" onclick="closeChat()">×</button>
-      </div>
-      <div class="call-banner">
-        <span id="call-banner-text">Prefer to speak with someone?</span>
-        <a href="tel:+12018697633"><i data-lucide='phone' class='icon'></i> (201) 869-7633</a>
-      </div>
-      <div class="chat-body" id="chat-body"></div>
-      <div class="quick-replies" id="quick-replies"></div>
-      <div class="chat-footer">
-        <textarea class="chat-input" id="chat-input" rows="1" placeholder="Type your message…"
-          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-        <button class="chat-send" onclick="sendMessage()"><i data-lucide='send' class='icon'></i></button>
+        </a>
+        <a href="https://wa.me/12018697633?text=Hi%21%20I%27d%20like%20to%20order%20a%20custom%20cake." target="_blank" rel="noopener" class="custom-cake-contact-btn custom-cake-contact-btn-whatsapp" onclick="closeCustomCakeContact()">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.611.611l4.458-1.496A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.352 0-4.556-.681-6.426-1.854l-.446-.296-3.107 1.042 1.042-3.107-.296-.446A9.935 9.935 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+          <div>
+            <span class="custom-cake-contact-btn-label" data-en="WhatsApp Us" data-es="Escríbenos por WhatsApp">WhatsApp Us</span>
+            <span class="custom-cake-contact-btn-number">(201) 869-7633</span>
+          </div>
+        </a>
       </div>
     </div>
   </div>
+
 
   <script>
     /* ══════════════════════════════
@@ -4111,8 +4504,7 @@
     ══════════════════════════════ */
     let lang = 'en';
     let theme = 'light';
-    let chatHistory = [];
-    let chatInitialized = false;
+
 
     /* ══════════════════════════════
        I18N STRINGS  (must be before applyTheme)
@@ -4254,101 +4646,19 @@
       });
     });
 
-    /* ══════════════════════════════
-       CHAT
-    ══════════════════════════════ */
-    const SYSTEM_PROMPT = `You are the friendly order assistant at Cecilia Bakery in West New York, NJ. Your name is Ceci. Help customers choose and order cakes. Match the customer's language — if they write in Spanish, respond in Spanish; if English, respond in English.
 
-FULL MENU:
-TRES LECHES (signature): Tres Leche (classic), Tres Leche Piña, Tres Leche Strawberry, Tres Leche Hershey, Cuatro Leche
-BIRTHDAY CAKES (Big & Small): Piña, Guava, Dulce de Leche, Chocolate, Strawberry
-SQUARE CAKES: Pudin, Plain, Raisin, Maiz, Tres Leche, Cuatro Leche
-PIEZAS/SLICES: Red Velvet, Carrot Cake, Cheesecake, Pudin, Piña, Guava, Crema Piña, Crema Guava, Crema Dulce de Leche, Crema Chocolate
-BASOS (cups): Tres Leche, Cuatro Leche, Hershey
-
-Bakery info: Founded by Cecilia, owner is Alejandro Dominguez. 6101 Park Ave, West New York NJ 07093. Phone: (201) 869-7633. Mon–Sat 8:30am–6pm.
-
-Be warm and conversational. Keep replies concise. For custom orders collect: occasion, cake type, flavor, size, custom message, name, and contact number. Summarize the order at the end.`;
-
-    function openChat() {
-      document.getElementById('chat-overlay').classList.add('open');
+    function openCustomCakeContact() {
+      document.getElementById('custom-cake-contact-modal').classList.add('open');
       document.body.style.overflow = 'hidden';
-      const badge = document.querySelector('.fab-badge');
-      if (badge) badge.remove();
     }
-    function closeChat() {
-      document.getElementById('chat-overlay').classList.remove('open');
+    function closeCustomCakeContact() {
+      document.getElementById('custom-cake-contact-modal').classList.remove('open');
       document.body.style.overflow = '';
     }
-    function closeChatOutside(e) {
-      if (e.target === document.getElementById('chat-overlay')) closeChat();
+    function closeCustomCakeContactOutside(e) {
+      if (e.target === document.getElementById('custom-cake-contact-modal')) closeCustomCakeContact();
     }
 
-    const chatBody = () => document.getElementById('chat-body');
-
-    function addBotMsg(text) {
-      const m = document.createElement('div');
-      m.className = 'msg bot'; m.textContent = text;
-      chatBody().appendChild(m); chatBody().scrollTop = 99999;
-    }
-    function addUserMsg(text) {
-      const m = document.createElement('div');
-      m.className = 'msg user'; m.textContent = text;
-      chatBody().appendChild(m); chatBody().scrollTop = 99999;
-    }
-    function showTyping() {
-      const m = document.createElement('div');
-      m.className = 'msg bot typing'; m.id = 'typing';
-      m.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
-      chatBody().appendChild(m); chatBody().scrollTop = 99999;
-    }
-    function removeTyping() { const el = document.getElementById('typing'); if (el) el.remove(); }
-    function showQR(arr) {
-      const qr = document.getElementById('quick-replies'); qr.innerHTML = '';
-      arr.forEach(r => {
-        const b = document.createElement('button');
-        b.className = 'qr'; b.textContent = r;
-        b.onclick = () => { qr.innerHTML = ''; sendText(r); };
-        qr.appendChild(b);
-      });
-    }
-    function clearQR() { document.getElementById('quick-replies').innerHTML = ''; }
-
-    async function sendText(text) {
-      if (!text.trim()) return;
-      clearQR(); addUserMsg(text);
-      chatHistory.push({ role: 'user', content: text });
-      showTyping();
-      try {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-6',
-            max_tokens: 400,
-            system: SYSTEM_PROMPT,
-            messages: chatHistory
-          })
-        });
-        const data = await res.json();
-        removeTyping();
-        const reply = data.content?.[0]?.text || i18n[lang].chatFallback;
-        addBotMsg(reply);
-        chatHistory.push({ role: 'assistant', content: reply });
-      } catch {
-        removeTyping();
-        addBotMsg(i18n[lang].chatOffline);
-      }
-    }
-    async function sendMessage() {
-      const inp = document.getElementById('chat-input');
-      const text = inp.value.trim();
-      if (!text) return;
-      inp.value = ''; autoResize(inp);
-      await sendText(text);
-    }
-    function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
-    function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 100) + 'px'; }
   </script>
 
   <!-- ══ CART OVERLAY + DRAWER ══ -->
@@ -4382,7 +4692,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         <span class="cart-total-label" data-en="Total" data-es="Total">Total</span>
         <span class="cart-total-amount" id="cart-total-amount"></span>
       </div>
-      <button class="cart-checkout-btn" onclick="saveCart(); window.location.href='/checkout.html'">Checkout</button>
+      <button class="cart-checkout-btn" onclick="saveCart(); window.location.href='/checkout'">Checkout</button>
       <p class="cart-checkout-note">We'll confirm your order and arrange pickup after receiving it.</p>
     </div>
   </div>
@@ -4786,7 +5096,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       <div class="cart-empty">
         <div class="cart-empty-icon"></div>
         <p>${t.empty}<br>${t.emptySub}</p>
-        <button class="cart-empty-btn" onclick="closeCart(); if(!window.location.href.includes('menu')) window.location.href='menu.html';">${t.browseMenu}</button>
+        <button class="cart-empty-btn" onclick="closeCart(); if(!window.location.href.includes('menu')) window.location.href='/menu';">${t.browseMenu}</button>
       </div>`;
         footer.style.display = 'none';
         if (scrollForm) scrollForm.style.display = 'none';
@@ -5248,48 +5558,48 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
         }
       }
 
-      // ── Save to Supabase if logged in ──
+      // ── Save to Supabase if logged in via Clerk ──
       let orderId = null;
       const sb = window.__supabase;
-      if (sb) {
+      const clerkUser = window.Clerk?.user;
+      if (sb && clerkUser) {
         try {
-          const { data: sessionData } = await sb.auth.getSession();
-          if (sessionData?.session?.user) {
-            const userId = sessionData.session.user.id;
-            const total = cart.reduce((sum, item) => {
-              const p = parseFloat(item.price || 0);
-              return sum + (p * item.qty);
-            }, 0);
+          const total = cart.reduce((sum, item) => {
+            const p = parseFloat(item.price || 0);
+            return sum + (p * item.qty);
+          }, 0);
 
-            const orderData = {
-              profile_id: userId,
-              role: 'customer',
-              status: 'active',
-              delivery_status: 'pending',
-              payment_method: 'at_pickup',
-              payment_status: 'pending',
-              items: cart.map(i => ({
-                name: i.nameEn || i.name,
-                qty: i.qty,
-                price: parseFloat(i.price || 0),
-                size: i.size || null,
-                tag: i.tagEn || i.tag || '',
-              })),
-              total_amount: total,
-              note: note || null,
-            };
+          const orderData = {
+            clerk_user_id: clerkUser.id,
+            customer_name: name,
+            customer_phone: phone,
+            customer_email: clerkUser.primaryEmailAddress?.emailAddress || null,
+            role: 'customer',
+            status: 'active',
+            delivery_status: 'pending',
+            payment_method: 'at_pickup',
+            payment_status: 'pending',
+            items: cart.map(i => ({
+              name: i.nameEn || i.name,
+              qty: i.qty,
+              price: parseFloat(i.price || 0),
+              size: i.size || null,
+              tag: i.tagEn || i.tag || '',
+            })),
+            total_amount: total,
+            note: note || null,
+          };
 
-            const { data: inserted, error } = await sb
-              .from('orders')
-              .insert(orderData)
-              .select('id')
-              .single();
+          const { data: inserted, error } = await sb
+            .from('orders')
+            .insert(orderData)
+            .select('id')
+            .single();
 
-            if (!error && inserted) {
-              orderId = inserted.id;
-            } else {
-              console.error('Order insert error:', error);
-            }
+          if (!error && inserted) {
+            orderId = inserted.id;
+          } else {
+            console.error('Order insert error:', error);
           }
         } catch (err) {
           console.error('Failed to save order:', err);
@@ -5311,7 +5621,7 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       if (orderId) {
         // Store order ID in sessionStorage for the confirmation page
         sessionStorage.setItem('cecilia_last_order_id', orderId);
-        window.location.href = `order-confirmation.html?id=${orderId.split('-')[0]}`;
+        window.location.href = `/order-confirmation?id=${orderId.split('-')[0]}`;
         // Also open WhatsApp in background
         window.open(waUrl, '_blank');
       } else {
@@ -5423,6 +5733,298 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       });
     }
 
+    /* ── Dynamic Category Showcase Cards ── */
+    function slugify(text) {
+      return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    }
+
+    /* Hardcoded fallback HTML (original cards) */
+    const CAT_FALLBACK_HTML = `
+      <a href="/menu#tres-leches" class="cat-card cat-featured reveal">
+        <div class="cat-card-top">
+          <span class="cat-emoji"><i data-lucide="star" class="icon"></i></span>
+          <span class="cat-count" data-en="5 flavors" data-es="5 sabores">5 flavors</span>
+        </div>
+        <div class="cat-card-bottom">
+          <div class="cat-label" data-en="Our Signature" data-es="Nuestra Firma">Our Signature</div>
+          <div class="cat-name">Tres Leches</div>
+          <p class="cat-desc"
+            data-en="The cake that started it all. Soaked in three milks, impossibly moist, unmistakably ours."
+            data-es="El bizcocho que lo comenzó todo. Empapado en tres leches, increíblemente húmedo, inconfundiblemente nuestro.">
+            The cake that started it all. Soaked in three milks, impossibly moist, unmistakably ours.
+          </p>
+          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        </div>
+      </a>
+      <a href="/menu#birthday" class="cat-card reveal d1">
+        <div class="cat-card-top">
+          <span class="cat-emoji"><i data-lucide="cake" class="icon"></i></span>
+          <span class="cat-count" data-en="5 flavors · 2 sizes" data-es="5 sabores · 2 tamaños">5 flavors · 2 sizes</span>
+        </div>
+        <div class="cat-card-bottom">
+          <div class="cat-label" data-en="Celebration Cakes" data-es="Bizcochos de Celebración">Celebration Cakes</div>
+          <div class="cat-name" data-en="Birthday Cakes" data-es="Cumpleaños">Birthday Cakes</div>
+          <p class="cat-desc" data-en="Custom cakes for every celebration. Big or small, with your message."
+            data-es="Bizcochos personalizados para cada celebración. Grande o pequeño, con tu mensaje.">
+            Custom cakes for every celebration. Big or small, with your message.
+          </p>
+          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        </div>
+      </a>
+      <a href="/menu#square" class="cat-card reveal d2">
+        <div class="cat-card-top">
+          <span class="cat-emoji"><i data-lucide="square" class="icon"></i></span>
+          <span class="cat-count" data-en="4 options" data-es="4 opciones">4 options</span>
+        </div>
+        <div class="cat-card-bottom">
+          <div class="cat-label" data-en="Dominican Classics" data-es="Clásicos Dominicanos">Dominican Classics</div>
+          <div class="cat-name" data-en="Square Cakes" data-es="Cuadrados">Square Cakes</div>
+          <p class="cat-desc" data-en="Pudin, Maiz, Plain, and Raisin — baked fresh daily."
+            data-es="Pudin, Maiz, Plain y Pasas — horneados frescos cada día.">
+            Pudin, Maiz, Plain, and Raisin — baked fresh daily.
+          </p>
+          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        </div>
+      </a>
+      <a href="/menu#piezas" class="cat-card reveal d1">
+        <div class="cat-card-top">
+          <span class="cat-emoji"><i data-lucide="cake-slice" class="icon"></i></span>
+          <span class="cat-count" data-en="11 options" data-es="11 opciones">11 options</span>
+        </div>
+        <div class="cat-card-bottom">
+          <div class="cat-label" data-en="By the Slice" data-es="Por Pieza">By the Slice</div>
+          <div class="cat-name" data-en="Slices" data-es="Piezas">Slices</div>
+          <p class="cat-desc" data-en="Red Velvet, Cheesecake, Chocoflan, Crema Guava, and more — individual slices."
+            data-es="Red Velvet, Cheesecake, Chocoflan, Crema Guava y más — piezas individuales.">
+            Red Velvet, Cheesecake, Chocoflan, Crema Guava, and more — individual slices.
+          </p>
+          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        </div>
+      </a>
+      <a href="/menu#basos" class="cat-card reveal d2">
+        <div class="cat-card-top">
+          <span class="cat-emoji"><i data-lucide="cup-soda" class="icon"></i></span>
+          <span class="cat-count" data-en="3 flavors" data-es="3 sabores">3 flavors</span>
+        </div>
+        <div class="cat-card-bottom">
+          <div class="cat-label" data-en="Individual Cups" data-es="Vasos Individuales">Individual Cups</div>
+          <div class="cat-name" data-en="Cups" data-es="Basos">Cups</div>
+          <p class="cat-desc" data-en="Your favorite flavors in a cup. Perfect for events and offices."
+            data-es="Tus sabores favoritos en vaso. Perfecto para eventos y oficinas.">
+            Your favorite flavors in a cup. Perfect for events and offices.
+          </p>
+          <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">See Menu →</span>
+        </div>
+      </a>
+    `;
+
+    async function loadCategoryCards() {
+      const grid = document.getElementById('cat-preview-grid');
+      if (!grid) return;
+
+      try {
+        const sb = window.__supabase;
+        if (!sb) throw new Error('No Supabase client');
+
+        const { data, error } = await sb
+          .from('products')
+          .select('tag_en, tag_es, description_en, description_es, images, icon_name')
+          .eq('available', true)
+          .order('sort_order', { ascending: true });
+
+        if (error || !data || data.length === 0) throw new Error('No data');
+
+        // Deduplicate: first product per category wins
+        const seen = new Set();
+        const categories = [];
+        for (const p of data) {
+          if (p.tag_en && !seen.has(p.tag_en)) {
+            seen.add(p.tag_en);
+            categories.push(p);
+          }
+        }
+        if (categories.length === 0) throw new Error('No categories');
+
+        // Count products per category for the count badge
+        const countMap = {};
+        data.forEach(p => {
+          if (!p.tag_en) return;
+          countMap[p.tag_en] = (countMap[p.tag_en] || 0) + 1;
+        });
+
+        const currentLang = localStorage.getItem('lang') || 'en';
+
+        // Build card HTML
+        const cardsHTML = categories.map((cat, i) => {
+          const slug = slugify(cat.tag_en);
+          const isFeatured = i === 0;
+          const delay = i === 0 ? '' : i % 2 === 0 ? ' d2' : ' d1';
+          const featuredClass = isFeatured ? ' cat-featured' : '';
+          const iconName = cat.icon_name || 'tag';
+          const count = countMap[cat.tag_en] || 0;
+
+          const tagEn = cat.tag_en || '';
+          const tagEs = cat.tag_es || tagEn;
+          const descEn = cat.description_en || '';
+          const descEs = cat.description_es || descEn;
+
+          // Determine count label
+          const countLabelEn = count === 1 ? '1 option' : `${count} options`;
+          const countLabelEs = count === 1 ? '1 opción' : `${count} opciones`;
+
+          // Category label (eyebrow above name)
+          const labelEn = isFeatured ? 'Our Signature' : tagEn;
+          const labelEs = isFeatured ? 'Nuestra Firma' : tagEs;
+
+          const displayName = currentLang === 'es' ? tagEs : tagEn;
+          const displayDesc = currentLang === 'es' ? descEs : descEn;
+          const displayCount = currentLang === 'es' ? countLabelEs : countLabelEn;
+          const displayLabel = currentLang === 'es' ? labelEs : labelEn;
+          const displayArrow = currentLang === 'es' ? 'Ver Menú →' : 'See Menu →';
+
+          return `
+            <a href="/menu#${slug}" class="cat-card${featuredClass} reveal${delay}">
+              <div class="cat-card-top">
+                <span class="cat-emoji"><i data-lucide="${iconName}" class="icon"></i></span>
+                <span class="cat-count" data-en="${countLabelEn}" data-es="${countLabelEs}">${displayCount}</span>
+              </div>
+              <div class="cat-card-bottom">
+                <div class="cat-label" data-en="${labelEn}" data-es="${labelEs}">${displayLabel}</div>
+                <div class="cat-name" data-en="${tagEn}" data-es="${tagEs}">${displayName}</div>
+                <p class="cat-desc" data-en="${descEn}" data-es="${descEs}">${displayDesc}</p>
+                <span class="cat-arrow" data-en="See Menu →" data-es="Ver Menú →">${displayArrow}</span>
+              </div>
+            </a>
+          `;
+        }).join('');
+
+        grid.innerHTML = cardsHTML;
+
+        // Re-init Lucide icons for the newly injected cards
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        // Re-register reveal observers for new cards
+        const revealEls = grid.querySelectorAll('.reveal');
+        if (revealEls.length && typeof IntersectionObserver !== 'undefined') {
+          const revealObs = new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                obs.unobserve(entry.target);
+              }
+            });
+          }, { threshold: 0.15 });
+          revealEls.forEach(el => revealObs.observe(el));
+        }
+
+      } catch (e) {
+        // Supabase failed — fall back to hardcoded cards
+        console.warn('Category cards fallback:', e);
+        grid.innerHTML = CAT_FALLBACK_HTML;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        // Still need reveal observers for fallback
+        const revealEls = grid.querySelectorAll('.reveal');
+        if (revealEls.length && typeof IntersectionObserver !== 'undefined') {
+          const revealObs = new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                obs.unobserve(entry.target);
+              }
+            });
+          }, { threshold: 0.15 });
+          revealEls.forEach(el => revealObs.observe(el));
+        }
+      }
+    }
+
+    /* ── Dynamic Footer Menu Categories ── */
+    async function loadFooterMenu() {
+      try {
+        const sb = window.__supabase;
+        if (!sb) return;
+
+        const { data, error } = await sb
+          .from('products')
+          .select('tag_en, tag_es, sort_order')
+          .eq('available', true)
+          .order('sort_order', { ascending: true });
+
+        if (error || !data) return;
+
+        // Deduplicate categories
+        const seen = new Set();
+        const categories = [];
+        for (const p of data) {
+          if (p.tag_en && !seen.has(p.tag_en)) {
+            seen.add(p.tag_en);
+            categories.push(p);
+          }
+        }
+
+        if (categories.length === 0) return;
+
+        const container = document.getElementById('footer-menu-links');
+        if (!container) return;
+
+        container.innerHTML = categories.map(c => {
+          const slug = slugify(c.tag_en);
+          return `<li><a href="/menu#${slug}" 
+            data-en="${c.tag_en}" 
+            data-es="${c.tag_es || c.tag_en}">${c.tag_en}</a></li>`;
+        }).join('');
+
+      } catch(e) {
+        console.error('Footer menu error:', e);
+      }
+    }
+
+    /* ── Load Product Ticker from Supabase ── */
+    async function loadProductTicker() {
+      try {
+        const sb = window.__supabase;
+        if (!sb) return;
+
+        const { data, error } = await sb
+          .from('products')
+          .select('name_en, name_es')
+          .eq('available', true)
+          .eq('sold_out', false)
+          .order('sort_order', { ascending: true });
+
+        if (error || !data || data.length === 0) return;
+
+        const tickerEl = document.getElementById('product-ticker-inner');
+        if (!tickerEl) return;
+
+        // Build one set of ticker items
+        const buildTickerItems = (names) => {
+          return names.map(name =>
+            `<span class="ti">${name.toUpperCase()}<span class="ti-dot"> ·</span></span>`
+          ).join('');
+        };
+
+        // Use name_en by default; name_es swapped on lang change
+        const namesEn = data.map(p => p.name_en).filter(Boolean);
+        const namesEs = data.map(p => p.name_es || p.name_en).filter(Boolean);
+
+        if (namesEn.length === 0) return;
+
+        // Store names for language switching
+        tickerEl.dataset.namesEn = JSON.stringify(namesEn);
+        tickerEl.dataset.namesEs = JSON.stringify(namesEs);
+
+        // Duplicate the list for seamless infinite scroll
+        const lang = localStorage.getItem('lang') || 'en';
+        const names = lang === 'es' ? namesEs : namesEn;
+        const itemsHtml = buildTickerItems(names);
+        tickerEl.innerHTML = itemsHtml + itemsHtml;
+      } catch (err) {
+        // On failure, keep existing hardcoded ticker content as fallback
+        console.warn('Failed to load product ticker from Supabase:', err);
+      }
+    }
+
     /* ── Init ── */
     document.addEventListener('DOMContentLoaded', async () => {
       loadCart();
@@ -5434,6 +6036,9 @@ Be warm and conversational. Keep replies concise. For custom orders collect: occ
       await loadProductsFromSupabase();
       applyHiddenProducts();
       applySOldOutState();
+      loadCategoryCards();
+      loadFooterMenu();
+      loadProductTicker();
     });
 
   </script>

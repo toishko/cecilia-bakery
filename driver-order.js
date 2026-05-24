@@ -1582,7 +1582,7 @@ async function submitAllOrders() {
       // Get the batch_id from the original order so new orders join the same batch
       const { data: origOrder } = await sb.from('driver_orders').select('batch_id, editable_until').eq('id', driverEditOrderId).single();
       const editBatchId = origOrder?.batch_id || driverEditOrderId;
-      const editableUntil = origOrder?.editable_until || new Date(Date.now() + 30 * 60 * 1000).toISOString();
+      const editableUntil = origOrder?.editable_until || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
       // Insert any additional orders (orders[1..n]) as new orders in the same batch
       for (let i = 1; i < orders.length; i++) {
@@ -1640,7 +1640,7 @@ async function submitAllOrders() {
 
     // ── NORMAL MODE: create new orders ──
     const batchId = crypto.randomUUID();
-    const editableUntil = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    const editableUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
     for (let i = 0; i < orders.length; i++) {
       const o = orders[i];
@@ -1739,7 +1739,7 @@ function showConfirmation() {
     <div class="confirm-card">
       <div class="confirm-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
       <h2 class="confirm-title" data-en="Orders Submitted!" data-es="Pedidos Enviados!">${lang === 'es' ? '¡Pedidos Enviados!' : 'Orders Submitted!'}</h2>
-      <p class="confirm-sub" data-en="You can edit your orders for the next 30 minutes" data-es="Puedes editar tus pedidos durante los proximos 30 minutos">${lang === 'es' ? 'Puedes editar tus pedidos durante los próximos 30 minutos' : 'You can edit your orders for the next 30 minutes'}</p>
+      <p class="confirm-sub" data-en="You can edit your orders for the next 24 hours" data-es="Puedes editar tus pedidos durante las próximas 24 horas">${lang === 'es' ? 'Puedes editar tus pedidos durante las próximas 24 horas' : 'You can edit your orders for the next 24 hours'}</p>
       <button class="confirm-btn" id="confirm-back-btn" data-en="Back to Dashboard" data-es="Volver al Panel">${lang === 'es' ? 'Volver al Panel' : 'Back to Dashboard'}</button>
     </div>`;
 
@@ -2035,6 +2035,19 @@ function getEditTimeRemaining(order) {
   return min;
 }
 
+function formatEditTimeRemaining(minLeft, lang) {
+  if (minLeft === null) return '';
+  if (minLeft < 60) {
+    return `${minLeft} min`;
+  }
+  const hrs = Math.floor(minLeft / 60);
+  const mins = minLeft % 60;
+  if (mins > 0) {
+    return `${hrs}h ${mins}m`;
+  }
+  return `${hrs}h`;
+}
+
 function getDriverDisplayName(o, lang) {
   let n = (o.business_name || '').trim();
   const lower = n.toLowerCase();
@@ -2096,7 +2109,8 @@ function renderSingleOcaCard(primary, isChild = false) {
   if (primary.status === 'pending') {
     const minLeft = getEditTimeRemaining(primary);
     if (minLeft !== null) {
-      editHtml = `<div class="oca-edit active"><i data-lucide="pencil"></i> ${minLeft} min</div>`;
+      const timeStr = formatEditTimeRemaining(minLeft, lang);
+      editHtml = `<div class="oca-edit active"><i data-lucide="pencil"></i> ${timeStr}</div>`;
     }
   }
 
@@ -2234,7 +2248,8 @@ function renderOrderCard(batch) {
   if (primary.status === 'pending') {
     const minLeft = getEditTimeRemaining(primary);
     if (minLeft !== null) {
-      editHtml = `<div class="oca-edit active"><i data-lucide="pencil"></i> ${minLeft} min</div>`;
+      const timeStr = formatEditTimeRemaining(minLeft, lang);
+      editHtml = `<div class="oca-edit active"><i data-lucide="pencil"></i> ${timeStr}</div>`;
     }
   }
 
@@ -2342,8 +2357,9 @@ function renderOrderInDetail(idx) {
   if (order.status === 'pending') {
     const minLeft = getEditTimeRemaining(order);
     if (editable && minLeft !== null) {
+      const timeStr = formatEditTimeRemaining(minLeft, lang);
       editBannerHtml = `<div class="edit-indicator active" style="margin-bottom:10px">
-        <i data-lucide="pencil"></i> ${lang === 'es' ? `Editable por ${minLeft} min más` : `Editable for ${minLeft} more min`}
+        <i data-lucide="pencil"></i> ${lang === 'es' ? `Editable por ${timeStr} más` : `Editable for ${timeStr} more`}
       </div>`;
     } else {
       editBannerHtml = `<div class="edit-indicator locked" style="margin-bottom:10px">
