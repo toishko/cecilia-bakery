@@ -11237,6 +11237,13 @@ window.toggleBatchMode = function() {
   window._batchMode = !window._batchMode;
   window._selectedOrderIds.clear();
   
+  // Toggle layout class on body to slide bottom navigation off-screen
+  if (window._batchMode) {
+    document.body.classList.add('batch-mode-active');
+  } else {
+    document.body.classList.remove('batch-mode-active');
+  }
+  
   // Toggle class on the active batch buttons
   const incomingBtn = document.getElementById('batch-toggle-btn');
   const historyBtn = document.getElementById('history-batch-toggle-btn');
@@ -11289,8 +11296,8 @@ window.updateFloatingActionBar = function() {
   });
   
   const countText = lang === 'es'
-    ? `${count} pedido${count !== 1 ? 's' : ''} seleccionado${count !== 1 ? 's' : ''}`
-    : `${count} order${count !== 1 ? 's' : ''} selected`;
+    ? `${count} ${count !== 1 ? 'pedidos' : 'pedido'}`
+    : `${count} ${count !== 1 ? 'orders' : 'order'}`;
     
   const countEl = document.getElementById('fbb-count');
   const totalEl = document.getElementById('fbb-total');
@@ -11303,6 +11310,9 @@ window.updateFloatingActionBar = function() {
 window.exitBatchMode = function() {
   window._batchMode = false;
   window._selectedOrderIds.clear();
+  
+  // Slide bottom navigation back on-screen
+  document.body.classList.remove('batch-mode-active');
   
   const incomingBtn = document.getElementById('batch-toggle-btn');
   const historyBtn = document.getElementById('history-batch-toggle-btn');

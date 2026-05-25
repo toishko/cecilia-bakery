@@ -1356,9 +1356,13 @@ initUpdateBanner();
 <!-- FLOATING BATCH ACTION BAR -->
 <div class="floating-batch-bar" id="floating-batch-bar">
   <div class="fbb-content">
-    <div class="fbb-info">
-      <span class="fbb-count" id="fbb-count">0 orders selected</span>
-      <span class="fbb-total" id="fbb-total">$0.00</span>
+    <div class="fbb-header-row">
+      <div class="fbb-info">
+        <span class="fbb-count" id="fbb-count">0 orders selected</span>
+        <span style="opacity:0.3; margin:0 4px;">·</span>
+        <span class="fbb-total-badge" id="fbb-total">$0.00</span>
+      </div>
+      <button class="fbb-close-x" onclick="exitBatchMode()" aria-label="Cancel">✕</button>
     </div>
     <div class="fbb-actions">
       <button class="fbb-btn paid" onclick="executeBatchAction('paid')">
@@ -1366,9 +1370,6 @@ initUpdateBanner();
       </button>
       <button class="fbb-btn pickup" onclick="executeBatchAction('picked_up')">
         <i data-lucide="truck" style="width:14px;height:14px;"></i> <span data-en="Mark Picked Up" data-es="Marcar Recogido">Mark Picked Up</span>
-      </button>
-      <button class="fbb-btn cancel" onclick="exitBatchMode()">
-        <span data-en="Cancel" data-es="Cancelar">Cancel</span>
       </button>
     </div>
   </div>
