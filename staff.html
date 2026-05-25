@@ -4731,7 +4731,7 @@
               <span class="${payBadgeClass}">${payBadgeText}</span>
             </span>
             <span class="compiler-row-meta">${date}</span>
-            <span class="compiler-row-qty">${totalQty} uds</span>
+            <span class="compiler-row-qty">${totalQty} ${staffLang === 'es' ? 'uds' : 'pcs'}</span>
             <button class="compiler-preview-btn" onclick="toggleStaffCompilerPreview(event, '${order.id}')" title="${staffLang === 'es' ? 'Vista previa' : 'Preview Order'}">
               <i data-lucide="eye" style="width:16px; height:16px;"></i>
             </button>
@@ -4954,7 +4954,7 @@
         <div class="compiler-order-chip">
           <span class="compiler-chip-num">${orderNum}</span>
           <span class="compiler-chip-biz">${_esc(bizName)}</span>
-          <span class="compiler-chip-qty">${totalQty} uds</span>
+          <span class="compiler-chip-qty">${totalQty} ${staffLang === 'es' ? 'uds' : 'pcs'}</span>
           <button class="compiler-chip-remove" onclick="removeStaffCompilerOrder('${order.id}')">✕</button>
         </div>`;
     });
@@ -5042,7 +5042,7 @@
         itemsHtml += `
           <div class="compiler-item-row">
             <span class="compiler-item-name">${_esc(item.product_label)}${highlightAdjusted}</span>
-            <span class="compiler-item-qty">${item.quantity} uds</span>
+            <span class="compiler-item-qty">${item.quantity} ${staffLang === 'es' ? 'uds' : 'pcs'}</span>
             <span class="compiler-item-price staff-compiler-price-dependent" style="display:${staffCompilerPriceToggle ? 'inline' : 'none'};">
               <span style="margin-right:8px;">@ ${staffFormatCurrency(item.price)}</span>
               <span class="line-total">${staffFormatCurrency(lineTotal)}</span>
