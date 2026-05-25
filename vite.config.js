@@ -14,8 +14,24 @@ function versionPlugin() {
   };
 }
 
+function vercelRewritesPlugin() {
+  return {
+    name: 'vercel-rewrites',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const url = req.url.split('?')[0];
+        const htmlPages = ['/menu', '/checkout', '/account', '/order-confirmation', '/driver-order', '/admin-dashboard', '/terms', '/privacy', '/refunds', '/product-manager', '/staff', '/wholesale', '/wholesale-portal', '/receipt', '/woo'];
+        if (htmlPages.includes(url)) {
+          req.url = url + '.html';
+        }
+        next();
+      });
+    }
+  };
+}
+
 export default defineConfig({
-  plugins: [versionPlugin()],
+  plugins: [versionPlugin(), vercelRewritesPlugin()],
   build: {
     rollupOptions: {
       input: {

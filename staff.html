@@ -4343,6 +4343,22 @@
     var isDragging = false;
     var dragSource = '';
 
+    function finishDrag() {
+      sheet.style.transition = 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)';
+      overlay.style.transition = 'opacity 0.3s';
+      var dy = currentY - startY;
+      var velocity = dy / (Date.now() - startTime);
+
+      if (dy > sheet.offsetHeight * 0.3 || velocity > 0.5) {
+        closeFrostModal();
+      } else {
+        sheet.style.transform = 'translateY(0)';
+        overlay.style.opacity = '1';
+      }
+      isDragging = false;
+      dragSource = '';
+    }
+
     // --- Handle / Header drag (always initiates pull-down) ---
     dragRegion.addEventListener('touchstart', function(e) {
       if (!sheet.classList.contains('open')) return;
@@ -4397,7 +4413,7 @@
             sheet.style.transition = 'none';
             overlay.style.transition = 'none';
           }
-          e.preventDefault();
+          if (e.cancelable) e.preventDefault();
           var pullDy = currentY - startY;
           sheet.style.transform = 'translateY(' + pullDy + 'px)';
           var progress = Math.max(0, Math.min(1, 1 - (pullDy / (sheet.offsetHeight * 0.5))));
@@ -4406,6 +4422,16 @@
           if (bodyDragActive) {
             bodyDragActive = false;
             isDragging = false;
+          }
+        }
+      }, { passive: false });
+
+      scrollBody.addEventListener('touchend', function(e) {
+        if (bodyDragActive) {
+          finishDrag();
+          bodyDragActive = false;
+        }
+      }, { passive: true });
     }
   })();
 
@@ -5412,7 +5438,7 @@
 
       // Generate the Canvas Image Blob
       const blob = _drawStaffCompilerCanvas(grouped, sortedCats, staffCompilerSelectedOrders, totalQty, totalAmount, staffCompilerPriceToggle);
-      const fileName = \`cecilia-compiler-\${Date.now()}.jpg\`;
+      const fileName = `cecilia-compiler-${Date.now()}.jpg`;
       const file = new File([blob], fileName, { type: 'image/jpeg' });
 
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -5435,8 +5461,6 @@
   }
   window.whatsappShareStaffCompiler = whatsappShareStaffCompiler;
 
-    }
-  })();
   </script>
 </body>
 
