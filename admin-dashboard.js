@@ -10769,7 +10769,6 @@ window.renderCompilerView = renderCompilerView;
 function printCompilerSummary() {
   if (compilerSelectedOrders.length === 0) return;
 
-  const printWindow = window.open('', '_blank');
   const isEs = lang === 'es';
   
   // Compile items same way
