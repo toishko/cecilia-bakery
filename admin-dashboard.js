@@ -10884,6 +10884,7 @@ function printCompilerSummary() {
       </div>
       <div class="pp-actions">
         <button class="pp-btn pp-print" id="pp-print-btn">🖨 ${isEs ? 'Imprimir Documento' : 'Print Document'}</button>
+        <button class="pp-btn pp-share" id="pp-share-btn">📤 ${isEs ? 'Compartir Imagen' : 'Share Image'}</button>
         <button class="pp-btn pp-close" id="pp-close-btn">✕ ${isEs ? 'Cerrar Vista' : 'Close Preview'}</button>
       </div>
     </div>
@@ -10893,6 +10894,11 @@ function printCompilerSummary() {
   // Bind close action
   document.getElementById('pp-close-btn').addEventListener('click', () => {
     overlay.remove();
+  });
+
+  // Bind share action
+  document.getElementById('pp-share-btn').addEventListener('click', () => {
+    whatsappShareCompiler();
   });
 
   // Bind print action
@@ -10911,81 +10917,253 @@ function printCompilerSummary() {
 }
 window.printCompilerSummary = printCompilerSummary;
 
-function whatsappShareCompiler() {
-  if (compilerSelectedOrders.length === 0) return;
-
+function _drawCompilerCanvas(grouped, sortedCats, orders, totalQty, totalAmount, showTotals) {
   const isEs = lang === 'es';
-  const compiled = {};
-  let totalQty = 0;
-  let totalAmount = 0;
+  const W = 600, PAD = 30;
+  const usable = W - PAD * 2;
+  const dpr = 2; // retina
+  const font = (w, s) => `${w} ${s}px "Outfit", -apple-system, sans-serif`;
+  const RED = '#C8102E', GRAY = '#666', DARK = '#111', LIGHT_BG = '#fdfdfd';
 
-  compilerSelectedOrders.forEach(order => {
-    (order.items || []).forEach(item => {
-      const qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
-      if (qty <= 0) return;
-      const key = item.product_key;
-      const price = parseFloat(item.price_at_order || 0);
-
-      if (!compiled[key]) {
-        compiled[key] = {
-          product_label: item.product_label,
-          quantity: 0,
-          price: price,
-          category: PRODUCT_CAT[key] ? PRODUCT_CAT[key].en : 'Other'
-        };
-      }
-      compiled[key].quantity += qty;
-      totalQty += qty;
-      totalAmount += (qty * price);
-    });
-  });
-
-  const grouped = {};
-  Object.values(compiled).forEach(item => {
-    const cat = item.category;
-    if (!grouped[cat]) grouped[cat] = [];
-    grouped[cat].push(item);
-  });
-
-  const sortedCats = Object.keys(grouped).sort((a, b) => {
-    const ai = CAT_ORDER_EN.indexOf(a);
-    const bi = CAT_ORDER_EN.indexOf(b);
-    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-  });
-
-  let text = `*${isEs ? 'Resumen Compilado de Carga' : 'Compiled Loading Load Sheet'}*\n`;
-  text += `_Cecilia Bakery — ${new Date().toLocaleDateString()}_\n\n`;
+  // Pre-calculate height
+  let h = 0;
+  h += 80;  // Title + Subtitle
+  h += 20;  // Gap
   
-  text += `*${isEs ? 'Pedidos Incluidos:' : 'Included Orders:'}*\n`;
-  compilerSelectedOrders.forEach(o => {
+  // Included orders box
+  h += 14;  // box padding top
+  h += 20;  // "Included Orders:"
+  h += orders.length * 20; // Orders list
+  h += 10;  // Gap
+  h += 20;  // Total Pieces
+  if (showTotals) h += 24; // Grand Total
+  h += 14;  // box padding bottom
+  h += 30;  // Gap before tables
+
+  sortedCats.forEach(cat => {
+    h += 40; // Category Header
+    h += 30; // Table Header
+    grouped[cat].forEach(() => {
+      h += 28; // Table Row
+    });
+    h += 20; // Margin bottom
+  });
+
+  h += 50; // Footer
+
+  // Create canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = W * dpr;
+  canvas.height = h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  // Background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, h);
+
+  let y = PAD;
+
+  // ── Header ──
+  ctx.textAlign = 'left';
+  ctx.fillStyle = DARK;
+  ctx.font = font('700', 24);
+  ctx.fillText(isEs ? 'Hoja de Compilación' : 'Compiled Load Sheet', PAD, y + 24);
+  y += 32;
+  ctx.fillStyle = GRAY;
+  ctx.font = font('600', 14);
+  ctx.fillText(`${isEs ? 'Panadería Cecilia — Resumen Compilado' : 'Cecilia Bakery — Compiled Summary'} (${new Date().toLocaleDateString()})`, PAD, y + 14);
+  y += 40;
+
+  // ── Orders Box ──
+  const boxTop = y;
+  let boxY = y + 14;
+  ctx.fillStyle = DARK;
+  ctx.font = font('700', 13);
+  ctx.fillText(isEs ? 'Pedidos Incluidos:' : 'Included Orders:', PAD + 14, boxY + 13);
+  boxY += 24;
+  
+  ctx.fillStyle = DARK;
+  ctx.font = font('400', 13);
+  orders.forEach(o => {
     const num = o.order_number ? `#${o.order_number}` : '';
     const biz = o.business_name || '';
     const driver = getDriverName(o.driver_id);
-    text += `• ${num} ${biz} (${driver})\n`;
+    ctx.fillText(`• ${num} ${biz} (${driver})`, PAD + 24, boxY + 13);
+    boxY += 20;
   });
-  text += `\n`;
 
+  boxY += 10;
+  ctx.font = font('700', 13);
+  ctx.fillText((isEs ? 'Total de Productos: ' : 'Total Pieces: ') + totalQty, PAD + 14, boxY + 13);
+  boxY += 24;
+  
+  if (showTotals) {
+    ctx.fillText((isEs ? 'Monto Total: ' : 'Grand Total: ') + formatCurrency(totalAmount), PAD + 14, boxY + 13);
+    boxY += 24;
+  }
+  
+  // Draw Box Background (behind text)
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-over';
+  ctx.fillStyle = '#f9f9f9';
+  ctx.beginPath();
+  ctx.roundRect(PAD, boxTop, usable, (boxY + 6) - boxTop, 8);
+  ctx.fill();
+  ctx.strokeStyle = '#dddddd';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
+
+  y = boxY + 36;
+
+  // ── Tables ──
   sortedCats.forEach(cat => {
     const displayCat = isEs && PRODUCT_CAT[grouped[cat][0].product_key] ? PRODUCT_CAT[grouped[cat][0].product_key].es : cat;
-    text += `*${displayCat.toUpperCase()}*\n`;
+    
+    // Category Header
+    ctx.fillStyle = RED;
+    ctx.font = font('700', 14);
+    ctx.textAlign = 'left';
+    ctx.fillText(displayCat.toUpperCase(), PAD, y + 14);
+    y += 24;
+    ctx.fillStyle = RED;
+    ctx.fillRect(PAD, y, usable, 2);
+    y += 12;
+
+    // Table Header
+    ctx.fillStyle = DARK;
+    ctx.font = font('700', 12);
+    ctx.textAlign = 'left';
+    ctx.fillText(isEs ? 'Producto' : 'Product', PAD, y + 12);
+    
+    const qtyX = showTotals ? PAD + usable * 0.65 : PAD + usable * 0.8;
+    ctx.textAlign = 'right';
+    ctx.fillText(isEs ? 'Cantidad' : 'Quantity', qtyX, y + 12);
+    
+    if (showTotals) {
+      ctx.fillText(isEs ? 'Precio' : 'Price', PAD + usable * 0.82, y + 12);
+      ctx.fillText('Total', PAD + usable, y + 12);
+    }
+    y += 18;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(PAD, y, usable, 2);
+    y += 6;
+
+    // Rows
     grouped[cat].forEach(item => {
-      if (compilerPriceToggle) {
-        text += `• ${item.product_label} x${item.quantity} (@ ${formatCurrency(item.price)}) = ${formatCurrency(item.quantity * item.price)}\n`;
-      } else {
-        text += `• ${item.product_label} x${item.quantity}\n`;
+      ctx.fillStyle = DARK;
+      ctx.font = font('400', 13);
+      ctx.textAlign = 'left';
+      ctx.fillText(item.product_label, PAD, y + 18);
+      
+      ctx.textAlign = 'right';
+      ctx.font = font('700', 13);
+      ctx.fillText(String(item.quantity), qtyX, y + 18);
+
+      if (showTotals) {
+        ctx.font = font('400', 13);
+        ctx.fillText(formatCurrency(item.price), PAD + usable * 0.82, y + 18);
+        ctx.font = font('700', 13);
+        ctx.fillText(formatCurrency(item.quantity * item.price), PAD + usable, y + 18);
       }
+      y += 26;
+      ctx.fillStyle = '#ddd';
+      ctx.fillRect(PAD, y, usable, 1);
+      y += 2;
     });
-    text += `\n`;
+
+    y += 20;
   });
 
-  text += `*${isEs ? 'Total Piezas:' : 'Total Pieces:'}* ${totalQty}\n`;
-  if (compilerPriceToggle) {
-    text += `*${isEs ? 'Monto Total:' : 'Grand Total:'}* ${formatCurrency(totalAmount)}\n`;
-  }
+  // ── Footer ──
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#bbb';
+  ctx.font = font('400', 11);
+  ctx.fillText('ceciliabakery.com', W / 2, y + 20);
 
-  // Open WhatsApp Link
-  const encodedText = encodeURIComponent(text);
-  window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+  // Export as JPEG blob
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+  const bin = atob(dataUrl.split(',')[1]);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: 'image/jpeg' });
+}
+
+async function whatsappShareCompiler() {
+  if (compilerSelectedOrders.length === 0) return;
+
+  // Show loading state if called from the print preview overlay
+  const ppBtn = document.getElementById('pp-share-btn');
+  const mainBtn = document.getElementById('compiler-btn-whatsapp');
+  if (ppBtn) { ppBtn.textContent = '⏳ ...'; ppBtn.disabled = true; }
+  if (mainBtn) { mainBtn.disabled = true; }
+
+  // Wait a frame to let UI update
+  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 30)));
+
+  try {
+    const isEs = lang === 'es';
+    const compiled = {};
+    let totalQty = 0;
+    let totalAmount = 0;
+
+    compilerSelectedOrders.forEach(order => {
+      (order.items || []).forEach(item => {
+        const qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
+        if (qty <= 0) return;
+        const key = item.product_key;
+        const price = parseFloat(item.price_at_order || 0);
+
+        if (!compiled[key]) {
+          compiled[key] = {
+            product_label: item.product_label,
+            quantity: 0,
+            price: price,
+            category: PRODUCT_CAT[key] ? PRODUCT_CAT[key].en : 'Other'
+          };
+        }
+        compiled[key].quantity += qty;
+        totalQty += qty;
+        totalAmount += (qty * price);
+      });
+    });
+
+    const grouped = {};
+    Object.values(compiled).forEach(item => {
+      const cat = item.category;
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(item);
+    });
+
+    const sortedCats = Object.keys(grouped).sort((a, b) => {
+      const ai = CAT_ORDER_EN.indexOf(a);
+      const bi = CAT_ORDER_EN.indexOf(b);
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
+
+    // Generate the Canvas Image Blob
+    const blob = _drawCompilerCanvas(grouped, sortedCats, compilerSelectedOrders, totalQty, totalAmount, compilerPriceToggle);
+    const fileName = `cecilia-compiler-${Date.now()}.jpg`;
+    const file = new File([blob], fileName, { type: 'image/jpeg' });
+
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ title: 'Cecilia Bakery Load Sheet', files: [file] });
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = fileName; a.click();
+      URL.revokeObjectURL(url);
+      showToast(lang === 'es' ? 'Imagen descargada' : 'Image downloaded', 'success');
+    }
+
+  } catch (e) {
+    console.error('Compiler share error:', e);
+    if (e.name !== 'AbortError') showToast(lang === 'es' ? 'Error al compartir' : 'Error sharing', 'error');
+  } finally {
+    if (ppBtn) { ppBtn.textContent = '📤 ' + (lang === 'es' ? 'Compartir Imagen' : 'Share Image'); ppBtn.disabled = false; }
+    if (mainBtn) { mainBtn.disabled = false; }
+  }
 }
 window.whatsappShareCompiler = whatsappShareCompiler;
 
