@@ -10323,8 +10323,7 @@ async function loadDriverCompilerChecklist(driverId) {
       .from('driver_orders')
       .select('*, items:driver_order_items(*)')
       .eq('driver_id', driverId)
-      .order('pickup_date', { ascending: false })
-      .limit(10);
+      .order('pickup_date', { ascending: false });
 
     if (error) throw error;
 
@@ -10407,32 +10406,86 @@ function renderCompilerChecklist() {
     const payBadgeClass = isPaid ? 'compiler-badge paid' : 'compiler-badge unpaid';
     const payBadgeText = isPaid ? (lang === 'es' ? 'Pagado' : 'Paid') : (lang === 'es' ? 'Deuda' : 'Unpaid');
 
-    const isConfirmed = order.status === 'confirmed';
-    const statusBadgeClass = isConfirmed ? 'compiler-badge confirmed' : 'compiler-badge pending';
-    const statusBadgeText = isConfirmed ? (lang === 'es' ? 'Confirmado' : 'Confirmed') : (lang === 'es' ? 'Pendiente' : 'Pending');
-
     const rowClass = isSelected ? 'compiler-row-flat selected' : 'compiler-row-flat';
 
+    const primaryTitle = order.driver_ref 
+      ? `Ref: ${order.driver_ref}` 
+      : (order.order_number ? `Order #${order.order_number}` : 'Unknown Order');
+      
+    const subTitle = (order.driver_ref && order.order_number) 
+      ? `Order #${order.order_number}` 
+      : '';
+
+    let itemsHtml = '';
+    if (order.items && order.items.length > 0) {
+      // Group items by category
+      const groupedPreview = {};
+      order.items.forEach(item => {
+        const catObj = PRODUCT_CAT[item.product_key];
+        const catName = catObj ? (lang === 'es' ? catObj.es : catObj.en) : (lang === 'es' ? 'Otros' : 'Other');
+        if (!groupedPreview[catName]) groupedPreview[catName] = [];
+        groupedPreview[catName].push(item);
+      });
+
+      for (const cat in groupedPreview) {
+        itemsHtml += `<div class="compiler-preview-cat-header">${_esc(cat)}</div>`;
+        groupedPreview[cat].forEach(item => {
+          const qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
+          const itemName = _esc(item.product_label || 'Unknown Item');
+          itemsHtml += `
+            <div class="compiler-preview-item">
+              <span class="compiler-preview-item-name">${qty}x ${itemName}</span>
+            </div>`;
+        });
+      }
+    } else {
+      itemsHtml = `<div class="compiler-preview-item"><span class="compiler-preview-item-name">${lang === 'es' ? 'Sin artículos' : 'No items'}</span></div>`;
+    }
+
     html += `
-      <label class="${rowClass}">
-        <span class="compiler-custom-chk">
-          <input type="checkbox" class="compiler-order-chk" data-id="${order.id}" ${isChecked} onchange="syncCompilerChecklistSelection()" />
-          <span class="chk-box"></span>
-        </span>
-        <span class="compiler-row-name">${orderNum} — ${_esc(biz)}</span>
-        <span class="compiler-row-badges">
-          <span class="${payBadgeClass}">${payBadgeText}</span>
-          <span class="${statusBadgeClass}">${statusBadgeText}</span>
-        </span>
-        <span class="compiler-row-meta">${date}${_esc(ref)}</span>
-        <span class="compiler-row-qty">${totalQty} ${_esc(lang === 'es' ? 'uds' : 'pcs')}</span>
-      </label>`;
+      <div style="display:flex; flex-direction:column; width:100%;">
+        <label class="${rowClass}">
+          <span class="compiler-custom-chk">
+            <input type="checkbox" class="compiler-order-chk" data-id="${order.id}" ${isChecked} onchange="syncCompilerChecklistSelection()" />
+            <span class="chk-box"></span>
+          </span>
+          <div class="compiler-row-info">
+            <div class="compiler-row-title">${_esc(primaryTitle)}</div>
+            ${subTitle ? `<div class="compiler-row-sub">${_esc(subTitle)}</div>` : ''}
+          </div>
+          <span class="compiler-row-badges">
+            <span class="${payBadgeClass}">${payBadgeText}</span>
+          </span>
+          <span class="compiler-row-meta">${date}</span>
+          <span class="compiler-row-qty">${totalQty} ${_esc(lang === 'es' ? 'uds' : 'pcs')}</span>
+          <button class="compiler-preview-btn" onclick="toggleCompilerPreview(event, '${order.id}')" title="${lang === 'es' ? 'Vista previa' : 'Preview Order'}">
+            <i data-lucide="eye" style="width:16px; height:16px;"></i>
+          </button>
+        </label>
+        <div class="compiler-preview-panel" id="compiler-preview-${order.id}">
+          ${itemsHtml}
+        </div>
+      </div>`;
   });
 
   listContainer.innerHTML = html;
+  if (window.lucide) window.lucide.createIcons();
   wrap.style.display = 'block';
 }
 window.renderCompilerChecklist = renderCompilerChecklist;
+
+window.toggleCompilerPreview = function(e, id) {
+  e.preventDefault();
+  e.stopPropagation();
+  const panel = document.getElementById('compiler-preview-' + id);
+  if (!panel) return;
+  if (panel.style.display === 'none' || panel.style.display === '') {
+    panel.style.display = 'block';
+  } else {
+    panel.style.display = 'none';
+  }
+};
+
 
 function syncCompilerChecklistSelection() {
   const checkedIds = Array.from(document.querySelectorAll('.compiler-order-chk:checked')).map(el => el.dataset.id);
@@ -10770,14 +10823,14 @@ function printCompilerSummary() {
     const displayCat = isEs && PRODUCT_CAT[grouped[cat][0].product_key] ? PRODUCT_CAT[grouped[cat][0].product_key].es : cat;
     itemsHtml += `
       <h3>${displayCat}</h3>
-      <table style="width:100%; border-collapse:collapse; margin-bottom:12px;">
+      <table style="width:100%; border-collapse:collapse; margin-bottom:12px; table-layout:fixed;">
         <thead>
           <tr style="border-bottom:2px solid #333; text-align:left;">
-            <th style="padding:6px 0;">${isEs ? 'Producto' : 'Product'}</th>
-            <th style="padding:6px 0; text-align:right;">${isEs ? 'Cantidad' : 'Quantity'}</th>
+            <th style="padding:6px 0; width:${compilerPriceToggle ? '50%' : '80%'};">${isEs ? 'Producto' : 'Product'}</th>
+            <th style="padding:6px 0; text-align:right; width:${compilerPriceToggle ? '15%' : '20%'};">${isEs ? 'Cantidad' : 'Quantity'}</th>
             ${compilerPriceToggle ? `
-            <th style="padding:6px 0; text-align:right;">${isEs ? 'Precio' : 'Price'}</th>
-            <th style="padding:6px 0; text-align:right;">Total</th>` : ''}
+            <th style="padding:6px 0; text-align:right; width:15%;">${isEs ? 'Precio' : 'Price'}</th>
+            <th style="padding:6px 0; text-align:right; width:20%;">Total</th>` : ''}
           </tr>
         </thead>
         <tbody>`;

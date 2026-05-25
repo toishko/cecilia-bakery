@@ -2977,32 +2977,67 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   margin: 0;
   text-decoration: none;
   color: inherit;
+  background-color: var(--bg-card);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 .compiler-row-flat:last-child {
   border-bottom: none;
 }
 .compiler-row-flat:hover {
-  background: rgba(200, 16, 46, 0.02);
+  background-color: var(--bg-surface);
 }
 .compiler-row-flat.selected {
-  background: rgba(200, 16, 46, 0.04);
+  background-color: var(--bg-surface);
   border-left-color: var(--red);
 }
 [data-theme="dark"] .compiler-row-flat:hover {
-  background: rgba(200, 16, 46, 0.06);
+  background-color: var(--bg-surface);
 }
 [data-theme="dark"] .compiler-row-flat.selected {
-  background: rgba(200, 16, 46, 0.08);
+  background-color: var(--bg-surface);
 }
 
-.compiler-row-name {
+.compiler-avatar-sm {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(200,16,46,0.06);
+  color: var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  border: 1px solid rgba(200,16,46,0.1);
+  letter-spacing: 0.05em;
+}
+.compiler-row-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+}
+.compiler-row-title {
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   color: var(--tx);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 180px;
+  line-height: 1.2;
+}
+.compiler-row-sub {
+  font-size: 0.68rem;
+  color: var(--tx-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 3px;
+  letter-spacing: 0.02em;
 }
 .compiler-row-badges {
   display: flex;
@@ -3175,6 +3210,50 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .compiler-chip-remove:hover {
   color: var(--red);
 }
+
+/* ── Inline Preview Panel ── */
+.compiler-preview-btn {
+  background: none;
+  border: none;
+  color: var(--tx-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+}
+.compiler-preview-btn:hover { background: rgba(0,0,0,0.05); color: var(--tx); }
+[data-theme="dark"] .compiler-preview-btn:hover { background: rgba(255,255,255,0.1); }
+
+.compiler-preview-panel {
+  display: none;
+  background: rgba(0,0,0,0.02);
+  border-bottom: 1px solid var(--bd);
+  padding: 12px 16px 16px 42px;
+  font-size: 0.8rem;
+  color: var(--tx-muted);
+}
+[data-theme="dark"] .compiler-preview-panel { background: rgba(255,255,255,0.02); }
+
+.compiler-preview-cat-header {
+  font-weight: 700;
+  font-size: 0.72rem;
+  color: var(--tx);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 10px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--bd);
+  padding-bottom: 2px;
+}
+.compiler-preview-cat-header:first-child { margin-top: 0; }
+
+.compiler-preview-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed var(--bd); }
+.compiler-preview-item:last-child { border-bottom: none; }
+.compiler-preview-item-name { color: var(--tx); font-weight: 500; }
 
 /* ── Boutique Loading Sheet ── */
 .compiler-cat-header {
