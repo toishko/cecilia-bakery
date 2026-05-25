@@ -10822,7 +10822,7 @@ function printCompilerSummary() {
   sortedCats.forEach(cat => {
     const displayCat = isEs && PRODUCT_CAT[grouped[cat][0].product_key] ? PRODUCT_CAT[grouped[cat][0].product_key].es : cat;
     itemsHtml += `
-      <h3>${displayCat}</h3>
+      <h3 style="font-size: 0.95rem; border-bottom: 2px solid #c8102e; padding-bottom: 4px; margin-top: 24px; margin-bottom: 8px; color: #c8102e; text-transform: uppercase;">${displayCat}</h3>
       <table style="width:100%; border-collapse:collapse; margin-bottom:12px; table-layout:fixed;">
         <thead>
           <tr style="border-bottom:2px solid #333; text-align:left;">
@@ -10851,45 +10851,63 @@ function printCompilerSummary() {
       </table>`;
   });
 
-  const title = isEs ? 'Hoja de Compilación de Carga' : 'Compiled Loading Load Sheet';
+  const title = isEs ? 'Hoja de Compilación' : 'Compiled Load Sheet';
   const subTitle = isEs ? 'Panadería Cecilia — Resumen Compilado' : 'Cecilia Bakery — Compiled Summary';
 
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>${title}</title>
-        <style>
-          body { font-family: 'Outfit', sans-serif; padding: 20px; color: #111; }
-          h1 { font-size: 1.6rem; margin-bottom: 6px; }
-          h2 { font-size: 1.1rem; color: #666; margin-top: 0; margin-bottom: 20px; }
-          h3 { font-size: 0.95rem; border-bottom: 2px solid #c8102e; padding-bottom: 4px; margin-top: 24px; color: #c8102e; text-transform: uppercase; }
-          ul { padding-left: 20px; margin-bottom: 20px; }
-          .summary-card { background: #f9f9f9; padding: 14px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; }
-          @media print {
-            body { padding: 0; }
-            button { display: none; }
-          }
-        </style>
-      </head>
-      <body>
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h1>${title}</h1>
-          <button onclick="window.print()" style="padding:8px 16px; background:#c8102e; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">${isEs ? 'Imprimir' : 'Print'}</button>
-        </div>
-        <h2>${subTitle} (${new Date().toLocaleDateString()})</h2>
+  const content = `
+    <div style="margin-bottom: 20px;">
+      <h1 style="font-size: 1.6rem; margin: 0 0 4px 0;">${title}</h1>
+      <h2 style="font-size: 1.1rem; color: #666; margin: 0;">${subTitle} (${new Date().toLocaleDateString()})</h2>
+    </div>
 
-        <div class="summary-card">
-          <p style="margin:4px 0;"><strong>${isEs ? 'Pedidos Incluidos:' : 'Included Orders:'}</strong></p>
-          <ul style="margin:6px 0 0 0;">${ordersListHtml}</ul>
-          <p style="margin:10px 0 0 0;"><strong>${isEs ? 'Total de Productos:' : 'Total Pieces:'}</strong> ${totalQty}</p>
-          ${compilerPriceToggle ? `<p style="margin:4px 0 0 0;"><strong>${isEs ? 'Monto Total:' : 'Grand Total:'}</strong> ${formatCurrency(totalAmount)}</p>` : ''}
-        </div>
+    <div style="background: #f9f9f9; padding: 14px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px;">
+      <p style="margin:4px 0;"><strong>${isEs ? 'Pedidos Incluidos:' : 'Included Orders:'}</strong></p>
+      <ul style="margin:6px 0 0 0; padding-left: 20px;">${ordersListHtml}</ul>
+      <p style="margin:10px 0 0 0;"><strong>${isEs ? 'Total de Productos:' : 'Total Pieces:'}</strong> ${totalQty}</p>
+      ${compilerPriceToggle ? `<p style="margin:4px 0 0 0;"><strong>${isEs ? 'Monto Total:' : 'Grand Total:'}</strong> ${formatCurrency(totalAmount)}</p>` : ''}
+    </div>
 
-        ${itemsHtml}
-      </body>
-    </html>
-  `);
-  printWindow.document.close();
+    ${itemsHtml}
+  `;
+
+  // Remove any existing print overlay
+  const existing = document.getElementById('print-preview-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'print-preview-overlay';
+  overlay.innerHTML = `
+    <div class="pp-scroll">
+      <div class="pp-page" style="max-width: 600px;">
+        ${content}
+        <div class="pp-footer">ceciliabakery.com</div>
+      </div>
+      <div class="pp-actions">
+        <button class="pp-btn pp-print" id="pp-print-btn">🖨 ${isEs ? 'Imprimir Documento' : 'Print Document'}</button>
+        <button class="pp-btn pp-close" id="pp-close-btn">✕ ${isEs ? 'Cerrar Vista' : 'Close Preview'}</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // Bind close action
+  document.getElementById('pp-close-btn').addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  // Bind print action
+  document.getElementById('pp-print-btn').addEventListener('click', () => {
+    overlay.classList.add('printing');
+    window.print();
+    
+    // Safely remove the printing class when print dialog closes
+    const removePrinting = () => {
+      overlay.classList.remove('printing');
+      window.removeEventListener('focus', removePrinting);
+    };
+    window.addEventListener('focus', removePrinting);
+    setTimeout(removePrinting, 2000); // safety fallback
+  });
 }
 window.printCompilerSummary = printCompilerSummary;
 
