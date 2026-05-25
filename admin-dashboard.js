@@ -345,6 +345,7 @@ async function showSection(name) {
   if (typeof closeOrderSheet === 'function') closeOrderSheet();
   if (typeof closeQueueSheet === 'function') closeQueueSheet();
   if (typeof closeOrderedSheet === 'function') closeOrderedSheet();
+  if (typeof exitBatchMode === 'function') exitBatchMode();
 
   // Update mobile header section name
   const nameEl = document.getElementById('mobile-section-name');
@@ -2897,6 +2898,10 @@ function _updateTabBadge(id, count) {
 }
 
 function renderIncomingOrders() {
+  if (window._incomingViewMode === 'grouped') {
+    renderDriverGroupedOrders();
+    return;
+  }
   const activeFilter = document.querySelector('#driver-orders-filter .insights-pill.active')?.dataset.filter || 'all';
   let filtered = [...incomingOrders];
 
@@ -3062,6 +3067,9 @@ function renderOrderCards(orders, containerId, showLive = false) {
     return;
   }
 
+  const isBatchMode = !!window._batchMode;
+  if (!window._selectedOrderIds) window._selectedOrderIds = new Set();
+
   let html = '';
   if (showLive) {
     html += `<div class="live-indicator"><span class="live-dot"></span>${lang === 'es' ? 'EN VIVO' : 'LIVE'}</div>`;
@@ -3126,8 +3134,26 @@ function renderOrderCards(orders, containerId, showLive = false) {
 
     const unseenClass = isDriverOrderSeen(order.id) ? '' : ' unseen';
     
+    // Batch variables
+    const isSelected = window._selectedOrderIds.has(order.id);
+    const selectableClass = isBatchMode ? ' batch-selectable' : '';
+    const selectedClass = (isBatchMode && isSelected) ? ' selected' : '';
+    
+    // Intercept card click
+    const clickHandler = isBatchMode 
+      ? `toggleBatchSelection('${order.id}', this)` 
+      : `openOrderSheet('${order.id}')`;
+      
+    // Custom Checkbox
+    const chkHtml = isBatchMode 
+      ? `<div class="batch-card-chk-wrap" onclick="event.stopPropagation(); toggleBatchSelection('${order.id}', this.parentElement)">
+          <div class="chk-box"></div>
+         </div>`
+      : '';
+
     html += `
-      <div class="order-card-avatar${unseenClass}" data-order-id="${order.id}" onclick="openOrderSheet('${order.id}')">
+      <div class="order-card-avatar${unseenClass}${selectableClass}${selectedClass}" data-order-id="${order.id}" onclick="${clickHandler}">
+        ${chkHtml}
         <div class="oca-avatar">${initials}</div>
         <div class="oca-body">
           <div class="oca-name">${driverName}</div>
@@ -11166,4 +11192,471 @@ async function whatsappShareCompiler() {
   }
 }
 window.whatsappShareCompiler = whatsappShareCompiler;
+
+
+/* ═══════════════════════════════════
+   BATCH SETTLEMENT & VIEW MODE CONTROLLERS
+   ═══════════════════════════════════ */
+
+window._incomingViewMode = 'standard'; // 'standard' or 'grouped'
+window._batchMode = false;
+window._selectedOrderIds = new Set();
+
+window.setIncomingViewMode = function(mode) {
+  window._incomingViewMode = mode;
+  
+  // Reset batch mode if active
+  if (window._batchMode) {
+    exitBatchMode();
+  }
+  
+  // Segmented control UI classes
+  const stdBtn = document.getElementById('view-mode-standard');
+  const grpBtn = document.getElementById('view-mode-grouped');
+  if (stdBtn) stdBtn.classList.toggle('active', mode === 'standard');
+  if (grpBtn) grpBtn.classList.toggle('active', mode === 'grouped');
+  
+  // Toggle standard vs. grouped containers
+  const stdList = document.getElementById('incoming-orders-list');
+  const grpList = document.getElementById('incoming-orders-grouped-list');
+  if (stdList) stdList.style.display = mode === 'standard' ? 'block' : 'none';
+  if (grpList) grpList.style.display = mode === 'grouped' ? 'block' : 'none';
+  
+  // Hide/Show batch toggle button (only available in standard list view)
+  const batchBtn = document.getElementById('batch-toggle-btn');
+  if (batchBtn) batchBtn.style.display = mode === 'standard' ? 'inline-flex' : 'none';
+  
+  if (mode === 'grouped') {
+    renderDriverGroupedOrders();
+  } else {
+    renderIncomingOrders();
+  }
+};
+
+window.toggleBatchMode = function() {
+  window._batchMode = !window._batchMode;
+  window._selectedOrderIds.clear();
+  
+  // Toggle class on the active batch buttons
+  const incomingBtn = document.getElementById('batch-toggle-btn');
+  const historyBtn = document.getElementById('history-batch-toggle-btn');
+  if (incomingBtn) incomingBtn.classList.toggle('active', window._batchMode);
+  if (historyBtn) historyBtn.classList.toggle('active', window._batchMode);
+  
+  // Refresh rendering
+  if (currentSection === 'incoming') {
+    renderIncomingOrders();
+  } else if (currentSection === 'history') {
+    renderOrderCards(historyOrders, 'history-orders-list');
+  }
+  
+  updateFloatingActionBar();
+};
+
+window.toggleBatchSelection = function(orderId, cardEl) {
+  if (!window._selectedOrderIds) window._selectedOrderIds = new Set();
+  
+  if (window._selectedOrderIds.has(orderId)) {
+    window._selectedOrderIds.delete(orderId);
+    if (cardEl) cardEl.classList.remove('selected');
+  } else {
+    window._selectedOrderIds.add(orderId);
+    if (cardEl) cardEl.classList.add('selected');
+  }
+  
+  updateFloatingActionBar();
+};
+
+window.updateFloatingActionBar = function() {
+  const bar = document.getElementById('floating-batch-bar');
+  if (!bar) return;
+  
+  const count = window._selectedOrderIds.size;
+  if (count === 0) {
+    bar.classList.remove('open');
+    return;
+  }
+  
+  // Sum selected order totals
+  let totalSum = 0;
+  const allOrders = [...(incomingOrders || []), ...(historyOrders || [])];
+  
+  window._selectedOrderIds.forEach(id => {
+    const o = allOrders.find(x => x.id === id);
+    if (o) {
+      totalSum += parseFloat(o.total_amount || 0);
+    }
+  });
+  
+  const countText = lang === 'es'
+    ? `${count} pedido${count !== 1 ? 's' : ''} seleccionado${count !== 1 ? 's' : ''}`
+    : `${count} order${count !== 1 ? 's' : ''} selected`;
+    
+  const countEl = document.getElementById('fbb-count');
+  const totalEl = document.getElementById('fbb-total');
+  if (countEl) countEl.textContent = countText;
+  if (totalEl) totalEl.textContent = formatCurrency(totalSum);
+  
+  bar.classList.add('open');
+};
+
+window.exitBatchMode = function() {
+  window._batchMode = false;
+  window._selectedOrderIds.clear();
+  
+  const incomingBtn = document.getElementById('batch-toggle-btn');
+  const historyBtn = document.getElementById('history-batch-toggle-btn');
+  if (incomingBtn) incomingBtn.classList.remove('active');
+  if (historyBtn) historyBtn.classList.remove('active');
+  
+  const bar = document.getElementById('floating-batch-bar');
+  if (bar) bar.classList.remove('open');
+  
+  if (currentSection === 'incoming') {
+    renderIncomingOrders();
+  } else if (currentSection === 'history') {
+    renderOrderCards(historyOrders, 'history-orders-list');
+  }
+};
+
+window.executeBatchAction = async function(action) {
+  if (window._selectedOrderIds.size === 0) return;
+  
+  const bar = document.getElementById('floating-batch-bar');
+  const count = window._selectedOrderIds.size;
+  
+  // Find paid/pickup buttons to show loader spinner
+  const paidBtn = bar.querySelector('.fbb-btn.paid');
+  const pickupBtn = bar.querySelector('.fbb-btn.pickup');
+  const cancelBtn = bar.querySelector('.fbb-btn.cancel');
+  
+  const origPaidText = paidBtn ? paidBtn.innerHTML : '';
+  const origPickupText = pickupBtn ? pickupBtn.innerHTML : '';
+  
+  // Set disabled/loading UI
+  if (paidBtn) { paidBtn.disabled = true; if (action === 'paid') paidBtn.innerHTML = '<div class="fbb-loading-spinner"></div>'; }
+  if (pickupBtn) { pickupBtn.disabled = true; if (action === 'picked_up') pickupBtn.innerHTML = '<div class="fbb-loading-spinner"></div>'; }
+  if (cancelBtn) cancelBtn.disabled = true;
+  
+  try {
+    const allOrders = [...(incomingOrders || []), ...(historyOrders || [])];
+    const now = new Date();
+    
+    // Map order updates promises
+    const promises = Array.from(window._selectedOrderIds).map(id => {
+      const order = allOrders.find(x => x.id === id);
+      const updateData = {};
+      
+      if (action === 'paid') {
+        updateData.payment_status = 'paid';
+        updateData.payment_amount = order ? parseFloat(order.total_amount || 0) : 0;
+        // Auto-mark picked_up like standard details save does
+        if (order && order.status !== 'picked_up') {
+          updateData.status = 'picked_up';
+          updateData.picked_up_at = now.toISOString();
+          if (!order.confirmed_at) {
+            updateData.confirmed_at = now.toISOString();
+          }
+        }
+      } else if (action === 'picked_up') {
+        updateData.status = 'picked_up';
+        updateData.picked_up_at = now.toISOString();
+        if (order && !order.confirmed_at) {
+          updateData.confirmed_at = now.toISOString();
+        }
+      }
+      
+      return sb.from('driver_orders').update(updateData).eq('id', id);
+    });
+    
+    // Execute all updates concurrently
+    const results = await Promise.all(promises);
+    const hasError = results.some(r => r.error);
+    
+    if (hasError) {
+      throw new Error('Some updates failed');
+    }
+    
+    // Show premium checkmark animation
+    const targetBtn = action === 'paid' ? paidBtn : pickupBtn;
+    if (targetBtn) {
+      targetBtn.innerHTML = '&#10003;';
+    }
+    
+    showToast(
+      lang === 'es' 
+        ? `${count} pedidos actualizados` 
+        : `Successfully updated ${count} orders`, 
+      'success'
+    );
+    
+    // Smooth reset
+    setTimeout(async () => {
+      exitBatchMode();
+      
+      // Reload lists
+      if (currentSection === 'incoming') await loadIncomingOrders();
+      if (currentSection === 'history') await loadHistoryOrders(true);
+      if (currentSection === 'overview') await loadOverview();
+    }, 600);
+    
+  } catch (err) {
+    console.error('Batch update failed:', err);
+    showToast(
+      lang === 'es' 
+        ? 'Error al actualizar pedidos por lotes' 
+        : 'Failed to update orders in batch', 
+      'error'
+    );
+    
+    // Restore button texts
+    if (paidBtn) { paidBtn.disabled = false; paidBtn.innerHTML = origPaidText; }
+    if (pickupBtn) { pickupBtn.disabled = false; pickupBtn.innerHTML = origPickupText; }
+    if (cancelBtn) cancelBtn.disabled = false;
+  }
+};
+
+/* ── Driver Grouped View Accordions & 1-Click Settlement ── */
+window._expandedGroupCards = new Set();
+
+window.renderDriverGroupedOrders = function() {
+  const container = document.getElementById('incoming-orders-grouped-list');
+  if (!container) return;
+  
+  const activeFilter = document.querySelector('#driver-orders-filter .insights-pill.active')?.dataset.filter || 'all';
+  let filtered = [...incomingOrders];
+
+  // Update tab badges dynamically (same logic as standard render)
+  const todayStr = getTodayStr();
+  const allCount = incomingOrders.length;
+  const todayCount = incomingOrders.filter(o => (o.submitted_at || '').startsWith(todayStr)).length;
+  const unpaidCount = incomingOrders.filter(o => o.payment_status === 'not_paid').length;
+  const partialCount = incomingOrders.filter(o => o.payment_status === 'partial').length;
+
+  _updateTabBadge('badge-incoming-all', allCount);
+  _updateTabBadge('badge-incoming-today', todayCount);
+  _updateTabBadge('badge-incoming-unpaid', unpaidCount);
+  _updateTabBadge('badge-incoming-partial', partialCount);
+
+  if (activeFilter === 'today') {
+    filtered = filtered.filter(o => (o.submitted_at || '').startsWith(todayStr));
+  } else if (activeFilter === 'unpaid') {
+    filtered = filtered.filter(o => o.payment_status === 'not_paid');
+  } else if (activeFilter === 'partial') {
+    filtered = filtered.filter(o => o.payment_status === 'partial');
+  }
+  
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state" data-en="No driver orders" data-es="No hay pedidos de conductores">${lang === 'es' ? 'No hay pedidos de conductores' : 'No driver orders'}</div>`;
+    return;
+  }
+  
+  // Group by driver
+  const driverGroups = {};
+  filtered.forEach(o => {
+    const dId = o.driver_id || 'unknown';
+    if (!driverGroups[dId]) driverGroups[dId] = [];
+    driverGroups[dId].push(o);
+  });
+  
+  let html = '';
+  
+  Object.entries(driverGroups).forEach(([driverId, orders]) => {
+    const driverName = getDriverName(driverId);
+    const initials = _getInitials(driverName) || '??';
+    
+    // Aggregate values
+    const totalOrders = orders.length;
+    const unpaidOrders = orders.filter(o => o.payment_status !== 'paid').length;
+    
+    // Sum outstanding balance for unpaid / partial orders
+    let driverBalance = 0;
+    orders.forEach(o => {
+      if (o.payment_status !== 'paid') {
+        const total = parseFloat(o.total_amount || 0);
+        const paid = parseFloat(o.payment_amount || 0);
+        driverBalance += Math.max(0, total - paid);
+      }
+    });
+    
+    const balanceText = formatCurrency(driverBalance);
+    const orderText = lang === 'es'
+      ? `${totalOrders} pedido${totalOrders !== 1 ? 's' : ''} en total · ${unpaidOrders} sin pagar`
+      : `${totalOrders} order${totalOrders !== 1 ? 's' : ''} total · ${unpaidOrders} unpaid`;
+      
+    // Collapsible state retention
+    const cardId = `group-card-${driverId}`;
+    const wasExpanded = window._expandedGroupCards && window._expandedGroupCards.has(cardId);
+    const cardClass = wasExpanded ? 'driver-group-card expanded' : 'driver-group-card';
+    
+    // Settle button
+    let settleBtnHtml = '';
+    if (driverBalance > 0) {
+      settleBtnHtml = `<button class="btn-settle-driver" onclick="event.stopPropagation(); settleDriverOrders('${driverId}', this)">
+        ${lang === 'es' ? `Saldar ${balanceText}` : `Settle All ${balanceText}`}
+      </button>`;
+    } else {
+      settleBtnHtml = `<span class="compiler-badge paid" style="font-size: 0.72rem; padding: 6px 12px; border-radius: 8px; font-weight:700;">
+        ${lang === 'es' ? 'Pagado' : 'Fully Paid'}
+      </span>`;
+    }
+    
+    // Render children rows
+    let childrenHtml = '';
+    orders.forEach(o => {
+      const oNum = o.order_number ? `#${o.order_number}` : '';
+      const oTime = formatTime(o.submitted_at);
+      const oAmt = formatCurrency(parseFloat(o.total_amount || 0));
+      
+      let payClass = 'unpaid';
+      let payText = lang === 'es' ? 'Sin Pagar' : 'Not Paid';
+      if (o.payment_status === 'paid') { payClass = 'paid'; payText = lang === 'es' ? 'Pagado' : 'Paid'; }
+      else if (o.payment_status === 'partial') { payClass = 'partial'; payText = lang === 'es' ? 'Parcial' : 'Partial'; }
+      
+      const statusLabels = {
+        pending: lang === 'es' ? 'Pendiente' : 'Pending',
+        confirmed: lang === 'es' ? 'Confirmado' : 'Confirmed',
+        sent: lang === 'es' ? 'Enviado' : 'Sent',
+        picked_up: lang === 'es' ? 'Recogido' : 'Picked Up'
+      };
+      const statusLabel = statusLabels[o.status] || o.status;
+      
+      childrenHtml += `
+        <div class="order-card-avatar dgo-row" onclick="openOrderSheet('${o.id}')" style="box-shadow:none; border:none; border-bottom:1px dashed var(--bd); margin:0; padding:12px 0; border-radius:0; background:transparent;">
+          <div class="oca-body" style="padding-left:0;">
+            <div class="oca-name" style="font-size:0.86rem; font-weight:600;">${oNum ? oNum + ' • ' : ''}${statusLabel}</div>
+            <div class="oca-time">${oTime}</div>
+          </div>
+          ${o.driver_ref ? `<div class="oca-ref" style="font-size:0.75rem; border:1px solid var(--bd); padding:2px 6px; border-radius:6px; background:var(--bg-surface);">#${_esc(o.driver_ref)}</div>` : ''}
+          <div class="oca-right" style="margin-left:12px;">
+            <div class="oca-price" style="font-size:0.86rem; font-weight:700;">${oAmt}</div>
+            <div class="oca-pill ${payClass}" style="margin-top:2px;">${payText}</div>
+          </div>
+        </div>`;
+    });
+    
+    html += `
+      <div class="${cardClass}" id="${cardId}">
+        <div class="driver-group-header" onclick="toggleDriverGroupCard('${cardId}')">
+          <div class="driver-group-avatar">${initials}</div>
+          <div class="driver-group-info">
+            <span class="driver-group-name">${driverName}</span>
+            <span class="driver-group-sub">${orderText}</span>
+          </div>
+          <div class="driver-group-settle-wrap">
+            <div class="driver-group-balance">
+              <span class="driver-group-bal-val">${balanceText}</span>
+              <span class="driver-group-bal-lbl">${lang === 'es' ? 'Adeudado' : 'Outstanding'}</span>
+            </div>
+            ${settleBtnHtml}
+            <div class="driver-group-arrow">
+              <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
+            </div>
+          </div>
+        </div>
+        <div class="driver-group-orders">
+          ${childrenHtml}
+        </div>
+      </div>`;
+  });
+  
+  container.innerHTML = html;
+  if (window.lucide) window.lucide.createIcons();
+};
+
+window.toggleDriverGroupCard = function(cardId) {
+  if (!window._expandedGroupCards) window._expandedGroupCards = new Set();
+  
+  const el = document.getElementById(cardId);
+  if (!el) return;
+  
+  if (el.classList.contains('expanded')) {
+    el.classList.remove('expanded');
+    window._expandedGroupCards.delete(cardId);
+  } else {
+    el.classList.add('expanded');
+    window._expandedGroupCards.add(cardId);
+  }
+};
+
+window.settleDriverOrders = async function(driverId, btnEl) {
+  const origBtnText = btnEl.innerHTML;
+  btnEl.disabled = true;
+  btnEl.innerHTML = '<div class="fbb-loading-spinner" style="border-top-color:#fff; border-left-color:rgba(255,255,255,0.2);"></div>';
+  
+  try {
+    const activeFilter = document.querySelector('#driver-orders-filter .insights-pill.active')?.dataset.filter || 'all';
+    let filtered = [...incomingOrders];
+    const todayStr = getTodayStr();
+
+    if (activeFilter === 'today') {
+      filtered = filtered.filter(o => (o.submitted_at || '').startsWith(todayStr));
+    } else if (activeFilter === 'unpaid') {
+      filtered = filtered.filter(o => o.payment_status === 'not_paid');
+    } else if (activeFilter === 'partial') {
+      filtered = filtered.filter(o => o.payment_status === 'partial');
+    }
+    
+    const targetOrders = filtered.filter(o => o.driver_id === driverId && o.payment_status !== 'paid');
+    const count = targetOrders.length;
+    
+    if (count === 0) {
+      showToast(lang === 'es' ? 'No hay pedidos sin pagar para este conductor' : 'No unpaid orders for this driver', 'info');
+      renderDriverGroupedOrders();
+      return;
+    }
+    
+    const now = new Date();
+    
+    // Map updates
+    const promises = targetOrders.map(o => {
+      const total = parseFloat(o.total_amount || 0);
+      const updateData = {
+        payment_status: 'paid',
+        payment_amount: total
+      };
+      
+      if (o.status !== 'picked_up') {
+        updateData.status = 'picked_up';
+        updateData.picked_up_at = now.toISOString();
+        if (!o.confirmed_at) {
+          updateData.confirmed_at = now.toISOString();
+        }
+      }
+      
+      return sb.from('driver_orders').update(updateData).eq('id', o.id);
+    });
+    
+    const results = await Promise.all(promises);
+    const hasError = results.some(r => r.error);
+    
+    if (hasError) throw new Error('Driver settlement failed');
+    
+    btnEl.innerHTML = '&#10003;';
+    
+    showToast(
+      lang === 'es'
+        ? `Saldado con éxito. ${count} pedidos marcados como pagados.`
+        : `Successfully settled! ${count} orders marked as paid.`,
+      'success'
+    );
+    
+    setTimeout(async () => {
+      // Reload lists
+      await loadIncomingOrders();
+      if (currentSection === 'overview') await loadOverview();
+    }, 600);
+    
+  } catch (err) {
+    console.error('Driver settlement failed:', err);
+    showToast(
+      lang === 'es' ? 'Error al liquidar pedidos del chofer' : 'Failed to settle driver orders',
+      'error'
+    );
+    btnEl.disabled = false;
+    btnEl.innerHTML = origBtnText;
+  }
+};
+
+
 

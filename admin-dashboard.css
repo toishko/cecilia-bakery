@@ -3373,3 +3373,407 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   color: var(--red);
 }
 
+/* ═══════════════════════════════════
+   BATCH SETTLEMENT & DRIVER GROUP VIEWS
+   ═══════════════════════════════════ */
+
+/* ── View Toggle / Segment Bar & Toolbar ── */
+.incoming-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.view-segmented-control {
+  display: flex;
+  background: var(--bg-surface);
+  border: 1px solid var(--bd);
+  padding: 3px;
+  border-radius: 12px;
+  gap: 2px;
+}
+.view-segment-btn {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--tx-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.view-segment-btn.active {
+  background: var(--bg-card);
+  color: var(--tx);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.batch-toggle-btn {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--bd);
+  background: var(--bg-card);
+  color: var(--tx-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.batch-toggle-btn:hover {
+  border-color: var(--bd-hover);
+  color: var(--tx);
+}
+.batch-toggle-btn.active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.2);
+}
+
+/* ── Interactive Multi-select Checkboxes ── */
+.order-card-avatar {
+  position: relative;
+  transition: padding-left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.2s ease, box-shadow 0.2s ease;
+}
+.order-card-avatar.batch-selectable {
+  padding-left: 48px !important;
+}
+.batch-card-chk-wrap {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%) scale(0);
+  opacity: 0;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+  z-index: 5;
+}
+.order-card-avatar.batch-selectable .batch-card-chk-wrap {
+  transform: translateY(-50%) scale(1);
+  opacity: 1;
+}
+.order-card-avatar.selected {
+  background: var(--bg-surface) !important;
+  border: 1px solid rgba(200, 16, 46, 0.25) !important;
+  box-shadow: 0 4px 16px rgba(200, 16, 46, 0.05) !important;
+  transform: scale(0.99);
+}
+
+/* Checkbox Style matching compiler */
+.batch-card-chk-wrap .chk-box {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--bd);
+  border-radius: 6px;
+  background: var(--bg-card);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  cursor: pointer;
+}
+.batch-card-chk-wrap .chk-box::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 6px;
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0);
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.batch-card-chk-wrap input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.batch-card-chk-wrap input:checked + .chk-box {
+  background: var(--red);
+  border-color: var(--red);
+  transform: scale(1.08);
+}
+.batch-card-chk-wrap input:checked + .chk-box::after {
+  transform: rotate(45deg) scale(1);
+}
+
+/* ── Apple-style Floating Dynamic Island Bar ── */
+.floating-batch-bar {
+  position: fixed;
+  bottom: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 540px;
+  z-index: 1000;
+  transition: bottom 0.4s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+.floating-batch-bar.open {
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  opacity: 1;
+  pointer-events: auto;
+}
+.fbb-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-radius: 20px;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  background: rgba(18, 8, 12, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  color: #fff;
+  gap: 16px;
+}
+[data-theme="light"] .fbb-content {
+  background: rgba(255, 254, 253, 0.9);
+  border-color: rgba(200, 16, 46, 0.15);
+  box-shadow: 0 10px 40px rgba(200, 16, 46, 0.12), inset 0 1px 0 #fff;
+  color: var(--tx);
+}
+.fbb-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.fbb-count {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fbb-total {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--red-lt);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+[data-theme="light"] .fbb-total {
+  color: var(--red);
+}
+.fbb-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.fbb-btn {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+.fbb-btn svg, .fbb-btn i {
+  width: 14px;
+  height: 14px;
+}
+.fbb-btn.paid {
+  background: linear-gradient(135deg, #1B7A4A 0%, #125633 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(27, 122, 74, 0.2);
+}
+.fbb-btn.paid:active {
+  transform: scale(0.95);
+}
+.fbb-btn.pickup {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+.fbb-btn.pickup:active {
+  transform: scale(0.95);
+}
+.fbb-btn.cancel {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 8px 12px;
+}
+[data-theme="light"] .fbb-btn.cancel {
+  color: var(--tx-muted);
+  border-color: var(--bd);
+}
+.fbb-btn.cancel:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+[data-theme="light"] .fbb-btn.cancel:hover {
+  color: var(--tx);
+  background: var(--bg-surface);
+}
+.fbb-loading-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: fbbSpin 0.7s linear infinite;
+}
+@keyframes fbbSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Driver Grouped Settlement Cards ── */
+.driver-group-card {
+  background: var(--bg-card);
+  border: 1px solid var(--bd);
+  border-radius: 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.driver-group-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+.driver-group-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--bg-card);
+  transition: background 0.15s ease;
+}
+.driver-group-header:hover {
+  background: var(--bg-surface);
+}
+.driver-group-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--red) 0%, var(--red-dk) 100%);
+  color: #fff;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.15);
+}
+.driver-group-info {
+  flex: 1;
+  min-width: 0;
+}
+.driver-group-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--tx);
+}
+.driver-group-sub {
+  font-size: 0.72rem;
+  color: var(--tx-muted);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.driver-group-settle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.driver-group-balance {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+}
+.driver-group-bal-val {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--red);
+  font-variant-numeric: tabular-nums;
+}
+.driver-group-bal-lbl {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--tx-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.btn-settle-driver {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1B7A4A 0%, #125633 100%);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(27, 122, 74, 0.15);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.btn-settle-driver:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(27, 122, 74, 0.25);
+}
+.btn-settle-driver:active {
+  transform: scale(0.97);
+}
+.driver-group-arrow {
+  color: var(--tx-muted);
+  transition: transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.driver-group-card.expanded .driver-group-arrow {
+  transform: rotate(180deg);
+}
+
+.driver-group-orders {
+  display: none;
+  background: rgba(0, 0, 0, 0.015);
+  border-top: 1px solid var(--bd);
+  padding: 8px 16px 16px;
+}
+[data-theme="dark"] .driver-group-orders {
+  background: rgba(255, 255, 255, 0.01);
+}
+.driver-group-card.expanded .driver-group-orders {
+  display: block;
+  animation: driverOrdersSlide 0.25s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@keyframes driverOrdersSlide {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.dgo-row {
+  border-bottom: 1px dashed var(--bd);
+}
+.dgo-row:last-child {
+  border-bottom: none;
+}
+
+

@@ -281,7 +281,7 @@
 
     <!-- ── DRIVER ORDERS ── -->
     <div id="section-incoming" class="dash-section" style="display:none">
-      <div class="insights-hero-top" style="margin-bottom: 24px;">
+      <div class="insights-hero-top" style="margin-bottom: 12px;">
         <h2 class="insights-title" data-en="Driver Orders" data-es="Pedidos">Driver Orders</h2>
         <div class="insights-time-selector" id="driver-orders-filter">
           <button class="insights-pill" data-filter="all">
@@ -302,7 +302,25 @@
           </button>
         </div>
       </div>
+
+      <!-- View & Batch Controls Toolbar -->
+      <div class="incoming-toolbar">
+        <div class="view-segmented-control">
+          <button class="view-segment-btn active" id="view-mode-standard" onclick="setIncomingViewMode('standard')" data-en="Standard List" data-es="Lista Estándar">Standard List</button>
+          <button class="view-segment-btn" id="view-mode-grouped" onclick="setIncomingViewMode('grouped')" data-en="Group by Driver" data-es="Por Conductor">Group by Driver</button>
+        </div>
+        <button class="batch-toggle-btn" id="batch-toggle-btn" onclick="toggleBatchMode()">
+          <i data-lucide="check-square" style="width:14px;height:14px;"></i> <span data-en="Batch Select" data-es="Selección Lote">Batch Select</span>
+        </button>
+      </div>
+
+      <!-- Standard chronological order cards container -->
       <div id="incoming-orders-list">
+        <div class="empty-state" data-en="No driver orders" data-es="No hay pedidos de conductores">No driver orders</div>
+      </div>
+
+      <!-- Driver-wise Grouped orders container -->
+      <div id="incoming-orders-grouped-list" style="display:none">
         <div class="empty-state" data-en="No driver orders" data-es="No hay pedidos de conductores">No driver orders</div>
       </div>
     </div>
@@ -612,7 +630,12 @@
 
     <!-- ── ORDER HISTORY ── -->
     <div id="section-history" class="dash-section" style="display:none">
-      <h2 class="page-title" data-en="Order History" data-es="Historial de Pedidos">Order History</h2>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px">
+        <h2 class="page-title" style="margin:0;" data-en="Order History" data-es="Historial de Pedidos">Order History</h2>
+        <button class="batch-toggle-btn" id="history-batch-toggle-btn" onclick="toggleBatchMode()">
+          <i data-lucide="check-square" style="width:14px;height:14px;"></i> <span data-en="Batch Select" data-es="Selección Lote">Batch Select</span>
+        </button>
+      </div>
       <div class="history-filters">
         <div class="history-filter-row">
           <div class="filter-field">
@@ -1327,6 +1350,27 @@ initUpdateBanner();
       <button class="order-sheet-close" onclick="closeOrderedSheet()">✕</button>
     </div>
     <div id="ordered-sheet-content" class="order-sheet-content"></div>
+  </div>
+</div>
+
+<!-- FLOATING BATCH ACTION BAR -->
+<div class="floating-batch-bar" id="floating-batch-bar">
+  <div class="fbb-content">
+    <div class="fbb-info">
+      <span class="fbb-count" id="fbb-count">0 orders selected</span>
+      <span class="fbb-total" id="fbb-total">$0.00</span>
+    </div>
+    <div class="fbb-actions">
+      <button class="fbb-btn paid" onclick="executeBatchAction('paid')">
+        <i data-lucide="check-circle" style="width:14px;height:14px;"></i> <span data-en="Mark Paid" data-es="Marcar Pagado">Mark Paid</span>
+      </button>
+      <button class="fbb-btn pickup" onclick="executeBatchAction('picked_up')">
+        <i data-lucide="truck" style="width:14px;height:14px;"></i> <span data-en="Mark Picked Up" data-es="Marcar Recogido">Mark Picked Up</span>
+      </button>
+      <button class="fbb-btn cancel" onclick="exitBatchMode()">
+        <span data-en="Cancel" data-es="Cancelar">Cancel</span>
+      </button>
+    </div>
   </div>
 </div>
 
