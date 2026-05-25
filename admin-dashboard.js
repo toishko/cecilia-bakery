@@ -282,7 +282,8 @@ function _toggleActionSheet(group) {
 function _updateActionSheetBadges() {
   // Driver orders badge
   const driverCount = incomingOrders.filter(o =>
-    o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent'
+    (o.status === 'pending' || o.status === 'confirmed' || o.status === 'sent') ||
+    (o.status === 'picked_up' && (o.payment_status === 'not_paid' || o.payment_status === 'partial'))
   ).length;
   const dBadge = document.getElementById('as-incoming-badge');
   if (dBadge) { dBadge.textContent = driverCount; dBadge.style.display = driverCount > 0 ? '' : 'none'; }
