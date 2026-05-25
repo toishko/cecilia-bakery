@@ -1368,6 +1368,66 @@
     .staff-toast.success { background: #0a7a0a; color: #fff; }
     .staff-toast.error { background: var(--red, #c8102e); color: #fff; }
     .staff-toast.info { background: var(--bg-card, #fff); color: var(--tx, #333); border: 1px solid var(--bd); }
+
+    /* ── Print Preview Overlay ── */
+    #print-preview-overlay{position:fixed;inset:0;z-index:99999;background:#fff;
+      display:flex;flex-direction:column;animation:ppFadeIn .2s ease}
+    @keyframes ppFadeIn{from{opacity:0}to{opacity:1}}
+    .pp-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px;
+      touch-action:pan-y;overscroll-behavior:contain}
+    .pp-page{max-width:600px;margin:0 auto;font-family:'Outfit','Segoe UI',sans-serif;color:#1a1a1a}
+    .pp-page .print-logo{display:block;max-width:140px;height:auto;margin:0 auto 8px}
+    .pp-page .print-header{text-align:center;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #C8102E}
+    .pp-page .print-order-num{font-size:1rem;font-weight:600;margin-top:4px;color:#333}
+    .pp-page .print-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:20px;font-size:.88rem}
+    .pp-page .print-meta-item{display:flex;gap:6px}
+    .pp-page .print-meta-label{font-weight:700;min-width:80px;color:#555}
+    .pp-page .print-items{width:100%;border-collapse:collapse;margin-bottom:16px}
+    .pp-page .print-items th{text-align:left;border-bottom:2px solid #C8102E;padding:8px;
+      font-size:.82rem;text-transform:uppercase;letter-spacing:.5px;color:#888}
+    .pp-page .print-items td{border-bottom:1px solid #eee;padding:8px;font-size:.88rem}
+    .pp-page .print-items .col-r{text-align:right}
+    .pp-page .print-items tbody tr:nth-child(even){background:#fafafa}
+    .pp-page .print-total{text-align:right;font-size:1.15rem;font-weight:700;margin-top:8px;
+      padding-top:10px;border-top:2px solid #C8102E;color:#C8102E}
+    .pp-page .print-payment{margin-top:14px;font-size:.88rem;padding:10px 14px;
+      border:1px solid #ddd;border-radius:8px;background:#f9f9f9}
+    .pp-page .print-notes{margin-top:12px;font-size:.85rem;font-style:italic;padding:10px 14px;
+      border:1px solid #ddd;border-radius:8px;background:#fffbe6}
+    .pp-footer{margin-top:24px;text-align:center;font-size:.75rem;color:#aaa;
+      border-top:1px solid #eee;padding-top:12px}
+
+    .pp-actions{display:flex;gap:10px;padding:16px 20px;border-top:1px solid #eee;
+      background:#fff;flex-shrink:0}
+    .pp-btn{flex:1;padding:14px;border:none;border-radius:10px;font-size:.95rem;
+      font-weight:600;font-family:inherit;cursor:pointer;letter-spacing:.5px}
+    .pp-print{background:#C8102E;color:#fff}
+    .pp-print:active{background:#a00d24}
+    .pp-share{background:#2563eb;color:#fff}
+    .pp-share:active{background:#1d4ed8}
+    .pp-close{background:#eee;color:#333}
+    .pp-close:active{background:#ddd}
+
+    /* ── Print Stylesheet — fit-to-one-page via smaller sizes ── */
+    @media print{
+      html,body{height:auto!important;min-height:0!important;margin:0!important;padding:0!important;
+        overflow:visible!important;position:static!important;width:auto!important;touch-action:auto!important}
+      body>*{display:none!important}
+      #print-preview-overlay{display:block!important;position:static!important;
+        height:auto!important;min-height:0!important;overflow:visible!important;
+        margin:0!important;padding:0!important}
+      #print-preview-overlay .pp-actions{display:none!important}
+      #print-preview-overlay .pp-scroll{padding:0!important;margin:0!important;overflow:visible!important;height:auto!important}
+      /* Shrink everything — 75% base font cascades to all children */
+      .pp-page{max-width:100%;font-size:75%;page-break-inside:avoid;break-inside:avoid;
+        page-break-after:avoid;margin:0!important;padding:0!important}
+      .pp-page .print-logo{max-width:90px;margin-bottom:4px}
+      .pp-page .print-header{margin-bottom:10px;padding-bottom:8px}
+      .pp-page .print-order-num{font-size:.9rem;margin-top:2px}
+      .pp-page .print-meta{gap:2px 12px;margin-bottom:10px}
+      .pp-page .print-items{margin-bottom:8px}
+      .pp-page .print-items th{border-bottom-color:#000;padding:3px 4px;font-size:.7rem}
+    }
   </style>
 </head>
 
@@ -4965,10 +5025,182 @@
   }
   window.renderStaffCompilerView = renderStaffCompilerView;
 
+  function _drawStaffCompilerCanvas(grouped, sortedCats, orders, totalQty, totalAmount, showTotals) {
+    const isEs = staffLang === 'es';
+    const W = 600, PAD = 30;
+    const usable = W - PAD * 2;
+    const dpr = 2; // retina
+    const font = (w, s) => `${w} ${s}px "Outfit", -apple-system, sans-serif`;
+    const RED = '#C8102E', GRAY = '#666', DARK = '#111', LIGHT_BG = '#fdfdfd';
+
+    // Pre-calculate height
+    let h = 0;
+    h += 80;  // Title + Subtitle
+    h += 20;  // Gap
+    
+    // Included orders box
+    h += 14;  // box padding top
+    h += 20;  // "Included Orders:"
+    h += orders.length * 20; // Orders list
+    h += 10;  // Gap
+    h += 20;  // Total Pieces
+    if (showTotals) h += 24; // Grand Total
+    h += 14;  // box padding bottom
+    h += 30;  // Gap before tables
+
+    sortedCats.forEach(cat => {
+      h += 40; // Category Header
+      h += 30; // Table Header
+      grouped[cat].forEach(() => {
+        h += 28; // Table Row
+      });
+      h += 20; // Margin bottom
+    });
+
+    h += 50; // Footer
+
+    // Create canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = W * dpr;
+    canvas.height = h * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    // Background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, h);
+
+    let y = PAD;
+
+    // ── Header ──
+    ctx.textAlign = 'left';
+    ctx.fillStyle = DARK;
+    ctx.font = font('700', 24);
+    ctx.fillText(isEs ? 'Hoja de Compilación' : 'Compiled Load Sheet', PAD, y + 24);
+    y += 32;
+    ctx.fillStyle = GRAY;
+    ctx.font = font('600', 14);
+    ctx.fillText(`${isEs ? 'Panadería Cecilia — Resumen Compilado' : 'Cecilia Bakery — Compiled Summary'} (${new Date().toLocaleDateString()})`, PAD, y + 14);
+    y += 40;
+
+    // ── Orders Box ──
+    const boxTop = y;
+    let boxY = y + 14;
+    ctx.fillStyle = DARK;
+    ctx.font = font('700', 13);
+    ctx.fillText(isEs ? 'Pedidos Incluidos:' : 'Included Orders:', PAD + 14, boxY + 13);
+    boxY += 24;
+    
+    ctx.fillStyle = DARK;
+    ctx.font = font('400', 13);
+    orders.forEach(o => {
+      const num = o.order_number ? `#${o.order_number}` : '';
+      const biz = o.business_name || '';
+      const driver = getDriverName(o.driver_id);
+      ctx.fillText(`• ${num} ${biz} (${driver})`, PAD + 24, boxY + 13);
+      boxY += 20;
+    });
+
+    boxY += 10;
+    ctx.font = font('700', 13);
+    ctx.fillText((isEs ? 'Total de Productos: ' : 'Total Pieces: ') + totalQty, PAD + 14, boxY + 13);
+    boxY += 24;
+    
+    if (showTotals) {
+      ctx.fillText((isEs ? 'Monto Total: ' : 'Grand Total: ') + staffFormatCurrency(totalAmount), PAD + 14, boxY + 13);
+      boxY += 24;
+    }
+    
+    // Draw Box Background (behind text)
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.fillStyle = '#f9f9f9';
+    ctx.beginPath();
+    ctx.roundRect(PAD, boxTop, usable, (boxY + 6) - boxTop, 8);
+    ctx.fill();
+    ctx.strokeStyle = '#dddddd';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+
+    y = boxY + 36;
+
+    // ── Tables ──
+    sortedCats.forEach(cat => {
+      const displayCat = isEs && PRODUCT_CAT[grouped[cat][0].product_key] ? PRODUCT_CAT[grouped[cat][0].product_key].es : cat;
+      
+      // Category Header
+      ctx.fillStyle = RED;
+      ctx.font = font('700', 14);
+      ctx.textAlign = 'left';
+      ctx.fillText(displayCat.toUpperCase(), PAD, y + 14);
+      y += 24;
+      ctx.fillStyle = RED;
+      ctx.fillRect(PAD, y, usable, 2);
+      y += 12;
+
+      // Table Header
+      ctx.fillStyle = DARK;
+      ctx.font = font('700', 12);
+      ctx.textAlign = 'left';
+      ctx.fillText(isEs ? 'Producto' : 'Product', PAD, y + 12);
+      
+      const qtyX = showTotals ? PAD + usable * 0.65 : PAD + usable * 0.8;
+      ctx.textAlign = 'right';
+      ctx.fillText(isEs ? 'Cantidad' : 'Quantity', qtyX, y + 12);
+      
+      if (showTotals) {
+        ctx.fillText(isEs ? 'Precio' : 'Price', PAD + usable * 0.82, y + 12);
+        ctx.fillText('Total', PAD + usable, y + 12);
+      }
+      y += 18;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(PAD, y, usable, 2);
+      y += 6;
+
+      // Rows
+      grouped[cat].forEach(item => {
+        ctx.fillStyle = DARK;
+        ctx.font = font('400', 13);
+        ctx.textAlign = 'left';
+        ctx.fillText(item.product_label, PAD, y + 18);
+        
+        ctx.textAlign = 'right';
+        ctx.font = font('700', 13);
+        ctx.fillText(String(item.quantity), qtyX, y + 18);
+
+        if (showTotals) {
+          ctx.font = font('400', 13);
+          ctx.fillText(staffFormatCurrency(item.price), PAD + usable * 0.82, y + 18);
+          ctx.font = font('700', 13);
+          ctx.fillText(staffFormatCurrency(item.quantity * item.price), PAD + usable, y + 18);
+        }
+        y += 26;
+        ctx.fillStyle = '#ddd';
+        ctx.fillRect(PAD, y, usable, 1);
+        y += 2;
+      });
+
+      y += 20;
+    });
+
+    // ── Footer ──
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#bbb';
+    ctx.font = font('400', 11);
+    ctx.fillText('ceciliabakery.com', W / 2, y + 20);
+
+    // Export as JPEG blob
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    const bin = atob(dataUrl.split(',')[1]);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: 'image/jpeg' });
+  }
+
   function printStaffCompilerSummary() {
     if (staffCompilerSelectedOrders.length === 0) return;
 
-    var printWindow = window.open('', '_blank');
     var isEs = staffLang === 'es';
     
     var compiled = {};
@@ -5029,26 +5261,26 @@
       
       itemsHtml += `
         <h3>${displayCat}</h3>
-        <table style="width:100%; border-collapse:collapse; margin-bottom:12px;">
+        <table class="print-items">
           <thead>
-            <tr style="border-bottom:2px solid #333; text-align:left;">
-              <th style="padding:6px 0;">${isEs ? 'Producto' : 'Product'}</th>
-              <th style="padding:6px 0; text-align:right;">${isEs ? 'Cantidad' : 'Quantity'}</th>
+            <tr>
+              <th>${isEs ? 'Producto' : 'Product'}</th>
+              <th class="col-r">${isEs ? 'Cantidad' : 'Quantity'}</th>
               ${staffCompilerPriceToggle ? `
-              <th style="padding:6px 0; text-align:right;">${isEs ? 'Precio' : 'Price'}</th>
-              <th style="padding:6px 0; text-align:right;">Total</th>` : ''}
+              <th class="col-r">${isEs ? 'Precio' : 'Price'}</th>
+              <th class="col-r">Total</th>` : ''}
             </tr>
           </thead>
           <tbody>`;
 
       grouped[cat].forEach(function(item) {
         itemsHtml += `
-          <tr style="border-bottom:1px solid #ddd;">
-            <td style="padding:6px 0;">${item.product_label}</td>
-            <td style="padding:6px 0; text-align:right; font-weight:bold;">${item.quantity}</td>
+          <tr>
+            <td>${item.product_label}</td>
+            <td class="col-r"><strong>${item.quantity}</strong></td>
             ${staffCompilerPriceToggle ? `
-            <td style="padding:6px 0; text-align:right;">${staffFormatCurrency(item.price)}</td>
-            <td style="padding:6px 0; text-align:right; font-weight:bold;">${staffFormatCurrency(item.quantity * item.price)}</td>` : ''}
+            <td class="col-r">${staffFormatCurrency(item.price)}</td>
+            <td class="col-r"><strong>${staffFormatCurrency(item.quantity * item.price)}</strong></td>` : ''}
           </tr>`;
       });
 
@@ -5057,129 +5289,149 @@
         </table>`;
     });
 
-    var title = isEs ? 'Hoja de Compilación de Carga' : 'Compiled Loading Load Sheet';
-    var subTitle = isEs ? 'Panadería Cecilia — Resumen Compilado de Personal' : 'Cecilia Bakery — Staff Compiled Summary';
+    const title = isEs ? 'Hoja de Compilación' : 'Compiled Load Sheet';
+    const subTitle = isEs ? 'Panadería Cecilia — Resumen Compilado' : 'Cecilia Bakery — Compiled Summary';
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>${title}</title>
-          <style>
-            body { font-family: sans-serif; padding: 20px; color: #111; }
-            h1 { font-size: 1.6rem; margin-bottom: 6px; }
-            h2 { font-size: 1.1rem; color: #666; margin-top: 0; margin-bottom: 20px; }
-            h3 { font-size: 0.95rem; border-bottom: 2px solid #c8102e; padding-bottom: 4px; margin-top: 24px; color: #c8102e; text-transform: uppercase; }
-            ul { padding-left: 20px; margin-bottom: 20px; }
-            .summary-card { background: #f9f9f9; padding: 14px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; }
-            @media print {
-              body { padding: 0; }
-              button { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h1>${title}</h1>
-            <button onclick="window.print()" style="padding:8px 16px; background:#c8102e; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">${isEs ? 'Imprimir' : 'Print'}</button>
-          </div>
-          <h2>${subTitle} (${new Date().toLocaleDateString()})</h2>
+    const content = `
+      <div class="print-header">
+        <h1 style="font-size: 1.6rem; margin: 0 0 4px 0;">${title}</h1>
+        <h2 style="font-size: 1.1rem; color: #666; margin: 0;">${subTitle} (${new Date().toLocaleDateString()})</h2>
+      </div>
 
-          <div class="summary-card">
-            <p style="margin:4px 0;"><strong>${isEs ? 'Pedidos Incluidos:' : 'Included Orders:'}</strong></p>
-            <ul style="margin:6px 0 0 0;">${ordersListHtml}</ul>
-            <p style="margin:10px 0 0 0;"><strong>${isEs ? 'Total de Productos:' : 'Total Pieces:'}</strong> ${totalQty}</p>
-            ${staffCompilerPriceToggle ? `<p style="margin:4px 0 0 0;"><strong>${isEs ? 'Monto Total:' : 'Grand Total:'}</strong> ${staffFormatCurrency(totalAmount)}</p>` : ''}
-          </div>
+      <div class="print-notes">
+        <p style="margin:4px 0;"><strong>${isEs ? 'Pedidos Incluidos:' : 'Included Orders:'}</strong></p>
+        <ul style="margin:6px 0 0 0; padding-left: 20px;">${ordersListHtml}</ul>
+        <p style="margin:10px 0 0 0;"><strong>${isEs ? 'Total de Productos:' : 'Total Pieces:'}</strong> ${totalQty}</p>
+        ${staffCompilerPriceToggle ? `<p style="margin:4px 0 0 0;"><strong>${isEs ? 'Monto Total:' : 'Grand Total:'}</strong> ${staffFormatCurrency(totalAmount)}</p>` : ''}
+      </div>
 
-          ${itemsHtml}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+      ${itemsHtml}
+    `;
+
+    // Remove any existing print overlay
+    const existing = document.getElementById('print-preview-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'print-preview-overlay';
+    overlay.innerHTML = `
+      <div class="pp-scroll">
+        <div class="pp-page" style="max-width: 600px;">
+          ${content}
+          <div class="pp-footer">ceciliabakery.com</div>
+        </div>
+        <div class="pp-actions">
+          <button class="pp-btn pp-print" id="pp-print-btn">🖨 ${isEs ? 'Imprimir Documento' : 'Print Document'}</button>
+          <button class="pp-btn pp-share" id="pp-share-btn">📤 ${isEs ? 'Compartir Imagen' : 'Share Image'}</button>
+          <button class="pp-btn pp-close" id="pp-close-btn">✕ ${isEs ? 'Cerrar Vista' : 'Close Preview'}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Bind close action
+    document.getElementById('pp-close-btn').addEventListener('click', () => {
+      overlay.remove();
+    });
+
+    // Bind share action
+    document.getElementById('pp-share-btn').addEventListener('click', () => {
+      whatsappShareStaffCompiler();
+    });
+
+    // Bind print action
+    document.getElementById('pp-print-btn').addEventListener('click', () => {
+      overlay.classList.add('printing');
+      window.print();
+      
+      // Safely remove the printing class when print dialog closes
+      const removePrinting = () => {
+        overlay.classList.remove('printing');
+        window.removeEventListener('focus', removePrinting);
+      };
+      window.addEventListener('focus', removePrinting);
+      setTimeout(removePrinting, 2000); // safety fallback
+    });
   }
   window.printStaffCompilerSummary = printStaffCompilerSummary;
 
-  function whatsappShareStaffCompiler() {
+  async function whatsappShareStaffCompiler() {
     if (staffCompilerSelectedOrders.length === 0) return;
 
-    var isEs = staffLang === 'es';
-    var compiled = {};
-    var totalQty = 0;
-    var totalAmount = 0;
+    // Show loading state if called from the print preview overlay
+    const ppBtn = document.getElementById('pp-share-btn');
+    const mainBtn = document.querySelector('button[onclick="whatsappShareStaffCompiler()"]');
+    if (ppBtn) { ppBtn.textContent = '⏳ ...'; ppBtn.disabled = true; }
+    if (mainBtn) { mainBtn.disabled = true; }
 
-    staffCompilerSelectedOrders.forEach(function(order) {
-      (order.items || []).forEach(function(item) {
-        var qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
-        if (qty <= 0) return;
-        var key = item.product_key;
-        var price = parseFloat(item.price_at_order || 0);
+    // Wait a frame to let UI update
+    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 30)));
 
-        if (!compiled[key]) {
-          compiled[key] = {
-            product_label: item.product_label,
-            quantity: 0,
-            price: price,
-            category: 'Other'
-          };
-          if (typeof PRODUCT_CAT !== 'undefined' && PRODUCT_CAT[key]) {
-            compiled[key].category = PRODUCT_CAT[key].en;
+    try {
+      var isEs = staffLang === 'es';
+      var compiled = {};
+      var totalQty = 0;
+      var totalAmount = 0;
+
+      staffCompilerSelectedOrders.forEach(function(order) {
+        (order.items || []).forEach(function(item) {
+          var qty = item.adjusted_quantity !== null && item.adjusted_quantity !== undefined ? item.adjusted_quantity : item.quantity;
+          if (qty <= 0) return;
+          var key = item.product_key;
+          var price = parseFloat(item.price_at_order || 0);
+
+          if (!compiled[key]) {
+            compiled[key] = {
+              product_label: item.product_label,
+              quantity: 0,
+              price: price,
+              category: 'Other'
+            };
+            if (typeof PRODUCT_CAT !== 'undefined' && PRODUCT_CAT[key]) {
+              compiled[key].category = PRODUCT_CAT[key].en;
+            }
           }
-        }
-        compiled[key].quantity += qty;
-        totalQty += qty;
-        totalAmount += (qty * price);
+          compiled[key].quantity += qty;
+          totalQty += qty;
+          totalAmount += (qty * price);
+        });
       });
-    });
 
-    var grouped = {};
-    Object.values(compiled).forEach(function(item) {
-      var cat = item.category;
-      if (!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push(item);
-    });
+      var grouped = {};
+      Object.values(compiled).forEach(function(item) {
+        var cat = item.category;
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(item);
+      });
 
-    var sortedCats = Object.keys(grouped).sort(function(a, b) {
-      var ai = CAT_ORDER_EN.indexOf(a);
-      var bi = CAT_ORDER_EN.indexOf(b);
-      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-    });
+      var sortedCats = Object.keys(grouped).sort(function(a, b) {
+        var ai = CAT_ORDER_EN.indexOf(a);
+        var bi = CAT_ORDER_EN.indexOf(b);
+        return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+      });
 
-    var text = `*${isEs ? 'Resumen de Carga (Compilado)' : 'Staff Compiled Loading Load Sheet'}*\n`;
-    text += `_Cecilia Bakery — ${new Date().toLocaleDateString()}_\n\n`;
-    
-    text += `*${isEs ? 'Pedidos Incluidos:' : 'Included Orders:'}*\n`;
-    staffCompilerSelectedOrders.forEach(function(o) {
-      var num = o.order_number ? '#' + o.order_number : '';
-      var biz = o.business_name || '';
-      var driver = getDriverName(o.driver_id);
-      text += `• ${num} ${biz} (${driver})\n`;
-    });
-    text += `\n`;
+      // Generate the Canvas Image Blob
+      const blob = _drawStaffCompilerCanvas(grouped, sortedCats, staffCompilerSelectedOrders, totalQty, totalAmount, staffCompilerPriceToggle);
+      const fileName = \`cecilia-compiler-\${Date.now()}.jpg\`;
+      const file = new File([blob], fileName, { type: 'image/jpeg' });
 
-    sortedCats.forEach(function(cat) {
-      var catData = grouped[cat][0];
-      var displayCat = cat;
-      if (isEs && typeof PRODUCT_CAT !== 'undefined' && PRODUCT_CAT[catData.product_key]) {
-        displayCat = PRODUCT_CAT[catData.product_key].es;
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ title: 'Cecilia Bakery Load Sheet', files: [file] });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName; a.click();
+        URL.revokeObjectURL(url);
+        staffToast(isEs ? 'Imagen descargada' : 'Image downloaded', 'success');
       }
-      text += `*${displayCat.toUpperCase()}*\n`;
-      grouped[cat].forEach(function(item) {
-        if (staffCompilerPriceToggle) {
-          text += `• ${item.product_label} x${item.quantity} (@ ${staffFormatCurrency(item.price)}) = ${staffFormatCurrency(item.quantity * item.price)}\n`;
-        } else {
-          text += `• ${item.product_label} x${item.quantity}\n`;
-        }
-      });
-      text += `\n`;
-    });
 
-    text += `*${isEs ? 'Total Piezas:' : 'Total Pieces:'}* ${totalQty}\n`;
-    if (staffCompilerPriceToggle) {
-      text += `*${isEs ? 'Monto Total:' : 'Grand Total:'}* ${staffFormatCurrency(totalAmount)}\n`;
+    } catch (e) {
+      console.error('Compiler share error:', e);
+      if (e.name !== 'AbortError') staffToast(staffLang === 'es' ? 'Error al compartir' : 'Error sharing', 'error');
+    } finally {
+      if (ppBtn) { ppBtn.textContent = '📤 ' + (staffLang === 'es' ? 'Compartir Imagen' : 'Share Image'); ppBtn.disabled = false; }
+      if (mainBtn) { mainBtn.disabled = false; }
     }
-
-    var encodedText = encodeURIComponent(text);
-    window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
   }
   window.whatsappShareStaffCompiler = whatsappShareStaffCompiler;
 
