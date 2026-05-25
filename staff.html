@@ -1994,6 +1994,20 @@
       document.querySelectorAll('[data-en-placeholder]').forEach(function(el) {
         el.placeholder = staffLang === 'es' ? (el.dataset.esPlaceholder || el.dataset.enPlaceholder) : el.dataset.enPlaceholder;
       });
+
+      // Instantly re-render dynamic views so they update their text (e.g. pcs vs uds)
+      if (typeof renderOrders === 'function' && typeof staffOrders !== 'undefined' && staffOrders && staffOrders.length > 0) {
+        try { renderOrders(staffOrders); } catch(e){}
+      }
+      if (typeof renderStaffCompilerChecklist === 'function' && typeof staffCompilerActiveDriverOrders !== 'undefined' && staffCompilerActiveDriverOrders && staffCompilerActiveDriverOrders.length > 0) {
+        try { renderStaffCompilerChecklist(); } catch(e){}
+      }
+      if (typeof renderStaffCompilerView === 'function' && typeof staffCompilerSelectedOrders !== 'undefined' && staffCompilerSelectedOrders && staffCompilerSelectedOrders.length > 0) {
+        try { renderStaffCompilerView(); } catch(e){}
+      }
+      if (typeof renderSavedCalcs === 'function') {
+        try { renderSavedCalcs(); } catch(e){}
+      }
     }
 
     // Apply language on load
