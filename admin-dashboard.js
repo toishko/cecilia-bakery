@@ -740,15 +740,22 @@ function changeSize(delta) {
    ═══════════════════════════════════ */
 async function loadDriversCache() {
   try {
-    const { data } = await sb.from('drivers').select('id, name, code, scanner_enabled').order('name');
+    const { data } = await sb.from('drivers').select('id, name, code, scanner_enabled, is_active').order('name');
     driversCache = data || [];
     // Populate driver filter dropdown
     const select = document.getElementById('filter-driver');
     if (select && driversCache.length) {
-      // Keep the first "All Drivers" option
+      // Keep the first "All Drivers" option safely
       const firstOpt = select.querySelector('option');
       select.innerHTML = '';
-      select.appendChild(firstOpt);
+      if (firstOpt) {
+        select.appendChild(firstOpt);
+      } else {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = lang === 'es' ? 'Todos los Conductores' : 'All Drivers';
+        select.appendChild(opt);
+      }
       driversCache.forEach(d => {
         const opt = document.createElement('option');
         opt.value = d.id;
@@ -8602,15 +8609,28 @@ async function initAdminOrderForm() {
   // Force a fresh load so deduplication always applies
   adminNoProductsLoaded = false;
   adminNoProducts = {};
-  await _noLoadProducts();
+  
+  try {
+    await _noLoadProducts();
+  } catch (e) {
+    console.warn('Admin New Order: products load failed', e);
+  }
 
   // Populate driver dropdown
-  if (driversCache.length === 0) await loadDriversCache();
+  try {
+    if (driversCache.length === 0) await loadDriversCache();
+  } catch (e) {
+    console.warn('Admin New Order: drivers load failed', e);
+  }
+  
   const select = document.getElementById('no-driver-select');
   if (!select) return;
 
-  select.innerHTML = '<option value="">— Select Driver —</option>';
-  driversCache.forEach(d => {
+  select.innerHTML = `<option value="">${lang === 'es' ? '— Seleccionar Conductor —' : '— Select Driver —'}</option>`;
+  
+  // Filter and show active drivers only
+  const activeDrivers = driversCache.filter(d => d.is_active !== false);
+  activeDrivers.forEach(d => {
     const opt = document.createElement('option');
     opt.value = d.id;
     opt.textContent = d.name;
