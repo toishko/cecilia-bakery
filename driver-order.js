@@ -575,6 +575,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const { error: err2 } = await sb.from('driver_sales').delete().eq('id', window._currentReceiptSaleId);
       if (err2) throw err2;
 
+      invalidateDashboardCache();
+
       showToast(lang === 'es' ? 'Venta borrada' : 'Sale deleted', 'success');
 
       // Force inventory recalculation
@@ -2804,6 +2806,8 @@ async function saveSale(saleData, items) {
 
     if (itemsErr) throw itemsErr;
 
+    invalidateDashboardCache();
+
     return sale;
   } catch (e) {
     console.error('Save sale error:', e);
@@ -4841,9 +4845,117 @@ async function saveManualLoad() {
    ═══════════════════════════════════ */
 let _driverRevenueChart = null;
 
+function invalidateDashboardCache() {
+  if (!currentDriver) return;
+  const timeframes = ['today', 'this_week', 'this_month', 'last_month', 'all_time'];
+  timeframes.forEach(tf => {
+    try {
+      localStorage.removeItem(`cecilia_dashboard_cache_${currentDriver.id}_${tf}`);
+    } catch (e) {
+      console.error('Error removing cached dashboard data:', e);
+    }
+  });
+}
+
+function getCurrentElementValue(id) {
+  const el = document.getElementById(id);
+  if (!el || el.classList.contains('loading-shimmer')) return 0;
+  const txt = el.textContent.replace('$', '').trim();
+  return parseFloat(txt) || 0;
+}
+
+function animateValue(id, start, end, duration = 800, isCurrency = false) {
+  const obj = document.getElementById(id);
+  if (!obj) return;
+  
+  const startVal = parseFloat(start) || 0;
+  const endVal = parseFloat(end) || 0;
+  if (startVal === endVal) {
+    obj.textContent = isCurrency ? '$' + endVal.toFixed(2) : Math.floor(endVal);
+    return;
+  }
+  
+  const startTime = performance.now();
+  
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    
+    // Ease out quad
+    const easeProgress = progress * (2 - progress);
+    
+    const currentVal = startVal + (endVal - startVal) * easeProgress;
+    
+    obj.textContent = isCurrency ? '$' + currentVal.toFixed(2) : Math.floor(currentVal);
+    
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    } else {
+      obj.textContent = isCurrency ? '$' + endVal.toFixed(2) : Math.floor(endVal);
+    }
+  }
+  
+  requestAnimationFrame(update);
+}
+
 async function loadOverviewDashboard(timeframe) {
   if (!sb || !currentDriver) return;
   if (!timeframe) timeframe = document.getElementById('overview-filter')?.value || 'this_month';
+
+  const cacheKey = `cecilia_dashboard_cache_${currentDriver.id}_${timeframe}`;
+  
+  // Try retrieving cached SWR data
+  let cachedData = null;
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (raw) cachedData = JSON.parse(raw);
+  } catch (e) {
+    console.error('Failed to read dashboard cache:', e);
+  }
+
+  // Define metric card elements
+  const elRevenue = document.getElementById('ov-stat-revenue');
+  const elItems = document.getElementById('ov-stat-items');
+  const elCount = document.getElementById('ov-stat-count');
+
+  // Immediately render from cache if available
+  if (cachedData) {
+    // Calculate cached stats
+    let cachedRevenue = 0;
+    let cachedCount = cachedData.salesData.length;
+    cachedData.salesData.forEach(s => { cachedRevenue += parseFloat(s.total || 0); });
+    let cachedItemsSold = 0;
+    cachedData.allItems.forEach(it => { cachedItemsSold += (it.quantity || 0); });
+
+    // Read previous displayed values before animating
+    const startRev = getCurrentElementValue('ov-stat-revenue');
+    const startItems = getCurrentElementValue('ov-stat-items');
+    const startCount = getCurrentElementValue('ov-stat-count');
+
+    // Remove shimmer classes
+    elRevenue?.classList.remove('loading-shimmer');
+    elItems?.classList.remove('loading-shimmer');
+    elCount?.classList.remove('loading-shimmer');
+
+    // Smooth animate from previous to cached
+    animateValue('ov-stat-revenue', startRev, cachedRevenue, 400, true);
+    animateValue('ov-stat-items', startItems, cachedItemsSold, 400, false);
+    animateValue('ov-stat-count', startCount, cachedCount, 400, false);
+
+    // Render charts & leaderboards with cached data
+    renderOverviewChart(cachedData.salesData, timeframe);
+    renderBestSellers(cachedData.allItems);
+    renderTopClients(cachedData.salesData);
+  } else {
+    // If no cache, display shimmering skeletons
+    elRevenue?.classList.add('loading-shimmer');
+    elItems?.classList.add('loading-shimmer');
+    elCount?.classList.add('loading-shimmer');
+    
+    if (elRevenue) elRevenue.textContent = '$0.00';
+    if (elItems) elItems.textContent = '0';
+    if (elCount) elCount.textContent = '0';
+  }
 
   const now = new Date();
   let startDate = null;
@@ -4863,9 +4975,9 @@ async function loadOverviewDashboard(timeframe) {
   // all_time: startDate stays null
 
   try {
-    // Fetch sales + sale items in parallel
+    // Single-Request Joined Query
     let salesQuery = sb.from('driver_sales')
-      .select('id, total, client_id, created_at')
+      .select('id, total, client_id, created_at, driver_sale_items(product_key, product_label, quantity, line_total)')
       .eq('driver_id', currentDriver.id);
 
     if (startDate) salesQuery = salesQuery.gte('created_at', startDate.toISOString());
@@ -4873,46 +4985,81 @@ async function loadOverviewDashboard(timeframe) {
     salesQuery = salesQuery.order('created_at', { ascending: false });
 
     const { data: sales, error: salesErr } = await salesQuery;
-    if (salesErr) { console.error('Overview sales error:', salesErr); return; }
-
-    const salesData = sales || [];
-
-    // Compute stats
-    let totalRevenue = 0;
-    let totalCount = salesData.length;
-    salesData.forEach(s => { totalRevenue += parseFloat(s.total || 0); });
-
-    // Fetch all sale items for this period to get items sold + best sellers
-    const saleIds = salesData.map(s => s.id);
-    let allItems = [];
-    if (saleIds.length > 0) {
-      // Supabase .in() has a limit, so batch if needed
-      const batchSize = 100;
-      for (let i = 0; i < saleIds.length; i += batchSize) {
-        const batch = saleIds.slice(i, i + batchSize);
-        const { data: items } = await sb.from('driver_sale_items')
-          .select('product_key, product_label, quantity, line_total, sale_id')
-          .in('sale_id', batch);
-        if (items) allItems = allItems.concat(items);
-      }
+    if (salesErr) { 
+      console.error('Overview sales error:', salesErr); 
+      // Remove shimmer if query error occurs
+      elRevenue?.classList.remove('loading-shimmer');
+      elItems?.classList.remove('loading-shimmer');
+      elCount?.classList.remove('loading-shimmer');
+      return; 
     }
 
-    let totalItemsSold = 0;
-    allItems.forEach(it => { totalItemsSold += (it.quantity || 0); });
+    // Reconstruct flat arrays for charts and leaderboards
+    const salesData = (sales || []).map(s => ({
+      id: s.id,
+      total: s.total,
+      client_id: s.client_id,
+      created_at: s.created_at
+    }));
 
-    // Update stat cards
-    document.getElementById('ov-stat-revenue').textContent = '$' + totalRevenue.toFixed(2);
-    document.getElementById('ov-stat-items').textContent = totalItemsSold;
-    document.getElementById('ov-stat-count').textContent = totalCount;
+    let allItems = [];
+    if (sales) {
+      sales.forEach(s => {
+        if (s.driver_sale_items) {
+          s.driver_sale_items.forEach(item => {
+            allItems.push({
+              product_key: item.product_key,
+              product_label: item.product_label,
+              quantity: item.quantity,
+              line_total: item.line_total,
+              sale_id: s.id
+            });
+          });
+        }
+      });
+    }
 
-    // Build chart
+    // Compute fresh metrics
+    let freshRevenue = 0;
+    let freshCount = salesData.length;
+    salesData.forEach(s => { freshRevenue += parseFloat(s.total || 0); });
+    let freshItemsSold = 0;
+    allItems.forEach(it => { freshItemsSold += (it.quantity || 0); });
+
+    // Read displayed values before animating (either from cache or 0)
+    const startRev = getCurrentElementValue('ov-stat-revenue');
+    const startItems = getCurrentElementValue('ov-stat-items');
+    const startCount = getCurrentElementValue('ov-stat-count');
+
+    // Remove shimmer placeholder styling
+    elRevenue?.classList.remove('loading-shimmer');
+    elItems?.classList.remove('loading-shimmer');
+    elCount?.classList.remove('loading-shimmer');
+
+    // Smooth animate metrics count-up
+    animateValue('ov-stat-revenue', startRev, freshRevenue, 800, true);
+    animateValue('ov-stat-items', startItems, freshItemsSold, 800, false);
+    animateValue('ov-stat-count', startCount, freshCount, 800, false);
+
+    // Build chart & leaderboards using fresh data
     renderOverviewChart(salesData, timeframe);
-
-    // Build leaderboards
     renderBestSellers(allItems);
     renderTopClients(salesData);
 
-  } catch (e) { console.error('Overview dashboard error:', e); }
+    // Store raw data to cache (SWR key)
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ salesData, allItems }));
+    } catch (e) {
+      console.error('Failed to write dashboard cache:', e);
+    }
+
+  } catch (e) { 
+    console.error('Overview dashboard error:', e); 
+    // Safely remove shimmer in case of exceptions
+    elRevenue?.classList.remove('loading-shimmer');
+    elItems?.classList.remove('loading-shimmer');
+    elCount?.classList.remove('loading-shimmer');
+  }
 }
 
 function renderOverviewChart(salesData, timeframe) {
