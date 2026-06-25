@@ -5479,7 +5479,8 @@ async function _driverScanTicketFile(file) {
       if (rawQty <= 0) return;
 
       const isBirthdayCake = key.startsWith('hb_');
-      const qty = isBirthdayCake ? rawQty : Math.round(rawQty * 12);
+      const isUnidades = item.unit === 'unidades' || item.unit === 'units' || item.unit === 'unit';
+      const qty = (isBirthdayCake || isUnidades) ? rawQty : Math.round(rawQty * 12);
 
       if (key in order.qty) {
         order.qty[key] = qty;
@@ -5516,11 +5517,12 @@ async function _driverScanTicketFile(file) {
         const key = item.systemKey;
         const rawQty = parseFloat(item.qty) || 0;
         const isBirthdayCake = key && key.startsWith('hb_');
+        const isUnidades = item.unit === 'unidades' || item.unit === 'units' || item.unit === 'unit';
         return {
           code: item.code,
           description: item.description,
           rawQty,
-          convertedQty: (key && rawQty > 0) ? (isBirthdayCake ? rawQty : Math.round(rawQty * 12)) : 0,
+          convertedQty: (key && rawQty > 0) ? ((isBirthdayCake || isUnidades) ? rawQty : Math.round(rawQty * 12)) : 0,
           confident: item.confident,
           matched: item.matched,
           isBirthdayCake,
@@ -5528,7 +5530,6 @@ async function _driverScanTicketFile(file) {
       });
     }
 
-    // Show result banner
     if (banner && bannerText) {
       banner.style.display = 'flex';
       let msg = lang === 'es'

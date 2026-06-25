@@ -8993,7 +8993,8 @@ async function _noScanTicketFile(file) {
       // Birthday cakes (hb_*) = 1 on ticket means 1 cake (no conversion)
       // Everything else = 1 on ticket means 1 dozen (12 pieces), 0.5 = 6 pieces
       const isBirthdayCake = key.startsWith('hb_');
-      const qty = isBirthdayCake ? rawQty : Math.round(rawQty * 12);
+      const isUnidades = item.unit === 'unidades' || item.unit === 'units' || item.unit === 'unit';
+      const qty = (isBirthdayCake || isUnidades) ? rawQty : Math.round(rawQty * 12);
 
       // Set quantity in the order data ONLY
       if (key in order.qty) {
@@ -9033,11 +9034,12 @@ async function _noScanTicketFile(file) {
         const key = item.systemKey;
         const rawQty = parseFloat(item.qty) || 0;
         const isBirthdayCake = key && key.startsWith('hb_');
+        const isUnidades = item.unit === 'unidades' || item.unit === 'units' || item.unit === 'unit';
         return {
           code: item.code,
           description: item.description,
           rawQty: rawQty,
-          convertedQty: (key && rawQty > 0) ? (isBirthdayCake ? rawQty : Math.round(rawQty * 12)) : 0,
+          convertedQty: (key && rawQty > 0) ? ((isBirthdayCake || isUnidades) ? rawQty : Math.round(rawQty * 12)) : 0,
           confident: item.confident,
           matched: item.matched,
           isBirthdayCake,
