@@ -8671,18 +8671,58 @@ async function initAdminOrderForm() {
 
   // ── Ticket Scanner wiring ──
   const scanBtn = document.getElementById('scan-ticket-btn');
-  const scanInput = document.getElementById('scan-ticket-input');
+  const scanInputCamera = document.getElementById('scan-ticket-input-camera');
+  const scanInputGallery = document.getElementById('scan-ticket-input-gallery');
+  const scanActionSheet = document.getElementById('scan-ticket-action-sheet-overlay');
+  const scanOptCamera = document.getElementById('scan-ticket-opt-camera');
+  const scanOptGallery = document.getElementById('scan-ticket-opt-gallery');
+  const scanOptCancel = document.getElementById('scan-ticket-opt-cancel');
   const scanBanner = document.getElementById('scan-result-banner');
   const scanClear = document.getElementById('scan-result-clear');
 
-  if (scanBtn && scanInput) {
-    scanBtn.onclick = () => scanInput.click();
-    scanInput.onchange = async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      await _noScanTicketFile(file);
-      scanInput.value = ''; // reset for re-scan
+  if (scanBtn && scanActionSheet) {
+    scanBtn.onclick = () => {
+      scanActionSheet.classList.add('open');
     };
+    scanActionSheet.onclick = (e) => {
+      if (e.target === scanActionSheet) {
+        scanActionSheet.classList.remove('open');
+      }
+    };
+  }
+
+  if (scanOptCamera && scanInputCamera && scanActionSheet) {
+    scanOptCamera.onclick = () => {
+      scanActionSheet.classList.remove('open');
+      scanInputCamera.click();
+    };
+  }
+
+  if (scanOptGallery && scanInputGallery && scanActionSheet) {
+    scanOptGallery.onclick = () => {
+      scanActionSheet.classList.remove('open');
+      scanInputGallery.click();
+    };
+  }
+
+  if (scanOptCancel && scanActionSheet) {
+    scanOptCancel.onclick = () => {
+      scanActionSheet.classList.remove('open');
+    };
+  }
+
+  const handleFileSelection = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await _noScanTicketFile(file);
+    e.target.value = ''; // reset for re-scan
+  };
+
+  if (scanInputCamera) {
+    scanInputCamera.onchange = handleFileSelection;
+  }
+  if (scanInputGallery) {
+    scanInputGallery.onchange = handleFileSelection;
   }
   if (scanClear) {
     scanClear.onclick = () => {

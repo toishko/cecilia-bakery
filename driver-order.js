@@ -5328,21 +5328,62 @@ function _initDriverScanner() {
   _driverScannerInited = true;
 
   const scanBtn = document.getElementById('scan-ticket-btn');
-  const scanInput = document.getElementById('scan-ticket-input');
+  const scanInputCamera = document.getElementById('scan-ticket-input-camera');
+  const scanInputGallery = document.getElementById('scan-ticket-input-gallery');
+  const scanActionSheet = document.getElementById('scan-ticket-action-sheet-overlay');
+  const scanOptCamera = document.getElementById('scan-ticket-opt-camera');
+  const scanOptGallery = document.getElementById('scan-ticket-opt-gallery');
+  const scanOptCancel = document.getElementById('scan-ticket-opt-cancel');
   const scanClear = document.getElementById('scan-result-clear');
   const scanReviewBtn = document.getElementById('scan-review-btn');
   const scanReviewClose = document.getElementById('scan-review-close');
   const scanReviewBackdrop = document.getElementById('scan-review-backdrop');
 
-  if (scanBtn && scanInput) {
-    scanBtn.onclick = () => scanInput.click();
-    scanInput.onchange = async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      await _driverScanTicketFile(file);
-      scanInput.value = '';
+  if (scanBtn && scanActionSheet) {
+    scanBtn.onclick = () => {
+      scanActionSheet.classList.add('open');
+    };
+    scanActionSheet.onclick = (e) => {
+      if (e.target === scanActionSheet) {
+        scanActionSheet.classList.remove('open');
+      }
     };
   }
+
+  if (scanOptCamera && scanInputCamera && scanActionSheet) {
+    scanOptCamera.onclick = () => {
+      scanActionSheet.classList.remove('open');
+      scanInputCamera.click();
+    };
+  }
+
+  if (scanOptGallery && scanInputGallery && scanActionSheet) {
+    scanOptGallery.onclick = () => {
+      scanActionSheet.classList.remove('open');
+      scanInputGallery.click();
+    };
+  }
+
+  if (scanOptCancel && scanActionSheet) {
+    scanOptCancel.onclick = () => {
+      scanActionSheet.classList.remove('open');
+    };
+  }
+
+  const handleFileSelection = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await _driverScanTicketFile(file);
+    e.target.value = '';
+  };
+
+  if (scanInputCamera) {
+    scanInputCamera.onchange = handleFileSelection;
+  }
+  if (scanInputGallery) {
+    scanInputGallery.onchange = handleFileSelection;
+  }
+
   if (scanClear) {
     scanClear.onclick = () => _driverClearScanResults();
   }

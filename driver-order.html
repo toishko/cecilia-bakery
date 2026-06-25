@@ -436,7 +436,8 @@
             </svg>
             <span data-en="Attach Ticket" data-es="Adjuntar Ticket">Attach Ticket</span>
           </button>
-          <input type="file" id="scan-ticket-input" accept="image/*" style="display:none">
+          <input type="file" id="scan-ticket-input-camera" accept="image/*" capture="environment" style="display:none">
+          <input type="file" id="scan-ticket-input-gallery" accept="image/*" style="display:none">
         </div>
 
         <!-- Scan Result Banner -->
@@ -760,6 +761,18 @@
       <div class="cp-action-title" data-en="Copy prices from" data-es="Copiar precios de">Copy prices from</div>
       <div class="cp-action-list" id="cp-action-list"></div>
       <button class="cp-action-cancel" id="cp-action-cancel" data-en="Cancel" data-es="Cancelar">Cancel</button>
+    </div>
+  </div>
+
+  <!-- SCAN TICKET ACTION SHEET -->
+  <div class="cp-action-sheet-overlay" id="scan-ticket-action-sheet-overlay">
+    <div class="cp-action-sheet">
+      <div class="cp-action-title" data-en="Attach Ticket" data-es="Adjuntar Ticket">Attach Ticket</div>
+      <div class="cp-action-list">
+        <button class="cp-action-item" id="scan-ticket-opt-camera" style="color: var(--tx)" data-en="📸 Take Photo" data-es="📸 Tomar Foto">📸 Take Photo</button>
+        <button class="cp-action-item" id="scan-ticket-opt-gallery" style="color: var(--tx)" data-en="📁 Choose from Gallery" data-es="📁 Seleccionar de Galería">📁 Choose from Gallery</button>
+      </div>
+      <button class="cp-action-cancel" id="scan-ticket-opt-cancel" data-en="Cancel" data-es="Cancelar">Cancel</button>
     </div>
   </div>
 

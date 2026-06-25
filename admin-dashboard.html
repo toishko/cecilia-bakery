@@ -817,7 +817,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
             <span data-en="Attach Ticket" data-es="Adjuntar Ticket">Attach Ticket</span>
           </button>
-          <input type="file" id="scan-ticket-input" accept="image/*" style="display:none">
+          <input type="file" id="scan-ticket-input-camera" accept="image/*" capture="environment" style="display:none">
+          <input type="file" id="scan-ticket-input-gallery" accept="image/*" style="display:none">
         </div>
 
         <!-- Scan Result Banner -->
@@ -993,6 +994,27 @@
       <div class="action-sheet-handle"></div>
       <h3 class="action-sheet-title" id="action-sheet-title"></h3>
       <div class="action-sheet-items" id="action-sheet-items"></div>
+    </div>
+  </div>
+
+  <!-- SCAN TICKET ACTION SHEET -->
+  <div class="action-sheet-overlay" id="scan-ticket-action-sheet-overlay">
+    <div class="action-sheet" style="padding-bottom: 24px;">
+      <div class="action-sheet-handle" onclick="document.getElementById('scan-ticket-action-sheet-overlay').classList.remove('open')"></div>
+      <h3 class="action-sheet-title" data-en="Attach Ticket" data-es="Adjuntar Ticket">Attach Ticket</h3>
+      <div class="action-sheet-items">
+        <button class="action-sheet-item" id="scan-ticket-opt-camera" style="border: none; background: none; font-family: inherit; font-size: 1rem; color: var(--tx);">
+          <i data-lucide="camera"></i>
+          <span class="action-sheet-item-label" data-en="Take Photo" data-es="Tomar Foto">Take Photo</span>
+        </button>
+        <button class="action-sheet-item" id="scan-ticket-opt-gallery" style="border: none; background: none; font-family: inherit; font-size: 1rem; color: var(--tx);">
+          <i data-lucide="image"></i>
+          <span class="action-sheet-item-label" data-en="Choose from Gallery" data-es="Seleccionar de Galería">Choose from Gallery</span>
+        </button>
+        <button class="action-sheet-item" id="scan-ticket-opt-cancel" style="border: none; background: none; font-family: inherit; font-size: 1rem; color: var(--red); font-weight: 600; justify-content: center; margin-top: 8px;">
+          <span data-en="Cancel" data-es="Cancelar">Cancel</span>
+        </button>
+      </div>
     </div>
   </div>
 
