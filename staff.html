@@ -3068,7 +3068,7 @@
     /* ── Render order cards with inline box calculator ── */
     function renderOrders(orders) {
       const container = document.getElementById('orders-list');
-      staffOrders = orders;
+      const renderedOrders = [];
       
       const activeStatusBtn = document.querySelector('.segment-btn[data-type="status"].active');
       const isArchive = activeStatusBtn && activeStatusBtn.dataset.value === 'completed';
@@ -3315,6 +3315,7 @@
              html += `<div style="font-size:.85rem;font-weight:700;color:var(--tx-faint);text-transform:uppercase;margin:16px 0 12px 0;letter-spacing:.5px;">${dateLabel}</div>`;
              
              dDateGroups[dateKey].forEach(order => {
+                renderedOrders.push(order);
                 html += getCardHtml(order, globalOi++);
              });
            });
@@ -3354,10 +3355,13 @@
            </div>`;
 
            dateGroups[dateKey].forEach(order => {
+             renderedOrders.push(order);
              html += getCardHtml(order, globalOi++);
            });
          });
       }
+
+      staffOrders = renderedOrders;
 
       // Save existing box calc state before destroying the DOM (only if cards exist)
       if (document.getElementById('staff-order-0')) {
@@ -3366,7 +3370,7 @@
       container.innerHTML = html || '<div class="empty-state">No orders found</div>';
 
       // Initialize frost packers for orders that have frosted items
-      orders.forEach(function(order) {
+      renderedOrders.forEach(function(order) {
         var orderItems = order.driver_order_items || [];
         var frosted = [];
         orderItems.forEach(function(item) {
@@ -3998,7 +4002,11 @@
           '<button class="set-update staff-update-btn" onclick="event.stopPropagation();staffUpdateOrder(' + idx + ')" data-en="Update" data-es="Actualizar">Update</button>' +
           '</div>';
         cardTop.appendChild(toolbar);
-        applyStaffLang();
+        
+        // Translate the toolbar buttons inline without triggering a full page re-render
+        toolbar.querySelectorAll('[data-en]').forEach(function(el) {
+          el.textContent = staffLang === 'es' ? (el.dataset.es || el.dataset.en) : el.dataset.en;
+        });
       }
 
       // Change edit button color
