@@ -178,9 +178,9 @@
     }
 
     .bottom-nav {
+      display: none;
       position: fixed;
       bottom: 0; left: 0; right: 0;
-      display: flex;
       background: var(--bg-nav);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
@@ -190,6 +190,9 @@
       align-items: center;
       z-index: 1000;
       box-shadow: 0 -4px 20px rgba(0,0,0,.03);
+    }
+    body.staff-dashboard-active .bottom-nav {
+      display: flex;
     }
     .bottom-nav-item {
       display: flex;
