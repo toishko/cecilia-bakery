@@ -2197,7 +2197,9 @@
           '<div data-en="No pinned orders" data-es="No hay pedidos fijados">No pinned orders</div>' +
           '<div style="font-size:.78rem;margin-top:4px" data-en="Tap the bookmark icon on any order to pin it here" data-es="Toque el icono de marcador en cualquier pedido para fijarlo aqui">Tap the bookmark icon on any order to pin it here</div>' +
           '</div>';
-        applyStaffLang();
+        container.querySelectorAll('[data-en]').forEach(function(el) {
+          el.textContent = staffLang === 'es' ? (el.dataset.es || el.dataset.en) : el.dataset.en;
+        });
         return;
       }
 
@@ -2402,7 +2404,9 @@
       });
 
       container.innerHTML = html;
-      applyStaffLang();
+      container.querySelectorAll('[data-en]').forEach(function(el) {
+        el.textContent = staffLang === 'es' ? (el.dataset.es || el.dataset.en) : el.dataset.en;
+      });
     }
 
     function toggleSavedDetail(ci) {
