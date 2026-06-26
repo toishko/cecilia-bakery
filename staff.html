@@ -2783,12 +2783,38 @@
     let _cachedDriversList = [];
     async function loadDriversCache() {
       try {
+        const cachedRaw = localStorage.getItem('cecilia_staff_drivers_cache');
+        if (cachedRaw) {
+          const parsed = JSON.parse(cachedRaw);
+          if (Array.isArray(parsed)) {
+            _cachedDriversList = parsed;
+            parsed.forEach(d => {
+              cachedDrivers[d.id] = d.name;
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse cached drivers:', e);
+      }
+
+      try {
         const sb = await getSupabaseClient();
         if (!sb) return;
         const { data, error } = await sb.from('drivers').select('id, name, code').order('name');
         if (!error && data) {
           _cachedDriversList = data;
           data.forEach(d => { cachedDrivers[d.id] = d.name; });
+          
+          try {
+            localStorage.setItem('cecilia_staff_drivers_cache', JSON.stringify(data));
+          } catch (e) {
+            console.warn('Failed to save drivers cache:', e);
+          }
+
+          // If orders are already rendered, trigger a re-render to update names in case cache was missing or stale
+          if (cachedOrders && cachedOrders.length > 0) {
+            renderOrders(cachedOrders);
+          }
         }
       } catch (e) { console.warn('Drivers cache error:', e); }
     }
