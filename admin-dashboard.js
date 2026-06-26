@@ -5446,7 +5446,19 @@ async function updateStaffRole(targetClerkUserId, newRole) {
     }),
   });
 
-  const data = await resp.json();
+  let data;
+  try {
+    const text = await resp.text();
+    data = text ? JSON.parse(text) : {};
+  } catch (e) {
+    if (resp.status === 404) {
+      throw new Error(lang === 'es'
+        ? 'El servidor local de Vite no soporta funciones API. Ejecuta "vercel dev" en la terminal para probar el backend local.'
+        : 'Vite dev server does not run local backend APIs. Run "vercel dev" in the terminal to test local backend.');
+    }
+    throw new Error(`HTTP Error ${resp.status}`);
+  }
+
   if (!resp.ok || !data.success) {
     throw new Error(data.message || 'Failed to update role');
   }
