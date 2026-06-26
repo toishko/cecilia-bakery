@@ -37,46 +37,72 @@
       window.__SUPABASE_KEY = SUPABASE_KEY;
     })();
 
-    // Authenticated Supabase client using Clerk JWT
+    // Authenticated Supabase client using Clerk JWT with token promise caching
     let _cachedSupabaseClient = null;
     let _cachedToken = null;
+    let _cachedTokenExpiry = 0;
+    let _tokenPromise = null;
+
     async function getSupabaseClient() {
       if (!window.supabase) return null;
-      try {
-        const token = await window.Clerk?.session?.getToken({ template: 'supabase' });
-        if (token) {
-          // Only recreate client if token changed (avoids unnecessary overhead)
-          if (token !== _cachedToken) {
-            _cachedToken = token;
-            _cachedSupabaseClient = window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY, {
-              global: {
-                headers: {
-                  Authorization: `Bearer ${token}`
+      
+      const now = Date.now();
+      if (_cachedSupabaseClient && _cachedToken && now < _cachedTokenExpiry - 30000) {
+        return _cachedSupabaseClient;
+      }
+
+      if (_tokenPromise) {
+        return _tokenPromise;
+      }
+
+      _tokenPromise = (async () => {
+        try {
+          const token = await window.Clerk?.session?.getToken({ template: 'supabase' });
+          if (token) {
+            try {
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              _cachedTokenExpiry = (payload.exp * 1000) || (Date.now() + 60000);
+            } catch (jwtErr) {
+              _cachedTokenExpiry = Date.now() + 60000;
+            }
+
+            if (token !== _cachedToken) {
+              _cachedToken = token;
+              _cachedSupabaseClient = window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY, {
+                global: {
+                  headers: {
+                    Authorization: `Bearer ${token}`
+                  }
+                },
+                auth: {
+                  persistSession: false,
+                  autoRefreshToken: false,
+                  detectSessionInUrl: false
                 }
-              },
-              auth: {
-                persistSession: false,
-                autoRefreshToken: false,
-                detectSessionInUrl: false
-              }
-            });
+              });
+            }
+            return _cachedSupabaseClient;
           }
-          return _cachedSupabaseClient;
+        } catch (e) {
+          console.warn('Clerk token fetch failed:', e);
+        } finally {
+          _tokenPromise = null;
         }
-      } catch (e) {
-        console.warn('Clerk token fetch failed:', e);
-      }
-      // Fallback: unauthenticated client
-      if (!_cachedSupabaseClient) {
-        _cachedSupabaseClient = window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY, {
-          auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-            detectSessionInUrl: false
-          }
-        });
-      }
-      return _cachedSupabaseClient;
+
+        // Fallback: unauthenticated client
+        if (!_cachedSupabaseClient) {
+          _cachedSupabaseClient = window.supabase.createClient(window.__SUPABASE_URL, window.__SUPABASE_KEY, {
+            auth: {
+              persistSession: false,
+              autoRefreshToken: false,
+              detectSessionInUrl: false
+            }
+          });
+        }
+        return _cachedSupabaseClient;
+      })();
+
+      return _tokenPromise;
     }
   </script>
 
@@ -4273,7 +4299,24 @@
           if (!user) {
             showState('signin');
           } else {
-            // Upsert profile with email so admin can see it in staff management
+            currentUser = user;
+
+            // Check cached role to render instantly
+            const cachedRole = sessionStorage.getItem(`cecilia_staff_role_${user.id}`);
+            if (cachedRole === 'admin' || cachedRole === 'staff') {
+              showState('dashboard');
+              populateUserInfo(user);
+              Promise.all([
+                loadDriversCache(),
+                loadOrders()
+              ]).then(() => {
+                setupStaffRealtime();
+                applyStaffLang();
+              });
+            }
+
+            // Verify/update profile in background (or foreground if no cache)
+            let verifiedRole = 'customer';
             try {
               const sb = await getSupabaseClient();
               if (sb) {
@@ -4285,21 +4328,26 @@
                   .eq('clerk_user_id', user.id)
                   .maybeSingle();
 
-                const existingRole = existing?.role || 'customer';
+                verifiedRole = existing?.role || 'customer';
 
                 if (existing) {
-                  // Profile exists — just update email
-                  await sb.from('profiles')
+                  // Profile exists — just update email (in background)
+                  sb.from('profiles')
                     .update({ email: email })
-                    .eq('clerk_user_id', user.id);
+                    .eq('clerk_user_id', user.id)
+                    .then(() => {});
                 } else {
-                  // No profile yet — insert new row
-                  await sb.from('profiles')
-                    .insert({ clerk_user_id: user.id, email: email, role: 'customer' });
+                  // No profile yet — insert new row (in background)
+                  sb.from('profiles')
+                    .insert({ clerk_user_id: user.id, email: email, role: 'customer' })
+                    .then(() => {});
                 }
 
-                // Use profiles.role for access control
-                if (existingRole !== 'admin' && existingRole !== 'staff') {
+                // Cache verified role
+                sessionStorage.setItem(`cecilia_staff_role_${user.id}`, verifiedRole);
+
+                if (verifiedRole !== 'admin' && verifiedRole !== 'staff') {
+                  sessionStorage.removeItem(`cecilia_staff_role_${user.id}`);
                   showState('denied');
                   return;
                 }
@@ -4314,22 +4362,20 @@
               || '';
 
             // If we already returned via 'denied' above, this won't run.
-            // If profiles check succeeded (returned early), this also won't run.
-            // This block only runs if the profiles upsert block succeeded 
-            // and the role WAS admin/staff, OR if the profiles check failed entirely.
             const stateEl = document.querySelector('.state-panel.active');
             if (stateEl && stateEl.id === 'state-denied') return; // Already denied
 
-            currentUser = user;
-            showState('dashboard');
-            populateUserInfo(user);
-            // Load data in parallel
-            await Promise.all([
-              loadDriversCache(),
-              loadOrders()
-            ]);
-            setupStaffRealtime();
-            applyStaffLang();
+            // If not rendered from cache, do it now
+            if (cachedRole !== 'admin' && cachedRole !== 'staff') {
+              showState('dashboard');
+              populateUserInfo(user);
+              await Promise.all([
+                loadDriversCache(),
+                loadOrders()
+              ]);
+              setupStaffRealtime();
+              applyStaffLang();
+            }
 
             // Register service worker for push notifications
             if ('serviceWorker' in navigator) {
