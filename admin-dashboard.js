@@ -2374,55 +2374,25 @@ async function loadInsights(timeframe) {
     endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
   }
 
+  const startDateStr = startDate ? _toLocalISOString(startDate) : null;
+  const endDateStr = _toLocalISOString(endDate);
+
   try {
-    const driverQuery = sb.from('driver_orders')
-      .select('total_amount, payment_amount, payment_status, submitted_at, driver_id');
-    const wholesaleQuery = sb.from('wholesale_orders')
-      .select('subtotal, status, placed_at');
-    const onlineQuery = sb.from('orders')
-      .select('total_amount, delivery_status, created_at')
-      .eq('source', 'website');
-
-    if (startDate) {
-      driverQuery.gte('submitted_at', _toLocalISOString(startDate));
-      wholesaleQuery.gte('placed_at', _toLocalISOString(startDate));
-      onlineQuery.gte('created_at', _toLocalISOString(startDate));
-    }
-    driverQuery.lte('submitted_at', _toLocalISOString(endDate));
-    wholesaleQuery.lte('placed_at', _toLocalISOString(endDate));
-    onlineQuery.lte('created_at', _toLocalISOString(endDate));
-
-    const [driverRes, wholesaleRes, onlineRes] = await Promise.all([
-      driverQuery, wholesaleQuery, onlineQuery
+    const [statsRes, leaderboardRes] = await Promise.all([
+      sb.rpc('get_admin_dashboard_stats', { p_start_date: startDateStr, p_end_date: endDateStr }),
+      sb.rpc('get_driver_leaderboard', { p_start_date: startDateStr, p_end_date: endDateStr })
     ]);
 
-    const driverOrders = driverRes.data || [];
-    const wholesaleOrders = wholesaleRes.data || [];
-    const onlineOrders = onlineRes.data || [];
+    if (statsRes.error) throw statsRes.error;
+    if (leaderboardRes.error) throw leaderboardRes.error;
 
-    // ── Aggregate channel totals ──
-    let driverCollected = 0;
-    const driverMap = {};
-    driverOrders.forEach(o => {
-      const paid = parseFloat(o.payment_amount || 0);
-      driverCollected += paid;
-      const name = getDriverName(o.driver_id) || 'Unknown';
-      if (!driverMap[name]) driverMap[name] = { amount: 0, count: 0 };
-      driverMap[name].amount += parseFloat(o.total_amount || 0);
-      driverMap[name].count += 1;
-    });
+    const stats = statsRes.data;
+    const leaderboard = leaderboardRes.data || [];
 
-    let wholesaleCollected = 0;
-    wholesaleOrders.forEach(o => {
-      if (o.status === 'delivered') wholesaleCollected += parseFloat(o.subtotal || 0);
-    });
-
-    let onlineCollected = 0;
-    onlineOrders.forEach(o => {
-      if (o.delivery_status !== 'cancelled') onlineCollected += parseFloat(o.total_amount || 0);
-    });
-
-    const totalCollected = driverCollected + wholesaleCollected + onlineCollected;
+    const driverCollected = parseFloat(stats.driverCollected || 0);
+    const wholesaleCollected = parseFloat(stats.wholesaleCollected || 0);
+    const onlineCollected = parseFloat(stats.onlineCollected || 0);
+    const totalCollected = parseFloat(stats.totalCollected || 0);
 
     // ── Channel definitions ──
     const driverLabel = lang === 'es' ? 'Rutas de Choferes' : 'Driver Routes';
@@ -2438,10 +2408,6 @@ async function loadInsights(timeframe) {
     _renderDonutLegend('collected-donut-legend', collectedChannels, totalCollected);
 
     // ── Driver Leaderboard ──
-    const leaderboard = Object.entries(driverMap)
-      .map(([name, data]) => ({ name, ...data }))
-      .sort((a, b) => b.amount - a.amount);
-
     const lbEl = document.getElementById('driver-leaderboard');
     if (lbEl) {
       if (leaderboard.length === 0) {
@@ -2450,19 +2416,19 @@ async function loadInsights(timeframe) {
         const topAmount = leaderboard[0].amount;
         const avatarClasses = ['gold', 'silver', 'bronze'];
         lbEl.innerHTML = leaderboard.map((d, i) => {
-          const initials = _getInitials(d.name);
+          const initials = _getInitials(d.driver_name);
           const avatarCls = i < 3 ? avatarClasses[i] : 'default';
           const championCls = i === 0 ? ' champion' : '';
           const barWidth = topAmount > 0 ? Math.round((d.amount / topAmount) * 100) : 0;
           const barColor = i === 0 ? '#D4A017' : i === 1 ? '#A0A0A0' : i === 2 ? '#CD7F32' : 'var(--tx-muted)';
           const orderLabel = lang === 'es'
-            ? `${d.count} pedido${d.count !== 1 ? 's' : ''}`
-            : `${d.count} order${d.count !== 1 ? 's' : ''}`;
+            ? `${d.order_count} pedido${d.order_count !== 1 ? 's' : ''}`
+            : `${d.order_count} order${d.order_count !== 1 ? 's' : ''}`;
           return `<div class="leaderboard-row${championCls}">
             <div class="leaderboard-bar" style="width:${barWidth}%;background:${barColor}"></div>
             <div class="leaderboard-avatar ${avatarCls}">${initials}</div>
             <div class="leaderboard-info">
-              <span class="leaderboard-name">${d.name}</span>
+              <span class="leaderboard-name">${d.driver_name}</span>
               <span class="leaderboard-orders">${orderLabel}</span>
             </div>
             <span class="leaderboard-amount">${formatCurrency(d.amount)}</span>
@@ -2479,6 +2445,15 @@ async function loadInsights(timeframe) {
 async function loadOverview(timeframe) {
   if (!timeframe) timeframe = document.getElementById('revenue-filter')?.value || 'this_month';
 
+  const cacheKey = `cecilia_admin_overview_cache_${timeframe}`;
+  let cachedData = null;
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (raw) cachedData = JSON.parse(raw);
+  } catch (e) {
+    console.error('Failed to read admin overview cache:', e);
+  }
+
   // Format dates strictly as Local Time ISO strings to avoid timezone clipping in Supabase
   function _toLocalISOString(date) {
     const pad = n => n < 10 ? '0' + n : n;
@@ -2490,6 +2465,26 @@ async function loadOverview(timeframe) {
       pad(date.getSeconds());
   }
 
+  const elGross = document.getElementById('stat-gross-revenue');
+  const elCollected = document.getElementById('stat-collected');
+  const elOutstanding = document.getElementById('stat-outstanding');
+
+  // Immediately render from cache if available to give instant response
+  if (cachedData) {
+    const { stats, chartData } = cachedData;
+    if (elGross) elGross.textContent = formatAbbreviated(stats.totalGross);
+    if (elCollected) elCollected.textContent = formatAbbreviated(stats.totalCollected);
+    if (elOutstanding) elOutstanding.textContent = formatAbbreviated(stats.totalOutstanding);
+    _channelBreakdown = stats;
+    renderAdminOverviewChart(chartData, timeframe);
+    renderAdminRevenueBreakdown(stats);
+  } else {
+    // Shimmer effect if no cache
+    elGross?.classList.add('loading-shimmer');
+    elCollected?.classList.add('loading-shimmer');
+    elOutstanding?.classList.add('loading-shimmer');
+  }
+
   const now = new Date();
   let startDate = null;
   let endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
@@ -2497,7 +2492,7 @@ async function loadOverview(timeframe) {
   if (timeframe === 'today') {
     startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
   } else if (timeframe === 'this_week') {
-    const dayOfWeek = now.getDay() || 7; // Convert Sunday(0) to 7 to make Monday = start of week
+    const dayOfWeek = now.getDay() || 7;
     startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek + 1, 0, 0, 0);
   } else if (timeframe === 'this_month') {
     startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
@@ -2505,210 +2500,156 @@ async function loadOverview(timeframe) {
     startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
     endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
   }
-  // all_time: startDate stays null
+
+  const startDateStr = startDate ? _toLocalISOString(startDate) : null;
+  const endDateStr = _toLocalISOString(endDate);
+  const useMonthly = (timeframe === 'all_time' || timeframe === 'last_month');
 
   try {
-    // ── Fetch all three data streams in parallel ──
-    const driverQuery = sb.from('driver_orders')
-      .select('total_amount, payment_amount, payment_status, submitted_at');
-    const wholesaleQuery = sb.from('wholesale_orders')
-      .select('subtotal, status, placed_at');
-    const onlineQuery = sb.from('orders')
-      .select('total_amount, delivery_status, created_at')
-      .eq('source', 'website');
-
-    if (startDate) {
-      driverQuery.gte('submitted_at', _toLocalISOString(startDate));
-      wholesaleQuery.gte('placed_at', _toLocalISOString(startDate));
-      onlineQuery.gte('created_at', _toLocalISOString(startDate));
-    }
-    driverQuery.lte('submitted_at', _toLocalISOString(endDate));
-    wholesaleQuery.lte('placed_at', _toLocalISOString(endDate));
-    onlineQuery.lte('created_at', _toLocalISOString(endDate));
-
-    const [driverRes, wholesaleRes, onlineRes] = await Promise.all([
-      driverQuery, wholesaleQuery, onlineQuery
+    const [statsRes, chartRes] = await Promise.all([
+      sb.rpc('get_admin_dashboard_stats', { p_start_date: startDateStr, p_end_date: endDateStr }),
+      sb.rpc('get_admin_chart_buckets', { p_start_date: startDateStr, p_end_date: endDateStr, p_use_monthly: useMonthly })
     ]);
 
-    const driverOrders = driverRes.data || [];
-    const wholesaleOrders = wholesaleRes.data || [];
-    const onlineOrders = onlineRes.data || [];
+    if (statsRes.error) throw statsRes.error;
+    if (chartRes.error) throw chartRes.error;
 
-    // ── Aggregate Totals ──
-    // DRIVER: has per-order payment tracking (payment_amount, payment_status)
-    let driverGross = 0, driverCollected = 0, driverOutstanding = 0;
-    driverOrders.forEach(o => {
-      const total = parseFloat(o.total_amount || 0);
-      const paid = parseFloat(o.payment_amount || 0);
-      driverGross += total;
-      driverCollected += paid;
-      if (o.payment_status === 'not_paid' || o.payment_status === 'partial') {
-        driverOutstanding += Math.max(0, total - paid);
-      }
-    });
+    const stats = statsRes.data;
+    const chartData = chartRes.data || [];
 
-    // WHOLESALE: payment happens on delivery; only 'delivered' = collected
-    // confirmed/scheduled = outstanding (accepted but not yet delivered/paid)
-    // pending/cancelled = neither collected nor outstanding
-    let wholesaleGross = 0, wholesaleCollected = 0, wholesaleOutstanding = 0;
-    wholesaleOrders.forEach(o => {
-      const sub = parseFloat(o.subtotal || 0);
-      wholesaleGross += sub;
-      if (o.status === 'delivered') {
-        wholesaleCollected += sub;
-      } else if (o.status === 'confirmed' || o.status === 'scheduled') {
-        wholesaleOutstanding += sub;
-      }
-    });
+    // Remove shimmers
+    elGross?.classList.remove('loading-shimmer');
+    elCollected?.classList.remove('loading-shimmer');
+    elOutstanding?.classList.remove('loading-shimmer');
 
-    // ONLINE: customers pay at checkout (pre-paid); delivery_status tracks fulfillment
-    // All non-cancelled orders are collected; cancelled orders are excluded entirely
-    let onlineGross = 0, onlineCollected = 0;
-    onlineOrders.forEach(o => {
-      const total = parseFloat(o.total_amount || 0);
-      onlineGross += total;
-      if (o.delivery_status !== 'cancelled') {
-        onlineCollected += total;
-      }
-    });
+    // Update UI Metrics
+    if (elGross) elGross.textContent = formatAbbreviated(stats.totalGross);
+    if (elCollected) elCollected.textContent = formatAbbreviated(stats.totalCollected);
+    if (elOutstanding) elOutstanding.textContent = formatAbbreviated(stats.totalOutstanding);
 
-    const totalGross = driverGross + wholesaleGross + onlineGross;
-    const totalCollected = driverCollected + wholesaleCollected + onlineCollected;
-    const totalOutstanding = driverOutstanding + wholesaleOutstanding;
+    _channelBreakdown = stats;
 
-    // ── Cache channel breakdown for drill-down sheets ──
-    _channelBreakdown = {
-      driverGross, driverCollected, driverOutstanding,
-      wholesaleGross, wholesaleCollected, wholesaleOutstanding,
-      onlineGross, onlineCollected
-    };
+    renderAdminOverviewChart(chartData, timeframe);
+    renderAdminRevenueBreakdown(stats);
 
-    // ── Update Stat Cards (abbreviated) ──
-    document.getElementById('stat-gross-revenue').textContent = formatAbbreviated(totalGross);
-    document.getElementById('stat-collected').textContent = formatAbbreviated(totalCollected);
-    document.getElementById('stat-outstanding').textContent = formatAbbreviated(totalOutstanding);
-
-    // ── Build Chart Data ──
-    const useMonthlyBuckets = (timeframe === 'all_time' || timeframe === 'last_month');
-    const buckets = {};
-
-    function addToBucket(dateStr, amount) {
-      if (!dateStr) return;
-      const d = new Date(dateStr);
-      const key = useMonthlyBuckets
-        ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-        : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      buckets[key] = (buckets[key] || 0) + amount;
+    // Save to Cache
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ stats, chartData }));
+    } catch (e) {
+      console.error('Failed to write admin overview cache:', e);
     }
 
-    driverOrders.forEach(o => addToBucket(o.submitted_at, parseFloat(o.total_amount || 0)));
-    wholesaleOrders.forEach(o => addToBucket(o.placed_at, parseFloat(o.subtotal || 0)));
-    onlineOrders.forEach(o => addToBucket(o.created_at, parseFloat(o.total_amount || 0)));
+    renderNeedsAttention();
+    loadTodaySnapshot();
+    updateQuickActionBadges();
+  } catch (e) {
+    console.error('Overview load error:', e);
+    elGross?.classList.remove('loading-shimmer');
+    elCollected?.classList.remove('loading-shimmer');
+    elOutstanding?.classList.remove('loading-shimmer');
+  }
+}
 
-    const sortedKeys = Object.keys(buckets).sort();
-    const chartLabels = sortedKeys.map(k => {
-      if (useMonthlyBuckets) {
-        const [y, m] = k.split('-');
-        return new Date(y, m - 1).toLocaleString('en-US', { month: 'short', year: '2-digit' });
-      }
-      const [y, m, d] = k.split('-');
-      return new Date(y, m - 1, d).toLocaleString('en-US', { month: 'short', day: 'numeric' });
-    });
-    const chartValues = sortedKeys.map(k => buckets[k]);
+function renderAdminOverviewChart(chartData, timeframe) {
+  const useMonthlyBuckets = (timeframe === 'all_time' || timeframe === 'last_month');
+  const chartLabels = chartData.map(row => {
+    if (useMonthlyBuckets) {
+      const [y, m] = row.bucket_key.split('-');
+      return new Date(y, m - 1).toLocaleString('en-US', { month: 'short', year: '2-digit' });
+    }
+    const [y, m, d] = row.bucket_key.split('-');
+    return new Date(y, m - 1, d).toLocaleString('en-US', { month: 'short', day: 'numeric' });
+  });
+  const chartValues = chartData.map(row => parseFloat(row.total_amount || 0));
 
-    // ── Render Chart ──
-    const ctx = document.getElementById('revenueChart');
-    if (_revenueChart) { _revenueChart.destroy(); _revenueChart = null; }
+  const ctx = document.getElementById('revenueChart');
+  if (_revenueChart) { _revenueChart.revenueChart = null; _revenueChart.destroy(); _revenueChart = null; }
 
-    if (ctx) {
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(200,16,46,.06)';
-      const tickColor = isDark ? '#BFA0A8' : '#6B5057';
+  if (ctx && chartLabels.length > 0) {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(200,16,46,.06)';
+    const tickColor = isDark ? '#BFA0A8' : '#6B5057';
 
-      _revenueChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: chartLabels,
-          datasets: [{
-            label: lang === 'es' ? 'Ingresos' : 'Revenue',
-            data: chartValues,
-            backgroundColor: 'rgba(200, 16, 46, 0.7)',
-            hoverBackgroundColor: 'rgba(200, 16, 46, 0.9)',
-            borderRadius: 6,
-            borderSkipped: false,
-            maxBarThickness: 48
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: isDark ? '#1E0D12' : '#fff',
-              titleColor: isDark ? '#F2E8E4' : '#18080D',
-              bodyColor: isDark ? '#BFA0A8' : '#6B5057',
-              borderColor: isDark ? 'rgba(200,16,46,.35)' : 'rgba(200,16,46,.22)',
-              borderWidth: 1,
-              padding: 12,
-              cornerRadius: 10,
-              titleFont: { family: 'Outfit', weight: '600' },
-              bodyFont: { family: 'Outfit' },
-              callbacks: {
-                label: ctx => formatCurrency(ctx.parsed.y)
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: { color: tickColor, font: { family: 'Outfit', size: 11 } }
-            },
-            y: {
-              grid: { color: gridColor },
-              ticks: {
-                color: tickColor,
-                font: { family: 'Outfit', size: 11 },
-                callback: v => '$' + (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v)
-              },
-              beginAtZero: true
+    _revenueChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: chartLabels,
+        datasets: [{
+          label: lang === 'es' ? 'Ingresos' : 'Revenue',
+          data: chartValues,
+          backgroundColor: 'rgba(200, 16, 46, 0.7)',
+          hoverBackgroundColor: 'rgba(200, 16, 46, 0.9)',
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: 48
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: isDark ? '#1E0D12' : '#fff',
+            titleColor: isDark ? '#F2E8E4' : '#18080D',
+            bodyColor: isDark ? '#BFA0A8' : '#6B5057',
+            borderColor: isDark ? 'rgba(200,16,46,.35)' : 'rgba(200,16,46,.22)',
+            borderWidth: 1,
+            padding: 12,
+            cornerRadius: 10,
+            titleFont: { family: 'Outfit', weight: '600' },
+            bodyFont: { family: 'Outfit' },
+            callbacks: {
+              label: ctx => formatCurrency(ctx.parsed.y)
             }
           }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: tickColor, font: { family: 'Outfit', size: 11 } }
+          },
+          y: {
+            grid: { color: gridColor },
+            ticks: {
+              color: tickColor,
+              font: { family: 'Outfit', size: 11 },
+              callback: v => '$' + (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v)
+            },
+            beginAtZero: true
+          }
         }
-      });
-    }
+      }
+    });
+  }
+}
 
-    // ── Revenue Breakdown ──
-    const breakdownEl = document.getElementById('revenue-breakdown');
-    if (breakdownEl) {
-      const sources = [
-        { label: lang === 'es' ? 'Rutas (Conductores)' : 'Driver Routes', amount: driverGross, color: '#C8102E' },
-        { label: lang === 'es' ? 'Mayoreo (B2B)' : 'Wholesale (B2B)', amount: wholesaleGross, color: '#002D62' },
-        { label: lang === 'es' ? 'En Línea (Sitio Web)' : 'Online (Website)', amount: onlineGross, color: '#1B7A4A' }
-      ];
-      const maxAmount = Math.max(...sources.map(s => s.amount), 1);
+function renderAdminRevenueBreakdown(stats) {
+  const breakdownEl = document.getElementById('revenue-breakdown');
+  if (breakdownEl) {
+    const totalGross = parseFloat(stats.totalGross || 0);
+    const driverGross = parseFloat(stats.driverGross || 0);
+    const wholesaleGross = parseFloat(stats.wholesaleGross || 0);
+    const onlineGross = parseFloat(stats.onlineGross || 0);
 
-      breakdownEl.innerHTML = sources.map(s => {
-        const pct = Math.round((s.amount / (totalGross || 1)) * 100);
-        const barW = Math.max(2, (s.amount / maxAmount) * 100);
-        return `<div class="rev-breakdown-row">
-          <span class="rev-breakdown-dot" style="background:${s.color}"></span>
-          <span class="rev-breakdown-label">${s.label} <span style="color:var(--tx-faint);font-weight:400;font-size:.8rem">(${pct}%)</span></span>
-          <div class="rev-breakdown-bar-bg"><div class="rev-breakdown-bar" style="width:${barW}%;background:${s.color}"></div></div>
-          <span class="rev-breakdown-amount">${formatCurrency(s.amount)}</span>
-        </div>`;
-      }).join('');
-    }
+    const sources = [
+      { label: lang === 'es' ? 'Rutas (Conductores)' : 'Driver Routes', amount: driverGross, color: '#C8102E' },
+      { label: lang === 'es' ? 'Mayoreo (B2B)' : 'Wholesale (B2B)', amount: wholesaleGross, color: '#002D62' },
+      { label: lang === 'es' ? 'En Línea (Sitio Web)' : 'Online (Website)', amount: onlineGross, color: '#1B7A4A' }
+    ];
+    const maxAmount = Math.max(...sources.map(s => s.amount), 1);
 
-    // Render Needs Attention from already-loaded incomingOrders
-    renderNeedsAttention();
-
-    // Load Today's Snapshot (independent of the selected timeframe)
-    loadTodaySnapshot();
-
-    // Update Quick Action tile badges
-    updateQuickActionBadges();
-  } catch (e) { console.error('Overview load error:', e); }
+    breakdownEl.innerHTML = sources.map(s => {
+      const pct = Math.round((s.amount / (totalGross || 1)) * 100);
+      const barW = Math.max(2, (s.amount / maxAmount) * 100);
+      return `<div class="rev-breakdown-row">
+        <span class="rev-breakdown-dot" style="background:${s.color}"></span>
+        <span class="rev-breakdown-label">${s.label} <span style="color:var(--tx-faint);font-weight:400;font-size:.8rem">(${pct}%)</span></span>
+        <div class="rev-breakdown-bar-bg"><div class="rev-breakdown-bar" style="width:${barW}%;background:${s.color}"></div></div>
+        <span class="rev-breakdown-amount">${formatCurrency(s.amount)}</span>
+      </div>`;
+    }).join('');
+  }
 }
 
 /* ── Global Action Queue Sheet ── */

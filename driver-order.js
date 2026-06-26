@@ -4920,12 +4920,10 @@ async function loadOverviewDashboard(timeframe) {
 
   // Immediately render from cache if available
   if (cachedData) {
-    // Calculate cached stats
-    let cachedRevenue = 0;
-    let cachedCount = cachedData.salesData.length;
-    cachedData.salesData.forEach(s => { cachedRevenue += parseFloat(s.total || 0); });
-    let cachedItemsSold = 0;
-    cachedData.allItems.forEach(it => { cachedItemsSold += (it.quantity || 0); });
+    const { summary, chart, best_sellers, top_clients } = cachedData;
+    const cachedRevenue = parseFloat(summary.total_revenue || 0);
+    const cachedCount = parseInt(summary.total_sales || 0);
+    const cachedItemsSold = parseInt(summary.total_items_sold || 0);
 
     // Read previous displayed values before animating
     const startRev = getCurrentElementValue('ov-stat-revenue');
@@ -4943,9 +4941,9 @@ async function loadOverviewDashboard(timeframe) {
     animateValue('ov-stat-count', startCount, cachedCount, 400, false);
 
     // Render charts & leaderboards with cached data
-    renderOverviewChart(cachedData.salesData, timeframe);
-    renderBestSellers(cachedData.allItems);
-    renderTopClients(cachedData.salesData);
+    renderOverviewChart(chart, timeframe);
+    renderBestSellers(best_sellers);
+    renderTopClients(top_clients);
   } else {
     // If no cache, display shimmering skeletons
     elRevenue?.classList.add('loading-shimmer');
@@ -4972,59 +4970,27 @@ async function loadOverviewDashboard(timeframe) {
     startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
     endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
   }
-  // all_time: startDate stays null
+
+  const pad = n => n < 10 ? '0' + n : n;
+  const startDateStr = startDate ? (startDate.getFullYear() + '-' + pad(startDate.getMonth() + 1) + '-' + pad(startDate.getDate()) + 'T' + pad(startDate.getHours()) + ':' + pad(startDate.getMinutes()) + ':' + pad(startDate.getSeconds())) : null;
+  const endDateStr = endDate.getFullYear() + '-' + pad(endDate.getMonth() + 1) + '-' + pad(endDate.getDate()) + 'T' + pad(endDate.getHours()) + ':' + pad(endDate.getMinutes()) + ':' + pad(endDate.getSeconds());
+  const useMonthly = (timeframe === 'all_time' || timeframe === 'last_month');
 
   try {
-    // Single-Request Joined Query
-    let salesQuery = sb.from('driver_sales')
-      .select('id, total, client_id, created_at, driver_sale_items(product_key, product_label, quantity, line_total)')
-      .eq('driver_id', currentDriver.id);
+    const { data, error } = await sb.rpc('get_driver_dashboard_stats', {
+      p_driver_id: currentDriver.id,
+      p_start_date: startDateStr,
+      p_end_date: endDateStr,
+      p_use_monthly: useMonthly
+    });
 
-    if (startDate) salesQuery = salesQuery.gte('created_at', startDate.toISOString());
-    salesQuery = salesQuery.lte('created_at', endDate.toISOString());
-    salesQuery = salesQuery.order('created_at', { ascending: false });
+    if (error) throw error;
 
-    const { data: sales, error: salesErr } = await salesQuery;
-    if (salesErr) { 
-      console.error('Overview sales error:', salesErr); 
-      // Remove shimmer if query error occurs
-      elRevenue?.classList.remove('loading-shimmer');
-      elItems?.classList.remove('loading-shimmer');
-      elCount?.classList.remove('loading-shimmer');
-      return; 
-    }
+    const { summary, chart, best_sellers, top_clients } = data;
 
-    // Reconstruct flat arrays for charts and leaderboards
-    const salesData = (sales || []).map(s => ({
-      id: s.id,
-      total: s.total,
-      client_id: s.client_id,
-      created_at: s.created_at
-    }));
-
-    let allItems = [];
-    if (sales) {
-      sales.forEach(s => {
-        if (s.driver_sale_items) {
-          s.driver_sale_items.forEach(item => {
-            allItems.push({
-              product_key: item.product_key,
-              product_label: item.product_label,
-              quantity: item.quantity,
-              line_total: item.line_total,
-              sale_id: s.id
-            });
-          });
-        }
-      });
-    }
-
-    // Compute fresh metrics
-    let freshRevenue = 0;
-    let freshCount = salesData.length;
-    salesData.forEach(s => { freshRevenue += parseFloat(s.total || 0); });
-    let freshItemsSold = 0;
-    allItems.forEach(it => { freshItemsSold += (it.quantity || 0); });
+    const freshRevenue = parseFloat(summary.total_revenue || 0);
+    const freshCount = parseInt(summary.total_sales || 0);
+    const freshItemsSold = parseInt(summary.total_items_sold || 0);
 
     // Read displayed values before animating (either from cache or 0)
     const startRev = getCurrentElementValue('ov-stat-revenue');
@@ -5042,13 +5008,13 @@ async function loadOverviewDashboard(timeframe) {
     animateValue('ov-stat-count', startCount, freshCount, 800, false);
 
     // Build chart & leaderboards using fresh data
-    renderOverviewChart(salesData, timeframe);
-    renderBestSellers(allItems);
-    renderTopClients(salesData);
+    renderOverviewChart(chart, timeframe);
+    renderBestSellers(best_sellers);
+    renderTopClients(top_clients);
 
     // Store raw data to cache (SWR key)
     try {
-      localStorage.setItem(cacheKey, JSON.stringify({ salesData, allItems }));
+      localStorage.setItem(cacheKey, JSON.stringify(data));
     } catch (e) {
       console.error('Failed to write dashboard cache:', e);
     }
@@ -5062,29 +5028,17 @@ async function loadOverviewDashboard(timeframe) {
   }
 }
 
-function renderOverviewChart(salesData, timeframe) {
+function renderOverviewChart(chartBuckets, timeframe) {
   const useMonthly = (timeframe === 'all_time' || timeframe === 'last_month');
-  const buckets = {};
-
-  salesData.forEach(s => {
-    if (!s.created_at) return;
-    const d = new Date(s.created_at);
-    const key = useMonthly
-      ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    buckets[key] = (buckets[key] || 0) + parseFloat(s.total || 0);
-  });
-
-  const sortedKeys = Object.keys(buckets).sort();
-  const chartLabels = sortedKeys.map(k => {
+  const chartLabels = chartBuckets.map(row => {
     if (useMonthly) {
-      const [y, m] = k.split('-');
+      const [y, m] = row.bucket_key.split('-');
       return new Date(y, m - 1).toLocaleString('en-US', { month: 'short', year: '2-digit' });
     }
-    const [y, m, d] = k.split('-');
+    const [y, m, d] = row.bucket_key.split('-');
     return new Date(y, m - 1, d).toLocaleString('en-US', { month: 'short', day: 'numeric' });
   });
-  const chartValues = sortedKeys.map(k => buckets[k]);
+  const chartValues = chartBuckets.map(row => parseFloat(row.total_amount || 0));
 
   const ctx = document.getElementById('driverRevenueChart');
   if (_driverRevenueChart) { _driverRevenueChart.destroy(); _driverRevenueChart = null; }
@@ -5152,64 +5106,38 @@ function renderOverviewChart(salesData, timeframe) {
   }
 }
 
-function renderBestSellers(allItems) {
+function renderBestSellers(bestSellers) {
   const container = document.getElementById('ov-best-sellers');
   if (!container) return;
 
-  // Aggregate by product_key
-  const productMap = {};
-  allItems.forEach(it => {
-    const key = it.product_key;
-    if (!productMap[key]) {
-      productMap[key] = { label: it.product_label || key, qty: 0, revenue: 0 };
-    }
-    productMap[key].qty += (it.quantity || 0);
-    productMap[key].revenue += parseFloat(it.line_total || 0);
-  });
-
-  const sorted = Object.values(productMap).sort((a, b) => b.qty - a.qty);
-  if (sorted.length === 0) {
+  if (!bestSellers || bestSellers.length === 0) {
     container.innerHTML = `<div class="empty-state" data-en="No sales data yet" data-es="Sin datos de ventas">${lang === 'es' ? 'Sin datos de ventas' : 'No sales data yet'}</div>`;
     return;
   }
 
-  const topItems = sorted.slice(0, 8);
-  const maxQty = topItems[0].qty;
+  const maxQty = bestSellers[0].qty;
 
-  container.innerHTML = topItems.map((item, i) => {
+  container.innerHTML = bestSellers.map((item, i) => {
     const barW = Math.max(3, (item.qty / maxQty) * 100);
     return `<div class="ov-lb-item">
       <span class="ov-lb-rank">${i + 1}</span>
       <div class="ov-lb-info">
-        <div class="ov-lb-name">${_esc(item.label)}</div>
+        <div class="ov-lb-name">${_esc(item.product_label || item.product_key)}</div>
         <div class="ov-lb-bar-bg"><div class="ov-lb-bar" style="width:${barW}%"></div></div>
       </div>
       <div class="ov-lb-meta">
         <div class="ov-lb-amount">${item.qty}</div>
-        <div class="ov-lb-sub">$${item.revenue.toFixed(2)}</div>
+        <div class="ov-lb-sub">$${parseFloat(item.revenue || 0).toFixed(2)}</div>
       </div>
     </div>`;
   }).join('');
 }
 
-function renderTopClients(salesData) {
+function renderTopClients(topClients) {
   const container = document.getElementById('ov-top-clients');
   if (!container) return;
 
-  // Aggregate by client_id
-  const clientMap = {};
-  salesData.forEach(s => {
-    const cid = s.client_id;
-    if (!cid) return;
-    if (!clientMap[cid]) {
-      clientMap[cid] = { id: cid, count: 0, revenue: 0 };
-    }
-    clientMap[cid].count++;
-    clientMap[cid].revenue += parseFloat(s.total || 0);
-  });
-
-  const sorted = Object.values(clientMap).sort((a, b) => b.revenue - a.revenue);
-  if (sorted.length === 0) {
+  if (!topClients || topClients.length === 0) {
     container.innerHTML = `<div class="empty-state" data-en="No client data yet" data-es="Sin datos de clientes">${lang === 'es' ? 'Sin datos de clientes' : 'No client data yet'}</div>`;
     return;
   }
@@ -5220,12 +5148,12 @@ function renderTopClients(salesData) {
     _clientsList.forEach(c => { clientNameMap[c.id] = c.business_name || c.name || 'Unknown'; });
   }
 
-  const topClients = sorted.slice(0, 5);
-  const maxRev = topClients[0].revenue;
+  const maxRev = parseFloat(topClients[0].total || 0);
 
-  container.innerHTML = topClients.map((c, i) => {
-    const name = clientNameMap[c.id] || (lang === 'es' ? 'Cliente' : 'Client');
-    const barW = Math.max(3, (c.revenue / maxRev) * 100);
+  container.innerHTML = topClients.slice(0, 5).map((c, i) => {
+    const name = clientNameMap[c.client_id] || (lang === 'es' ? 'Cliente' : 'Client');
+    const revenue = parseFloat(c.total || 0);
+    const barW = Math.max(3, (revenue / (maxRev || 1)) * 100);
     const salesLabel = c.count === 1
       ? (lang === 'es' ? '1 venta' : '1 sale')
       : (lang === 'es' ? `${c.count} ventas` : `${c.count} sales`);
@@ -5236,7 +5164,7 @@ function renderTopClients(salesData) {
         <div class="ov-lb-bar-bg"><div class="ov-lb-bar" style="width:${barW}%;background:var(--blue)"></div></div>
       </div>
       <div class="ov-lb-meta">
-        <div class="ov-lb-amount">$${c.revenue.toFixed(2)}</div>
+        <div class="ov-lb-amount">$${revenue.toFixed(2)}</div>
         <div class="ov-lb-sub">${salesLabel}</div>
       </div>
     </div>`;
