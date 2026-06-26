@@ -107,15 +107,16 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
+#variable_conflict use_column
 BEGIN
   IF p_use_monthly THEN
     RETURN QUERY
     WITH combined AS (
-      SELECT submitted_at::timestamptz as dt, total_amount as amt FROM driver_orders WHERE (p_start_date IS NULL OR submitted_at >= p_start_date) AND submitted_at <= p_end_date
+      SELECT o.submitted_at::timestamptz as dt, o.total_amount as amt FROM driver_orders o WHERE (p_start_date IS NULL OR o.submitted_at >= p_start_date) AND o.submitted_at <= p_end_date
       UNION ALL
-      SELECT placed_at::timestamptz as dt, subtotal as amt FROM wholesale_orders WHERE (p_start_date IS NULL OR placed_at >= p_start_date) AND placed_at <= p_end_date
+      SELECT w.placed_at::timestamptz as dt, w.subtotal as amt FROM wholesale_orders w WHERE (p_start_date IS NULL OR w.placed_at >= p_start_date) AND w.placed_at <= p_end_date
       UNION ALL
-      SELECT created_at::timestamptz as dt, total_amount as amt FROM orders WHERE source = 'website' AND (p_start_date IS NULL OR created_at >= p_start_date) AND created_at <= p_end_date
+      SELECT r.created_at::timestamptz as dt, r.total_amount as amt FROM orders r WHERE r.source = 'website' AND (p_start_date IS NULL OR r.created_at >= p_start_date) AND r.created_at <= p_end_date
     )
     SELECT 
       to_char(dt, 'YYYY-MM') as b_key,
@@ -126,11 +127,11 @@ BEGIN
   ELSE
     RETURN QUERY
     WITH combined AS (
-      SELECT submitted_at::timestamptz as dt, total_amount as amt FROM driver_orders WHERE (p_start_date IS NULL OR submitted_at >= p_start_date) AND submitted_at <= p_end_date
+      SELECT o.submitted_at::timestamptz as dt, o.total_amount as amt FROM driver_orders o WHERE (p_start_date IS NULL OR o.submitted_at >= p_start_date) AND o.submitted_at <= p_end_date
       UNION ALL
-      SELECT placed_at::timestamptz as dt, subtotal as amt FROM wholesale_orders WHERE (p_start_date IS NULL OR placed_at >= p_start_date) AND placed_at <= p_end_date
+      SELECT w.placed_at::timestamptz as dt, w.subtotal as amt FROM wholesale_orders w WHERE (p_start_date IS NULL OR w.placed_at >= p_start_date) AND w.placed_at <= p_end_date
       UNION ALL
-      SELECT created_at::timestamptz as dt, total_amount as amt FROM orders WHERE source = 'website' AND (p_start_date IS NULL OR created_at >= p_start_date) AND created_at <= p_end_date
+      SELECT r.created_at::timestamptz as dt, r.total_amount as amt FROM orders r WHERE r.source = 'website' AND (p_start_date IS NULL OR r.created_at >= p_start_date) AND r.created_at <= p_end_date
     )
     SELECT 
       to_char(dt, 'YYYY-MM-DD') as b_key,
