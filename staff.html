@@ -1938,10 +1938,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
       <span data-en="Saved" data-es="Guardadas">Saved</span>
     </button>
-    <button class="bottom-nav-item" data-section="compiler" onclick="staffShowSection('compiler')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-      <span data-en="Compiler" data-es="Compilador">Compiler</span>
-    </button>
+
     <button class="bottom-nav-item" data-section="calculator" onclick="staffShowSection('calculator')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
       <span data-en="Calculator" data-es="Calculadora">Calculator</span>
@@ -4436,6 +4433,7 @@
 
             // Restore last active section
             var lastSection = localStorage.getItem('cb-staff-section') || 'orders';
+            if (lastSection === 'compiler') lastSection = 'orders';
             staffShowSection(lastSection);
           }
         } else {
