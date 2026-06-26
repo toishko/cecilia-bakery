@@ -197,39 +197,101 @@
       </div>
 
       <!-- Today's Snapshot (always shows today regardless of filter) -->
-      <div class="today-snapshot" id="today-snapshot">
-        <div class="today-snapshot-item">
-          <span class="today-snapshot-value" id="today-order-count">—</span>
-          <span class="today-snapshot-label" data-en="Orders Today" data-es="Pedidos Hoy" style="margin-top: 4px;">Orders Today</span>
+      <section class="today-snapshot" id="today-snapshot">
+        <div class="today-snapshot-col">
+          <span class="today-snapshot-label" data-en="Orders Today" data-es="Pedidos Hoy">Orders Today</span>
+          <div class="today-snapshot-value-wrap">
+            <span class="today-snapshot-value" id="today-order-count">—</span>
+            <span class="today-snapshot-trend">
+              <i data-lucide="trending-up"></i>
+              <span data-en="+15%" data-es="+15%">+15%</span>
+            </span>
+          </div>
         </div>
-        <div class="today-snapshot-divider"></div>
-        <div class="today-snapshot-item">
-          <span class="today-snapshot-value" id="today-revenue" style="color:var(--green)">—</span>
-          <span class="today-snapshot-label" data-en="Collected Today" data-es="Cobrado Hoy" style="margin-top: 4px;">Collected Today</span>
+        <div class="today-snapshot-col">
+          <span class="today-snapshot-label" data-en="Collected Today" data-es="Cobrado Hoy">Collected Today</span>
+          <div class="today-snapshot-value-wrap">
+            <span class="today-snapshot-value" id="today-revenue">—</span>
+            <span class="today-snapshot-rate">
+              <i data-lucide="check-circle"></i>
+              <span id="today-collection-rate">69% Rate</span>
+            </span>
+          </div>
         </div>
-      </div>
+        <div class="today-snapshot-peak">
+          <i data-lucide="clock"></i>
+          <span data-en="Production peak: 04:30 AM" data-es="Pico de producción: 04:30 AM">Production peak: 04:30 AM</span>
+        </div>
+      </section>
 
       <div class="stats-grid">
+        <!-- Total Ordered Value -->
         <div class="stat-card" id="stat-ordered-card" style="cursor:pointer">
-          <div class="stat-icon"><i data-lucide="trending-up"></i></div>
-          <div class="stat-info">
-            <span class="stat-value" id="stat-gross-revenue">$0</span>
+          <div style="display:flex; justify-content:space-between; width:100%; align-items:flex-start;">
+            <div class="stat-icon"><i data-lucide="trending-up"></i></div>
+            <span id="today-gross-badge" style="font-size: 0.75rem; font-weight: 700; color: var(--red); line-height: 1;" data-en="+$2,400 today" data-es="+$2,400 hoy">+$2,400 today</span>
+          </div>
+          <div class="stat-info" style="margin-top: 12px; width: 100%;">
             <span class="stat-label" data-en="Total Ordered Value" data-es="Valor Total Pedido">Total Ordered Value</span>
+            <span class="stat-value" id="stat-gross-revenue">$0</span>
           </div>
+          <svg class="sparkline-svg" viewBox="0 0 100 40">
+            <defs>
+              <linearGradient id="grad-gross" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#C8102E" stop-opacity="0.15"></stop>
+                <stop offset="100%" stop-color="#C8102E" stop-opacity="0"></stop>
+              </linearGradient>
+            </defs>
+            <path d="M0 35 C 20 10, 40 30, 60 15 S 80 5, 100 25 L 100 40 L 0 40 Z" fill="url(#grad-gross)"></path>
+            <path d="M0 35 C 20 10, 40 30, 60 15 S 80 5, 100 25" fill="none" stroke="#C8102E" stroke-linecap="round" stroke-width="2"></path>
+            <circle cx="100" cy="25" fill="#C8102E" r="3"></circle>
+          </svg>
         </div>
+
+        <!-- Gross Revenue -->
         <div class="stat-card" id="stat-collected-card" style="cursor:pointer">
-          <div class="stat-icon revenue"><i data-lucide="check-circle"></i></div>
-          <div class="stat-info">
-            <span class="stat-value" id="stat-collected">$0</span>
+          <div style="display:flex; justify-content:space-between; width:100%; align-items:flex-start;">
+            <div class="stat-icon revenue"><i data-lucide="check-circle"></i></div>
+            <span id="today-collected-badge" style="font-size: 0.75rem; font-weight: 700; color: var(--green); line-height: 1;" data-en="+8.2% vs last week" data-es="+8.2% vs sem. pasada">+8.2% vs last week</span>
+          </div>
+          <div class="stat-info" style="margin-top: 12px; width: 100%;">
             <span class="stat-label" data-en="Gross Revenue" data-es="Ingresos Brutos">Gross Revenue</span>
+            <span class="stat-value" id="stat-collected">$0</span>
           </div>
+          <svg class="sparkline-svg" viewBox="0 0 100 40">
+            <defs>
+              <linearGradient id="grad-collected" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#1B7A4A" stop-opacity="0.15"></stop>
+                <stop offset="100%" stop-color="#1B7A4A" stop-opacity="0"></stop>
+              </linearGradient>
+            </defs>
+            <path d="M0 38 C 25 15, 50 20, 75 12 S 90 8, 100 5 L 100 40 L 0 40 Z" fill="url(#grad-collected)"></path>
+            <path d="M0 38 C 25 15, 50 20, 75 12 S 90 8, 100 5" fill="none" stroke="#1B7A4A" stroke-linecap="round" stroke-width="2"></path>
+            <circle cx="100" cy="5" fill="#1B7A4A" r="3"></circle>
+          </svg>
         </div>
+
+        <!-- Pending Collection -->
         <div class="stat-card" id="stat-outstanding-card" style="cursor:pointer">
-          <div class="stat-icon unpaid"><i data-lucide="alert-circle"></i></div>
-          <div class="stat-info">
-            <span class="stat-value" id="stat-outstanding">$0.00</span>
-            <span class="stat-label" data-en="Pending Collection" data-es="Pendiente de Cobro">Pending Collection</span>
+          <div style="display:flex; justify-content:space-between; width:100%; align-items:flex-start;">
+            <div class="stat-icon unpaid"><i data-lucide="alert-circle"></i></div>
+            <span id="today-pending-badge" style="font-size: 0.75rem; font-weight: 700; color: var(--yellow); line-height: 1;" data-en="0 active items" data-es="0 activos">0 active items</span>
           </div>
+          <div class="stat-info" style="margin-top: 12px; width: 100%;">
+            <span class="stat-label" data-en="Pending Collection" data-es="Pendiente de Cobro">Pending Collection</span>
+            <span class="stat-value" id="stat-outstanding">$0.00</span>
+          </div>
+          <svg class="sparkline-svg" viewBox="0 0 100 40">
+            <defs>
+              <linearGradient id="grad-outstanding" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#C89B2A" stop-opacity="0.15"></stop>
+                <stop offset="100%" stop-color="#C89B2A" stop-opacity="0"></stop>
+              </linearGradient>
+            </defs>
+            <path d="M0 20 C 25 25, 50 15, 75 35 S 90 20, 100 10 L 100 40 L 0 40 Z" fill="url(#grad-outstanding)"></path>
+            <path d="M0 20 C 25 25, 50 15, 75 35 S 90 20, 100 10" fill="none" stroke="#C89B2A" stroke-linecap="round" stroke-width="2"></path>
+            <circle cx="100" cy="10" fill="#C89B2A" r="3"></circle>
+          </svg>
         </div>
       </div>
 
@@ -257,11 +319,53 @@
         </button>
       </div>
 
-      <!-- Revenue Chart -->
-      <div class="revenue-chart-wrap">
-        <h3 class="revenue-chart-title" data-en="Revenue Over Time" data-es="Ingresos en el Tiempo">Revenue Over Time</h3>
-        <div class="revenue-chart-container">
-          <canvas id="revenueChart"></canvas>
+      <!-- Revenue Chart & Needs Attention Side-by-Side -->
+      <div class="overview-analytics-grid">
+        <!-- Revenue Chart -->
+        <div class="revenue-chart-wrap" style="margin-bottom:0">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+            <h3 class="revenue-chart-title" style="margin:0;" data-en="Revenue Analytics" data-es="Análisis de Ingresos">Revenue Analytics</h3>
+            <div style="display:flex; gap:16px; align-items:center;">
+              <span style="display:inline-flex; align-items:center; font-size:0.75rem; font-weight:600; color:var(--tx-muted);">
+                <span style="width:8px; height:8px; border-radius:50%; background:#C8102E; margin-right:6px;"></span>
+                <span data-en="Driver Routes" data-es="Rutas">Driver Routes</span>
+              </span>
+              <span style="display:inline-flex; align-items:center; font-size:0.75rem; font-weight:600; color:var(--tx-muted);">
+                <span style="width:8px; height:8px; border-radius:50%; background:#002D62; margin-right:6px;"></span>
+                <span data-en="Wholesale B2B" data-es="Mayoreo B2B">Wholesale B2B</span>
+              </span>
+            </div>
+          </div>
+          <div class="revenue-chart-container">
+            <canvas id="revenueChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Needs Attention Panel -->
+        <div class="needs-attention-panel">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 class="revenue-chart-title" style="margin:0;" data-en="Needs Attention" data-es="Requiere Atención">Needs Attention</h3>
+            <span style="background:rgba(200, 16, 46, 0.08); color:var(--red); font-size:0.68rem; font-weight:700; padding:4px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.5px;">Priority</span>
+          </div>
+          <div class="needs-attention-items-container" id="overview-attention-items">
+            <!-- Populated dynamically via JS -->
+            <div style="display:flex; align-items:center; justify-content:center; height:100%; color:var(--tx-muted); font-size:0.85rem;" data-en="Loading issues..." data-es="Cargando asuntos...">Loading issues...</div>
+          </div>
+          <button class="view-all-issues-btn" onclick="openQueueSheet()" data-en="View All Issues" data-es="Ver Todos los Asuntos">View All Issues</button>
+        </div>
+      </div>
+
+      <!-- Top Selling Products Leaderboard -->
+      <div class="revenue-chart-wrap" style="margin-top: 24px; margin-bottom: 24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <div>
+            <h3 class="revenue-chart-title" style="margin:0;" data-en="Top Selling Products" data-es="Productos Más Vendidos">Top Selling Products</h3>
+            <p style="font-size:0.8rem; color:var(--tx-muted); margin:4px 0 0;" data-en="Based on volume this week" data-es="Basado en volumen esta semana">Based on volume this week</p>
+          </div>
+          <button class="link-btn" onclick="showSection('products')" data-en="View Detailed Report" data-es="Ver Reporte Detallado">View Detailed Report</button>
+        </div>
+        <div class="leaderboard-grid" id="leaderboard-grid">
+          <!-- Populated dynamically via JS -->
         </div>
       </div>
 

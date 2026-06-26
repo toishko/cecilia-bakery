@@ -94,7 +94,7 @@ $$;
 
 
 -- ── 3. ADMIN CHART BUCKETS RPC ──
--- Returns daily or monthly aggregated revenue groups
+-- Returns daily or monthly aggregated revenue groups split by channel
 CREATE OR REPLACE FUNCTION get_admin_chart_buckets(
   p_start_date timestamptz,
   p_end_date timestamptz,
@@ -102,6 +102,9 @@ CREATE OR REPLACE FUNCTION get_admin_chart_buckets(
 )
 RETURNS TABLE (
   bucket_key text,
+  driver_amount numeric,
+  wholesale_amount numeric,
+  online_amount numeric,
   total_amount numeric
 )
 LANGUAGE plpgsql
@@ -112,14 +115,17 @@ BEGIN
   IF p_use_monthly THEN
     RETURN QUERY
     WITH combined AS (
-      SELECT o.submitted_at::timestamptz as dt, o.total_amount as amt FROM driver_orders o WHERE (p_start_date IS NULL OR o.submitted_at >= p_start_date) AND o.submitted_at <= p_end_date
+      SELECT o.submitted_at::timestamptz as dt, o.total_amount as amt, 'driver'::text as src FROM driver_orders o WHERE (p_start_date IS NULL OR o.submitted_at >= p_start_date) AND o.submitted_at <= p_end_date
       UNION ALL
-      SELECT w.placed_at::timestamptz as dt, w.subtotal as amt FROM wholesale_orders w WHERE (p_start_date IS NULL OR w.placed_at >= p_start_date) AND w.placed_at <= p_end_date
+      SELECT w.placed_at::timestamptz as dt, w.subtotal as amt, 'wholesale'::text as src FROM wholesale_orders w WHERE (p_start_date IS NULL OR w.placed_at >= p_start_date) AND w.placed_at <= p_end_date
       UNION ALL
-      SELECT r.created_at::timestamptz as dt, r.total_amount as amt FROM orders r WHERE r.source = 'website' AND (p_start_date IS NULL OR r.created_at >= p_start_date) AND r.created_at <= p_end_date
+      SELECT r.created_at::timestamptz as dt, r.total_amount as amt, 'online'::text as src FROM orders r WHERE r.source = 'website' AND (p_start_date IS NULL OR r.created_at >= p_start_date) AND r.created_at <= p_end_date
     )
     SELECT 
       to_char(dt, 'YYYY-MM') as b_key,
+      SUM(CASE WHEN src = 'driver' THEN amt ELSE 0 END)::numeric as drv_amt,
+      SUM(CASE WHEN src = 'wholesale' THEN amt ELSE 0 END)::numeric as wh_amt,
+      SUM(CASE WHEN src = 'online' THEN amt ELSE 0 END)::numeric as on_amt,
       SUM(amt)::numeric as tot
     FROM combined
     GROUP BY b_key
@@ -127,14 +133,17 @@ BEGIN
   ELSE
     RETURN QUERY
     WITH combined AS (
-      SELECT o.submitted_at::timestamptz as dt, o.total_amount as amt FROM driver_orders o WHERE (p_start_date IS NULL OR o.submitted_at >= p_start_date) AND o.submitted_at <= p_end_date
+      SELECT o.submitted_at::timestamptz as dt, o.total_amount as amt, 'driver'::text as src FROM driver_orders o WHERE (p_start_date IS NULL OR o.submitted_at >= p_start_date) AND o.submitted_at <= p_end_date
       UNION ALL
-      SELECT w.placed_at::timestamptz as dt, w.subtotal as amt FROM wholesale_orders w WHERE (p_start_date IS NULL OR w.placed_at >= p_start_date) AND w.placed_at <= p_end_date
+      SELECT w.placed_at::timestamptz as dt, w.subtotal as amt, 'wholesale'::text as src FROM wholesale_orders w WHERE (p_start_date IS NULL OR w.placed_at >= p_start_date) AND w.placed_at <= p_end_date
       UNION ALL
-      SELECT r.created_at::timestamptz as dt, r.total_amount as amt FROM orders r WHERE r.source = 'website' AND (p_start_date IS NULL OR r.created_at >= p_start_date) AND r.created_at <= p_end_date
+      SELECT r.created_at::timestamptz as dt, r.total_amount as amt, 'online'::text as src FROM orders r WHERE r.source = 'website' AND (p_start_date IS NULL OR r.created_at >= p_start_date) AND r.created_at <= p_end_date
     )
     SELECT 
       to_char(dt, 'YYYY-MM-DD') as b_key,
+      SUM(CASE WHEN src = 'driver' THEN amt ELSE 0 END)::numeric as drv_amt,
+      SUM(CASE WHEN src = 'wholesale' THEN amt ELSE 0 END)::numeric as wh_amt,
+      SUM(CASE WHEN src = 'online' THEN amt ELSE 0 END)::numeric as on_amt,
       SUM(amt)::numeric as tot
     FROM combined
     GROUP BY b_key

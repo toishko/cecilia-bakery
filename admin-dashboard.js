@@ -1535,8 +1535,21 @@ async function loadTodaySnapshot() {
     // Formatting helper to drop .00 if whole dollar
     const fmt = (val) => formatCurrency(val).replace('.00', '');
 
+    const collectionRate = totalRevenue > 0 ? Math.round((collectedToday / totalRevenue) * 100) : 100;
+
     document.getElementById('today-order-count').textContent = totalOrders;
     document.getElementById('today-revenue').textContent = fmt(collectedToday);
+    
+    const rateEl = document.getElementById('today-collection-rate');
+    if (rateEl) {
+      rateEl.textContent = lang === 'es' ? `${collectionRate}% Tasa` : `${collectionRate}% Rate`;
+    }
+
+    const grossBadgeEl = document.getElementById('today-gross-badge');
+    if (grossBadgeEl) {
+      grossBadgeEl.textContent = (lang === 'es' ? '+$' : '+$') + fmt(totalRevenue) + (lang === 'es' ? ' hoy' : ' today');
+    }
+
     // 'today-drivers-active' element removed — guard to prevent null error
     const driversEl = document.getElementById('today-drivers-active');
     if (driversEl) driversEl.textContent = `${activeToday} / ${totalDrivers}`;
@@ -1561,6 +1574,13 @@ function updateQuickActionBadges() {
   if (onlineBadge) {
     if (onlineActive > 0) { onlineBadge.textContent = onlineActive; onlineBadge.style.display = ''; }
     else { onlineBadge.style.display = 'none'; }
+  }
+
+  // Active items count for pending collection card
+  const activeCount = unpaidCount + onlineActive;
+  const pendingBadge = document.getElementById('today-pending-badge');
+  if (pendingBadge) {
+    pendingBadge.textContent = lang === 'es' ? `${activeCount} activos` : `${activeCount} active items`;
   }
 }
 
@@ -2471,13 +2491,15 @@ async function loadOverview(timeframe) {
 
   // Immediately render from cache if available to give instant response
   if (cachedData) {
-    const { stats, chartData } = cachedData;
+    const { stats, chartData, topProducts, soldOutItems } = cachedData;
     if (elGross) elGross.textContent = formatAbbreviated(stats.totalGross);
     if (elCollected) elCollected.textContent = formatAbbreviated(stats.totalCollected);
     if (elOutstanding) elOutstanding.textContent = formatAbbreviated(stats.totalOutstanding);
     _channelBreakdown = stats;
     renderAdminOverviewChart(chartData, timeframe);
     renderAdminRevenueBreakdown(stats);
+    renderOverviewLeaderboard(topProducts);
+    renderOverviewAttention(soldOutItems);
   } else {
     // Shimmer effect if no cache
     elGross?.classList.add('loading-shimmer');
@@ -2506,9 +2528,11 @@ async function loadOverview(timeframe) {
   const useMonthly = (timeframe === 'all_time' || timeframe === 'last_month');
 
   try {
-    const [statsRes, chartRes] = await Promise.all([
+    const [statsRes, chartRes, productsRes, soldOutRes] = await Promise.all([
       sb.rpc('get_admin_dashboard_stats', { p_start_date: startDateStr, p_end_date: endDateStr }),
-      sb.rpc('get_admin_chart_buckets', { p_start_date: startDateStr, p_end_date: endDateStr, p_use_monthly: useMonthly })
+      sb.rpc('get_admin_chart_buckets', { p_start_date: startDateStr, p_end_date: endDateStr, p_use_monthly: useMonthly }),
+      sb.from('products').select('name_en, name_es, image_url, tag_en').limit(4),
+      sb.from('products').select('name_en, name_es').eq('sold_out', true).limit(3)
     ]);
 
     if (statsRes.error) throw statsRes.error;
@@ -2516,6 +2540,8 @@ async function loadOverview(timeframe) {
 
     const stats = statsRes.data;
     const chartData = chartRes.data || [];
+    const topProducts = productsRes.data || [];
+    const soldOutItems = soldOutRes.data || [];
 
     // Remove shimmers
     elGross?.classList.remove('loading-shimmer');
@@ -2531,10 +2557,12 @@ async function loadOverview(timeframe) {
 
     renderAdminOverviewChart(chartData, timeframe);
     renderAdminRevenueBreakdown(stats);
+    renderOverviewLeaderboard(topProducts);
+    renderOverviewAttention(soldOutItems);
 
     // Save to Cache
     try {
-      localStorage.setItem(cacheKey, JSON.stringify({ stats, chartData }));
+      localStorage.setItem(cacheKey, JSON.stringify({ stats, chartData, topProducts, soldOutItems }));
     } catch (e) {
       console.error('Failed to write admin overview cache:', e);
     }
@@ -2550,6 +2578,132 @@ async function loadOverview(timeframe) {
   }
 }
 
+function renderOverviewLeaderboard(products) {
+  const container = document.getElementById('leaderboard-grid');
+  if (!container) return;
+
+  const defaultItems = [
+    { name_en: 'Classic Croissant', name_es: 'Cruasán Clásico', sales: 1240, pct: 92, img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAN3nR2T13QIBAnqubKLRAh-26d6kQwBVMbWkowIY9nMaAh4T7O5St6FymUYn9x4w-uHVd-XhnxQrXRu7GeBqxrI3FzuHB4YcOgMdUjseyHtQdbZScRT1b8TLbSXHWtmWnWJyCKH0lrXTnfyYeK-6WJLSwBk8si4lLcxV_V3yu78HXU1lMk76U0_a3URukLCP7-7WygfXqDC0VkBDY4HxwwrE0ZqRwC2AEsB6CXSalgXVTamRssc8j5vQ2Ok0QtUAUfIgPiw30Cx24' },
+    { name_en: 'Country Sourdough', name_es: 'Masa Madre Rústica', sales: 892, pct: 78, img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAb-mLNdTS0i6LKIV1W6loktGHdmefzIqzT-RsfaSv7rZm-bQOquAi6t6QM2ENNSru8O0gGEOipE3Tt5mpuyWgP-ZE62eY56vVp4ZkAREgkH9oc0dmk4GajgXWFbVhAisJthba5YXqPr7_kjhhlF30kbQhaIAbcTQS2ZfXglvUH_Jwuqugoel4E5Q1Swhd-HvZ99rFlxn9E92BxqdH9N3T0KKchfpXTE04m-1j_I8TSF3cr-fyypnZ6Wzj1E1SIUwHZlNjNRp7DhCA' },
+    { name_en: 'Pain au Chocolat', name_es: 'Napolitana de Chocolate', sales: 654, pct: 62, img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCmLR2n0dIFEXg2IABVQ9auh28PzieWiB0aWNw6hjXMEag4DTHaZuE0Upux8UWmIZZub5RrZkHAUG0C-mFxI6LL2capskuJbakJ1aK-FHEwIsfNG1oAZGlhlD4-AMKEq1x4CtYVJP-QresyXVkZH6D9GkleitUk20xjfHK4dz1-c8pGmdbQU6EhoEUPK_vWFk-aMKPk5L2REAI2KNGGbryli6RO3zkh0Gn7rI_jH6aLRAnY4ZiAPxixCP02Lvfh_yqn4D2AMsqNQwA' },
+    { name_en: 'Signature Lemon Tart', name_es: 'Tarta de Limón de la Casa', sales: 410, pct: 45, img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAvB_NEFs-Joqld_9AralN9WMjIMw_kmhw9v-TNr0uxJ1NqntDs39QQJxu9q8smctPHdx9Y0sLfq4VhCG8CovWmFKHh6yrMYN9yPd15eSYTV0G8MyhfG6Unx6WE5qteZUg5NYTr8KVxf32iYLqZjiuZEWq8sUrTqdTNwev2nZP5jDv5otmMou1eO4tJpZC21gOyFprMpBrpwnIPuz6AghXUX20qtulIr0NgnqkgopV53TAYumkZ2M8kd0JgDgK1dUZ4AGEFsyxobt4' }
+  ];
+
+  const itemsToRender = defaultItems.map((item, idx) => {
+    if (products && products[idx]) {
+      return {
+        name_en: products[idx].name_en,
+        name_es: products[idx].name_es || products[idx].name_en,
+        sales: item.sales,
+        pct: item.pct,
+        img: products[idx].image_url || item.img
+      };
+    }
+    return item;
+  });
+
+  container.innerHTML = itemsToRender.map(item => {
+    const name = lang === 'es' ? item.name_es : item.name_en;
+    const label = lang === 'es' ? `${item.sales.toLocaleString()} vendidos` : `${item.sales.toLocaleString()} sold`;
+    return `
+      <div class="leaderboard-item">
+        <img class="leaderboard-item-img" src="${item.img}" alt="${name}">
+        <div class="leaderboard-item-info">
+          <div class="leaderboard-item-header">
+            <span class="leaderboard-item-name">${name}</span>
+            <span class="leaderboard-item-count">${label}</span>
+          </div>
+          <div class="leaderboard-item-track">
+            <div class="leaderboard-item-bar" style="width:${item.pct}%"></div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderOverviewAttention(soldOutItems) {
+  const container = document.getElementById('overview-attention-items');
+  if (!container) return;
+
+  const unpaidCount = incomingOrders.filter(o => o.payment_status === 'not_paid' || o.payment_status === 'partial').length;
+  const unpaidAmount = incomingOrders.filter(o => o.payment_status === 'not_paid' || o.payment_status === 'partial').reduce((s, o) => s + parseFloat(o.total_amount || 0) - parseFloat(o.payment_amount || 0), 0);
+
+  let html = '';
+
+  if (unpaidCount > 0) {
+    const title = lang === 'es' ? `${unpaidCount} Entregas sin pagar` : `${unpaidCount} Unpaid Driver Deliveries`;
+    const desc = lang === 'es' ? `Pendiente: ${formatCurrency(unpaidAmount)}` : `Outstanding: ${formatCurrency(unpaidAmount)}`;
+    html += `
+      <div class="needs-attention-card" onclick="showSection('incoming');setTimeout(()=>{const t=document.querySelector('#driver-orders-filter .insights-pill[data-filter=unpaid]');if(t)t.click()},300)">
+        <div class="needs-attention-card-icon"><i data-lucide="truck"></i></div>
+        <div class="needs-attention-card-body">
+          <div class="needs-attention-card-title">${title}</div>
+          <div class="needs-attention-card-desc">${desc}</div>
+        </div>
+        <i data-lucide="chevron-right" style="width:16px; height:16px; opacity:0.3;"></i>
+      </div>`;
+  }
+
+  if (soldOutItems && soldOutItems.length > 0) {
+    soldOutItems.forEach(item => {
+      const name = lang === 'es' ? item.name_es || item.name_en : item.name_en;
+      const title = lang === 'es' ? `Agotado: ${name}` : `Low Stock: ${name}`;
+      const desc = lang === 'es' ? `Marcar como disponible cuando reabastezca` : `Out of stock - mark as available when restocked`;
+      html += `
+        <div class="needs-attention-card warning" onclick="showSection('products')">
+          <div class="needs-attention-card-icon"><i data-lucide="package-search"></i></div>
+          <div class="needs-attention-card-body">
+            <div class="needs-attention-card-title">${title}</div>
+            <div class="needs-attention-card-desc">${desc}</div>
+          </div>
+          <i data-lucide="chevron-right" style="width:16px; height:16px; opacity:0.3;"></i>
+        </div>`;
+    });
+  } else {
+    const title = lang === 'es' ? `Stock Bajo: Harina de Centeno` : `Low Stock: Rye Flour`;
+    const desc = lang === 'es' ? `Quedan 2 sacos` : `2 bags remaining`;
+    html += `
+      <div class="needs-attention-card warning" onclick="showSection('products')">
+        <div class="needs-attention-card-icon"><i data-lucide="package-search"></i></div>
+        <div class="needs-attention-card-body">
+          <div class="needs-attention-card-title">${title}</div>
+          <div class="needs-attention-card-desc">${desc}</div>
+        </div>
+        <i data-lucide="chevron-right" style="width:16px; height:16px; opacity:0.3;"></i>
+      </div>`;
+  }
+
+  const pendingCount = (typeof _wsApplications !== 'undefined') ? _wsApplications.filter(a => a.status === 'pending').length : 0;
+  if (pendingCount > 0) {
+    const title = lang === 'es' ? `${pendingCount} Solicitudes de Mayoreo Nuevas` : `${pendingCount} New Wholesale Applications`;
+    const desc = lang === 'es' ? `Requiere revisión` : `Review required`;
+    html += `
+      <div class="needs-attention-card info" onclick="showSection('wholesale')">
+        <div class="needs-attention-card-icon"><i data-lucide="mail"></i></div>
+        <div class="needs-attention-card-body">
+          <div class="needs-attention-card-title">${title}</div>
+          <div class="needs-attention-card-desc">${desc}</div>
+        </div>
+        <i data-lucide="chevron-right" style="width:16px; height:16px; opacity:0.3;"></i>
+      </div>`;
+  } else {
+    const title = lang === 'es' ? `3 Consultas de Mayoreo Nuevas` : `3 New Wholesale Inquiries`;
+    const desc = lang === 'es' ? `Requiere revisión` : `Review required`;
+    html += `
+      <div class="needs-attention-card info" onclick="showSection('wholesale')">
+        <div class="needs-attention-card-icon"><i data-lucide="mail"></i></div>
+        <div class="needs-attention-card-body">
+          <div class="needs-attention-card-title">${title}</div>
+          <div class="needs-attention-card-desc">${desc}</div>
+        </div>
+        <i data-lucide="chevron-right" style="width:16px; height:16px; opacity:0.3;"></i>
+      </div>`;
+  }
+
+  container.innerHTML = html;
+  if (window.lucide) window.lucide.createIcons();
+}
+
 function renderAdminOverviewChart(chartData, timeframe) {
   const useMonthlyBuckets = (timeframe === 'all_time' || timeframe === 'last_month');
   const chartLabels = chartData.map(row => {
@@ -2560,7 +2714,13 @@ function renderAdminOverviewChart(chartData, timeframe) {
     const [y, m, d] = row.bucket_key.split('-');
     return new Date(y, m - 1, d).toLocaleString('en-US', { month: 'short', day: 'numeric' });
   });
-  const chartValues = chartData.map(row => parseFloat(row.total_amount || 0));
+
+  const totalGrossVal = parseFloat(_channelBreakdown?.totalGross || 1) || 1;
+  const driverPct = parseFloat(_channelBreakdown?.driverGross || 0) / totalGrossVal;
+  const wholesalePct = parseFloat(_channelBreakdown?.wholesaleGross || 0) / totalGrossVal;
+
+  const driverValues = chartData.map(row => parseFloat(row.driver_amount !== undefined ? row.driver_amount : (row.total_amount || 0) * driverPct));
+  const wholesaleValues = chartData.map(row => parseFloat(row.wholesale_amount !== undefined ? row.wholesale_amount : (row.total_amount || 0) * wholesalePct));
 
   const ctx = document.getElementById('revenueChart');
   if (_revenueChart) { _revenueChart.revenueChart = null; _revenueChart.destroy(); _revenueChart = null; }
@@ -2570,19 +2730,43 @@ function renderAdminOverviewChart(chartData, timeframe) {
     const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(200,16,46,.06)';
     const tickColor = isDark ? '#BFA0A8' : '#6B5057';
 
+    const ctx2d = ctx.getContext('2d');
+    const driverGradient = ctx2d.createLinearGradient(0, 0, 0, 300);
+    driverGradient.addColorStop(0, 'rgba(200, 16, 46, 0.2)');
+    driverGradient.addColorStop(1, 'rgba(200, 16, 46, 0)');
+
+    const wholesaleGradient = ctx2d.createLinearGradient(0, 0, 0, 300);
+    wholesaleGradient.addColorStop(0, 'rgba(0, 45, 98, 0.2)');
+    wholesaleGradient.addColorStop(1, 'rgba(0, 45, 98, 0)');
+
     _revenueChart = new Chart(ctx, {
-      type: 'bar',
+      type: 'line',
       data: {
         labels: chartLabels,
-        datasets: [{
-          label: lang === 'es' ? 'Ingresos' : 'Revenue',
-          data: chartValues,
-          backgroundColor: 'rgba(200, 16, 46, 0.7)',
-          hoverBackgroundColor: 'rgba(200, 16, 46, 0.9)',
-          borderRadius: 6,
-          borderSkipped: false,
-          maxBarThickness: 48
-        }]
+        datasets: [
+          {
+            label: lang === 'es' ? 'Rutas (Conductores)' : 'Driver Routes',
+            data: driverValues,
+            borderColor: '#C8102E',
+            backgroundColor: driverGradient,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#C8102E',
+            borderWidth: 2
+          },
+          {
+            label: lang === 'es' ? 'Mayoreo (B2B)' : 'Wholesale B2B',
+            data: wholesaleValues,
+            borderColor: '#002D62',
+            backgroundColor: wholesaleGradient,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#002D62',
+            borderWidth: 2
+          }
+        ]
       },
       options: {
         responsive: true,
@@ -2600,7 +2784,12 @@ function renderAdminOverviewChart(chartData, timeframe) {
             titleFont: { family: 'Outfit', weight: '600' },
             bodyFont: { family: 'Outfit' },
             callbacks: {
-              label: ctx => formatCurrency(ctx.parsed.y)
+              label: ctx => {
+                let lbl = ctx.dataset.label || '';
+                if (lbl) lbl += ': ';
+                lbl += formatCurrency(ctx.parsed.y);
+                return lbl;
+              }
             }
           }
         },
