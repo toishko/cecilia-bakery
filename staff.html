@@ -2754,12 +2754,14 @@
 
 
     /* ── Load drivers cache for name resolution ── */
+    let _cachedDriversList = [];
     async function loadDriversCache() {
       try {
         const sb = await getSupabaseClient();
         if (!sb) return;
-        const { data, error } = await sb.from('drivers').select('id, name');
+        const { data, error } = await sb.from('drivers').select('id, name, code').order('name');
         if (!error && data) {
+          _cachedDriversList = data;
           data.forEach(d => { cachedDrivers[d.id] = d.name; });
         }
       } catch (e) { console.warn('Drivers cache error:', e); }
@@ -2885,8 +2887,6 @@
       const container = document.getElementById('orders-list');
       const countBadge = document.getElementById('orders-count');
 
-      container.innerHTML = '<div class="loading-spinner"></div>';
-
       try {
         const sb = await getSupabaseClient();
         if (!sb) {
@@ -2900,6 +2900,37 @@
 
         const activeDateBtn = document.querySelector('.segment-btn[data-type="date"].active');
         const dateFilter = activeDateBtn ? activeDateBtn.dataset.value : 'today';
+
+        const cacheKey = `cecilia_staff_orders_cache_${statusFilter}_${dateFilter}`;
+        let cachedData = null;
+        try {
+          const raw = localStorage.getItem(cacheKey);
+          if (raw) cachedData = JSON.parse(raw);
+        } catch (e) {
+          console.error('Failed to read staff orders cache:', e);
+        }
+
+        // Immediately render from cache if available
+        if (cachedData) {
+          cachedOrders = cachedData;
+          countBadge.textContent = cachedOrders.length;
+          if (cachedOrders.length === 0) {
+            container.innerHTML = `
+              <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="1" y="3" width="15" height="13" rx="2"/>
+                  <path d="M16 8h4l3 3v5a2 2 0 0 1-2 2h-1"/>
+                  <circle cx="5.5" cy="18.5" r="2.5"/>
+                  <circle cx="18.5" cy="18.5" r="2.5"/>
+                </svg>
+                <div>No orders found for the selected filters.</div>
+              </div>`;
+          } else {
+            renderOrders(cachedOrders);
+          }
+        } else {
+          container.innerHTML = '<div class="loading-spinner"></div>';
+        }
 
         let query = sb
           .from('driver_orders')
@@ -2941,14 +2972,24 @@
 
         if (error) {
           console.error('Orders load error:', error);
-          container.innerHTML = '<div class="empty-state" style="color:var(--red)">Failed to load orders. Please try again.</div>';
+          if (!cachedData) {
+            container.innerHTML = '<div class="empty-state" style="color:var(--red)">Failed to load orders. Please try again.</div>';
+          }
           return;
         }
 
-        cachedOrders = data || [];
-        countBadge.textContent = cachedOrders.length;
+        const freshOrders = data || [];
+        cachedOrders = freshOrders;
+        countBadge.textContent = freshOrders.length;
 
-        if (cachedOrders.length === 0) {
+        // Save to cache
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify(freshOrders));
+        } catch (e) {
+          console.error('Failed to write staff orders cache:', e);
+        }
+
+        if (freshOrders.length === 0) {
           container.innerHTML = `
             <div class="empty-state">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -2962,10 +3003,12 @@
           return;
         }
 
-        renderOrders(cachedOrders);
+        renderOrders(freshOrders);
       } catch (e) {
         console.error('Orders fetch error:', e);
-        container.innerHTML = '<div class="empty-state" style="color:var(--red)">Error loading orders.</div>';
+        if (!cachedOrders || cachedOrders.length === 0) {
+          container.innerHTML = '<div class="empty-state" style="color:var(--red)">Error loading orders.</div>';
+        }
       }
     }
 
@@ -4280,9 +4323,11 @@
             currentUser = user;
             showState('dashboard');
             populateUserInfo(user);
-            // Load data
-            await loadDriversCache();
-            await loadOrders();
+            // Load data in parallel
+            await Promise.all([
+              loadDriversCache(),
+              loadOrders()
+            ]);
             setupStaffRealtime();
             applyStaffLang();
 
@@ -4493,19 +4538,29 @@
 
     // Populate drivers select
     if (select) {
-      var sb = await getSupabaseClient();
-      if (sb) {
-        try {
-          var { data, error } = await sb.from('drivers').select('*').order('name');
-          if (!error && data) {
-            var html = '<option value="" data-en="— Select Driver —" data-es="— Seleccionar Conductor —">' + (staffLang === 'es' ? '— Seleccionar Conductor —' : '— Select Driver —') + '</option>';
-            data.forEach(function(d) {
-              html += '<option value="' + d.id + '">' + _esc(d.name) + ' (' + _esc(d.code) + ')</option>';
-            });
-            select.innerHTML = html;
+      if (_cachedDriversList && _cachedDriversList.length > 0) {
+        var html = '<option value="" data-en="— Select Driver —" data-es="— Seleccionar Conductor —">' + (staffLang === 'es' ? '— Seleccionar Conductor —' : '— Select Driver —') + '</option>';
+        _cachedDriversList.forEach(function(d) {
+          html += '<option value="' + d.id + '">' + _esc(d.name) + ' (' + _esc(d.code) + ')</option>';
+        });
+        select.innerHTML = html;
+      } else {
+        // Fallback if not loaded yet
+        var sb = await getSupabaseClient();
+        if (sb) {
+          try {
+            var { data, error } = await sb.from('drivers').select('*').order('name');
+            if (!error && data) {
+              _cachedDriversList = data;
+              var html = '<option value="" data-en="— Select Driver —" data-es="— Seleccionar Conductor —">' + (staffLang === 'es' ? '— Seleccionar Conductor —' : '— Select Driver —') + '</option>';
+              data.forEach(function(d) {
+                html += '<option value="' + d.id + '">' + _esc(d.name) + ' (' + _esc(d.code) + ')</option>';
+              });
+              select.innerHTML = html;
+            }
+          } catch(e) {
+            console.error(e);
           }
-        } catch(e) {
-          console.error(e);
         }
       }
     }
@@ -4593,6 +4648,31 @@
     var wrap = document.getElementById('staff-compiler-recent-orders-wrap');
     if (!wrap) return;
 
+    const cacheKey = `cecilia_staff_compiler_cache_${driverId}`;
+    let cachedData = null;
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) cachedData = JSON.parse(raw);
+    } catch (e) {
+      console.error('Failed to read compiler checklist cache:', e);
+    }
+
+    if (cachedData) {
+      staffCompilerActiveDriverOrders = cachedData;
+      wrap.style.display = '';
+
+      var dateInput = document.getElementById('staff-compiler-date-input');
+      var currentDate = dateInput ? dateInput.value : '';
+
+      // Auto-select matching current date initially
+      staffCompilerSelectedOrders = staffCompilerActiveDriverOrders.filter(function(order) {
+        return order.pickup_date === currentDate;
+      });
+
+      renderStaffCompilerChecklist();
+      renderStaffCompilerView();
+    }
+
     var sb = await getSupabaseClient();
     if (!sb) return;
 
@@ -4605,7 +4685,14 @@
 
       if (error) throw error;
 
-      staffCompilerActiveDriverOrders = data || [];
+      const freshOrders = data || [];
+      staffCompilerActiveDriverOrders = freshOrders;
+
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(freshOrders));
+      } catch (e) {
+        console.error('Failed to write compiler checklist cache:', e);
+      }
 
       if (staffCompilerActiveDriverOrders.length === 0) {
         wrap.style.display = 'none';
@@ -4621,14 +4708,14 @@
         return order.pickup_date === currentDate;
       });
 
-      // Render the checklist feed
+      wrap.style.display = '';
       renderStaffCompilerChecklist();
-
-      // Render the summary loading sheet
       renderStaffCompilerView();
     } catch (e) {
       console.error('Error loading staff compiler checklist:', e);
-      wrap.style.display = 'none';
+      if (!cachedData) {
+        wrap.style.display = 'none';
+      }
     }
   }
   window.loadStaffDriverCompilerChecklist = loadStaffDriverCompilerChecklist;
