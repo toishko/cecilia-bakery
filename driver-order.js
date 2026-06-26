@@ -5313,7 +5313,7 @@ async function checkAdvancedFeatures() {
   if (voiceEnabled) {
     _initVoiceOrdering();
     // Re-check mic visibility for current section
-    const isOnNewOrder = document.getElementById('section-new-order')?.classList.contains('active-section');
+    const isOnNewOrder = document.getElementById('section-new-order')?.style.display === 'block';
     _showVoiceFab(!!isOnNewOrder);
   }
 }
