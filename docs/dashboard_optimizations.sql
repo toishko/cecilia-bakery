@@ -295,3 +295,10 @@ BEGIN
   );
 END;
 $$;
+
+
+-- ── 6. SECURITY: ENABLE RLS ON LEGACY BACKUP TABLES ──
+-- Ensures backup tables are secured and do not trigger public access alerts
+ALTER TABLE IF EXISTS public.drivers_old ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.driver_prices_old ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.driver_order_items_old ENABLE ROW LEVEL SECURITY;
