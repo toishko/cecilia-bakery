@@ -645,7 +645,18 @@ async function enterDashboard(user) {
     window.history.replaceState({}, document.title, window.location.pathname);
 
     try {
-      const cleanBase64 = decodeURIComponent(rawItems).replace(/ /g, '+');
+      // Clean base64 characters: replace URL-safe characters and spaces
+      let cleanBase64 = rawItems
+        .replace(/-/g, '+')
+        .replace(/_/g, '/')
+        .replace(/ /g, '+');
+
+      // Re-pad the string if trailing '=' padding was stripped
+      const padLimit = (4 - (cleanBase64.length % 4)) % 4;
+      for (let i = 0; i < padLimit; i++) {
+        cleanBase64 += '=';
+      }
+
       const decodedJson = atob(cleanBase64);
       const parsedData = JSON.parse(decodedJson);
       
@@ -658,7 +669,9 @@ async function enterDashboard(user) {
         : 'Please select a driver to import the shared ticket', 'info');
     } catch (e) {
       console.error('Failed to parse shared items:', e);
-      showToast(lang === 'es' ? 'Error al procesar ticket compartido' : 'Failed to process shared ticket', 'error');
+      showToast(lang === 'es' 
+        ? `Error al procesar ticket: ${e.message}` 
+        : `Failed to process ticket: ${e.message}`, 'error');
     }
   }
 
