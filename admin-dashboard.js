@@ -660,6 +660,18 @@ async function enterDashboard(user) {
       const decodedJson = atob(cleanBase64);
       const parsedData = JSON.parse(decodedJson);
       
+      // Expand the shrunk items back to the full format expected by _noProcessScanResult
+      if (parsedData && Array.isArray(parsedData.items)) {
+        parsedData.items = parsedData.items.map(item => ({
+          code: item.c,
+          qty: item.q,
+          unit: item.u === 'u' ? 'unidades' : 'dozen',
+          systemKey: item.s,
+          matched: item.m === 1,
+          confident: item.f === 1
+        }));
+      }
+      
       // Cache the parsed data in a window-level pending variable
       window._pendingSharedItems = parsedData;
 

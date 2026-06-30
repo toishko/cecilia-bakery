@@ -338,8 +338,16 @@ export default async function handler(req, res) {
 
     let redirectUrl = null;
     if (isShortcut) {
+      const shrunkItems = mapped.map(item => ({
+        c: item.code,
+        q: item.qty,
+        u: item.unit === 'unidades' ? 'u' : 'd',
+        s: item.systemKey,
+        m: item.matched ? 1 : 0,
+        f: item.confident ? 1 : 0
+      }));
       const itemsBase64 = Buffer.from(JSON.stringify({
-        items: mapped,
+        items: shrunkItems,
         mismatch
       })).toString('base64');
       const host = req.headers['host'] || 'ceciliabakery.com';
