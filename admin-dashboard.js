@@ -84,9 +84,9 @@ const GLOBAL_TICKET_NAME_MAP = {
   '9769':  'Strawberry Cheesecake Slice - 12PK',
   '9936':  'Red Velvet Cake Slice - 12PK',
   '9943':  'Carrot Cake Slice - 12PK',
-  '9110':  'CB Cornbread Family Sz - 12PK',
-  '9103':  'CB Pound Cake Family Sz - 12PK',
-  '9202':  'CB Raisin Pound Cake Family Sz - 12PK'
+  '9110':  'CB Cornbread Family Sz. - 12PK',
+  '9103':  'CB Pound Cake Family Sz. - 12PK',
+  '9202':  'CB Raisin Pound Cake - Family Sz.-12PK'
 };
 
 /* ── PWA standalone detection — add class for CSS fallback ── */
