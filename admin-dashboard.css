@@ -116,13 +116,23 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .corner-btn:hover{border-color:var(--bd-hover);color:var(--tx)}
 
 /* ── Clerk component overrides ── */
-#clerk-mount-target .cl-rootBox{width:100%}
+#clerk-mount-target .cl-rootBox,
+#clerk-mount-target .cl-card,
+#clerk-mount-target .cl-main{
+  width:100%!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+}
 #clerk-mount-target .cl-card{background:transparent!important;border:none!important;
   box-shadow:none!important;padding:0!important;margin:0!important}
 #clerk-mount-target .cl-headerTitle,
 #clerk-mount-target .cl-headerSubtitle{display:none!important}
 #clerk-mount-target .cl-footer{display:none!important}
 #clerk-mount-target .cl-internal-b3fm6y{display:none!important}
+
+@media (max-width:480px){
+  .login-card{padding:40px 20px}
+}
 /* Clerk "Secured by Clerk" branding badge */
 .cl-internal-b3fm6y,
 [data-localization-key="footerPageLink__help"],
