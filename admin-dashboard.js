@@ -645,7 +645,8 @@ async function enterDashboard(user) {
     window.history.replaceState({}, document.title, window.location.pathname);
 
     try {
-      const decodedJson = atob(rawItems);
+      const cleanBase64 = decodeURIComponent(rawItems).replace(/ /g, '+');
+      const decodedJson = atob(cleanBase64);
       const parsedData = JSON.parse(decodedJson);
       
       // Cache the parsed data in a window-level pending variable

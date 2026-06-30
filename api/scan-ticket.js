@@ -344,7 +344,7 @@ export default async function handler(req, res) {
       })).toString('base64');
       const host = req.headers['host'] || 'ceciliabakery.com';
       const proto = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
-      redirectUrl = `${proto}://${host}/admin-dashboard.html?shared-items=${itemsBase64}`;
+      redirectUrl = `${proto}://${host}/admin-dashboard.html?shared-items=${encodeURIComponent(itemsBase64)}`;
     }
 
     return res.status(200).json({
