@@ -637,6 +637,10 @@ async function checkSession() {
 async function enterDashboard(user) {
   applyLang();
 
+  let rawItems = null;
+  let errorMsg = null;
+  let hasSharedImage = null;
+
   // Helper to read parameters from either the query string or the hash (anchors)
   function getUrlParam(name) {
     const urlParams = new URLSearchParams(window.location.search);
@@ -662,9 +666,9 @@ async function enterDashboard(user) {
 
   // Handle URL params and hash parsing
   async function handleUrlParamsAndHash() {
-    const rawItems = getUrlParam('shared-items');
-    const errorMsg = getUrlParam('shared-image-error');
-    const hasSharedImage = getUrlParam('shared-image');
+    rawItems = getUrlParam('shared-items');
+    errorMsg = getUrlParam('shared-image-error');
+    hasSharedImage = getUrlParam('shared-image');
 
     if (hasSharedImage || rawItems || errorMsg) {
       showSection('new-order');
