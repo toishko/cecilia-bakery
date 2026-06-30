@@ -3,7 +3,7 @@
 //  Network-first + Offline Fallback + Push Notifications
 // ═══════════════════════════════════
 
-const CACHE_VERSION = 'v85';                      // bump on each release
+const CACHE_VERSION = 'v86';                      // bump on each release
 const CACHE_NAME = `cecilia-cache-${CACHE_VERSION}`;
 const OFFLINE_URL = '/offline.html';
 
@@ -34,6 +34,28 @@ self.addEventListener('activate', (event) => {
 // ── FETCH: network-first with offline fallback ──
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+
+  // Intercept PWA Share Target POST requests
+  if (event.request.method === 'POST' && url.pathname === '/share-target') {
+    event.respondWith(
+      (async () => {
+        try {
+          const formData = await event.request.formData();
+          const file = formData.get('media');
+          if (file) {
+            const cache = await caches.open('shared-images');
+            await cache.put('/shared-image.jpg', new Response(file));
+          }
+          return Response.redirect('/admin-dashboard.html?shared-image=true', 303);
+        } catch (e) {
+          console.error('Share target error:', e);
+          return Response.redirect('/admin-dashboard.html?shared-image-error=true', 303);
+        }
+      })()
+    );
+    return;
+  }
+
   if (event.request.method !== 'GET') return;
   if (!url.protocol.startsWith('http')) return;
 

@@ -622,8 +622,43 @@ async function enterDashboard(user) {
   applyLang();
   showScreen('dashboard');
   await loadDriversCache();
-  const savedSection = sessionStorage.getItem('admin_section') || 'overview';
+
+  const urlParams = new URLSearchParams(window.location.search);
+  let savedSection = sessionStorage.getItem('admin_section') || 'overview';
+  if (urlParams.has('shared-image')) {
+    savedSection = 'new-order';
+  }
+
   showSection(savedSection);
+
+  if (urlParams.has('shared-image')) {
+    // Clean up the URL search params so reloading doesn't re-trigger
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    // Process the shared image
+    try {
+      const cache = await caches.open('shared-images');
+      const cachedResponse = await cache.match('/shared-image.jpg');
+      if (cachedResponse) {
+        const blob = await cachedResponse.blob();
+        const file = new File([blob], "shared-image.jpg", { type: blob.type });
+
+        // Cache the file in a window-level pending variable
+        window._pendingSharedFile = file;
+
+        // Show instructions to select a driver
+        showToast(lang === 'es' 
+          ? 'Por favor selecciona un conductor para procesar el ticket compartida' 
+          : 'Please select a driver to process the shared ticket', 'info');
+
+        // Clean up from cache
+        await cache.delete('/shared-image.jpg');
+      }
+    } catch (e) {
+      console.error('Failed to retrieve shared image:', e);
+    }
+  }
+
   setupRealtime();
   setupOnlineOrdersRealtime();
   updateOnlineOrdersBadge();
@@ -8613,6 +8648,13 @@ async function initAdminOrderForm() {
       adminNoOrders = [_noCreateBlankOrder()];
       adminNoActiveOrderIdx = 0;
       _noShowFormContainer();
+
+      // Auto-scan if a file was shared via PWA share target
+      if (window._pendingSharedFile) {
+        const fileToScan = window._pendingSharedFile;
+        window._pendingSharedFile = null;
+        await _noScanTicketFile(fileToScan);
+      }
     } else {
       document.getElementById('no-order-container').style.display = 'none';
       document.getElementById('form-footer').style.display = 'none';
