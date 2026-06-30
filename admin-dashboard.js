@@ -1,3 +1,27 @@
+// Capture shared parameters immediately before any other scripts or auth can strip them
+function getInitialParam(name) {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has(name)) return urlParams.get(name);
+  const hash = window.location.hash;
+  if (hash.startsWith('#') || hash.startsWith('#!')) {
+    const cleanHash = hash.replace(/^#!?/, '');
+    const hashParams = new URLSearchParams(cleanHash);
+    if (hashParams.has(name)) return hashParams.get(name);
+  }
+  const prefix = `#${name}=`;
+  if (hash.startsWith(prefix)) return hash.substring(prefix.length);
+  return null;
+}
+
+window._initialSharedItems = getInitialParam('shared-items');
+window._initialSharedImageError = getInitialParam('shared-image-error');
+window._initialSharedImage = getInitialParam('shared-image');
+
+// Clear parameters from the URL immediately so they don't persist on manual refresh
+if (window._initialSharedItems || window._initialSharedImageError || window._initialSharedImage) {
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
 /* ═══════════════════════════════════
    SUPABASE INIT
    ═══════════════════════════════════ */
@@ -641,42 +665,19 @@ async function enterDashboard(user) {
   let errorMsg = null;
   let hasSharedImage = null;
 
-  // Helper to read parameters from either the query string or the hash (anchors)
-  function getUrlParam(name) {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has(name)) {
-      return urlParams.get(name);
-    }
-    // Fallback to hash parameters (e.g. #shared-items=...)
-    const hash = window.location.hash;
-    if (hash.startsWith('#') || hash.startsWith('#!')) {
-      const cleanHash = hash.replace(/^#!?/, '');
-      const hashParams = new URLSearchParams(cleanHash);
-      if (hashParams.has(name)) {
-        return hashParams.get(name);
-      }
-    }
-    // Manual prefix check fallback for simple formats like #shared-items=value
-    const prefix = `#${name}=`;
-    if (hash.startsWith(prefix)) {
-      return hash.substring(prefix.length);
-    }
-    return null;
-  }
-
   // Handle URL params and hash parsing
   async function handleUrlParamsAndHash() {
-    rawItems = getUrlParam('shared-items');
-    errorMsg = getUrlParam('shared-image-error');
-    hasSharedImage = getUrlParam('shared-image');
+    rawItems = window._initialSharedItems;
+    errorMsg = window._initialSharedImageError;
+    hasSharedImage = window._initialSharedImage;
+
+    // Clear the globals immediately so subsequent calls don't re-trigger
+    window._initialSharedItems = null;
+    window._initialSharedImageError = null;
+    window._initialSharedImage = null;
 
     if (hasSharedImage || rawItems || errorMsg) {
       showSection('new-order');
-    }
-
-    // Clear query parameters AND hashes so reloading doesn't re-trigger
-    if (rawItems || errorMsg || hasSharedImage) {
-      window.history.replaceState({}, document.title, window.location.pathname);
     }
 
     if (errorMsg) {
