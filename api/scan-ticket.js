@@ -124,9 +124,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, message: 'Method not allowed' });
   }
 
-  // Origin check
+  // Origin check (allow bypass for iOS Shortcut client)
   const origin = req.headers['origin'] || req.headers['referer'] || '';
-  if (!isOriginAllowed(origin)) {
+  const isShortcut = req.headers['x-client'] === 'shortcut' || req.query.client === 'shortcut';
+  if (!isShortcut && !isOriginAllowed(origin)) {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
 
@@ -304,6 +305,18 @@ export default async function handler(req, res) {
       }
     }
 
+    // If request is from the iOS Shortcut, build and include the redirect URL
+    let redirectUrl = null;
+    if (isShortcut) {
+      const itemsBase64 = Buffer.from(JSON.stringify({
+        items: mapped,
+        mismatch
+      })).toString('base64');
+      const host = req.headers['host'] || 'www.ceciliabakery.com';
+      const proto = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
+      redirectUrl = `${proto}://${host}/admin-dashboard.html?shared-items=${itemsBase64}`;
+    }
+
     return res.status(200).json({
       success: true,
       items: mapped,
@@ -311,6 +324,7 @@ export default async function handler(req, res) {
       matched: mapped.filter(m => m.matched).length,
       unmatched: mapped.filter(m => !m.matched).length,
       mismatch,
+      redirect_url: redirectUrl,
     });
 
   } catch (err) {

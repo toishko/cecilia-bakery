@@ -625,11 +625,33 @@ async function enterDashboard(user) {
 
   const urlParams = new URLSearchParams(window.location.search);
   let savedSection = sessionStorage.getItem('admin_section') || 'overview';
-  if (urlParams.has('shared-image')) {
+  if (urlParams.has('shared-image') || urlParams.has('shared-items')) {
     savedSection = 'new-order';
   }
 
   showSection(savedSection);
+
+  if (urlParams.has('shared-items')) {
+    const rawItems = urlParams.get('shared-items');
+    // Clean up URL parameters so reloading doesn't re-trigger
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    try {
+      const decodedJson = atob(rawItems);
+      const parsedData = JSON.parse(decodedJson);
+      
+      // Cache the parsed data in a window-level pending variable
+      window._pendingSharedItems = parsedData;
+
+      // Show instructions to select a driver
+      showToast(lang === 'es' 
+        ? 'Por favor selecciona un conductor para importar el ticket compartido' 
+        : 'Please select a driver to import the shared ticket', 'info');
+    } catch (e) {
+      console.error('Failed to parse shared items:', e);
+      showToast(lang === 'es' ? 'Error al procesar ticket compartido' : 'Failed to process shared ticket', 'error');
+    }
+  }
 
   if (urlParams.has('shared-image')) {
     // Clean up the URL search params so reloading doesn't re-trigger
@@ -8649,6 +8671,13 @@ async function initAdminOrderForm() {
       adminNoActiveOrderIdx = 0;
       _noShowFormContainer();
 
+      // Auto-import if parsed items were shared via iOS Shortcut
+      if (window._pendingSharedItems) {
+        const scanData = window._pendingSharedItems;
+        window._pendingSharedItems = null;
+        _noProcessScanResult(scanData);
+      }
+
       // Auto-scan if a file was shared via PWA share target
       if (window._pendingSharedFile) {
         const fileToScan = window._pendingSharedFile;
@@ -8926,10 +8955,121 @@ async function _preprocessTicketImage(dataUrl) {
   });
 }
 
-async function _noScanTicketFile(file) {
-  const btn = document.getElementById('scan-ticket-btn');
+function _noProcessScanResult(data) {
   const banner = document.getElementById('scan-result-banner');
   const bannerText = document.getElementById('scan-result-text');
+
+  if (data.items.length === 0) {
+    if (banner && bannerText) {
+      banner.style.display = 'flex';
+      banner.className = 'scan-result-banner has-warnings';
+      bannerText.textContent = lang === 'es' ? 'No se encontraron productos en la imagen.' : 'No products found in image.';
+    }
+    return;
+  }
+
+  // Fill form with scanned items
+  // Save current form state first to avoid data bleed between orders
+  _noSaveFormToOrder(adminNoActiveOrderIdx);
+  const order = adminNoOrders[adminNoActiveOrderIdx];
+  let filled = 0, uncertain = 0, unmatched = 0;
+
+  data.items.forEach(item => {
+    if (!item.matched || !item.systemKey) {
+      unmatched++;
+      return;
+    }
+
+    const key = item.systemKey;
+    const rawQty = parseFloat(item.qty) || 0;
+    if (rawQty <= 0) return;
+
+    // Convert ticket qty to individual pieces:
+    // Birthday cakes (hb_*) = 1 on ticket means 1 cake (no conversion)
+    // Everything else = 1 on ticket means 1 dozen (12 pieces), 0.5 = 6 pieces
+    const isBirthdayCake = key.startsWith('hb_');
+    const isUnidades = item.unit === 'unidades' || item.unit === 'units' || item.unit === 'unit';
+    const qty = (isBirthdayCake || isUnidades) ? rawQty : Math.round(rawQty * 12);
+
+    // Set quantity in the order data ONLY
+    if (key in order.qty) {
+      order.qty[key] = qty;
+      filled++;
+    } else if ((key + '_inside') in order.qty) {
+      order.qty[key + '_inside'] = qty;
+      filled++;
+    } else {
+      unmatched++;
+      return;
+    }
+
+    if (!item.confident) uncertain++;
+  });
+
+  // Reload form from data to sync DOM with the correct order
+  _noLoadOrderToForm(adminNoActiveOrderIdx);
+
+  // Re-apply scan highlights after reload
+  data.items.forEach(item => {
+    if (!item.matched || !item.systemKey) return;
+    const key = item.systemKey;
+    const input = document.querySelector(`.qty-input[data-key="${key}"], .qty-input[data-key="${key}_inside"]`);
+    if (input && (parseFloat(item.qty) || 0) > 0) {
+      input.classList.add(item.confident !== false ? 'scan-filled' : 'scan-uncertain');
+    }
+  });
+
+  // Update footer count
+  _noUpdateFooterCount();
+
+  // Store scan data in the ORDER object (per-order, not global)
+  const currentOrder = adminNoOrders[adminNoActiveOrderIdx];
+  if (currentOrder) {
+    currentOrder.scanData = data.items.map(item => {
+      const key = item.systemKey;
+      const rawQty = parseFloat(item.qty) || 0;
+      const isBirthdayCake = key && key.startsWith('hb_');
+      const isUnidades = item.unit === 'unidades' || item.unit === 'units' || item.unit === 'unit';
+      return {
+        code: item.code,
+        description: item.description,
+        rawQty: rawQty,
+        convertedQty: (key && rawQty > 0) ? ((isBirthdayCake || isUnidades) ? rawQty : Math.round(rawQty * 12)) : 0,
+        confident: item.confident,
+        matched: item.matched,
+        isBirthdayCake,
+      };
+    });
+  }
+
+  // Show result banner
+  if (banner && bannerText) {
+    banner.style.display = 'flex';
+    let msg = lang === 'es'
+      ? `${filled} producto(s) escaneado(s)`
+      : `${filled} product(s) scanned`;
+    if (uncertain > 0) msg += lang === 'es' ? `, ${uncertain} por revisar` : `, ${uncertain} to review`;
+    if (unmatched > 0) msg += lang === 'es' ? `, ${unmatched} sin coincidencia` : `, ${unmatched} unmatched`;
+
+    // Server-side Total Boxes mismatch warning
+    const hasMismatch = data.mismatch && data.mismatch.expected !== undefined;
+    if (hasMismatch) {
+      const m = data.mismatch;
+      const label = m.type === 'total_boxes' ? 'Total Boxes' : 'Total Units';
+      msg += lang === 'es'
+        ? ` ⚠️ ${label}: ticket=${m.expected}, escaneo=${m.computed}`
+        : ` ⚠️ ${label}: ticket=${m.expected}, scan=${m.computed}`;
+    }
+
+    bannerText.textContent = msg;
+    banner.className = (uncertain > 0 || unmatched > 0 || hasMismatch)
+      ? 'scan-result-banner has-warnings'
+      : 'scan-result-banner';
+  }
+}
+
+async function _noScanTicketFile(file) {
+  const btn = document.getElementById('scan-ticket-btn');
 
   // Show scanning state
   if (btn) { btn.classList.add('scanning'); btn.querySelector('span').textContent = lang === 'es' ? 'Procesando...' : 'Processing...'; }
@@ -8959,116 +9099,12 @@ async function _noScanTicketFile(file) {
       throw new Error(data.message || 'Scan failed');
     }
 
-    if (data.items.length === 0) {
-      if (banner && bannerText) {
-        banner.style.display = 'flex';
-        banner.className = 'scan-result-banner has-warnings';
-        bannerText.textContent = lang === 'es' ? 'No se encontraron productos en la imagen.' : 'No products found in image.';
-      }
-      return;
-    }
-
-    // Fill form with scanned items
-    // Save current form state first to avoid data bleed between orders
-    _noSaveFormToOrder(adminNoActiveOrderIdx);
-    const order = adminNoOrders[adminNoActiveOrderIdx];
-    let filled = 0, uncertain = 0, unmatched = 0;
-
-    data.items.forEach(item => {
-      if (!item.matched || !item.systemKey) {
-        unmatched++;
-        return;
-      }
-
-      const key = item.systemKey;
-      const rawQty = parseFloat(item.qty) || 0;
-      if (rawQty <= 0) return;
-
-      // Convert ticket qty to individual pieces:
-      // Birthday cakes (hb_*) = 1 on ticket means 1 cake (no conversion)
-      // Everything else = 1 on ticket means 1 dozen (12 pieces), 0.5 = 6 pieces
-      const isBirthdayCake = key.startsWith('hb_');
-      const isUnidades = item.unit === 'unidades' || item.unit === 'units' || item.unit === 'unit';
-      const qty = (isBirthdayCake || isUnidades) ? rawQty : Math.round(rawQty * 12);
-
-      // Set quantity in the order data ONLY
-      if (key in order.qty) {
-        order.qty[key] = qty;
-        filled++;
-      } else if ((key + '_inside') in order.qty) {
-        order.qty[key + '_inside'] = qty;
-        filled++;
-      } else {
-        unmatched++;
-        return;
-      }
-
-      if (!item.confident) uncertain++;
-    });
-
-    // Reload form from data to sync DOM with the correct order
-    _noLoadOrderToForm(adminNoActiveOrderIdx);
-
-    // Re-apply scan highlights after reload
-    data.items.forEach(item => {
-      if (!item.matched || !item.systemKey) return;
-      const key = item.systemKey;
-      const input = document.querySelector(`.qty-input[data-key="${key}"], .qty-input[data-key="${key}_inside"]`);
-      if (input && (parseFloat(item.qty) || 0) > 0) {
-        input.classList.add(item.confident !== false ? 'scan-filled' : 'scan-uncertain');
-      }
-    });
-
-    // Update footer count
-    _noUpdateFooterCount();
-
-    // Store scan data in the ORDER object (per-order, not global)
-    const currentOrder = adminNoOrders[adminNoActiveOrderIdx];
-    if (currentOrder) {
-      currentOrder.scanData = data.items.map(item => {
-        const key = item.systemKey;
-        const rawQty = parseFloat(item.qty) || 0;
-        const isBirthdayCake = key && key.startsWith('hb_');
-        const isUnidades = item.unit === 'unidades' || item.unit === 'units' || item.unit === 'unit';
-        return {
-          code: item.code,
-          description: item.description,
-          rawQty: rawQty,
-          convertedQty: (key && rawQty > 0) ? ((isBirthdayCake || isUnidades) ? rawQty : Math.round(rawQty * 12)) : 0,
-          confident: item.confident,
-          matched: item.matched,
-          isBirthdayCake,
-        };
-      });
-    }
-
-    // Show result banner
-    if (banner && bannerText) {
-      banner.style.display = 'flex';
-      let msg = lang === 'es'
-        ? `${filled} producto(s) escaneado(s)`
-        : `${filled} product(s) scanned`;
-      if (uncertain > 0) msg += lang === 'es' ? `, ${uncertain} por revisar` : `, ${uncertain} to review`;
-      if (unmatched > 0) msg += lang === 'es' ? `, ${unmatched} sin coincidencia` : `, ${unmatched} unmatched`;
-
-      // Server-side Total Boxes mismatch warning
-      const hasMismatch = data.mismatch && data.mismatch.expected !== undefined;
-      if (hasMismatch) {
-        const m = data.mismatch;
-        const label = m.type === 'total_boxes' ? 'Total Boxes' : 'Total Units';
-        msg += lang === 'es'
-          ? ` ⚠️ ${label}: ticket=${m.expected}, escaneo=${m.computed}`
-          : ` ⚠️ ${label}: ticket=${m.expected}, scan=${m.computed}`;
-      }
-
-      bannerText.textContent = msg;
-      banner.className = (uncertain > 0 || unmatched > 0 || hasMismatch)
-        ? 'scan-result-banner has-warnings'
-        : 'scan-result-banner';
-    }
+    _noProcessScanResult(data);
 
   } catch (err) {
     console.error('Ticket scan error:', err);
+    const banner = document.getElementById('scan-result-banner');
+    const bannerText = document.getElementById('scan-result-text');
     if (banner && bannerText) {
       banner.style.display = 'flex';
       banner.className = 'scan-result-banner has-warnings';
