@@ -347,10 +347,13 @@ export default async function handler(req, res) {
       const itemsBase64 = Buffer.from(JSON.stringify({
         items: shrunkItems,
         mismatch
-      })).toString('base64');
+      })).toString('base64')
+        .replace(/\+/g, '-')    // base64url: + → -
+        .replace(/\//g, '_')    // base64url: / → _
+        .replace(/=+$/, '');    // strip padding =
       const host = req.headers['host'] || 'ceciliabakery.com';
       const proto = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
-      redirectUrl = `${proto}://${host}/admin-dashboard?shared-items=${encodeURIComponent(itemsBase64)}`;
+      redirectUrl = `${proto}://${host}/admin-dashboard/${itemsBase64}`;
       console.log('Redirect URL generated (length):', redirectUrl.length);
       console.log('Redirect URL content:', redirectUrl);
     }
