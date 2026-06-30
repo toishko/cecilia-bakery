@@ -56,6 +56,39 @@ window.addEventListener('unhandledrejection', (event) => {
   document.body.appendChild(div);
 });
 
+const GLOBAL_TICKET_NAME_MAP = {
+  '9226S': 'Birthday Cake (Small) - Dulce de Leche',
+  '9165S': 'Birthday Cake (Small) - Pineapple',
+  '9172S': 'Birthday Cake (Small) - Chocolate',
+  '9189S': 'Birthday Cake (Small) - Guava',
+  '9196S': 'Birthday Cake (Small) - Strawberry',
+  '9226':  'Birthday Cake (Large) - Dulce de Leche',
+  '9196':  'Birthday Cake (Large) - Strawberry',
+  '9165':  'Birthday Cake (Large) - Pineapple',
+  '9172':  'Birthday Cake (Large) - Chocolate',
+  '9189':  'Birthday Cake (Large) - Guava',
+  '9745':  'Bread Pudding Slice - 12PK',
+  '9158':  'Cake Slice Chocolate - 12PK',
+  '9141':  'Cake Slice Dulce de Leche - 12PK',
+  '9134':  'Cake Slice Guava - 12PK',
+  '9776':  'Cake Slice Pineapple - 12PK',
+  '9970':  'Chocoflan Slice - 12PK',
+  '9752':  'Flan Slice - 12PK',
+  '9813':  'Tres Leches Family - 12PK',
+  '9011':  'Cuatro Leches Family - 12PK',
+  '9738':  'Tres Leches Slice - 12PK',
+  '9820':  'Cuatro Leches Slice - 12PK',
+  '9969':  'Hershey Tres Leches Slice - 12PK',
+  '9868':  'Pineapple Tres Leches Slice - 12PK',
+  '9875':  'Strawberry Tres Leches Slice - 12PK',
+  '9769':  'Strawberry Cheesecake Slice - 12PK',
+  '9936':  'Red Velvet Cake Slice - 12PK',
+  '9943':  'Carrot Cake Slice - 12PK',
+  '9110':  'CB Cornbread Family Sz - 12PK',
+  '9103':  'CB Pound Cake Family Sz - 12PK',
+  '9202':  'CB Raisin Pound Cake Family Sz - 12PK'
+};
+
 /* ── PWA standalone detection — add class for CSS fallback ── */
 if (window.matchMedia('(display-mode: standalone)').matches ||
     window.navigator.standalone === true) {
@@ -714,44 +747,12 @@ async function enterDashboard(user) {
             '9103':  'cdr_pound',
             '9202':  'cdr_raisin'
           };
-          const NAME_MAP = {
-            '9226S': 'Birthday Cake (Small) - Dulce de Leche',
-            '9165S': 'Birthday Cake (Small) - Pineapple',
-            '9172S': 'Birthday Cake (Small) - Chocolate',
-            '9189S': 'Birthday Cake (Small) - Guava',
-            '9196S': 'Birthday Cake (Small) - Strawberry',
-            '9226':  'Birthday Cake (Large) - Dulce de Leche',
-            '9196':  'Birthday Cake (Large) - Strawberry',
-            '9165':  'Birthday Cake (Large) - Pineapple',
-            '9172':  'Birthday Cake (Large) - Chocolate',
-            '9189':  'Birthday Cake (Large) - Guava',
-            '9745':  'Bread Pudding Slice - 12PK',
-            '9158':  'Cake Slice Chocolate - 12PK',
-            '9141':  'Cake Slice Dulce de Leche - 12PK',
-            '9134':  'Cake Slice Guava - 12PK',
-            '9776':  'Cake Slice Pineapple - 12PK',
-            '9970':  'Chocoflan Slice - 12PK',
-            '9752':  'Flan Slice - 12PK',
-            '9813':  'Tres Leches Family - 12PK',
-            '9011':  'Cuatro Leches Family - 12PK',
-            '9738':  'Tres Leches Slice - 12PK',
-            '9820':  'Cuatro Leches Slice - 12PK',
-            '9969':  'Hershey Tres Leches Slice - 12PK',
-            '9868':  'Pineapple Tres Leches Slice - 12PK',
-            '9875':  'Strawberry Tres Leches Slice - 12PK',
-            '9769':  'Strawberry Cheesecake Slice - 12PK',
-            '9936':  'Red Velvet Cake Slice - 12PK',
-            '9943':  'Carrot Cake Slice - 12PK',
-            '9110':  'CB Cornbread Family Sz - 12PK',
-            '9103':  'CB Pound Cake Family Sz - 12PK',
-            '9202':  'CB Raisin Pound Cake Family Sz - 12PK'
-          };
           parsedData.items = parsedData.items.map(item => {
             const code = item.c;
             const systemKey = TICKET_MAP[code] || null;
             return {
               code,
-              description: NAME_MAP[code] || code,
+              description: GLOBAL_TICKET_NAME_MAP[code] || code,
               qty: item.q,
               unit: item.u === 'u' ? 'unidades' : 'dozen',
               systemKey,
@@ -9171,7 +9172,7 @@ function _noProcessScanResult(data) {
       const isUnidades = item.unit === 'unidades' || item.unit === 'units' || item.unit === 'unit';
       return {
         code: item.code,
-        description: item.description,
+        description: GLOBAL_TICKET_NAME_MAP[item.code] || item.description || item.code,
         rawQty: rawQty,
         convertedQty: (key && rawQty > 0) ? ((isBirthdayCake || isUnidades) ? rawQty : Math.round(rawQty * 12)) : 0,
         confident: item.confident,
