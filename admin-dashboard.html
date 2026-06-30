@@ -34,16 +34,6 @@
       if (window._initialSharedItems || window._initialSharedImageError || window._initialSharedImage) {
         window.history.replaceState({}, document.title, '/admin-dashboard');
       }
-
-      // DEBUG banner (temporary)
-      window._debugInitialURL = window.location.href;
-      document.addEventListener('DOMContentLoaded', function() {
-        var d = document.createElement('div');
-        d.style.cssText = 'position:fixed;bottom:60px;left:5px;right:5px;background:#1a1a2e;color:#0f0;padding:10px;z-index:99999;font-family:monospace;font-size:10px;border-radius:8px;max-height:120px;overflow:auto;word-break:break-all;box-shadow:0 4px 12px rgba(0,0,0,0.5)';
-        d.innerHTML = '<b>URL:</b> ' + window._debugInitialURL + '<br><b>path-data:</b> ' + (data ? 'YES (' + data.length + ' chars)' : 'NONE') + '<br><b>shared-items:</b> ' + (window._initialSharedItems ? 'YES' : 'NULL');
-        d.onclick = function() { d.remove(); };
-        document.body.appendChild(d);
-      });
     })();
   </script>
   <title>Cecilia Bakery — Admin Dashboard</title>

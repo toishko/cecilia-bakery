@@ -714,11 +714,44 @@ async function enterDashboard(user) {
             '9103':  'cdr_pound',
             '9202':  'cdr_raisin'
           };
+          const NAME_MAP = {
+            '9226S': 'Hornada Small Dulce de Leche',
+            '9165S': 'Hornada Small Piña',
+            '9172S': 'Hornada Small Chocolate',
+            '9189S': 'Hornada Small Guava',
+            '9196S': 'Hornada Small Strawberry',
+            '9226':  'Hornada Big Dulce de Leche',
+            '9196':  'Hornada Big Strawberry',
+            '9165':  'Hornada Big Piña',
+            '9172':  'Hornada Big Chocolate',
+            '9189':  'Hornada Big Guava',
+            '9158':  'Frita Chocolate',
+            '9141':  'Frita Dulce de Leche',
+            '9134':  'Frita Guava',
+            '9776':  'Frita Piña',
+            '9745':  'Pudín',
+            '9970':  'Chocoflan',
+            '9752':  'Flan',
+            '9936':  'Red Velvet',
+            '9943':  'Carrot',
+            '9769':  'Cheesecake',
+            '9738':  'Tres Leches',
+            '9820':  'Cuatro Leches',
+            '9969':  'Tres Leches Hershey',
+            '9868':  'Tres Leches Piña',
+            '9875':  'Tres Leches Strawberry',
+            '9813':  'Family Tres Leches',
+            '9011':  'Family Cuatro Leches',
+            '9110':  'Corn Bread',
+            '9103':  'Pound Cake',
+            '9202':  'Raisin Bread'
+          };
           parsedData.items = parsedData.items.map(item => {
             const code = item.c;
             const systemKey = TICKET_MAP[code] || null;
             return {
               code,
+              description: NAME_MAP[code] || code,
               qty: item.q,
               unit: item.u === 'u' ? 'unidades' : 'dozen',
               systemKey,
