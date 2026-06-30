@@ -70,39 +70,52 @@ const TICKET_MAP = {
 // Reverse map for the AI prompt (so it knows all valid codes)
 const VALID_CODES = Object.keys(TICKET_MAP);
 
-const SYSTEM_PROMPT = `You are an OCR assistant for a bakery order system. You will receive a photo of a printed paper order ticket.
+const SYSTEM_PROMPT = `You are an OCR assistant for a bakery order system. You will receive a photo of a printed paper order ticket or a handwritten guest check.
 
 THE TICKET LAYOUT:
-The ticket has a product table with three columns:
-- CODE — a printed 4-5 character product code (e.g., 9172, 9226S, 9738)
-- DESCRIPTION — the printed product name (e.g., "Birthday Cake (Large) - Chocolate", "Tres Leches Slice - 12PK")
-- QUANTITY / CANTIDAD — the rightmost column containing the order quantities.
-
-QUANTITY TYPES:
-1. Printed "Unidades" (Computer-Printed): The quantities are printed by a computer and explicitly include the word "unidades" or "units" (e.g., "6 unidades", "36 unidades", "30 unidades").
-2. Plain Numbers (Computer-Printed or Handwritten): The quantities are plain numbers/decimals (e.g., "0.5", "1", "1.5", "2", "3").
+1. Printed Tickets: The ticket has a product table with CODE, DESCRIPTION, and QUANTITY / CANTIDAD.
+2. Handwritten Guest Checks: The ticket is a handwritten note listing items (e.g., "2 Supiro", "30 Flan DOZ", "12 pudin pieces") without printed product codes.
 
 YOUR TASK:
-Read EVERY row in the product table from top to bottom. For each row that has a quantity in the quantity/cantidad column, extract the CODE, the QUANTITY, and the UNIT. Do NOT skip any rows. There may be anywhere from 10 to 30+ rows on a ticket.
+Read EVERY row in the product table or list from top to bottom. For each row that has a quantity, extract the CODE, the QUANTITY, and the UNIT. Do NOT skip any rows.
 
-LOCATING QUANTITIES — COLUMN ANCHOR METHOD:
-1. Find the printed header "QUANTITY" or "CANTIDAD". This marks the horizontal position of the quantity column.
-2. For each product row, look at the area DIRECTLY BELOW that header, on the SAME HORIZONTAL LINE as that row's printed code.
-3. Read the value in that intersection. Ignore any numbers outside this column.
-
-STRICT HANDWRITING & NOISE RULES:
-- IGNORE ALL handwritten scribbles, prices (e.g., "$40.80", "$234.60", "$856.95"), circled numbers (e.g., a circled "138", "110", "48", "80"), crossed-out marks, checkmarks, lines, and doodle notes on the ticket. These are just customer/staff notes.
-- If the ticket has computer-printed quantities (like "6 unidades" or "36 unidades"), ignore any handwriting or circled numbers next to them or on the page entirely. Read ONLY the printed text in the table.
-- Do NOT read route numbers, sales representative IDs, or metadata outside the table.
+HANDWRITTEN GUEST CHECKS & MISSING CODES:
+If the image is a handwritten check and does NOT have printed product codes, read the handwritten items and match them to the correct product code from this list:
+- "9226S" for Small Birthday Cake Dulce de Leche ("Small cake / Supino")
+- "9165S" for Small Birthday Cake Pineapple ("piña small cake", "pina")
+- "9172S" for Small Birthday Cake Chocolate
+- "9189S" for Small Birthday Cake Guava
+- "9196S" for Small Birthday Cake Strawberry
+- "9226" for Large Birthday Cake Dulce de Leche
+- "9196" for Large Birthday Cake Strawberry
+- "9165" for Large Birthday Cake Pineapple
+- "9172" for Large Birthday Cake Chocolate
+- "9189" for Large Birthday Cake Guava
+- "9158" for Frosted Pieces Chocolate
+- "9141" for Frosted Pieces Dulce de Leche
+- "9134" for Frosted Pieces Guava
+- "9776" for Frosted Pieces Pineapple
+- "9745" for Bread Pudding Slice ("pudin", "pudin pieces")
+- "9970" for Chocoflan ("chocoflan")
+- "9752" for Flan ("flan")
+- "9936" for Red Velvet Slice ("rv")
+- "9943" for Carrot Cake Slice ("carrot")
+- "9769" for Cheesecake Slice ("cheese cake")
+- "9738" for Tres Leches ("Tres", "Tres Leches")
+- "9820" for Cuatro Leches ("4Leche", "4 Leche")
+- "9969" for Tres Leches Hershey ("Hershey", "3L choc")
+- "9868" for Tres Leches Pineapple
+- "9875" for Tres Leches Strawberry
+- "9813" for Family Tres Leches ("Family Tres Leches")
+- "9011" for Family Cuatro Leches ("Family Cuatro Leches")
+- "9110" for Corn Square ("maiz")
+- "9103" for Pound Cake Square ("pound")
+- "9202" for Raisin Square ("raisin")
 
 QUANTITY & UNIT RULES:
-- "unit": If the quantity text contains the word "unidades" or "units", set "unit" to "unidades". Otherwise, set "unit" to "dozen".
-- "qty": Read the number exactly as written or printed. Do NOT multiply, convert, or divide. For "6 unidades", qty is 6. For "0.5", qty is 0.5.
-- Birthday cakes (codes ending in "S" like 9226S, 9165S, or 4-digit codes in the 9100-9200 range): Quantities are always whole numbers (1, 2, 3...).
-
-ALSO READ THESE TWO PRINTED VALUES FROM THE BOTTOM OF THE TICKET:
-- "Total Boxes:" or "TOTAL CAJAS:" — a printed number (e.g., 5.5 or 36.0).
-- "Total Units:" or "TOTAL UNIDADES:" — a printed number (e.g., 12 or 40).
+- "unit": If the quantity text contains "unidades", "units", or "pieces", set "unit" to "unidades". Otherwise, set "unit" to "dozen".
+- "qty": Read the number exactly as written or printed (e.g. for "8 1/2 cheese cake doz", qty is 8.5 and unit is "dozen". For "36 Dulce choc pieces", qty is 36 and unit is "unidades").
+- Birthday cakes (codes ending in "S" like 9226S, or 4-digit codes in the 9100-9200 range): Quantities are always whole numbers (1, 2, 3...).
 
 Return ONLY a JSON object (not an array). No markdown, no code fences, no explanation. Format:
 {
@@ -114,9 +127,7 @@ Return ONLY a JSON object (not an array). No markdown, no code fences, no explan
   "total_units": 40
 }
 
-Only include rows where you can see a quantity. Set "confident" to false if the quantity is hard to read.
-If you cannot read total_boxes or total_units, set them to null.
-If the image is not a bakery order ticket, return: { "items": [], "total_boxes": null, "total_units": null }`;
+If the image is not an order ticket, return: { "items": [], "total_boxes": null, "total_units": null }`;
 
 
 export default async function handler(req, res) {
@@ -127,6 +138,18 @@ export default async function handler(req, res) {
   // Origin check (allow bypass for iOS Shortcut client)
   const origin = req.headers['origin'] || req.headers['referer'] || '';
   const isShortcut = req.headers['x-client'] === 'shortcut' || req.query.client === 'shortcut';
+
+  // Helper to respond with errors safely (redirects on Shortcut to prevent crashes)
+  function sendError(message, statusCode = 400) {
+    if (isShortcut) {
+      const host = req.headers['host'] || 'ceciliabakery.com';
+      const proto = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
+      const redirectUrl = `${proto}://${host}/admin-dashboard.html?shared-image-error=${encodeURIComponent(message)}`;
+      return res.status(200).json({ success: true, redirect_url: redirectUrl });
+    }
+    return res.status(statusCode).json({ success: false, message });
+  }
+
   if (!isShortcut && !isOriginAllowed(origin)) {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
@@ -136,35 +159,55 @@ export default async function handler(req, res) {
     || req.headers['x-real-ip']
     || req.socket?.remoteAddress || 'unknown';
   if (isRateLimited(ip)) {
-    return res.status(429).json({ success: false, message: 'Too many requests. Please wait.' });
+    return sendError('Too many requests. Please wait a moment.', 429);
   }
 
   // Validate API key
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
     console.error('GOOGLE_AI_API_KEY not set');
-    return res.status(500).json({ success: false, message: 'Scanner not configured.' });
-  }
-
-  // Validate request body
-  const { image } = req.body || {};
-  if (!image || typeof image !== 'string') {
-    return res.status(400).json({ success: false, message: 'No image provided.' });
-  }
-
-  // Extract raw base64 and mime type
-  const isDataUrl = image.startsWith('data:image/');
-  let mimeType = 'image/jpeg';
-  let rawBase64 = image;
-  if (isDataUrl) {
-    const match = image.match(/^data:(image\/\w+);base64,(.+)$/);
-    if (match) {
-      mimeType = match[1];
-      rawBase64 = match[2];
-    }
+    return sendError('Scanner not configured on server.', 500);
   }
 
   try {
+    // Robust body parsing (handles JSON, URL-encoded string, or raw text)
+    let body = req.body || {};
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        // Try parsing urlencoded
+        try {
+          const params = new URLSearchParams(body);
+          body = {};
+          for (const [k, v] of params.entries()) {
+            body[k] = v;
+          }
+        } catch {}
+      }
+    }
+
+    const { image } = body;
+    if (!image || typeof image !== 'string') {
+      return sendError('No image data received. Make sure to link the Base64 variable in the Shortcut.', 400);
+    }
+
+    if (image === 'Base64 Encoded' || image.length < 50) {
+      return sendError('Invalid image data. The Shortcut sent the text label instead of the actual photo variable.', 400);
+    }
+
+    // Extract raw base64 and mime type
+    const isDataUrl = image.startsWith('data:image/');
+    let mimeType = 'image/jpeg';
+    let rawBase64 = image;
+    if (isDataUrl) {
+      const match = image.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (match) {
+        mimeType = match[1];
+        rawBase64 = match[2];
+      }
+    }
+
     // Model fallback chain — tries newest first, falls back to most stable
     const MODELS = [
       { name: 'gemini-2.5-flash', api: 'v1beta' },
@@ -196,56 +239,47 @@ export default async function handler(req, res) {
         body: requestBody,
       });
 
-      if (response.ok) break; // success — use this response
+      if (response.ok) break;
 
       const errText = await response.text();
       console.error(`Gemini ${model.name} error:`, response.status, errText);
       lastError = errText;
 
-      // Retry on 503 (overload), 429 (rate limit), or 400 (quota errors can return 400)
+      // Retry on 503, 429, or 400
       if (response.status !== 503 && response.status !== 429 && response.status !== 400) break;
-      console.log(`Model ${model.name} unavailable (${response.status}), trying next...`);
     }
 
     if (!response || !response.ok) {
       const isQuota = lastError.includes('quota') || lastError.includes('Quota') || lastError.includes('rate');
-      const detail = isQuota
-        ? 'Scanner limit reached. Please wait a few minutes and try again.'
-        : 'AI service temporarily unavailable. Please try again.';
-      return res.status(isQuota ? 429 : 502).json({ success: false, message: detail });
+      return sendError(
+        isQuota ? 'Scanner rate limit reached. Please wait a few minutes.' : 'AI scanner service temporarily unavailable.',
+        isQuota ? 429 : 502
+      );
     }
 
     const data = await response.json();
-
-    // Gemini 2.5 Flash may return multiple parts (thought + text)
-    // Extract only the text parts, skip thought parts
     const parts = data.candidates?.[0]?.content?.parts || [];
     const textParts = parts.filter(p => p.text && !p.thought);
     const rawContent = textParts.map(p => p.text).join('') || '{}';
 
-    console.log('Gemini raw response (first 500 chars):', rawContent.substring(0, 500));
-
-    // Parse the JSON from the AI response (strip markdown fences if present)
+    // Parse the JSON from the AI response
     let parsed;
     try {
-      // Strip markdown fences, backticks, and leading/trailing whitespace
       let cleaned = rawContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      // Also try to extract JSON from between curly braces if there's extra text
       const jsonMatch = cleaned.match(/(\{[\s\S]*\})/);
       if (jsonMatch) cleaned = jsonMatch[1];
       parsed = JSON.parse(cleaned);
     } catch (parseErr) {
       console.error('Failed to parse AI response:', rawContent);
-      return res.status(500).json({ success: false, message: 'Could not parse scan results. Raw: ' + rawContent.substring(0, 200) });
+      return sendError('AI response format was invalid. Please ensure the photo is clear.', 500);
     }
 
-    // Handle both old array format and new object format
     const items = Array.isArray(parsed) ? parsed : (parsed.items || []);
     const ticketTotalBoxes = Array.isArray(parsed) ? null : (parsed.total_boxes ?? null);
     const ticketTotalUnits = Array.isArray(parsed) ? null : (parsed.total_units ?? null);
 
     if (!Array.isArray(items)) {
-      return res.status(500).json({ success: false, message: 'Invalid scan result format.' });
+      return sendError('Invalid scan result format.', 500);
     }
 
     // Birthday cake codes (rows 1–2)
@@ -265,10 +299,8 @@ export default async function handler(req, res) {
       };
     });
 
-    // ── Server-side Total Boxes validation ──
     let mismatch = null;
     if (ticketTotalBoxes !== null) {
-      // Sum non-birthday-cake quantities
       const computedBoxes = items
         .filter(i => !HB_CODES.has(i.code))
         .reduce((sum, i) => {
@@ -276,7 +308,6 @@ export default async function handler(req, res) {
           const isUnidades = i.unit === 'unidades' || i.unit === 'units' || i.unit === 'unit';
           return sum + (isUnidades ? qty / 12 : qty);
         }, 0);
-      // Round to avoid float precision issues
       const roundedComputed = Math.round(computedBoxes * 10) / 10;
       const roundedTicket = Math.round(ticketTotalBoxes * 10) / 10;
 
@@ -305,14 +336,13 @@ export default async function handler(req, res) {
       }
     }
 
-    // If request is from the iOS Shortcut, build and include the redirect URL
     let redirectUrl = null;
     if (isShortcut) {
       const itemsBase64 = Buffer.from(JSON.stringify({
         items: mapped,
         mismatch
       })).toString('base64');
-      const host = req.headers['host'] || 'www.ceciliabakery.com';
+      const host = req.headers['host'] || 'ceciliabakery.com';
       const proto = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
       redirectUrl = `${proto}://${host}/admin-dashboard.html?shared-items=${itemsBase64}`;
     }
@@ -329,6 +359,6 @@ export default async function handler(req, res) {
 
   } catch (err) {
     console.error('Scan ticket error:', err);
-    return res.status(502).json({ success: false, message: 'Could not reach AI service.' });
+    return sendError('Internal server error: ' + err.message, 500);
   }
 }

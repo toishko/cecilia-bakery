@@ -625,11 +625,19 @@ async function enterDashboard(user) {
 
   const urlParams = new URLSearchParams(window.location.search);
   let savedSection = sessionStorage.getItem('admin_section') || 'overview';
-  if (urlParams.has('shared-image') || urlParams.has('shared-items')) {
+  if (urlParams.has('shared-image') || urlParams.has('shared-items') || urlParams.has('shared-image-error')) {
     savedSection = 'new-order';
   }
 
   showSection(savedSection);
+
+  if (urlParams.has('shared-image-error')) {
+    const errorMsg = urlParams.get('shared-image-error');
+    window.history.replaceState({}, document.title, window.location.pathname);
+    showToast(lang === 'es' 
+      ? `Error al importar: ${errorMsg}` 
+      : `Import failed: ${errorMsg}`, 'error');
+  }
 
   if (urlParams.has('shared-items')) {
     const rawItems = urlParams.get('shared-items');
