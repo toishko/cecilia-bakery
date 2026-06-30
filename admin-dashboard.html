@@ -6,6 +6,31 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <script>
+    // Capture shared parameters immediately before any other scripts or Clerk can strip them
+    (function() {
+      function getInitialParam(name) {
+        var urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has(name)) return urlParams.get(name);
+        var hash = window.location.hash;
+        if (hash && (hash.indexOf('#') === 0 || hash.indexOf('#!') === 0)) {
+          var cleanHash = hash.replace(/^#!?/, '');
+          var hashParams = new URLSearchParams(cleanHash);
+          if (hashParams.has(name)) return hashParams.get(name);
+        }
+        var prefix = '#' + name + '=';
+        if (hash && hash.indexOf(prefix) === 0) return hash.substring(prefix.length);
+        return null;
+      }
+      window._initialSharedItems = getInitialParam('shared-items');
+      window._initialSharedImageError = getInitialParam('shared-image-error');
+      window._initialSharedImage = getInitialParam('shared-image');
+
+      if (window._initialSharedItems || window._initialSharedImageError || window._initialSharedImage) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    })();
+  </script>
   <title>Cecilia Bakery — Admin Dashboard</title>
   <meta name="description" content="Admin dashboard for managing driver orders at Cecilia Bakery">
   <link rel="preconnect" href="https://fonts.googleapis.com">

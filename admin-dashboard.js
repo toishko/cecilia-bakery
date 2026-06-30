@@ -1,26 +1,3 @@
-// Capture shared parameters immediately before any other scripts or auth can strip them
-function getInitialParam(name) {
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.has(name)) return urlParams.get(name);
-  const hash = window.location.hash;
-  if (hash.startsWith('#') || hash.startsWith('#!')) {
-    const cleanHash = hash.replace(/^#!?/, '');
-    const hashParams = new URLSearchParams(cleanHash);
-    if (hashParams.has(name)) return hashParams.get(name);
-  }
-  const prefix = `#${name}=`;
-  if (hash.startsWith(prefix)) return hash.substring(prefix.length);
-  return null;
-}
-
-window._initialSharedItems = getInitialParam('shared-items');
-window._initialSharedImageError = getInitialParam('shared-image-error');
-window._initialSharedImage = getInitialParam('shared-image');
-
-// Clear parameters from the URL immediately so they don't persist on manual refresh
-if (window._initialSharedItems || window._initialSharedImageError || window._initialSharedImage) {
-  window.history.replaceState({}, document.title, window.location.pathname);
-}
 
 /* ═══════════════════════════════════
    SUPABASE INIT
