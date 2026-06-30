@@ -717,9 +717,11 @@ async function enterDashboard(user) {
         : 'Please select a driver to import the shared ticket', 'info');
     } catch (e) {
       console.error('Failed to parse shared items:', e);
+      const urlLen = window.location.href.length;
+      const paramLen = rawItems ? rawItems.length : 0;
       showToast(lang === 'es' 
-        ? `Error al procesar ticket: ${e.message}` 
-        : `Failed to process ticket: ${e.message}`, 'error');
+        ? `Error al procesar ticket: ${e.message} (p: ${paramLen}, u: ${urlLen})` 
+        : `Failed to process ticket: ${e.message} (p: ${paramLen}, u: ${urlLen})`, 'error');
     }
   }
 
