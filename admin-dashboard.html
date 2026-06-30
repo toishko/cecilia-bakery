@@ -7,6 +7,11 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <script>
+    // DEBUG: Capture the FULL URL before anything touches it
+    window._debugInitialURL = window.location.href;
+    window._debugSearch = window.location.search;
+    window._debugHash = window.location.hash;
+
     // Capture shared parameters immediately before any other scripts or Clerk can strip them
     (function() {
       function getInitialParam(name) {
@@ -29,6 +34,15 @@
       if (window._initialSharedItems || window._initialSharedImageError || window._initialSharedImage) {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
+
+      // Show debug banner when page is interactive
+      document.addEventListener('DOMContentLoaded', function() {
+        var d = document.createElement('div');
+        d.style.cssText = 'position:fixed;bottom:60px;left:5px;right:5px;background:#1a1a2e;color:#0f0;padding:10px;z-index:99999;font-family:monospace;font-size:10px;border-radius:8px;max-height:120px;overflow:auto;word-break:break-all;box-shadow:0 4px 12px rgba(0,0,0,0.5)';
+        d.innerHTML = '<b>DEBUG URL:</b><br>' + window._debugInitialURL + '<br><b>search:</b> ' + (window._debugSearch || '(empty)') + '<br><b>hash:</b> ' + (window._debugHash || '(empty)') + '<br><b>shared-items:</b> ' + (window._initialSharedItems ? 'YES (' + window._initialSharedItems.length + ' chars)' : 'NULL');
+        d.onclick = function() { d.remove(); };
+        document.body.appendChild(d);
+      });
     })();
   </script>
   <title>Cecilia Bakery — Admin Dashboard</title>
