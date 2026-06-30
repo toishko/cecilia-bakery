@@ -39,6 +39,22 @@ try {
   }
 } catch (e) { console.error('Supabase init failed:', e); }
 
+// Global error handlers for remote debugging
+window.addEventListener('error', (event) => {
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;top:10px;left:10px;right:10px;background:#c8102e;color:#fff;padding:12px;z-index:99999;font-family:monospace;font-size:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);word-break:break-all';
+  div.innerHTML = `<strong>Error:</strong> ${event.message}<br><small>${event.filename}:${event.lineno}</small>`;
+  div.onclick = () => div.remove();
+  document.body.appendChild(div);
+});
+window.addEventListener('unhandledrejection', (event) => {
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;top:10px;left:10px;right:10px;background:#c8102e;color:#fff;padding:12px;z-index:99999;font-family:monospace;font-size:12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);word-break:break-all';
+  div.innerHTML = `<strong>Promise Reject:</strong> ${event.reason}`;
+  div.onclick = () => div.remove();
+  document.body.appendChild(div);
+});
+
 /* ── PWA standalone detection — add class for CSS fallback ── */
 if (window.matchMedia('(display-mode: standalone)').matches ||
     window.navigator.standalone === true) {
@@ -620,8 +636,6 @@ async function checkSession() {
 
 async function enterDashboard(user) {
   applyLang();
-  showScreen('dashboard');
-  await loadDriversCache();
 
   // Helper to read parameters from either the query string or the hash (anchors)
   function getUrlParam(name) {
@@ -750,8 +764,15 @@ async function enterDashboard(user) {
     }
   }
 
-  // Run on initial load
-  await handleUrlParamsAndHash();
+  // Run URL/hash parsing first to avoid blocking on DB calls
+  try {
+    await handleUrlParamsAndHash();
+  } catch (err) {
+    console.error('Initial URL param processing error:', err);
+  }
+
+  showScreen('dashboard');
+  await loadDriversCache();
 
   // Listen for hash changes while the app is already open
   window.addEventListener('hashchange', handleUrlParamsAndHash);
