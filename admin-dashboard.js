@@ -662,14 +662,50 @@ async function enterDashboard(user) {
       
       // Expand the shrunk items back to the full format expected by _noProcessScanResult
       if (parsedData && Array.isArray(parsedData.items)) {
-        parsedData.items = parsedData.items.map(item => ({
-          code: item.c,
-          qty: item.q,
-          unit: item.u === 'u' ? 'unidades' : 'dozen',
-          systemKey: item.s,
-          matched: item.m === 1,
-          confident: item.f === 1
-        }));
+        const TICKET_MAP = {
+          '9226S': 'hb_s_dulce',
+          '9165S': 'hb_s_pina',
+          '9172S': 'hb_s_choco',
+          '9189S': 'hb_s_guava',
+          '9196S': 'hb_s_straw',
+          '9226':  'hb_b_dulce',
+          '9196':  'hb_b_straw',
+          '9165':  'hb_b_pina',
+          '9172':  'hb_b_choco',
+          '9189':  'hb_b_guava',
+          '9158':  'fr_choco',
+          '9141':  'fr_dulce',
+          '9134':  'fr_guava',
+          '9776':  'fr_pina',
+          '9745':  'pz_pudin',
+          '9970':  'pz_chocoflan',
+          '9752':  'pz_flan',
+          '9936':  'pz_rv',
+          '9943':  'pz_carrot',
+          '9769':  'pz_cheese',
+          '9738':  'tl',
+          '9820':  'cuatro_leche',
+          '9969':  'tl_hershey',
+          '9868':  'tl_pina',
+          '9875':  'tl_straw',
+          '9813':  'fam_tl',
+          '9011':  'fam_cl',
+          '9110':  'cdr_maiz',
+          '9103':  'cdr_pound',
+          '9202':  'cdr_raisin'
+        };
+        parsedData.items = parsedData.items.map(item => {
+          const code = item.c;
+          const systemKey = TICKET_MAP[code] || null;
+          return {
+            code,
+            qty: item.q,
+            unit: item.u === 'u' ? 'unidades' : 'dozen',
+            systemKey,
+            matched: systemKey !== null,
+            confident: item.f === 1
+          };
+        });
       }
       
       // Cache the parsed data in a window-level pending variable

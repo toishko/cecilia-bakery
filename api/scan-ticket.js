@@ -342,8 +342,6 @@ export default async function handler(req, res) {
         c: item.code,
         q: item.qty,
         u: item.unit === 'unidades' ? 'u' : 'd',
-        s: item.systemKey,
-        m: item.matched ? 1 : 0,
         f: item.confident ? 1 : 0
       }));
       const itemsBase64 = Buffer.from(JSON.stringify({
