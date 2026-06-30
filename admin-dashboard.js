@@ -623,27 +623,52 @@ async function enterDashboard(user) {
   showScreen('dashboard');
   await loadDriversCache();
 
-  const urlParams = new URLSearchParams(window.location.search);
+  // Helper to read parameters from either the query string or the hash (anchors)
+  function getUrlParam(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has(name)) {
+      return urlParams.get(name);
+    }
+    // Fallback to hash parameters (e.g. #shared-items=...)
+    const hash = window.location.hash;
+    if (hash.startsWith('#') || hash.startsWith('#!')) {
+      const cleanHash = hash.replace(/^#!?/, '');
+      const hashParams = new URLSearchParams(cleanHash);
+      if (hashParams.has(name)) {
+        return hashParams.get(name);
+      }
+    }
+    // Manual prefix check fallback for simple formats like #shared-items=value
+    const prefix = `#${name}=`;
+    if (hash.startsWith(prefix)) {
+      return hash.substring(prefix.length);
+    }
+    return null;
+  }
+
+  const rawItems = getUrlParam('shared-items');
+  const errorMsg = getUrlParam('shared-image-error');
+  const hasSharedImage = getUrlParam('shared-image');
+
   let savedSection = sessionStorage.getItem('admin_section') || 'overview';
-  if (urlParams.has('shared-image') || urlParams.has('shared-items') || urlParams.has('shared-image-error')) {
+  if (hasSharedImage || rawItems || errorMsg) {
     savedSection = 'new-order';
   }
 
   showSection(savedSection);
 
-  if (urlParams.has('shared-image-error')) {
-    const errorMsg = urlParams.get('shared-image-error');
+  // Clear query parameters AND hashes so reloading doesn't re-trigger
+  if (rawItems || errorMsg || hasSharedImage) {
     window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  if (errorMsg) {
     showToast(lang === 'es' 
       ? `Error al importar: ${errorMsg}` 
       : `Import failed: ${errorMsg}`, 'error');
   }
 
-  if (urlParams.has('shared-items')) {
-    const rawItems = urlParams.get('shared-items');
-    // Clean up URL parameters so reloading doesn't re-trigger
-    window.history.replaceState({}, document.title, window.location.pathname);
-
+  if (rawItems) {
     try {
       // Clean base64 characters: replace URL-safe characters and spaces
       let cleanBase64 = rawItems
@@ -725,7 +750,7 @@ async function enterDashboard(user) {
     }
   }
 
-  if (urlParams.has('shared-image')) {
+  if (hasSharedImage) {
     // Clean up the URL search params so reloading doesn't re-trigger
     window.history.replaceState({}, document.title, window.location.pathname);
 
