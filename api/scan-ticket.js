@@ -345,6 +345,8 @@ export default async function handler(req, res) {
       const host = req.headers['host'] || 'ceciliabakery.com';
       const proto = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
       redirectUrl = `${proto}://${host}/admin-dashboard.html?shared-items=${encodeURIComponent(itemsBase64)}`;
+      console.log('Redirect URL generated (length):', redirectUrl.length);
+      console.log('Redirect URL content:', redirectUrl);
     }
 
     return res.status(200).json({
