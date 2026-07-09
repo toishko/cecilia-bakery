@@ -210,9 +210,9 @@ export default async function handler(req, res) {
 
     // Model fallback chain — tries newest first, falls back to most stable
     const MODELS = [
+      { name: 'gemini-3.5-flash', api: 'v1beta' },
       { name: 'gemini-2.5-flash', api: 'v1beta' },
-      { name: 'gemini-2.0-flash', api: 'v1beta' },
-      { name: 'gemini-1.5-flash', api: 'v1beta' },
+      { name: 'gemini-2.5-flash-lite', api: 'v1beta' },
     ];
 
     let response = null;
@@ -228,7 +228,7 @@ export default async function handler(req, res) {
         generationConfig: {
           temperature: 0,
           maxOutputTokens: 2000,
-          ...(model.name.startsWith('gemini-2') ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+          ...((model.name.startsWith('gemini-2') || model.name.startsWith('gemini-3')) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
         },
       });
 
@@ -245,8 +245,10 @@ export default async function handler(req, res) {
       console.error(`Gemini ${model.name} error:`, response.status, errText);
       lastError = errText;
 
-      // Retry on 503, 429, or 400
-      if (response.status !== 503 && response.status !== 429 && response.status !== 400) break;
+      // Only break loop immediately on auth/forbidden errors.
+      // Continue to try other models on 404 (model deprecated), 429 (rate limit), or 5xx/503 (server overloaded).
+      if (response.status === 401 || response.status === 403) break;
+      console.log(`Model ${model.name} failed with status ${response.status}, trying next...`);
     }
 
     if (!response || !response.ok) {
