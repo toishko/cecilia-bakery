@@ -3889,20 +3889,27 @@
 
     // Sign out from denied state
     document.getElementById('denied-signout-btn')?.addEventListener('click', async () => {
+      localStorage.removeItem('cecilia_staff_device_session');
       if (window.Clerk) {
-        await window.Clerk.signOut();
-        showState('signin');
+        try { await window.Clerk.signOut(); } catch(e) {}
       }
+      showState('signin');
     });
 
     // Sign out from dashboard
     document.getElementById('staff-signout-btn')?.addEventListener('click', async () => {
-      if (window.Clerk) {
-        await window.Clerk.signOut();
-        _cachedSupabaseClient = null;
-        cachedOrders = [];
-        showState('signin');
+      localStorage.removeItem('cecilia_staff_device_session');
+      if (currentUser && currentUser.id) {
+        localStorage.removeItem(`cecilia_staff_role_${currentUser.id}`);
+        sessionStorage.removeItem(`cecilia_staff_role_${currentUser.id}`);
       }
+      currentUser = null;
+      _cachedSupabaseClient = null;
+      cachedOrders = [];
+      if (window.Clerk) {
+        try { await window.Clerk.signOut(); } catch(e) {}
+      }
+      showState('signin');
     });
 
 
@@ -4322,8 +4329,79 @@
     }
 
     /* ════════════════════════════════════════
-       CLERK INIT
+       CLERK INIT & PERSISTENT DEVICE AUTO-LOGIN
        ════════════════════════════════════════ */
+    const STAFF_DEVICE_SESSION_KEY = 'cecilia_staff_device_session';
+    const STAFF_SESSION_TTL_MS = 60 * 24 * 60 * 60 * 1000; // 60 days persistence for staff phones
+
+    function getStaffUser() {
+      return (window.Clerk && window.Clerk.user) || currentUser;
+    }
+
+    function tryRestoreDeviceSession() {
+      try {
+        const saved = localStorage.getItem(STAFF_DEVICE_SESSION_KEY);
+        if (!saved) return null;
+        const parsed = JSON.parse(saved);
+        const age = Date.now() - (parsed._session_ts || 0);
+        if (age < STAFF_SESSION_TTL_MS && (parsed.role === 'admin' || parsed.role === 'staff')) {
+          return parsed;
+        } else {
+          localStorage.removeItem(STAFF_DEVICE_SESSION_KEY);
+        }
+      } catch (e) {
+        localStorage.removeItem(STAFF_DEVICE_SESSION_KEY);
+      }
+      return null;
+    }
+
+    function saveDeviceSession(userObj, role) {
+      if (!userObj || !userObj.id) return;
+      const email = userObj.primaryEmailAddress?.emailAddress || userObj.email || '';
+      const payload = {
+        id: userObj.id,
+        firstName: userObj.firstName || userObj.username || 'Staff',
+        fullName: userObj.fullName || userObj.firstName || (email ? email.split('@')[0] : 'Staff'),
+        email: email,
+        primaryEmailAddress: { emailAddress: email },
+        role: role,
+        _session_ts: Date.now()
+      };
+      localStorage.setItem(STAFF_DEVICE_SESSION_KEY, JSON.stringify(payload));
+      localStorage.setItem(`cecilia_staff_role_${userObj.id}`, role);
+    }
+
+    function initStaffPushNotifications() {
+      const activeUser = getStaffUser();
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').then(function(reg) {
+          console.log('Staff: SW registered');
+        }).catch(function(err) {
+          console.warn('Staff: SW registration failed:', err);
+        });
+      }
+
+      setTimeout(function() {
+        if ('Notification' in window && Notification.permission === 'default') {
+          showNotificationBanner();
+        } else if ('Notification' in window && Notification.permission === 'granted') {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(async function(reg) {
+              try {
+                var staffSb = await getSupabaseClient();
+                if (staffSb && activeUser && activeUser.id) {
+                  var { subscribeToPush } = await import('/push-utils.js');
+                  await subscribeToPush(staffSb, 'staff', activeUser.id, 'en', staffToast);
+                }
+              } catch (pushErr) {
+                console.warn('Staff push subscription error:', pushErr);
+              }
+            });
+          }
+        }
+      }, 1500);
+    }
+
     window.addEventListener('load', async () => {
       try {
         if (window.Clerk) {
@@ -4332,12 +4410,33 @@
           const user = window.Clerk.user;
 
           if (!user) {
-            showState('signin');
+            // Clerk session cookie absent or expired — attempt phone auto-login from localStorage
+            const restored = tryRestoreDeviceSession();
+            if (restored) {
+              currentUser = restored;
+              showState('dashboard');
+              populateUserInfo(restored);
+              await Promise.all([
+                loadDriversCache(),
+                loadOrders()
+              ]);
+              setupStaffRealtime();
+              applyStaffLang();
+              initStaffPushNotifications();
+
+              var lastSection = localStorage.getItem('cb-staff-section') || 'orders';
+              if (lastSection === 'compiler') lastSection = 'orders';
+              staffShowSection(lastSection);
+            } else {
+              showState('signin');
+            }
           } else {
             currentUser = user;
 
-            // Check cached role to render instantly
-            const cachedRole = sessionStorage.getItem(`cecilia_staff_role_${user.id}`);
+            // Check cached role in localStorage/sessionStorage for instant load
+            const cachedRole = localStorage.getItem(`cecilia_staff_role_${user.id}`)
+              || sessionStorage.getItem(`cecilia_staff_role_${user.id}`);
+
             if (cachedRole === 'admin' || cachedRole === 'staff') {
               showState('dashboard');
               populateUserInfo(user);
@@ -4350,13 +4449,12 @@
               });
             }
 
-            // Verify/update profile in background (or foreground if no cache)
+            // Verify profile in background
             let verifiedRole = 'customer';
             try {
               const sb = await getSupabaseClient();
               if (sb) {
                 const email = user.primaryEmailAddress?.emailAddress || '';
-                // Check existing profile for role
                 const { data: existing } = await sb
                   .from('profiles')
                   .select('role')
@@ -4366,41 +4464,37 @@
                 verifiedRole = existing?.role || 'customer';
 
                 if (existing) {
-                  // Profile exists — just update email (in background)
                   sb.from('profiles')
                     .update({ email: email })
                     .eq('clerk_user_id', user.id)
                     .then(() => {});
                 } else {
-                  // No profile yet — insert new row (in background)
                   sb.from('profiles')
                     .insert({ clerk_user_id: user.id, email: email, role: 'customer' })
                     .then(() => {});
                 }
 
-                // Cache verified role
                 sessionStorage.setItem(`cecilia_staff_role_${user.id}`, verifiedRole);
 
                 if (verifiedRole !== 'admin' && verifiedRole !== 'staff') {
+                  localStorage.removeItem(STAFF_DEVICE_SESSION_KEY);
+                  localStorage.removeItem(`cecilia_staff_role_${user.id}`);
                   sessionStorage.removeItem(`cecilia_staff_role_${user.id}`);
                   showState('denied');
                   return;
                 }
               }
             } catch (profileErr) {
-              console.warn('Profile upsert/check failed:', profileErr);
+              console.warn('Profile check failed:', profileErr);
+              verifiedRole = cachedRole || user.publicMetadata?.role || user.unsafeMetadata?.role || 'staff';
             }
 
-            // Fallback: check Clerk metadata if profiles check didn't deny
-            const role = user.publicMetadata?.role
-              || user.unsafeMetadata?.role
-              || '';
+            // Save persistent device session for phone auto-login
+            saveDeviceSession(user, verifiedRole);
 
-            // If we already returned via 'denied' above, this won't run.
             const stateEl = document.querySelector('.state-panel.active');
-            if (stateEl && stateEl.id === 'state-denied') return; // Already denied
+            if (stateEl && stateEl.id === 'state-denied') return;
 
-            // If not rendered from cache, do it now
             if (cachedRole !== 'admin' && cachedRole !== 'staff') {
               showState('dashboard');
               populateUserInfo(user);
@@ -4412,49 +4506,45 @@
               applyStaffLang();
             }
 
-            // Register service worker for push notifications
-            if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                console.log('Staff: SW registered');
-              }).catch(function(err) {
-                console.warn('Staff: SW registration failed:', err);
-              });
-            }
+            initStaffPushNotifications();
 
-            // Check notification permission after a short delay
-            setTimeout(function() {
-              if ('Notification' in window && Notification.permission === 'default') {
-                showNotificationBanner();
-              } else if ('Notification' in window && Notification.permission === 'granted') {
-                // Already granted — make sure subscription exists
-                if ('serviceWorker' in navigator) {
-                  navigator.serviceWorker.ready.then(async function(reg) {
-                    try {
-                      var staffSb = await getSupabaseClient();
-                      if (staffSb && window.Clerk && window.Clerk.user) {
-                        var { subscribeToPush } = await import('/push-utils.js');
-                        await subscribeToPush(staffSb, 'staff', window.Clerk.user.id, 'en', staffToast);
-                      }
-                    } catch (pushErr) {
-                      console.warn('Staff push subscription error:', pushErr);
-                    }
-                  });
-                }
-              }
-            }, 1500);
-
-            // Restore last active section
             var lastSection = localStorage.getItem('cb-staff-section') || 'orders';
             if (lastSection === 'compiler') lastSection = 'orders';
             staffShowSection(lastSection);
           }
         } else {
-          console.warn('Clerk not available');
-          showState('signin');
+          // Clerk SDK unavailable — fallback to local device session
+          const restored = tryRestoreDeviceSession();
+          if (restored) {
+            currentUser = restored;
+            showState('dashboard');
+            populateUserInfo(restored);
+            await Promise.all([
+              loadDriversCache(),
+              loadOrders()
+            ]);
+            setupStaffRealtime();
+            applyStaffLang();
+          } else {
+            showState('signin');
+          }
         }
       } catch (err) {
         console.error('Clerk init error:', err);
-        showState('signin');
+        const restored = tryRestoreDeviceSession();
+        if (restored) {
+          currentUser = restored;
+          showState('dashboard');
+          populateUserInfo(restored);
+          await Promise.all([
+            loadDriversCache(),
+            loadOrders()
+          ]);
+          setupStaffRealtime();
+          applyStaffLang();
+        } else {
+          showState('signin');
+        }
       }
     });
 
