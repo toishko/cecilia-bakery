@@ -250,6 +250,56 @@ export default async function handler(req, res) {
       console.log(`Model ${model.name} failed with status ${response.status}, trying next...`);
     }
 
+    let rawContent = null;
+
+    if (response && response.ok) {
+      const data = await response.json();
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      const textParts = parts.filter(p => p.text && !p.thought);
+      rawContent = textParts.map(p => p.text).join('') || '{}';
+    } else {
+      // Attempt OpenAI fallback (gpt-4o-mini) if Gemini failed or hit quota
+      const openaiKey = process.env.OPENAI_API_KEY;
+      if (openaiKey) {
+        console.log('Gemini failed or rate-limited. Attempting OpenAI gpt-4o-mini fallback...');
+        try {
+          const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openaiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [
+                {
+                  role: 'user',
+                  content: [
+                    { type: 'text', text: SYSTEM_PROMPT + '\n\nRead this bakery order ticket and extract all product codes and quantities.' },
+                    { type: 'image_url', image_url: { url: isDataUrl ? image : `data:${mimeType};base64,${rawBase64}` } },
+                  ],
+                },
+              ],
+              temperature: 0,
+              max_tokens: 2000,
+              response_format: { type: 'json_object' },
+            }),
+          });
+
+          if (oaiRes.ok) {
+            const oaiData = await oaiRes.json();
+            rawContent = oaiData.choices?.[0]?.message?.content || '{}';
+            response = oaiRes;
+          } else {
+            const oaiErr = await oaiRes.text();
+            console.error('OpenAI fallback error:', oaiRes.status, oaiErr);
+          }
+        } catch (oaiErr) {
+          console.error('OpenAI fallback exception:', oaiErr);
+        }
+      }
+    }
+
     if (!response || !response.ok) {
       const status = response ? response.status : 502;
       let googleMessage = '';
@@ -277,11 +327,6 @@ export default async function handler(req, res) {
       const shortErr = googleMessage.length > 150 ? googleMessage.substring(0, 150) + '...' : googleMessage;
       return sendError(`AI scanner service unavailable (${status}: ${shortErr || 'Unknown error'})`, 502);
     }
-
-    const data = await response.json();
-    const parts = data.candidates?.[0]?.content?.parts || [];
-    const textParts = parts.filter(p => p.text && !p.thought);
-    const rawContent = textParts.map(p => p.text).join('') || '{}';
 
     // Parse the JSON from the AI response
     let parsed;

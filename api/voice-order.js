@@ -244,6 +244,54 @@ export default async function handler(req, res) {
       console.log(`Model ${model.name} failed with status ${response.status}, trying next...`);
     }
 
+    let rawContent = null;
+
+    if (response && response.ok) {
+      const data = await response.json();
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      const textParts = parts.filter(p => p.text && !p.thought);
+      rawContent = textParts.map(p => p.text).join('') || '{}';
+    } else {
+      // Attempt OpenAI fallback (gpt-4o-mini) if Gemini failed or hit quota
+      const openaiKey = process.env.OPENAI_API_KEY;
+      if (openaiKey) {
+        console.log('Gemini voice-order failed or rate-limited. Attempting OpenAI gpt-4o-mini fallback...');
+        try {
+          const userContent = transcript
+            ? `The driver said the following (transcribed from speech):\n"${transcript.trim()}"\n\nParse this into order actions.`
+            : 'Listen to this driver audio recording and parse into order actions.';
+          const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openaiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userContent },
+              ],
+              temperature: 0.1,
+              max_tokens: 2000,
+              response_format: { type: 'json_object' },
+            }),
+          });
+
+          if (oaiRes.ok) {
+            const oaiData = await oaiRes.json();
+            rawContent = oaiData.choices?.[0]?.message?.content || '{}';
+            response = oaiRes;
+          } else {
+            const oaiErr = await oaiRes.text();
+            console.error('OpenAI voice-order fallback error:', oaiRes.status, oaiErr);
+          }
+        } catch (oaiErr) {
+          console.error('OpenAI voice-order fallback exception:', oaiErr);
+        }
+      }
+    }
+
     if (!response || !response.ok) {
       const status = response ? response.status : 502;
       let googleMessage = '';
@@ -271,13 +319,6 @@ export default async function handler(req, res) {
       const shortErr = googleMessage.length > 150 ? googleMessage.substring(0, 150) + '...' : googleMessage;
       return res.status(502).json({ success: false, message: `AI voice ordering service unavailable (${status}: ${shortErr || 'Unknown error'})` });
     }
-
-    const data = await response.json();
-
-    // Gemini 2.5+ may return thought + text parts
-    const parts = data.candidates?.[0]?.content?.parts || [];
-    const textParts = parts.filter(p => p.text && !p.thought);
-    const rawContent = textParts.map(p => p.text).join('') || '{}';
 
     console.log('Voice order raw response (first 500 chars):', rawContent.substring(0, 500));
 
