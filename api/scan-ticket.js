@@ -251,11 +251,31 @@ export default async function handler(req, res) {
     }
 
     if (!response || !response.ok) {
-      const isQuota = lastError.includes('quota') || lastError.includes('Quota') || lastError.includes('rate');
-      return sendError(
-        isQuota ? 'Scanner rate limit reached. Please wait a few minutes.' : 'AI scanner service temporarily unavailable.',
-        isQuota ? 429 : 502
-      );
+      const status = response ? response.status : 502;
+      let googleMessage = '';
+      try {
+        const parsed = JSON.parse(lastError);
+        googleMessage = parsed.error?.message || lastError;
+      } catch {
+        googleMessage = lastError;
+      }
+      googleMessage = (googleMessage || '').replace(/key=[^&"'\s]+/gi, 'key=HIDDEN');
+
+      const isQuota = status === 429
+        || lastError.includes('RESOURCE_EXHAUSTED')
+        || lastError.toLowerCase().includes('quota exceeded')
+        || lastError.toLowerCase().includes('rate limit');
+
+      if (isQuota) {
+        return sendError('Scanner rate limit reached (Google AI quota exceeded). Please wait a few minutes.', 429);
+      }
+
+      if (status === 401 || status === 403) {
+        return sendError('AI scanner auth error: GOOGLE_AI_API_KEY is invalid or unauthorized.', 403);
+      }
+
+      const shortErr = googleMessage.length > 150 ? googleMessage.substring(0, 150) + '...' : googleMessage;
+      return sendError(`AI scanner service unavailable (${status}: ${shortErr || 'Unknown error'})`, 502);
     }
 
     const data = await response.json();

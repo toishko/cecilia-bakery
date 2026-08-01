@@ -245,11 +245,31 @@ export default async function handler(req, res) {
     }
 
     if (!response || !response.ok) {
-      const isQuota = lastError.includes('quota') || lastError.includes('Quota') || lastError.includes('rate');
-      const detail = isQuota
-        ? 'Voice ordering limit reached. Please wait a few minutes.'
-        : 'AI service temporarily unavailable. Please try again.';
-      return res.status(isQuota ? 429 : 502).json({ success: false, message: detail });
+      const status = response ? response.status : 502;
+      let googleMessage = '';
+      try {
+        const parsed = JSON.parse(lastError);
+        googleMessage = parsed.error?.message || lastError;
+      } catch {
+        googleMessage = lastError;
+      }
+      googleMessage = (googleMessage || '').replace(/key=[^&"'\s]+/gi, 'key=HIDDEN');
+
+      const isQuota = status === 429
+        || lastError.includes('RESOURCE_EXHAUSTED')
+        || lastError.toLowerCase().includes('quota exceeded')
+        || lastError.toLowerCase().includes('rate limit');
+
+      if (isQuota) {
+        return res.status(429).json({ success: false, message: 'Voice ordering limit reached (Google AI quota exceeded). Please wait a few minutes.' });
+      }
+
+      if (status === 401 || status === 403) {
+        return res.status(403).json({ success: false, message: 'AI voice ordering auth error: GOOGLE_AI_API_KEY is invalid or unauthorized.' });
+      }
+
+      const shortErr = googleMessage.length > 150 ? googleMessage.substring(0, 150) + '...' : googleMessage;
+      return res.status(502).json({ success: false, message: `AI voice ordering service unavailable (${status}: ${shortErr || 'Unknown error'})` });
     }
 
     const data = await response.json();
