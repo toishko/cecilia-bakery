@@ -200,9 +200,9 @@ export default async function handler(req, res) {
 
     // Model fallback chain — tries newest first
     const MODELS = [
-      { name: 'gemini-3.5-flash', api: 'v1beta' },
-      { name: 'gemini-2.5-flash', api: 'v1beta' },
-      { name: 'gemini-2.5-flash-lite', api: 'v1beta' },
+      { name: 'gemini-2.0-flash', api: 'v1beta' },
+      { name: 'gemini-1.5-flash', api: 'v1beta' },
+      { name: 'gemini-1.5-pro', api: 'v1beta' },
     ];
 
     let response = null;
@@ -222,7 +222,6 @@ export default async function handler(req, res) {
         generationConfig: {
           temperature: 0.1,
           maxOutputTokens: 2000,
-          ...((model.name.startsWith('gemini-2') || model.name.startsWith('gemini-3')) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
         },
       });
 
