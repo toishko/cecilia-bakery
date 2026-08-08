@@ -499,7 +499,11 @@ async function ensureClerkReady(timeoutMs = 8000) {
   if (!window.Clerk || !window.Clerk.load) {
     throw new Error('Clerk SDK unavailable or failed to load');
   }
-  await window.Clerk.load();
+  const remainingMs = Math.max(1000, timeoutMs - (Date.now() - start));
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Clerk.load() timed out')), remainingMs)
+  );
+  await Promise.race([window.Clerk.load(), timeoutPromise]);
   return window.Clerk;
 }
 
@@ -2777,8 +2781,8 @@ async function loadOverview(timeframe) {
 
     _channelBreakdown = stats;
 
-    renderAdminOverviewChart(chartData, timeframe);
-    renderAdminRevenueBreakdown(stats);
+    try { renderAdminOverviewChart(chartData, timeframe); } catch(e) { console.error('Chart error', e); }
+    try { renderAdminRevenueBreakdown(stats); } catch(e) { console.error('Breakdown error', e); }
 
     // Save to Cache
     try {
@@ -2810,65 +2814,75 @@ function renderAdminOverviewChart(chartData, timeframe) {
   });
   const chartValues = chartData.map(row => parseFloat(row.total_amount || 0));
 
-  const ctx = document.getElementById('revenueChart');
-  if (_revenueChart) { _revenueChart.revenueChart = null; _revenueChart.destroy(); _revenueChart = null; }
+  if (ctx && _revenueChart && typeof _revenueChart.destroy === 'function') { 
+    try {
+      _revenueChart.destroy(); 
+    } catch (e) {
+      console.warn('Failed to destroy existing chart:', e);
+    }
+    _revenueChart = null; 
+  }
 
   if (ctx && chartLabels.length > 0) {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(200,16,46,.06)';
     const tickColor = isDark ? '#BFA0A8' : '#6B5057';
 
-    _revenueChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: chartLabels,
-        datasets: [{
-          label: lang === 'es' ? 'Ingresos' : 'Revenue',
-          data: chartValues,
-          backgroundColor: 'rgba(200, 16, 46, 0.7)',
-          hoverBackgroundColor: 'rgba(200, 16, 46, 0.9)',
-          borderRadius: 6,
-          borderSkipped: false,
-          maxBarThickness: 48
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: isDark ? '#1E0D12' : '#fff',
-            titleColor: isDark ? '#F2E8E4' : '#18080D',
-            bodyColor: isDark ? '#BFA0A8' : '#6B5057',
-            borderColor: isDark ? 'rgba(200,16,46,.35)' : 'rgba(200,16,46,.22)',
-            borderWidth: 1,
-            padding: 12,
-            cornerRadius: 10,
-            titleFont: { family: 'Outfit', weight: '600' },
-            bodyFont: { family: 'Outfit' },
-            callbacks: {
-              label: ctx => formatCurrency(ctx.parsed.y)
+    try {
+      _revenueChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: chartLabels,
+          datasets: [{
+            label: lang === 'es' ? 'Ingresos' : 'Revenue',
+            data: chartValues,
+            backgroundColor: 'rgba(200, 16, 46, 0.7)',
+            hoverBackgroundColor: 'rgba(200, 16, 46, 0.9)',
+            borderRadius: 6,
+            borderSkipped: false,
+            maxBarThickness: 48
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: isDark ? '#1E0D12' : '#fff',
+              titleColor: isDark ? '#F2E8E4' : '#18080D',
+              bodyColor: isDark ? '#BFA0A8' : '#6B5057',
+              borderColor: isDark ? 'rgba(200,16,46,.35)' : 'rgba(200,16,46,.22)',
+              borderWidth: 1,
+              padding: 12,
+              cornerRadius: 10,
+              titleFont: { family: 'Outfit', weight: '600' },
+              bodyFont: { family: 'Outfit' },
+              callbacks: {
+                label: ctx => formatCurrency(ctx.parsed.y)
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: tickColor, font: { family: 'Outfit', size: 11 } }
+            },
+            y: {
+              grid: { color: gridColor },
+              ticks: {
+                color: tickColor,
+                font: { family: 'Outfit', size: 11 },
+                callback: v => '$' + (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v)
+              },
+              beginAtZero: true
             }
           }
-        },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: tickColor, font: { family: 'Outfit', size: 11 } }
-          },
-          y: {
-            grid: { color: gridColor },
-            ticks: {
-              color: tickColor,
-              font: { family: 'Outfit', size: 11 },
-              callback: v => '$' + (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v)
-            },
-            beginAtZero: true
-          }
         }
-      }
-    });
+      });
+    } catch (chartErr) {
+      console.warn('Failed to render Chart.js (possible ad-blocker or CDN issue):', chartErr);
+    }
   }
 }
 
