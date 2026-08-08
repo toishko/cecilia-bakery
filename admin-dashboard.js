@@ -844,6 +844,9 @@ async function enterDashboard(user) {
 
   showScreen('dashboard');
   await loadDriversCache();
+  
+  // Ensure the default or URL-selected section loads its data
+  showSection(currentSection);
 
   // Listen for hash changes while the app is already open
   window.addEventListener('hashchange', handleUrlParamsAndHash);
