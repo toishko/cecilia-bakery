@@ -77,7 +77,7 @@ THE TICKET LAYOUT:
 2. Handwritten Guest Checks: The ticket is a handwritten note listing items (e.g., "2 Supiro", "30 Flan DOZ", "12 pudin pieces") without printed product codes.
 
 YOUR TASK:
-Read EVERY row in the product table or list from top to bottom. For each row that has a quantity, extract the CODE, the QUANTITY, and the UNIT. Do NOT skip any rows.
+Read EVERY row in the product table or list from top to bottom. It is critical that you do not mix up quantities from adjacent rows. To prevent errors, FIRST transcribe the table exactly as it appears in the image into the \`raw_text_transcription\` field, reading row by row. THEN populate the \`items\` array with the extracted CODE, QUANTITY, and UNIT. Do NOT skip any rows.
 
 HANDWRITTEN GUEST CHECKS & MISSING CODES:
 If the image is a handwritten check and does NOT have printed product codes, read the handwritten items and match them to the correct product code from this list:
@@ -119,6 +119,7 @@ QUANTITY & UNIT RULES:
 
 Return ONLY a JSON object (not an array). No markdown, no code fences, no explanation. Format:
 {
+  "raw_text_transcription": "Line 1: 9172 | 7 | BIRTHDAY CAKE LARGE CHOCOLATE...",
   "items": [
     { "code": "9745", "qty": 6, "unit": "unidades", "description": "Bread Pudding Slice - 12PK", "confident": true },
     { "code": "9776", "qty": 0.5, "unit": "dozen", "description": "Cake Slice Pineapple - 12PK", "confident": true }
@@ -210,9 +211,9 @@ export default async function handler(req, res) {
 
     // Model fallback chain — tries newest first, falls back to most stable
     const MODELS = [
+      { name: 'gemini-1.5-pro', api: 'v1beta' },
       { name: 'gemini-2.0-flash', api: 'v1beta' },
       { name: 'gemini-1.5-flash', api: 'v1beta' },
-      { name: 'gemini-1.5-pro', api: 'v1beta' },
     ];
 
     let response = null;
