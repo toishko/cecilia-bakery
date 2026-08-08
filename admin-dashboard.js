@@ -2814,6 +2814,7 @@ function renderAdminOverviewChart(chartData, timeframe) {
   });
   const chartValues = chartData.map(row => parseFloat(row.total_amount || 0));
 
+  const ctx = document.getElementById('revenueChart');
   if (ctx && _revenueChart && typeof _revenueChart.destroy === 'function') { 
     try {
       _revenueChart.destroy(); 
