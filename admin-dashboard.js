@@ -491,20 +491,64 @@ window.__adminRefresh = async function () {
 /* ═══════════════════════════════════
    AUTH — CLERK-BASED LOGIN
    ═══════════════════════════════════ */
+async function ensureClerkReady(timeoutMs = 8000) {
+  const start = Date.now();
+  while ((!window.Clerk || !window.Clerk.load) && (Date.now() - start) < timeoutMs) {
+    await new Promise(r => setTimeout(r, 100));
+  }
+  if (!window.Clerk || !window.Clerk.load) {
+    throw new Error('Clerk SDK unavailable or failed to load');
+  }
+  await window.Clerk.load();
+  return window.Clerk;
+}
+
+async function mountClerkSignIn() {
+  const mount = document.getElementById('clerk-mount-target');
+  if (!mount) return;
+
+  // Render immediate feedback spinner
+  mount.innerHTML = `
+    <div style="padding:28px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
+      <div class="clerk-loading-spinner"></div>
+      <span style="font-size:0.85rem;color:var(--tx-muted);font-family:inherit">
+        ${lang === 'es' ? 'Cargando acceso seguro...' : 'Loading secure sign in...'}
+      </span>
+    </div>
+  `;
+
+  try {
+    const clerk = await ensureClerkReady(8000);
+    mount.innerHTML = '';
+    clerk.mountSignIn(mount, {
+      afterSignInUrl: '/admin-dashboard.html',
+      afterSignUpUrl: '/admin-dashboard.html',
+    });
+  } catch (err) {
+    console.warn('[AUTH] mountClerkSignIn error:', err);
+    mount.innerHTML = `
+      <div style="padding:18px;text-align:center;border:1px dashed var(--bd);border-radius:12px;margin-top:10px">
+        <p style="font-size:0.85rem;color:var(--tx-muted);margin-bottom:12px;line-height:1.4">
+          ${lang === 'es' ? 'No se pudo cargar el formulario de autenticación.' : 'Could not load authentication form.'}
+        </p>
+        <button class="corner-btn" style="padding:8px 18px;font-weight:600;cursor:pointer;border-radius:8px;border:1px solid var(--bd)" onclick="mountClerkSignIn()">
+          ${lang === 'es' ? 'Reintentar' : 'Retry'}
+        </button>
+      </div>
+    `;
+  }
+}
+
 function showLoginScreen() {
   showScreen('login');
   mountClerkSignIn();
 }
 
-function mountClerkSignIn() {
-  const mount = document.getElementById('clerk-mount-target');
-  if (mount && window.Clerk) {
-    mount.innerHTML = '';
-    window.Clerk.mountSignIn(mount, {
-      afterSignInUrl: '/admin-dashboard.html',
-      afterSignUpUrl: '/admin-dashboard.html',
-    });
-  }
+async function handleDeniedSwitchAccount() {
+  try {
+    if (window.Clerk) await window.Clerk.signOut();
+  } catch (e) { console.error('Sign out error:', e); }
+  showLoginScreen();
 }
 
 async function handleClerkUser(user) {
@@ -514,7 +558,7 @@ async function handleClerkUser(user) {
   }
 
   const errorEl = document.getElementById('login-error');
-  errorEl.textContent = '';
+  if (errorEl) errorEl.textContent = '';
 
   try {
     const email = user.primaryEmailAddress?.emailAddress || '';
@@ -531,13 +575,13 @@ async function handleClerkUser(user) {
         .eq('clerk_user_id', user.id)
         .maybeSingle();
 
-      console.log('[AUTH] Lookup by clerk_user_id:', JSON.stringify(resp1.data), 'Error:', JSON.stringify(resp1.error));
+      console.log('[AUTH] Lookup by clerk_user_id:', JSON.stringify(resp1?.data), 'Error:', JSON.stringify(resp1?.error));
 
-      if (resp1.data) {
+      if (resp1?.data) {
         existingRole = resp1.data.role;
         profileFound = true;
         // Silently update email if needed
-        if (resp1.data.email !== email) {
+        if (resp1.data.email !== email && email) {
           await sb.from('profiles').update({ email }).eq('clerk_user_id', user.id);
         }
       }
@@ -554,9 +598,9 @@ async function handleClerkUser(user) {
           .ilike('email', email)
           .maybeSingle();
 
-        console.log('[AUTH] Lookup by email:', JSON.stringify(resp2.data), 'Error:', JSON.stringify(resp2.error));
+        console.log('[AUTH] Lookup by email:', JSON.stringify(resp2?.data), 'Error:', JSON.stringify(resp2?.error));
 
-        if (resp2.data) {
+        if (resp2?.data) {
           existingRole = resp2.data.role;
           profileFound = true;
           // Link the Clerk user ID to this profile if not already linked
@@ -579,10 +623,9 @@ async function handleClerkUser(user) {
           .order('created_at', { ascending: false })
           .limit(20);
 
-        console.log('[AUTH] All profiles dump:', JSON.stringify(resp3.data), 'Error:', JSON.stringify(resp3.error));
+        console.log('[AUTH] All profiles dump:', JSON.stringify(resp3?.data), 'Error:', JSON.stringify(resp3?.error));
 
-        if (resp3.data) {
-          // Try to find matching row
+        if (resp3?.data) {
           const match = resp3.data.find(p =>
             p.clerk_user_id === user.id ||
             (p.email && p.email.toLowerCase() === email.toLowerCase())
@@ -608,7 +651,6 @@ async function handleClerkUser(user) {
           .single();
         if (insertErr) {
           console.error('[AUTH] Insert error:', JSON.stringify(insertErr));
-          // Retry without .select().single() in case it's a PostgREST issue
           const { error: retryErr } = await sb.from('profiles')
             .insert({ clerk_user_id: user.id, email: email, role: 'customer' });
           if (retryErr) {
@@ -633,10 +675,19 @@ async function handleClerkUser(user) {
     // Role check — admin only
     if (existingRole !== 'admin') {
       _log('User role is not admin. Role:', existingRole);
-      errorEl.innerHTML = lang === 'es'
-        ? 'Acceso denegado. Solo cuentas de administrador.<br><small style="color:var(--tx-muted)">Tu cuenta fue registrada. Un administrador puede darte acceso.</small>'
-        : 'Access denied. Admin accounts only.<br><small style="color:var(--tx-muted)">Your account has been registered. An admin can grant you access from the Staff tab.</small>';
-      await window.Clerk.signOut();
+      if (errorEl) {
+        const deniedText = lang === 'es'
+          ? `Acceso denegado.<br><small style="color:var(--tx-muted)">Iniciaste sesión como <strong>${email || 'usuario'}</strong> (rol: ${existingRole || 'cliente'}). Solo administradores tienen acceso.</small>`
+          : `Access denied.<br><small style="color:var(--tx-muted)">Signed in as <strong>${email || 'user'}</strong> (role: ${existingRole || 'customer'}). Admin accounts only.</small>`;
+        errorEl.innerHTML = `
+          <div style="margin-top:14px;padding:14px;background:rgba(200,16,46,0.08);border-radius:10px;border:1px solid rgba(200,16,46,0.2)">
+            <div>${deniedText}</div>
+            <button class="login-btn" style="margin-top:12px;padding:8px 16px;font-size:0.82rem" onclick="handleDeniedSwitchAccount()">
+              ${lang === 'es' ? 'Cambiar de Cuenta' : 'Switch Account'}
+            </button>
+          </div>
+        `;
+      }
       showLoginScreen();
       return;
     }
@@ -645,26 +696,26 @@ async function handleClerkUser(user) {
     enterDashboard(user);
   } catch (e) {
     console.error('Auth check error:', e);
-    errorEl.textContent = lang === 'es' ? 'Error de conexión' : 'Connection error';
+    if (errorEl) {
+      errorEl.textContent = lang === 'es' ? 'Error de conexión' : 'Connection error';
+    }
   }
 }
 
 async function checkSession() {
   try {
-    if (!window.Clerk) {
-      _log('Clerk not available yet');
-      return false;
-    }
-    await window.Clerk.load();
-
-    const user = window.Clerk.user;
+    const clerk = await ensureClerkReady(8000);
+    const user = clerk.user;
     if (user) {
       await handleClerkUser(user);
       return true;
     } else {
       showLoginScreen();
     }
-  } catch (e) { console.error('Session check error:', e); }
+  } catch (e) {
+    console.warn('Session check error or timeout:', e);
+    showLoginScreen();
+  }
   return false;
 }
 
@@ -5418,13 +5469,15 @@ function formatTimeValue(timeStr) {
 }
 
 /* ═══════════════════════════════════
-   INIT — ALL EVENT LISTENERS
+   INIT — ALL EVENT LISTENERS & LIFECYCLE
    ═══════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', async () => {
-  _log('Admin Dashboard: DOMContentLoaded');
+function bootAdminDashboard() {
+  _log('Admin Dashboard: Initializing application');
   applyTheme();
   applyLang();
-  lucide.createIcons();
+  if (window.lucide && window.lucide.createIcons) {
+    window.lucide.createIcons();
+  }
 
   // Restore font size
   const savedSize = localStorage.getItem('cecilia_admin_font_size');
@@ -5435,10 +5488,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (notifToggle) notifToggle.checked = notificationsEnabled;
 
   // ── Login screen controls ──
-  document.getElementById('login-lang-btn').addEventListener('click', () => {
+  document.getElementById('login-lang-btn')?.addEventListener('click', () => {
     setLang(lang === 'en' ? 'es' : 'en');
   });
-  document.getElementById('login-theme-btn').addEventListener('click', toggleTheme);
+  document.getElementById('login-theme-btn')?.addEventListener('click', toggleTheme);
 
   // ── Sidebar nav ──
   document.querySelectorAll('.sidebar-nav-item').forEach(btn => {
@@ -5446,9 +5499,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ── Mobile nav ──
-  document.getElementById('mobile-menu-btn').addEventListener('click', () => {
-    document.getElementById('mobile-nav').classList.toggle('open');
-    document.getElementById('mobile-menu-btn').classList.toggle('open');
+  document.getElementById('mobile-menu-btn')?.addEventListener('click', () => {
+    document.getElementById('mobile-nav')?.classList.toggle('open');
+    document.getElementById('mobile-menu-btn')?.classList.toggle('open');
   });
   document.querySelectorAll('.mobile-nav-item').forEach(btn => {
     btn.addEventListener('click', () => showSection(btn.dataset.section));
@@ -5469,7 +5522,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ── Action Sheet: backdrop click to close ──
-  document.getElementById('action-sheet-overlay').addEventListener('click', (e) => {
+  document.getElementById('action-sheet-overlay')?.addEventListener('click', (e) => {
     // Only close if clicking the backdrop, not the sheet itself
     if (e.target === e.currentTarget) _closeActionSheet();
   });
@@ -5522,7 +5575,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ── Overview ──
   document.getElementById('view-all-orders-btn')?.addEventListener('click', () => showSection('incoming'));
-  document.getElementById('stat-outstanding-card').addEventListener('click', () => {
+  document.getElementById('stat-outstanding-card')?.addEventListener('click', () => {
     openPendingSheet();
   });
   document.getElementById('stat-ordered-card')?.addEventListener('click', () => {
@@ -5551,11 +5604,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ── History filters ──
-  document.getElementById('filter-apply-btn').addEventListener('click', () => loadHistoryOrders(true));
-  document.getElementById('filter-search').addEventListener('keydown', e => {
+  document.getElementById('filter-apply-btn')?.addEventListener('click', () => loadHistoryOrders(true));
+  document.getElementById('filter-search')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') loadHistoryOrders(true);
   });
-  document.getElementById('load-more-btn').addEventListener('click', loadMoreHistory);
+  document.getElementById('load-more-btn')?.addEventListener('click', loadMoreHistory);
 
   // ── Settings ──
   document.querySelectorAll('.lang-opt').forEach(btn => {
@@ -5564,8 +5617,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.size-btn').forEach(btn => {
     btn.addEventListener('click', () => changeSize(parseInt(btn.dataset.size)));
   });
-  document.getElementById('theme-toggle').addEventListener('change', toggleTheme);
-  document.getElementById('notification-toggle').addEventListener('change', async (e) => {
+  document.getElementById('theme-toggle')?.addEventListener('change', toggleTheme);
+  document.getElementById('notification-toggle')?.addEventListener('change', async (e) => {
     notificationsEnabled = e.target.checked;
     localStorage.setItem('cecilia_admin_notifications', notificationsEnabled);
 
@@ -5579,10 +5632,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       showToast(lang === 'es' ? 'Notificaciones activadas' : 'Notifications enabled');
     }
   });
-  document.getElementById('logout-btn').addEventListener('click', handleLogout);
-
-  // ── Order Receipt Sheet ──
-  // close button is now inline on the HTML element; sheet backdrop handled by onclick on overlay
+  document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
 
   // ── Driver management ──
   document.getElementById('btn-add-driver')?.addEventListener('click', showAddDriver);
@@ -5599,30 +5649,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-edit-driver-from-profile')?.addEventListener('click', () => {
     if (profileDriverId) showEditDriver(profileDriverId);
   });
-  document.getElementById('driver-search').addEventListener('input', renderDriverTable);
+  document.getElementById('driver-search')?.addEventListener('input', renderDriverTable);
   document.querySelectorAll('.driver-table th.sortable').forEach(th => {
     th.addEventListener('click', () => sortDrivers(th.dataset.sort));
   });
-  document.getElementById('copy-prices-select').addEventListener('change', (e) => {
+  document.getElementById('copy-prices-select')?.addEventListener('change', (e) => {
     if (e.target.value) copyPricesFrom(e.target.value);
   });
-  document.getElementById('df-active').addEventListener('change', (e) => {
+  document.getElementById('df-active')?.addEventListener('change', (e) => {
     const label = document.getElementById('df-active-label');
-    label.textContent = e.target.checked
-      ? (lang === 'es' ? 'Activo' : 'Active')
-      : (lang === 'es' ? 'Desactivado' : 'Disabled');
-  });
-
-  // ── Clerk init: wait for Clerk script to load, then check session ──
-  window.addEventListener('load', async () => {
-    try {
-      await checkSession();
-    } catch (err) {
-      console.error('Clerk init error:', err);
-      showLoginScreen();
+    if (label) {
+      label.textContent = e.target.checked
+        ? (lang === 'es' ? 'Activo' : 'Active')
+        : (lang === 'es' ? 'Desactivado' : 'Disabled');
     }
   });
-});
+
+  // ── Deterministic Clerk session verification ──
+  checkSession().catch(err => {
+    console.error('Clerk init error:', err);
+    showLoginScreen();
+  });
+}
+
+// Immediate execution if DOM is ready, otherwise wait for DOMContentLoaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootAdminDashboard);
+} else {
+  bootAdminDashboard();
+}
 
 // ═══════════════════════════════════
 //  STAFF ROLE API HELPER
