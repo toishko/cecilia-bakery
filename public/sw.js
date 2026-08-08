@@ -1,21 +1,61 @@
 // ═══════════════════════════════════
 //  Cecilia Bakery — Service Worker
-//  Network-first + Push Notifications
+//  Network-first + Offline Fallback + Push Notifications
 // ═══════════════════════════════════
 
-const CACHE_NAME = 'cecilia-cache';
+const CACHE_VERSION = 'v89';                      // bump on each release
+const CACHE_NAME = `cecilia-cache-${CACHE_VERSION}`;
+const OFFLINE_URL = '/offline.html';
 
-// ── INSTALL: immediately activate ──
-self.addEventListener('install', () => self.skipWaiting());
-
-// ── ACTIVATE: clean old caches + claim clients ──
-self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+// ── INSTALL: pre-cache offline page + immediately activate ──
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.add(OFFLINE_URL))
+  );
+  self.skipWaiting();
 });
 
-// ── FETCH: always network-first ──
+// ── MESSAGE: allow banner button to trigger skipWaiting ──
+self.addEventListener('message', e => {
+  if (e.data === 'skipWaiting') {
+    self.skipWaiting();
+  }
+});
+
+// ── ACTIVATE: delete old caches + claim clients ──
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+// ── FETCH: network-first with offline fallback ──
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+
+  // Intercept PWA Share Target POST requests
+  if (event.request.method === 'POST' && url.pathname === '/share-target') {
+    event.respondWith(
+      (async () => {
+        try {
+          const formData = await event.request.formData();
+          const file = formData.get('media');
+          if (file) {
+            const cache = await caches.open('shared-images');
+            await cache.put('/shared-image.jpg', new Response(file));
+          }
+          return Response.redirect('/admin-dashboard.html?shared-image=true', 303);
+        } catch (e) {
+          console.error('Share target error:', e);
+          return Response.redirect('/admin-dashboard.html?shared-image-error=true', 303);
+        }
+      })()
+    );
+    return;
+  }
+
   if (event.request.method !== 'GET') return;
   if (!url.protocol.startsWith('http')) return;
 
@@ -28,7 +68,17 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() =>
+        caches.match(event.request).then((cached) => {
+          if (cached) return cached;
+          // Only serve offline page for navigation requests (HTML pages)
+          if (event.request.mode === 'navigate') {
+            return caches.match(OFFLINE_URL);
+          }
+          // If not in cache and not navigate, we MUST return a valid Response
+          return new Response('', { status: 404, statusText: 'Offline or not cached' });
+        })
+      )
   );
 });
 
