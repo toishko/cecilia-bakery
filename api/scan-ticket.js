@@ -113,7 +113,7 @@ If the image is a handwritten check and does NOT have printed product codes, rea
 - "9202" for Raisin Square ("raisin")
 
 QUANTITY & UNIT RULES:
-- "unit": If the quantity text contains "unidades", "units", or "pieces", set "unit" to "unidades". Otherwise, set "unit" to "dozen".
+- "unit": If the column header is "CANTIDAD" or the text contains "cantidad", "unidades", "units", or "pieces", set "unit" to "unidades". If it explicitly says "dozen" or "doz", set it to "dozen". Otherwise, default to "dozen" only if appropriate, but generally "cantidad" implies units.
 - "qty": Read the number exactly as written or printed (e.g. for "8 1/2 cheese cake doz", qty is 8.5 and unit is "dozen". For "36 Dulce choc pieces", qty is 36 and unit is "unidades").
 - Birthday cakes (codes ending in "S" like 9226S, or 4-digit codes in the 9100-9200 range): Quantities are always whole numbers (1, 2, 3...).
 
