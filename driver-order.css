@@ -30,14 +30,29 @@
 /* ═══════════════════════════════════
    RESET & BASE
    ═══════════════════════════════════ */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;word-break:normal;overflow-wrap:break-word;}
 html{scroll-padding-top:80px;overscroll-behavior:none;
   background:var(--bg);height:100%; touch-action: manipulation;}
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--tx);
   overflow-x:hidden;transition:background .3s ease,color .3s ease;
   min-height:100vh;min-height:100dvh;overscroll-behavior:none;
   padding-bottom:env(safe-area-inset-bottom);
+  -webkit-text-size-adjust:100%;text-size-adjust:100%;
   overflow-wrap:break-word; touch-action: manipulation;}
+
+.client-card-name,
+.client-name,
+.driver-title,
+.driver-name,
+.product-name,
+.order-num,
+.stat-label {
+  word-break: normal;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 /* Ensure inputs prevent iOS auto-zoom by enforcing 16px minimum */
 input[type="text"], input[type="number"], input[type="tel"], input[type="email"], input[type="date"], input[type="password"], select, textarea {
   font-size: 16px !important;
@@ -1891,6 +1906,12 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   padding: 2px;
   border-radius: 9px;
   gap: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.insights-pills::-webkit-scrollbar {
+  display: none;
 }
 [data-theme="dark"] .insights-pills {
   background: rgba(118, 118, 128, 0.24);
@@ -1908,6 +1929,8 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   font-weight: 500;
   padding: 6px 12px;
   border-radius: 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
   -webkit-tap-highlight-color: transparent;

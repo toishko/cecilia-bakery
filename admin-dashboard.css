@@ -31,13 +31,28 @@
 /* ═══════════════════════════════════
    RESET & BASE
    ═══════════════════════════════════ */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;word-break:normal;overflow-wrap:break-word;}
 html{scroll-padding-top:80px; touch-action: manipulation;}
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--tx);
   overflow-x:clip;transition:background .3s ease,color .3s ease;
   min-height:100vh;min-height:100dvh;overflow-wrap:break-word;
   padding-bottom:env(safe-area-inset-bottom);
   -webkit-text-size-adjust:100%;text-size-adjust:100%; touch-action: manipulation;}
+
+.oca-name,
+.driver-group-name,
+.driver-name,
+.client-name,
+.product-name,
+.item-title,
+.dash-card-title,
+.order-num-text {
+  word-break: normal;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 /* Ensure inputs prevent iOS auto-zoom by enforcing 16px minimum */
 input[type="text"], input[type="number"], input[type="tel"], input[type="email"], select, textarea {
   font-size: 16px !important;
@@ -470,6 +485,58 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 }
 .oca-pill.unpaid { color: var(--red); background: rgba(200,16,46,0.15); }
 
+/* Responsive adjustments for order-card-avatar under narrow viewports / zoom */
+@media (max-width: 520px) {
+  .order-card-avatar {
+    padding: 12px 2px;
+    gap: 8px;
+  }
+  .order-card-avatar .oca-ref {
+    position: static;
+    transform: none;
+    font-size: 0.76rem;
+    padding: 2px 6px;
+    margin: 0 4px;
+    align-self: center;
+    flex-shrink: 0;
+  }
+  .oca-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 0.8rem;
+    margin-right: 8px;
+  }
+  .oca-name {
+    font-size: 0.9rem;
+  }
+  .oca-price {
+    font-size: 0.88rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .order-card-avatar {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .order-card-avatar .oca-body {
+    flex: 1 1 calc(100% - 48px);
+  }
+  .order-card-avatar .oca-ref {
+    margin-left: 44px;
+    margin-top: 2px;
+  }
+  .order-card-avatar .oca-right {
+    margin-left: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+  .oca-pill {
+    margin-top: 0;
+  }
+}
+
 /* ═══════════════════════════════════
    ORDER RECEIPT SHEET
    ═══════════════════════════════════ */
@@ -821,8 +888,8 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .driver-search::placeholder{color:var(--tx-faint)}
 
 /* Driver table */
-.driver-table-wrap{overflow-x:auto}
-.driver-table{width:100%;border-collapse:collapse;background:var(--bg-card);
+.driver-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px;}
+.driver-table{width:100%;min-width:500px;border-collapse:collapse;background:var(--bg-card);
   border:1px solid var(--bd);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-card)}
 .driver-table thead{background:var(--bg-surface)}
 .driver-table th{text-align:left;padding:12px 14px;font-size:.72rem;text-transform:uppercase;
@@ -1125,9 +1192,10 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 
 /* Pill Selector */
 .insights-pills{display:flex;gap:4px;background:var(--bg-surface);border-radius:12px;padding:3px;
-  border:1px solid var(--bd)}
+  border:1px solid var(--bd);overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;scrollbar-width:none;}
+.insights-pills::-webkit-scrollbar{display:none;}
 .insights-pill{font-family:'Outfit',sans-serif;font-size:.72rem;font-weight:600;
-  padding:7px 14px;border:none;border-radius:10px;cursor:pointer;
+  padding:7px 14px;border:none;border-radius:10px;cursor:pointer;white-space:nowrap;flex-shrink:0;
   background:transparent;color:var(--tx-muted);transition:all .25s ease;
   -webkit-tap-highlight-color:transparent;letter-spacing:.02em}
 .insights-pill:active{transform:scale(.95)}
@@ -3818,5 +3886,67 @@ body.batch-mode-active .bottom-nav {
 .dgo-row:last-child {
   border-bottom: none;
 }
+
+/* Responsive Driver Group Cards under Narrow Viewports / Zoom */
+@media (max-width: 520px) {
+  .driver-group-header {
+    flex-wrap: wrap;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  .driver-group-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 0.85rem;
+  }
+  .driver-group-info {
+    flex: 1 1 calc(100% - 50px);
+    min-width: 0;
+  }
+  .driver-group-name {
+    font-size: 0.92rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .driver-group-settle-wrap {
+    width: 100%;
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--bd);
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .driver-group-balance {
+    text-align: left;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .driver-group-bal-val {
+    font-size: 1rem;
+  }
+  .btn-settle-driver {
+    padding: 7px 12px;
+    font-size: 0.74rem;
+  }
+  .driver-group-arrow {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 350px) {
+  .driver-group-settle-wrap {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .btn-settle-driver {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+}
+
 
 
