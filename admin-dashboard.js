@@ -2827,7 +2827,12 @@ function renderAdminOverviewChart(chartData, timeframe) {
     _revenueChart = null; 
   }
 
+  const container = ctx?.parentElement;
+  let emptyEl = container ? container.querySelector('.chart-empty-state') : null;
+
   if (ctx && chartLabels.length > 0) {
+    if (emptyEl) emptyEl.remove();
+    ctx.style.display = 'block';
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(200,16,46,.06)';
     const tickColor = isDark ? '#BFA0A8' : '#6B5057';
@@ -2886,6 +2891,15 @@ function renderAdminOverviewChart(chartData, timeframe) {
       });
     } catch (chartErr) {
       console.warn('Failed to render Chart.js (possible ad-blocker or CDN issue):', chartErr);
+    }
+  } else if (ctx) {
+    ctx.style.display = 'none';
+    if (!emptyEl && container) {
+      emptyEl = document.createElement('div');
+      emptyEl.className = 'chart-empty-state';
+      emptyEl.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;min-height:180px;color:var(--tx-faint);font-size:0.9rem;';
+      emptyEl.textContent = lang === 'es' ? 'No hay datos de ingresos para este período' : 'No revenue recorded for this period';
+      container.appendChild(emptyEl);
     }
   }
 }
