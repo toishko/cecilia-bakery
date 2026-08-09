@@ -229,9 +229,14 @@ export default async function handler(req, res) {
             sharp(imageBuffer).extract({ left: 0, top: s.top, width: meta.width, height: s.height }).jpeg({ quality: 92 }).toBuffer()
           ));
 
-          const prompt = 'Extract every table row visibly present in this image section. Columns: CODE | QUANTITY | PRODUCT NAME. Output JSON: {"items": [{"code": "...", "qty": 12, "unit": "dozen"|"unidades", "description": "..."}], "total_boxes": 37.5, "total_units": 65}';
+          const prompt = `Extract all table rows and any visible totals (Total Boxes / Total Units / TOTAL CAJAS / TOTAL UNIDADES) from this image section.
+Unit rule:
+- If quantities are in boxes/dozens/packs (e.g. 0.5, 1, 1.5, 2, or description has - 12PK), set unit="dozen".
+- If quantities are individual pieces (6, 12, 18, 24, 30, 36, 48), set unit="unidades".
+- Birthday cakes: set unit="unidades".
+Output JSON: {"items": [{"code": "...", "qty": 1.5, "unit": "dozen"|"unidades", "description": "..."}], "total_boxes": 5.0, "total_units": 0}`;
 
-          const results = await Promise.all(stripBuffers.map((buf, idx) =>
+          const results = await Promise.all(stripBuffers.map((buf) =>
             fetch('https://api.openai.com/v1/chat/completions', {
               method: 'POST',
               headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
@@ -240,7 +245,7 @@ export default async function handler(req, res) {
                 messages: [
                   { role: 'system', content: prompt },
                   { role: 'user', content: [
-                    { type: 'text', text: idx === 4 ? 'Extract all table rows and footer totals from this section.' : 'Extract all table rows from this section.' },
+                    { type: 'text', text: 'Extract table rows and any visible totals.' },
                     { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${buf.toString('base64')}`, detail: 'high' } }
                   ]}
                 ],
@@ -259,10 +264,10 @@ export default async function handler(req, res) {
           results.forEach((res) => {
             try {
               const parsedRes = JSON.parse(res.choices?.[0]?.message?.content || '{}');
-              if (parsedRes.total_boxes !== undefined && parsedRes.total_boxes !== null) {
+              if (parsedRes.total_boxes !== undefined && parsedRes.total_boxes !== null && parsedRes.total_boxes > 0) {
                 extractedTotalBoxes = parsedRes.total_boxes;
               }
-              if (parsedRes.total_units !== undefined && parsedRes.total_units !== null) {
+              if (parsedRes.total_units !== undefined && parsedRes.total_units !== null && (extractedTotalUnits === null || parsedRes.total_units > 0)) {
                 extractedTotalUnits = parsedRes.total_units;
               }
               const items = parsedRes.items || [];

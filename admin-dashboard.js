@@ -9448,15 +9448,10 @@ function _noOpenScanReview() {
     const rowClass = isUncertain ? 'scan-review-row uncertain' : 'scan-review-row';
     const badge = isUncertain ? '<span class="scan-review-badge">⚠</span>' : '';
 
-    // Show converted qty and raw ticket value
-    const rawLabel = (item.isBirthdayCake || item.convertedQty === item.rawQty)
-      ? '' // birthday cakes or items already matching don't need conversion note
-      : `<span class="scan-review-raw">(${item.rawQty} on ticket)</span>`;
-
     html += `<div class="${rowClass}">
       <span class="scan-review-code">${item.code}</span>
       <span class="scan-review-desc">${item.description}${badge}</span>
-      <span class="scan-review-qty">${item.convertedQty}${rawLabel}</span>
+      <span class="scan-review-qty">${item.convertedQty}</span>
     </div>`;
   });
 
