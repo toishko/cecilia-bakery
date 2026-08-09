@@ -285,7 +285,8 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
 
           results.forEach((res) => {
             try {
-              const parsedRes = JSON.parse(res.choices?.[0]?.message?.content || '{}');
+              const raw = JSON.parse(res.choices?.[0]?.message?.content || '{}');
+              const parsedRes = (typeof raw === 'object' && raw !== null) ? raw : {};
               if (parsedRes.total_boxes !== undefined && parsedRes.total_boxes !== null && parsedRes.total_boxes > 0) {
                 extractedTotalBoxes = parsedRes.total_boxes;
               }
@@ -536,46 +537,6 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
       '9110': 'CB Cornbread Family', '9103': 'CB Pound Cake Family',
       '9202': 'CB Raisin Pound Cake Family',
     };
-
-    // ── Self-Reconciliation via Printed Ticket Footers ──
-    if (ticketTotalUnits !== null) {
-      const hbItems = items.filter(i => HB_CODES.has(i.code));
-      const sumUnits = hbItems.reduce((s, i) => s + (parseFloat(i.qty) || 0), 0);
-      const diff = Math.round((sumUnits - ticketTotalUnits) * 10) / 10;
-      if (diff !== 0 && Math.abs(diff) <= 5) {
-        for (const item of hbItems) {
-          const q = parseFloat(item.qty) || 0;
-          if (q - diff > 0 && (q - diff === 1 || q - diff === 2 || q - diff === 3)) {
-            item.qty = q - diff;
-            break;
-          }
-        }
-      }
-    }
-
-    if (ticketTotalBoxes !== null) {
-      const sliceItems = items.filter(i => !HB_CODES.has(i.code));
-      const computeBoxes = () => sliceItems.reduce((s, i) => {
-        const q = parseFloat(i.qty) || 0;
-        const isU = i.unit === 'unidades' || i.unit === 'units' || i.unit === 'unit';
-        return s + (isU ? q / 12 : q);
-      }, 0);
-
-      let sumBoxes = Math.round(computeBoxes() * 10) / 10;
-      const diffBoxes = Math.round((sumBoxes - ticketTotalBoxes) * 10) / 10;
-
-      if (diffBoxes !== 0 && Math.abs(diffBoxes) <= 2.0) {
-        for (const item of sliceItems) {
-          const q = parseFloat(item.qty) || 0;
-          const isU = item.unit === 'unidades' || item.unit === 'units' || item.unit === 'unit';
-          const candidateQty = isU ? q - Math.round(diffBoxes * 12) : Math.round((q - diffBoxes) * 10) / 10;
-          if (candidateQty > 0 && (candidateQty === 0.5 || candidateQty === 1 || candidateQty === 1.5 || candidateQty === 2 || candidateQty % 6 === 0)) {
-            item.qty = candidateQty;
-            break;
-          }
-        }
-      }
-    }
 
     const mapped = items.map(item => {
       const systemKey = TICKET_MAP[item.code] || null;
