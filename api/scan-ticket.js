@@ -262,10 +262,10 @@ export default async function handler(req, res) {
     let rawContent = null;
     let lastError = '';
 
-    // ── Primary Engine: OpenAI GPT-4o (High Detail) ──
+    // ── Primary Engine: OpenAI GPT-4o Latest Vision Snapshot (High Detail) ──
     if (openaiKey) {
       try {
-        console.log('Scanning ticket with OpenAI GPT-4o (detail: high)...');
+        console.log('Scanning ticket with OpenAI GPT-4o (gpt-4o-2024-11-20, detail: high)...');
         const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -273,7 +273,7 @@ export default async function handler(req, res) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-4o',
+            model: 'gpt-4o-2024-11-20',
             messages: [
               { role: 'system', content: SYSTEM_PROMPT },
               {

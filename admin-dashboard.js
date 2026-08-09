@@ -9191,16 +9191,15 @@ function _noShowFormContainer() {
   _noUpdateScanBanner();
 }
 
-/* ── TICKET SCANNER LOGIC ── */
 /* ── TICKET IMAGE PREPROCESSING (Canvas API) ── */
-// Improves OCR accuracy by enhancing contrast, converting to grayscale,
-// and sharpening handwritten text before sending to the AI vision model.
+// Prepares ticket image for high-accuracy OCR by preserving high resolution (up to 2400px)
+// and encoding at 92% JPEG quality without destructive pixel filters.
 async function _preprocessTicketImage(dataUrl) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
-      // Scale down for speed (1200px is plenty for OCR, saves ~60% payload vs 2000px)
-      const MAX_DIM = 1200;
+      // Keep high resolution (2400px allows crystal-clear OCR on 30+ row tickets)
+      const MAX_DIM = 2400;
       let w = img.width, h = img.height;
       if (w > MAX_DIM || h > MAX_DIM) {
         const scale = MAX_DIM / Math.max(w, h);
@@ -9213,52 +9212,11 @@ async function _preprocessTicketImage(dataUrl) {
       canvas.height = h;
       const ctx = canvas.getContext('2d');
 
-      // Draw original
+      // Draw clean, sharp camera image
       ctx.drawImage(img, 0, 0, w, h);
 
-      // Get pixel data
-      const imageData = ctx.getImageData(0, 0, w, h);
-      const d = imageData.data;
-
-      // Pass 1: Grayscale + Contrast boost
-      // Uses a sigmoid-like curve to push mid-tones toward pure black or white
-      for (let i = 0; i < d.length; i += 4) {
-        // Luminance (perceptual weights)
-        const gray = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
-
-        // Contrast curve: push values away from midpoint (128)
-        // factor=1.8 is aggressive but preserves 0.5 vs 1 distinction
-        const factor = 1.8;
-        let val = ((gray / 255 - 0.5) * factor + 0.5) * 255;
-        val = Math.max(0, Math.min(255, val));
-
-        d[i] = d[i+1] = d[i+2] = val;
-        // Alpha stays the same
-      }
-
-      ctx.putImageData(imageData, 0, 0);
-
-      // Pass 2: Unsharp mask (sharpen)
-      // Draw slightly blurred version, then blend with original for edge enhancement
-      const sharpCanvas = document.createElement('canvas');
-      sharpCanvas.width = w;
-      sharpCanvas.height = h;
-      const sCtx = sharpCanvas.getContext('2d');
-
-      // Copy the contrast-boosted image
-      sCtx.drawImage(canvas, 0, 0);
-
-      // Apply sharpening using composite operations:
-      // Slightly brighten the contrast-boosted result to enhance edges
-      sCtx.globalCompositeOperation = 'multiply';
-      sCtx.drawImage(canvas, 0, 0);
-      sCtx.globalCompositeOperation = 'source-over';
-
-      // Actually, use a simpler approach: just use the contrast-boosted image
-      // The contrast boost alone makes the biggest difference for OCR
-
-      // Export as compressed JPEG (0.7 quality — fast upload, still clear for OCR)
-      const result = canvas.toDataURL('image/jpeg', 0.7);
+      // Export as high-quality JPEG (0.92 quality preserves fine number details)
+      const result = canvas.toDataURL('image/jpeg', 0.92);
       resolve(result);
     };
     img.onerror = () => {
