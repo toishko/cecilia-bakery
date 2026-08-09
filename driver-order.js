@@ -5408,6 +5408,8 @@ async function _driverScanTicketFile(file) {
     if (!resp.ok || !data.success) throw new Error(data.message || 'Scan failed');
 
     if (data.items.length === 0) {
+      const curOrder = orders[activeOrderIdx];
+      if (curOrder) { curOrder.scanData = null; curOrder.scanMismatch = null; curOrder.scanUnmatched = 0; }
       if (banner && bannerText) {
         banner.style.display = 'flex';
         banner.className = 'scan-result-banner has-warnings';
@@ -5462,6 +5464,8 @@ async function _driverScanTicketFile(file) {
     // Store scan data in the order object
     const currentOrder = orders[activeOrderIdx];
     if (currentOrder) {
+      currentOrder.scanMismatch = data.mismatch || null;
+      currentOrder.scanUnmatched = unmatched;
       currentOrder.scanData = data.items.map(item => {
         const key = item.systemKey;
         const rawQty = parseFloat(item.qty) || 0;
@@ -5543,16 +5547,26 @@ function updateScanBanner() {
   if (hasScan) {
     const filled = order.scanData.filter(i => i.matched && i.rawQty > 0).length;
     const uncertain = order.scanData.filter(i => !i.confident).length;
+    const unmatched = order.scanUnmatched || 0;
+    const mismatch = order.scanMismatch || null;
+    const hasMismatch = mismatch && mismatch.expected !== undefined;
     const bannerText = document.getElementById('scan-result-text');
     if (bannerText) {
       let msg = lang === 'es'
         ? `${filled} producto(s) escaneado(s)`
         : `${filled} product(s) scanned`;
       if (uncertain > 0) msg += lang === 'es' ? `, ${uncertain} por revisar` : `, ${uncertain} to review`;
+      if (unmatched > 0) msg += lang === 'es' ? `, ${unmatched} sin coincidencia` : `, ${unmatched} unmatched`;
+      if (hasMismatch) {
+        const label = mismatch.type === 'total_boxes' ? 'Total Boxes' : 'Total Units';
+        msg += lang === 'es'
+          ? ` ⚠️ ${label}: ticket=${mismatch.expected}, escaneo=${mismatch.computed}`
+          : ` ⚠️ ${label}: ticket=${mismatch.expected}, scan=${mismatch.computed}`;
+      }
       bannerText.textContent = msg;
     }
     banner.style.display = 'flex';
-    banner.className = uncertain > 0 ? 'scan-result-banner has-warnings' : 'scan-result-banner';
+    banner.className = (uncertain > 0 || unmatched > 0 || hasMismatch) ? 'scan-result-banner has-warnings' : 'scan-result-banner';
   } else {
     banner.style.display = 'none';
   }
