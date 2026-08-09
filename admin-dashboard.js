@@ -1060,6 +1060,17 @@ function setupRealtime() {
       _log('Realtime driver_order_items change:', payload);
       handleOrderItemsChange(payload);
     })
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'ai_usage_logs'
+    }, (payload) => {
+      _log('Realtime ai_usage_logs INSERT:', payload);
+      if (currentSection === 'insights') {
+        const activePill = document.querySelector('.insights-pill.active');
+        loadAiSpendInsights(activePill?.dataset.value || 'this_week');
+      }
+    })
     .subscribe((status) => {
       _log('Realtime subscription status:', status);
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
@@ -2694,6 +2705,99 @@ async function loadInsights(timeframe) {
   } catch (err) {
     console.error('loadInsights error:', err);
   }
+
+  // Also load real-time AI Usage & Waste Intelligence
+  loadAiSpendInsights(timeframe);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   AI USAGE & COST SUMMARY LOGIC
+   ══════════════════════════════════════════════════════════════════ */
+async function loadAiSpendInsights(timeframe = 'this_week') {
+  if (!sb) return;
+
+  const now = new Date();
+  let startDate = null;
+  let endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+  if (timeframe === 'today') {
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  } else if (timeframe === 'this_week') {
+    const dayOfWeek = now.getDay() || 7;
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek + 1, 0, 0, 0);
+  } else if (timeframe === 'this_month') {
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+  } else if (timeframe === 'last_month') {
+    startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
+    endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+  }
+
+  try {
+    let query = sb.from('ai_usage_logs').select('feature, estimated_cost_usd, created_at');
+
+    if (startDate) {
+      query = query.gte('created_at', startDate.toISOString());
+    }
+    if (endDate) {
+      query = query.lte('created_at', endDate.toISOString());
+    }
+
+    const { data: logs, error } = await query;
+
+    if (error) {
+      console.warn('Could not fetch ai_usage_logs:', error.message);
+      _resetAiStats();
+      return;
+    }
+
+    let totalSpend = 0;
+    let ticketSpend = 0;
+    let ticketScans = 0;
+    let voiceSpend = 0;
+    let voiceOrders = 0;
+
+    (logs || []).forEach(log => {
+      const cost = parseFloat(log.estimated_cost_usd) || 0;
+      totalSpend += cost;
+      if (log.feature === 'ticket_scanner') {
+        ticketSpend += cost;
+        ticketScans++;
+      } else if (log.feature === 'voice_order') {
+        voiceSpend += cost;
+        voiceOrders++;
+      }
+    });
+
+    const elTotal = document.getElementById('ai-total-spend');
+    const elTicketScans = document.getElementById('ai-ticket-scans');
+    const elTicketSpend = document.getElementById('ai-ticket-spend');
+    const elVoiceOrders = document.getElementById('ai-voice-orders');
+    const elVoiceSpend = document.getElementById('ai-voice-spend');
+
+    if (elTotal) elTotal.textContent = `$${totalSpend.toFixed(2)}`;
+    if (elTicketScans) elTicketScans.textContent = ticketScans;
+    if (elTicketSpend) elTicketSpend.textContent = `$${ticketSpend.toFixed(2)}`;
+    if (elVoiceOrders) elVoiceOrders.textContent = voiceOrders;
+    if (elVoiceSpend) elVoiceSpend.textContent = `$${voiceSpend.toFixed(2)}`;
+
+  } catch (err) {
+    console.error('Error in loadAiSpendInsights:', err);
+    _resetAiStats();
+  }
+}
+
+function _resetAiStats() {
+  const elTotal = document.getElementById('ai-total-spend');
+  const elTicketScans = document.getElementById('ai-ticket-scans');
+  const elTicketSpend = document.getElementById('ai-ticket-spend');
+  const elVoiceOrders = document.getElementById('ai-voice-orders');
+  const elVoiceSpend = document.getElementById('ai-voice-spend');
+
+  if (elTotal) elTotal.textContent = '$0.00';
+  if (elTicketScans) elTicketScans.textContent = '0';
+  if (elTicketSpend) elTicketSpend.textContent = '$0.00';
+  if (elVoiceOrders) elVoiceOrders.textContent = '0';
+  if (elVoiceSpend) elVoiceSpend.textContent = '$0.00';
 }
 
 
@@ -9195,9 +9299,12 @@ function _noShowFormContainer() {
 // Prepares ticket image for fast OCR by compressing to 1800px max dimension
 // and encoding at 85% JPEG quality (~250KB payload for instant mobile uploads).
 async function _preprocessTicketImage(dataUrl) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
+      if (img.width < 100 || img.height < 100) {
+        return reject(new Error(lang === 'es' ? 'La imagen es demasiado pequeña o ilegible.' : 'Image is too small or unreadable.'));
+      }
       // 1800px provides ~60 vertical pixels per row (plenty for OCR on 30+ row tickets)
       const MAX_DIM = 1800;
       let w = img.width, h = img.height;
@@ -9367,10 +9474,16 @@ async function _noScanTicketFile(file) {
     // ── Image preprocessing: sharpen + boost contrast ──
     const base64 = await _preprocessTicketImage(rawBase64);
 
+    const userEmail = window.Clerk?.user?.primaryEmailAddress?.emailAddress || 'admin';
+
     // Send to API
     const resp = await fetch('/api/scan-ticket', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-role': 'admin',
+        'x-user-email': userEmail
+      },
       body: JSON.stringify({ image: base64 }),
     });
 

@@ -3,6 +3,7 @@
 // with single-pass GPT-4o and Gemini fallbacks, and returns structured JSON of product keys + quantities.
 
 import sharp from 'sharp';
+import { logAiUsage, extractOpenAiTokens, extractGeminiTokens, calculateAiCost } from './lib/ai-logger.js';
 
 // ── Vercel Function config ──
 export const maxDuration = 60;
@@ -141,6 +142,11 @@ export default async function handler(req, res) {
   // Origin check (allow bypass for iOS Shortcut client)
   const origin = req.headers?.['origin'] || req.headers?.['referer'] || '';
   const isShortcut = req.headers?.['x-client'] === 'shortcut' || req.query?.client === 'shortcut';
+  const callerRole = isShortcut ? 'shortcut' : (req.headers?.['x-user-role'] || 'admin');
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+    || req.headers['x-real-ip']
+    || req.socket?.remoteAddress || 'unknown';
+  const callerIdentifier = req.headers?.['x-user-email'] || req.headers?.['x-driver-name'] || ip;
 
   // Helper to respond with errors safely (redirects on Shortcut to prevent crashes)
   function sendError(message, statusCode = 400) {
@@ -158,9 +164,6 @@ export default async function handler(req, res) {
   }
 
   // Rate limit
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
-    || req.headers['x-real-ip']
-    || req.socket?.remoteAddress || 'unknown';
   if (isRateLimited(ip)) {
     return sendError('Too many requests. Please wait a moment.', 429);
   }
@@ -224,6 +227,7 @@ export default async function handler(req, res) {
     if (openaiKey) {
       try {
         console.log('Starting parallel 5-strip split OCR with GPT-4o-2024-11-20...');
+        const stripStartTime = Date.now();
         const imageBuffer = Buffer.from(rawBase64, 'base64');
         const meta = await sharp(imageBuffer).metadata();
 
@@ -279,9 +283,15 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
           const seen = new Set();
           let extractedTotalBoxes = null;
           let extractedTotalUnits = null;
+          let stripInTokens = 0;
+          let stripOutTokens = 0;
 
           results.forEach((res) => {
             try {
+              const tok = extractOpenAiTokens(res);
+              stripInTokens += tok.inputTokens;
+              stripOutTokens += tok.outputTokens;
+
               const raw = JSON.parse(res.choices?.[0]?.message?.content || '{}');
               const parsedRes = (typeof raw === 'object' && raw !== null) ? raw : {};
               if (parsedRes.total_boxes !== undefined && parsedRes.total_boxes !== null && parsedRes.total_boxes > 0) {
@@ -303,6 +313,27 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
             }
           });
 
+          const stripDuration = Date.now() - stripStartTime;
+          const stripSuccess = merged.length > 0;
+
+          // Log AI usage for 4-strip parallel run
+          logAiUsage({
+            feature: 'ticket_scanner',
+            callerRole,
+            callerIdentifier,
+            provider: 'openai',
+            model: 'gpt-4o-2024-11-20',
+            callType: 'parallel_slice',
+            inputTokens: stripInTokens,
+            outputTokens: stripOutTokens,
+            totalTokens: stripInTokens + stripOutTokens,
+            executionMs: stripDuration,
+            status: stripSuccess ? 'success' : 'zero_items',
+            isWaste: !stripSuccess,
+            wasteReason: stripSuccess ? null : 'strip_slice_zero_items_fallback_triggered',
+            metadata: { slices: sections.length, extracted_items: merged.length }
+          });
+
           if (merged.length > 0) {
             parsed = {
               items: merged,
@@ -321,6 +352,7 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
     if (!parsed && openaiKey) {
       try {
         console.log('Running single-pass GPT-4o-2024-11-20 fallback...');
+        const spStartTime = Date.now();
         const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -354,14 +386,47 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
           }),
         });
 
+        const spDuration = Date.now() - spStartTime;
+
         if (oaiRes.ok) {
           const oaiData = await oaiRes.json();
           rawContent = oaiData.choices?.[0]?.message?.content || '{}';
           response = oaiRes;
+
+          const tok = extractOpenAiTokens(oaiData);
+          logAiUsage({
+            feature: 'ticket_scanner',
+            callerRole,
+            callerIdentifier,
+            provider: 'openai',
+            model: 'gpt-4o-2024-11-20',
+            callType: 'single_pass_fallback',
+            inputTokens: tok.inputTokens,
+            outputTokens: tok.outputTokens,
+            totalTokens: tok.totalTokens,
+            executionMs: spDuration,
+            status: 'success',
+            isWaste: false,
+            metadata: { fallback_from: 'strip_slice' }
+          });
         } else {
           const errText = await oaiRes.text();
           console.error('OpenAI GPT-4o error:', oaiRes.status, errText);
           lastError = errText;
+
+          logAiUsage({
+            feature: 'ticket_scanner',
+            callerRole,
+            callerIdentifier,
+            provider: 'openai',
+            model: 'gpt-4o-2024-11-20',
+            callType: 'single_pass_fallback',
+            executionMs: spDuration,
+            status: 'api_error',
+            isWaste: true,
+            wasteReason: `openai_error_${oaiRes.status}`,
+            metadata: { error: errText.slice(0, 150) }
+          });
         }
       } catch (oaiErr) {
         console.error('OpenAI GPT-4o call exception:', oaiErr);
@@ -380,6 +445,7 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
 
       for (const model of MODELS) {
         try {
+          const gStartTime = Date.now();
           const requestBody = JSON.stringify({
             contents: [{
               parts: [
@@ -400,17 +466,51 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
             body: requestBody,
           });
 
+          const gDuration = Date.now() - gStartTime;
+
           if (gRes.ok) {
             const data = await gRes.json();
             const parts = data.candidates?.[0]?.content?.parts || [];
             const textParts = parts.filter(p => p.text && !p.thought);
             rawContent = textParts.map(p => p.text).join('') || '{}';
             response = gRes;
+
+            const tok = extractGeminiTokens(data);
+            logAiUsage({
+              feature: 'ticket_scanner',
+              callerRole,
+              callerIdentifier,
+              provider: 'google_gemini',
+              model: model.name,
+              callType: 'gemini_fallback',
+              inputTokens: tok.inputTokens,
+              outputTokens: tok.outputTokens,
+              totalTokens: tok.totalTokens,
+              executionMs: gDuration,
+              status: 'success',
+              isWaste: false,
+              metadata: { fallback_from: 'openai' }
+            });
             break;
           } else {
             const errText = await gRes.text();
             console.error(`Gemini ${model.name} error:`, gRes.status, errText);
             lastError = errText;
+
+            logAiUsage({
+              feature: 'ticket_scanner',
+              callerRole,
+              callerIdentifier,
+              provider: 'google_gemini',
+              model: model.name,
+              callType: 'gemini_fallback',
+              executionMs: gDuration,
+              status: 'api_error',
+              isWaste: true,
+              wasteReason: `gemini_error_${gRes.status}`,
+              metadata: { error: errText.slice(0, 150) }
+            });
+
             if (gRes.status === 401 || gRes.status === 403) break;
           }
         } catch (gErr) {
@@ -424,6 +524,7 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
     if (!parsed && !rawContent && openaiKey) {
       console.log('Attempting secondary fallback to GPT-4o-mini...');
       try {
+        const miniStartTime = Date.now();
         const miniRes = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -447,10 +548,30 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
             response_format: { type: 'json_object' },
           }),
         });
+
+        const miniDuration = Date.now() - miniStartTime;
+
         if (miniRes.ok) {
           const miniData = await miniRes.json();
           rawContent = miniData.choices?.[0]?.message?.content || '{}';
           response = miniRes;
+
+          const tok = extractOpenAiTokens(miniData);
+          logAiUsage({
+            feature: 'ticket_scanner',
+            callerRole,
+            callerIdentifier,
+            provider: 'openai',
+            model: 'gpt-4o-mini',
+            callType: 'mini_fallback',
+            inputTokens: tok.inputTokens,
+            outputTokens: tok.outputTokens,
+            totalTokens: tok.totalTokens,
+            executionMs: miniDuration,
+            status: 'success',
+            isWaste: false,
+            metadata: { fallback_from: 'gemini' }
+          });
         }
       } catch (miniErr) {
         console.error('gpt-4o-mini fallback error:', miniErr);

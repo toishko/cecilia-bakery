@@ -3,6 +3,8 @@
 // sends to Google Gemini with the product catalog and order context,
 // and returns structured order actions with a readback.
 
+import { logAiUsage, extractGeminiTokens, extractOpenAiTokens } from './lib/ai-logger.js';
+
 // Vercel function config — audio uploads need more time and body size
 module.exports.config = {
   api: {
@@ -159,6 +161,10 @@ export default async function handler(req, res) {
     return res.status(429).json({ success: false, message: 'Too many requests. Please wait.' });
   }
 
+  const callerRole = req.headers?.['x-user-role'] || 'driver';
+  const callerIdentifier = req.headers?.['x-driver-name'] || req.headers?.['x-user-email'] || ip;
+  const startOverallTime = Date.now();
+
   // Validate API key
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
@@ -207,6 +213,10 @@ export default async function handler(req, res) {
 
     let response = null;
     let lastError = '';
+    let usedProvider = 'google_gemini';
+    let usedModel = 'gemini-2.0-flash';
+    let usedTokens = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+
     for (const model of MODELS) {
       // Build parts — audio if available, text fallback
       const parts = [];
@@ -232,14 +242,16 @@ export default async function handler(req, res) {
         body: requestBody,
       });
 
-      if (response.ok) break;
+      if (response.ok) {
+        usedModel = model.name;
+        break;
+      }
 
       const errText = await response.text();
       console.error(`Gemini ${model.name} voice-order error:`, response.status, errText);
       lastError = errText;
 
       // Only break loop immediately on auth/forbidden errors.
-      // Continue to try other models on 404 (model deprecated), 429 (rate limit), or 5xx/503 (server overloaded).
       if (response.status === 401 || response.status === 403) break;
       console.log(`Model ${model.name} failed with status ${response.status}, trying next...`);
     }
@@ -248,6 +260,7 @@ export default async function handler(req, res) {
 
     if (response && response.ok) {
       const data = await response.json();
+      usedTokens = extractGeminiTokens(data);
       const parts = data.candidates?.[0]?.content?.parts || [];
       const textParts = parts.filter(p => p.text && !p.thought);
       rawContent = textParts.map(p => p.text).join('') || '{}';
@@ -282,6 +295,9 @@ export default async function handler(req, res) {
             const oaiData = await oaiRes.json();
             rawContent = oaiData.choices?.[0]?.message?.content || '{}';
             response = oaiRes;
+            usedProvider = 'openai';
+            usedModel = 'gpt-4o-mini';
+            usedTokens = extractOpenAiTokens(oaiData);
           } else {
             const oaiErr = await oaiRes.text();
             console.error('OpenAI voice-order fallback error:', oaiRes.status, oaiErr);
@@ -308,6 +324,20 @@ export default async function handler(req, res) {
         || lastError.toLowerCase().includes('quota exceeded')
         || lastError.toLowerCase().includes('rate limit');
 
+      logAiUsage({
+        feature: 'voice_order',
+        callerRole,
+        callerIdentifier,
+        provider: usedProvider,
+        model: usedModel,
+        callType: rawBase64 ? 'voice_audio' : 'voice_text',
+        executionMs: Date.now() - startOverallTime,
+        status: 'api_error',
+        isWaste: true,
+        wasteReason: isQuota ? 'quota_exceeded' : `api_error_${status}`,
+        metadata: { error: googleMessage.slice(0, 150) }
+      });
+
       if (isQuota) {
         return res.status(429).json({ success: false, message: 'Voice ordering limit reached (Google AI quota exceeded). Please wait a few minutes.' });
       }
@@ -331,6 +361,21 @@ export default async function handler(req, res) {
       parsed = JSON.parse(cleaned);
     } catch (parseErr) {
       console.error('Failed to parse voice order response:', rawContent);
+      logAiUsage({
+        feature: 'voice_order',
+        callerRole,
+        callerIdentifier,
+        provider: usedProvider,
+        model: usedModel,
+        callType: rawBase64 ? 'voice_audio' : 'voice_text',
+        inputTokens: usedTokens.inputTokens,
+        outputTokens: usedTokens.outputTokens,
+        totalTokens: usedTokens.totalTokens,
+        executionMs: Date.now() - startOverallTime,
+        status: 'parse_error',
+        isWaste: true,
+        wasteReason: 'invalid_json_format_returned'
+      });
       return res.status(500).json({
         success: false,
         message: 'Could not parse voice order. Please try again.',
@@ -346,6 +391,31 @@ export default async function handler(req, res) {
         return false;
       }
       return true;
+    });
+
+    const isWaste = actions.length === 0;
+    const wasteReason = isWaste ? 'unrecognized_speech_or_empty_order' : null;
+
+    logAiUsage({
+      feature: 'voice_order',
+      callerRole,
+      callerIdentifier,
+      provider: usedProvider,
+      model: usedModel,
+      callType: rawBase64 ? 'voice_audio' : 'voice_text',
+      inputTokens: usedTokens.inputTokens,
+      outputTokens: usedTokens.outputTokens,
+      totalTokens: usedTokens.totalTokens,
+      executionMs: Date.now() - startOverallTime,
+      status: isWaste ? 'zero_items' : 'success',
+      isWaste,
+      wasteReason,
+      metadata: {
+        actions_count: actions.length,
+        has_audio: Boolean(rawBase64),
+        has_transcript: Boolean(transcript),
+        readback_lang: parsed.readback_lang
+      }
     });
 
     return res.status(200).json({

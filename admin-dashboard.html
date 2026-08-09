@@ -998,6 +998,37 @@
         </div>
         <div class="leaderboard-list" id="driver-leaderboard"></div>
       </div>
+
+      <!-- ═══════════ AI USAGE & COST ═══════════ -->
+      <div class="insights-card" id="ai-spend-monitor-card">
+        <div class="insights-card-header-row" style="margin-bottom: 14px;">
+          <div>
+            <h3 class="insights-card-title" style="display:flex;align-items:center;gap:8px;">
+              <i data-lucide="sparkles" style="width:18px;height:18px;color:var(--gold,#d4af37)"></i>
+              <span data-en="AI Usage & Cost" data-es="Uso y Costo de IA">AI Usage & Cost</span>
+            </h3>
+            <p class="insights-card-subtitle" data-en="Total money spent on ticket scanning & voice ordering" data-es="Gasto total en escaneo de tickets y pedidos por voz">Total money spent on ticket scanning & voice ordering</p>
+          </div>
+        </div>
+
+        <!-- Clean 3-Card Summary -->
+        <div class="ai-simple-grid">
+          <div class="ai-simple-card main">
+            <span class="ai-simple-lbl" data-en="Total AI Cost" data-es="Costo Total de IA">Total AI Cost</span>
+            <span class="ai-simple-val" id="ai-total-spend">$0.00</span>
+          </div>
+          <div class="ai-simple-card">
+            <span class="ai-simple-lbl">📄 <span data-en="Ticket Scans" data-es="Escaneos de Tickets">Ticket Scans</span></span>
+            <span class="ai-simple-val" id="ai-ticket-scans">0</span>
+            <span class="ai-simple-sub" id="ai-ticket-spend">$0.00</span>
+          </div>
+          <div class="ai-simple-card">
+            <span class="ai-simple-lbl">🎙️ <span data-en="Voice Orders" data-es="Pedidos por Voz">Voice Orders</span></span>
+            <span class="ai-simple-val" id="ai-voice-orders">0</span>
+            <span class="ai-simple-sub" id="ai-voice-spend">$0.00</span>
+          </div>
+        </div>
+      </div>
     </div>
 
   </main>
