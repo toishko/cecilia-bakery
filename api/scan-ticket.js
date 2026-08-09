@@ -228,37 +228,33 @@ export default async function handler(req, res) {
         const meta = await sharp(imageBuffer).metadata();
 
         if (meta.height && meta.height >= 400) {
-          const strips = [
-            { top: 0, height: Math.round(meta.height * 0.25) },
-            { top: Math.round(meta.height * 0.20), height: Math.round(meta.height * 0.22) },
-            { top: Math.round(meta.height * 0.38), height: Math.round(meta.height * 0.22) },
-            { top: Math.round(meta.height * 0.56), height: Math.round(meta.height * 0.22) },
-            { top: Math.round(meta.height * 0.74), height: meta.height - Math.round(meta.height * 0.74) },
+          const sections = [
+            { top: 0, height: Math.round(meta.height * 0.36) },
+            { top: Math.round(meta.height * 0.22), height: Math.round(meta.height * 0.36) },
+            { top: Math.round(meta.height * 0.44), height: Math.round(meta.height * 0.36) },
+            { top: Math.round(meta.height * 0.65), height: meta.height - Math.round(meta.height * 0.65) }
           ];
 
-          const stripBuffers = await Promise.all(strips.map(s =>
-            sharp(imageBuffer).extract({ left: 0, top: s.top, width: meta.width, height: s.height }).jpeg({ quality: 92 }).toBuffer()
+          const sectionBuffers = await Promise.all(sections.map(s =>
+            sharp(imageBuffer).extract({ left: 0, top: s.top, width: meta.width, height: s.height }).jpeg({ quality: 95 }).toBuffer()
           ));
 
           const prompt = `You are a high-precision OCR engine for bakery delivery invoices and production sheets.
-Extract EVERY single table row visibly present in this image section and any visible totals.
+Extract EVERY single table row visibly present in this image section and any printed totals.
 
-CRITICAL RULES:
-1. ROW EXTRACTION:
-   - Extract code (e.g. 9172, 9172S, 9745) and numeric quantity for every row.
-   - Quantity column may be on the far right (CÓDIGO | PRODUCTO | CANTIDAD) or middle (CÓDIGO | CANTIDAD | PRODUCTO).
-2. IGNORE HANDWRITTEN NOTES:
-   - Read ONLY machine-printed digital numbers.
-   - Completely ignore handwritten pen/pencil dollar prices ($52.50, $51.00), handwritten bracket totals (} 5), pencil checkmarks, or marginal notes.
-3. Unit rules:
-   - Slices in box/pack quantities (0.5, 1, 1.5, 2, or - 12PK): set unit="dozen".
+RULES:
+1. QUANTITY COLUMN:
+   - Read ONLY machine-printed digital black font inside the table column (e.g. 2, 1, 0.5, 12, 24).
+   - COMPLETELY DISCARD pencil/pen notes written in the margins or beside numbers (e.g. $52.50, $38.75, $51.00, pencil 30, pencil bracket } 5, checkmarks).
+2. UNIT RULES:
+   - Slices in box/pack quantities (0.5, 1, 1.5, 2, or description has - 12PK): set unit="dozen".
    - Slices in individual piece counts (6, 12, 18, 24, 30, 36, 48): set unit="unidades".
    - Birthday cakes: set unit="unidades".
-4. Extract printed totals if visible: "total_boxes": 6.5, "total_units": 10.
+3. Extract printed totals if visible: "total_boxes": 6.5, "total_units": 10.
 
 Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_boxes": 6.5, "total_units": 10}`;
 
-          const results = await Promise.all(stripBuffers.map((buf) =>
+          const results = await Promise.all(sectionBuffers.map((buf) =>
             fetch('https://api.openai.com/v1/chat/completions', {
               method: 'POST',
               headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
@@ -267,12 +263,12 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
                 messages: [
                   { role: 'system', content: prompt },
                   { role: 'user', content: [
-                    { type: 'text', text: 'Extract table rows and any visible totals.' },
+                    { type: 'text', text: 'Extract table rows and printed totals. Read digital printed quantities only; ignore handwritten prices, brackets, and scribbles.' },
                     { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${buf.toString('base64')}`, detail: 'high' } }
                   ]}
                 ],
                 temperature: 0,
-                max_tokens: 1200,
+                max_tokens: 1500,
                 response_format: { type: 'json_object' }
               })
             }).then(r => r.json())
