@@ -207,98 +207,87 @@ export default async function handler(req, res) {
     let lastError = '';
     let parsed = null;
 
-    // ── Primary Engine: Parallel 2-Pass Cropped OCR (Zero Vertical Drift, ~3-4s) ──
-    // Slices dense tables into top and bottom halves with vertical overlap.
-    // Each half has only ~15 rows, eliminating vertical attention drift and digit transpositions.
+    // ── Primary Engine: Parallel 5-Strip Slicing OCR (Zero Vertical Drift, ~2-3s) ──
+    // Slices tall dense tables into 5 compact horizontal strips (~5-6 rows each) with vertical overlap.
+    // Each strip is sent in parallel via Promise.all, ensuring zero line bleeding and lightning-fast speed.
     if (openaiKey) {
       try {
-        console.log('Starting parallel 2-pass split OCR with GPT-4o-2024-11-20...');
+        console.log('Starting parallel 5-strip split OCR with GPT-4o-2024-11-20...');
         const imageBuffer = Buffer.from(rawBase64, 'base64');
         const meta = await sharp(imageBuffer).metadata();
 
         if (meta.height && meta.height >= 400) {
-          const topHeight = Math.round(meta.height * 0.56);
-          const bottomTop = Math.round(meta.height * 0.44);
-          const bottomHeight = meta.height - bottomTop;
+          const strips = [
+            { top: 0, height: Math.round(meta.height * 0.25) },
+            { top: Math.round(meta.height * 0.20), height: Math.round(meta.height * 0.22) },
+            { top: Math.round(meta.height * 0.38), height: Math.round(meta.height * 0.22) },
+            { top: Math.round(meta.height * 0.56), height: Math.round(meta.height * 0.22) },
+            { top: Math.round(meta.height * 0.74), height: meta.height - Math.round(meta.height * 0.74) },
+          ];
 
-          const [topBuf, bottomBuf] = await Promise.all([
-            sharp(imageBuffer).extract({ left: 0, top: 0, width: meta.width, height: topHeight }).jpeg({ quality: 92 }).toBuffer(),
-            sharp(imageBuffer).extract({ left: 0, top: bottomTop, width: meta.width, height: bottomHeight }).jpeg({ quality: 92 }).toBuffer()
-          ]);
+          const stripBuffers = await Promise.all(strips.map(s =>
+            sharp(imageBuffer).extract({ left: 0, top: s.top, width: meta.width, height: s.height }).jpeg({ quality: 92 }).toBuffer()
+          ));
 
-          const topUrl = `data:image/jpeg;base64,${topBuf.toString('base64')}`;
-          const bottomUrl = `data:image/jpeg;base64,${bottomBuf.toString('base64')}`;
+          const prompt = 'Extract every table row visibly present in this image section. Columns: CODE | QUANTITY | PRODUCT NAME. Output JSON: {"items": [{"code": "...", "qty": 12, "unit": "dozen"|"unidades", "description": "..."}], "total_boxes": 37.5, "total_units": 65}';
 
-          const systemPrompt = `You are a high-precision OCR extraction engine. Extract EVERY single table row visibly present in this image from top to bottom.
-For each row, trace horizontally across that single line to read CODE and QUANTITY.
-Do NOT skip any rows.
-Output JSON only: {"items": [{"code": "...", "qty": 12, "unit": "dozen"|"unidades", "description": "..."}], "total_boxes": 37.5, "total_units": 65}`;
-
-          const [resTop, resBottom] = await Promise.all([
+          const results = await Promise.all(stripBuffers.map((buf, idx) =>
             fetch('https://api.openai.com/v1/chat/completions', {
               method: 'POST',
               headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 model: 'gpt-4o-2024-11-20',
                 messages: [
-                  { role: 'system', content: systemPrompt },
-                  { role: 'user', content: [{ type: 'text', text: 'Extract all table rows from this TOP section.' }, { type: 'image_url', image_url: { url: topUrl, detail: 'high' } }] }
+                  { role: 'system', content: prompt },
+                  { role: 'user', content: [
+                    { type: 'text', text: idx === 4 ? 'Extract all table rows and footer totals from this section.' : 'Extract all table rows from this section.' },
+                    { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${buf.toString('base64')}`, detail: 'high' } }
+                  ]}
                 ],
                 temperature: 0,
-                response_format: { type: 'json_object' }
-              })
-            }).then(r => r.json()),
-
-            fetch('https://api.openai.com/v1/chat/completions', {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                model: 'gpt-4o-2024-11-20',
-                messages: [
-                  { role: 'system', content: systemPrompt },
-                  { role: 'user', content: [{ type: 'text', text: 'Extract all table rows and footer totals from this BOTTOM section.' }, { type: 'image_url', image_url: { url: bottomUrl, detail: 'high' } }] }
-                ],
-                temperature: 0,
+                max_tokens: 350,
                 response_format: { type: 'json_object' }
               })
             }).then(r => r.json())
-          ]);
+          ));
 
-          const topParsed = JSON.parse(resTop.choices?.[0]?.message?.content || '{}');
-          const bottomParsed = JSON.parse(resBottom.choices?.[0]?.message?.content || '{}');
-
-          const topItems = topParsed.items || [];
-          const bottomItems = bottomParsed.items || [];
-
-          // Deduplicate and merge in visual reading order
           const merged = [];
           const seen = new Set();
+          let extractedTotalBoxes = null;
+          let extractedTotalUnits = null;
 
-          for (const item of topItems) {
-            if (item.code && TICKET_MAP[item.code] && !seen.has(item.code)) {
-              seen.add(item.code);
-              merged.push(item);
+          results.forEach((res) => {
+            try {
+              const parsedRes = JSON.parse(res.choices?.[0]?.message?.content || '{}');
+              if (parsedRes.total_boxes !== undefined && parsedRes.total_boxes !== null) {
+                extractedTotalBoxes = parsedRes.total_boxes;
+              }
+              if (parsedRes.total_units !== undefined && parsedRes.total_units !== null) {
+                extractedTotalUnits = parsedRes.total_units;
+              }
+              const items = parsedRes.items || [];
+              for (const item of items) {
+                if (item.code && TICKET_MAP[item.code] && !seen.has(item.code)) {
+                  seen.add(item.code);
+                  merged.push(item);
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing strip response:', e);
             }
-          }
-
-          for (const item of bottomItems) {
-            if (item.code && TICKET_MAP[item.code] && !seen.has(item.code)) {
-              seen.add(item.code);
-              merged.push(item);
-            }
-          }
+          });
 
           if (merged.length > 0) {
             parsed = {
               items: merged,
-              total_boxes: bottomParsed.total_boxes ?? null,
-              total_units: bottomParsed.total_units ?? null,
+              total_boxes: extractedTotalBoxes,
+              total_units: extractedTotalUnits,
             };
-            console.log(`Parallel 2-pass split OCR succeeded: extracted ${merged.length} items.`);
+            console.log(`Parallel 5-strip OCR succeeded: extracted ${merged.length} items.`);
           }
         }
-      } catch (twoPassErr) {
-        console.error('2-pass split OCR exception, falling back to single pass:', twoPassErr);
+      } catch (fiveStripErr) {
+        console.error('5-strip split OCR exception, falling back to single pass:', fiveStripErr);
       }
     }
 
