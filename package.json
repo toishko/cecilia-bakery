@@ -17,6 +17,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.101.0",
     "@vercel/analytics": "^2.0.1",
-    "@vercel/speed-insights": "^2.0.0"
+    "@vercel/speed-insights": "^2.0.0",
+    "sharp": "^0.35.3"
   }
 }
