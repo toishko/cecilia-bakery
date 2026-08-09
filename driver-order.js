@@ -895,6 +895,7 @@ function switchOrder(idx) {
   renderOrderTabs();
   loadOrderToForm(idx);
   updateFooterCount();
+  updateScanBanner();
 }
 
 function addOrder() {
@@ -904,6 +905,7 @@ function addOrder() {
   renderOrderTabs();
   loadOrderToForm(activeOrderIdx);
   updateFooterCount();
+  updateScanBanner();
 }
 
 function confirmRemoveOrder(idx) {
@@ -923,6 +925,7 @@ function removeOrder(idx) {
   renderOrderTabs();
   loadOrderToForm(activeOrderIdx);
   updateFooterCount();
+  updateScanBanner();
 }
 
 /* ═══════════════════════════════════
@@ -1636,6 +1639,15 @@ async function submitAllOrders() {
       driverEditOrderId = null;
       driverEditOrderObj = null;
       orders = [];
+      const banner = document.getElementById('scan-result-banner');
+      if (banner) banner.style.display = 'none';
+      document.querySelectorAll('.scan-filled, .scan-uncertain').forEach(el => {
+        el.classList.remove('scan-filled', 'scan-uncertain');
+      });
+      const camInp = document.getElementById('scan-ticket-input-camera');
+      const galInp = document.getElementById('scan-ticket-input-gallery');
+      if (camInp) camInp.value = '';
+      if (galInp) galInp.value = '';
       showSection('my-orders');
       return;
     }
@@ -1713,6 +1725,15 @@ async function submitAllOrders() {
     closeSummary();
     document.getElementById('form-footer').style.display = 'none';
     orders = [];
+    const banner = document.getElementById('scan-result-banner');
+    if (banner) banner.style.display = 'none';
+    document.querySelectorAll('.scan-filled, .scan-uncertain').forEach(el => {
+      el.classList.remove('scan-filled', 'scan-uncertain');
+    });
+    const camInp = document.getElementById('scan-ticket-input-camera');
+    const galInp = document.getElementById('scan-ticket-input-gallery');
+    if (camInp) camInp.value = '';
+    if (galInp) galInp.value = '';
     showConfirmation();
 
   } catch (e) {
@@ -5493,6 +5514,10 @@ async function _driverScanTicketFile(file) {
       btn.classList.remove('scanning');
       btn.querySelector('span').textContent = lang === 'es' ? 'Adjuntar Ticket' : 'Attach Ticket';
     }
+    const camInp = document.getElementById('scan-ticket-input-camera');
+    const galInp = document.getElementById('scan-ticket-input-gallery');
+    if (camInp) camInp.value = '';
+    if (galInp) galInp.value = '';
   }
 }
 
@@ -5507,6 +5532,30 @@ function _driverClearScanResults() {
   // Clear scan data from current order
   const order = orders[activeOrderIdx];
   if (order) order.scanData = null;
+}
+
+/* ── Update scan banner for active order ── */
+function updateScanBanner() {
+  const banner = document.getElementById('scan-result-banner');
+  if (!banner) return;
+  const order = orders[activeOrderIdx];
+  const hasScan = order && order.scanData && order.scanData.length > 0;
+  if (hasScan) {
+    const filled = order.scanData.filter(i => i.matched && i.rawQty > 0).length;
+    const uncertain = order.scanData.filter(i => !i.confident).length;
+    const bannerText = document.getElementById('scan-result-text');
+    if (bannerText) {
+      let msg = lang === 'es'
+        ? `${filled} producto(s) escaneado(s)`
+        : `${filled} product(s) scanned`;
+      if (uncertain > 0) msg += lang === 'es' ? `, ${uncertain} por revisar` : `, ${uncertain} to review`;
+      bannerText.textContent = msg;
+    }
+    banner.style.display = 'flex';
+    banner.className = uncertain > 0 ? 'scan-result-banner has-warnings' : 'scan-result-banner';
+  } else {
+    banner.style.display = 'none';
+  }
 }
 
 /* ── Open scan review sheet ── */

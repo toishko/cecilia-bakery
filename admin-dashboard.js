@@ -8998,6 +8998,8 @@ async function initAdminOrderForm() {
     } else {
       document.getElementById('no-order-container').style.display = 'none';
       document.getElementById('form-footer').style.display = 'none';
+      const banner = document.getElementById('scan-result-banner');
+      if (banner) banner.style.display = 'none';
       // Restore bottom nav
       const bnav = document.querySelector('.bottom-nav');
       if (bnav && window.innerWidth <= 768) bnav.style.display = 'flex';
@@ -9186,6 +9188,7 @@ function _noShowFormContainer() {
   const bnav = document.querySelector('.bottom-nav');
   if (bnav) bnav.style.display = 'none';
   _noUpdateFooterCount();
+  _noUpdateScanBanner();
 }
 
 /* ── TICKET SCANNER LOGIC ── */
@@ -9427,6 +9430,11 @@ async function _noScanTicketFile(file) {
       btn.classList.remove('scanning');
       btn.querySelector('span').textContent = lang === 'es' ? 'Adjuntar Ticket' : 'Attach Ticket';
     }
+    // Clear file inputs so uploading the same/new image always triggers change event
+    const camInp = document.getElementById('scan-ticket-input-camera');
+    const galInp = document.getElementById('scan-ticket-input-gallery');
+    if (camInp) camInp.value = '';
+    if (galInp) galInp.value = '';
   }
 }
 
@@ -10032,6 +10040,18 @@ async function _noSubmitAllOrders() {
     if (driverSelect) driverSelect.value = '';
     document.getElementById('no-order-container').style.display = 'none';
     document.getElementById('form-footer').style.display = 'none';
+
+    // Clear scanner state and highlights
+    const banner = document.getElementById('scan-result-banner');
+    if (banner) banner.style.display = 'none';
+    document.querySelectorAll('.scan-filled, .scan-uncertain').forEach(el => {
+      el.classList.remove('scan-filled', 'scan-uncertain');
+    });
+    const camInp = document.getElementById('scan-ticket-input-camera');
+    const galInp = document.getElementById('scan-ticket-input-gallery');
+    if (camInp) camInp.value = '';
+    if (galInp) galInp.value = '';
+
     // Restore bottom nav
     const bnav2 = document.querySelector('.bottom-nav');
     if (bnav2 && window.innerWidth <= 768) bnav2.style.display = 'flex';
