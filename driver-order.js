@@ -5347,13 +5347,13 @@ function _initDriverScanner() {
   }
 }
 
-/* ── Image preprocessing (high-res preservation for OCR) ── */
+/* ── Image preprocessing (fast OCR with 1800px / 85% JPEG) ── */
 async function _preprocessTicketImage(dataUrl) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
-      // Keep high resolution (2400px allows crystal-clear OCR on 30+ row tickets)
-      const MAX_DIM = 2400;
+      // 1800px provides ~60 vertical pixels per row (plenty for OCR on 30+ row tickets)
+      const MAX_DIM = 1800;
       let w = img.width, h = img.height;
       if (w > MAX_DIM || h > MAX_DIM) {
         const scale = MAX_DIM / Math.max(w, h);
@@ -5364,7 +5364,7 @@ async function _preprocessTicketImage(dataUrl) {
       canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, w, h);
-      resolve(canvas.toDataURL('image/jpeg', 0.92));
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
     };
     img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;

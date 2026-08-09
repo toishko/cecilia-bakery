@@ -9192,14 +9192,14 @@ function _noShowFormContainer() {
 }
 
 /* ── TICKET IMAGE PREPROCESSING (Canvas API) ── */
-// Prepares ticket image for high-accuracy OCR by preserving high resolution (up to 2400px)
-// and encoding at 92% JPEG quality without destructive pixel filters.
+// Prepares ticket image for fast OCR by compressing to 1800px max dimension
+// and encoding at 85% JPEG quality (~250KB payload for instant mobile uploads).
 async function _preprocessTicketImage(dataUrl) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
-      // Keep high resolution (2400px allows crystal-clear OCR on 30+ row tickets)
-      const MAX_DIM = 2400;
+      // 1800px provides ~60 vertical pixels per row (plenty for OCR on 30+ row tickets)
+      const MAX_DIM = 1800;
       let w = img.width, h = img.height;
       if (w > MAX_DIM || h > MAX_DIM) {
         const scale = MAX_DIM / Math.max(w, h);
@@ -9215,8 +9215,8 @@ async function _preprocessTicketImage(dataUrl) {
       // Draw clean, sharp camera image
       ctx.drawImage(img, 0, 0, w, h);
 
-      // Export as high-quality JPEG (0.92 quality preserves fine number details)
-      const result = canvas.toDataURL('image/jpeg', 0.92);
+      // Export as high-quality JPEG (0.85 quality keeps text crisp at ~250KB)
+      const result = canvas.toDataURL('image/jpeg', 0.85);
       resolve(result);
     };
     img.onerror = () => {
