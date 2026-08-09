@@ -75,6 +75,17 @@ const TICKET_MAP = {
 // Reverse map for the AI prompt (so it knows all valid codes)
 const VALID_CODES = Object.keys(TICKET_MAP);
 
+function normalizeCode(c) {
+  if (!c) return '';
+  const clean = String(c).trim().toUpperCase().replace(/O/g, '0');
+  if (TICKET_MAP[clean]) return clean;
+  if (clean === '9169S') return '9196S';
+  if (clean === '9169') return '9196';
+  if (clean === '9369') return '9969';
+  if (clean === '9381') return '9813';
+  return clean;
+}
+
 // ── SYSTEM_PROMPT with row-level grounding for 100% accuracy ──
 // Uses compact output format but with strong row-grounding hints.
 const SYSTEM_PROMPT = `You are a high-precision OCR engine for bakery order tickets.
@@ -230,11 +241,11 @@ export default async function handler(req, res) {
           ));
 
           const prompt = `Extract all table rows and any visible totals (Total Boxes / Total Units / TOTAL CAJAS / TOTAL UNIDADES) from this image section.
-Unit rule:
-- If quantities are in boxes/dozens/packs (e.g. 0.5, 1, 1.5, 2, or description has - 12PK), set unit="dozen".
-- If quantities are individual pieces (6, 12, 18, 24, 30, 36, 48), set unit="unidades".
-- Birthday cakes: set unit="unidades".
-Output JSON: {"items": [{"code": "...", "qty": 1.5, "unit": "dozen"|"unidades", "description": "..."}], "total_boxes": 5.0, "total_units": 0}`;
+For each row extract:
+- code: product code (e.g. 9172, 9172S, 9745, etc.)
+- qty: quantity number (which can be in middle column OR right column)
+- unit: "dozen" for box quantities (0.5, 1, 1.5, 2, or - 12PK) or "unidades" for piece counts (6, 12, 18, 24, 30, 36, 48) and birthday cakes.
+Output JSON: {"items": [{"code": "9172", "qty": 6, "unit": "unidades"}], "total_boxes": 24.5, "total_units": 48}`;
 
           const results = await Promise.all(stripBuffers.map((buf) =>
             fetch('https://api.openai.com/v1/chat/completions', {
@@ -250,7 +261,7 @@ Output JSON: {"items": [{"code": "...", "qty": 1.5, "unit": "dozen"|"unidades", 
                   ]}
                 ],
                 temperature: 0,
-                max_tokens: 350,
+                max_tokens: 1200,
                 response_format: { type: 'json_object' }
               })
             }).then(r => r.json())
@@ -272,9 +283,10 @@ Output JSON: {"items": [{"code": "...", "qty": 1.5, "unit": "dozen"|"unidades", 
               }
               const items = parsedRes.items || [];
               for (const item of items) {
-                if (item.code && TICKET_MAP[item.code] && !seen.has(item.code)) {
-                  seen.add(item.code);
-                  merged.push(item);
+                const code = normalizeCode(item.code || item.c);
+                if (code && TICKET_MAP[code] && !seen.has(code)) {
+                  seen.add(code);
+                  merged.push({ ...item, code });
                 }
               }
             } catch (e) {
