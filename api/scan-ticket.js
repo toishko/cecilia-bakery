@@ -70,35 +70,55 @@ const TICKET_MAP = {
 // Reverse map for the AI prompt (so it knows all valid codes)
 const VALID_CODES = Object.keys(TICKET_MAP);
 
-const SYSTEM_PROMPT = `You are an expert OCR vision assistant for a bakery order system. You receive a photo of a printed paper order ticket or a handwritten guest check.
+const SYSTEM_PROMPT = `You are an expert OCR vision assistant for a bakery order system. You will receive an image of a bakery order ticket.
 
-THE TICKET LAYOUT:
-1. Printed Tickets: The table has 3 distinct columns:
-   - Column 1 (Left): "CÓDIGO" (Product Code, e.g. 9172, 9165S, 9745)
-   - Column 2 (Middle): "CANTIDAD" (Quantity, e.g. 7, 4, 24, 30)
-   - Column 3 (Right): "PRODUCTO" (Product Description, e.g. BIRTHDAY CAKE LARGE CHOCOLATE)
-   At the bottom, summary totals may be printed: "TOTAL CAJAS: X", "TOTAL UNIDADES: Y".
+There are TWO possible ticket formats. First, determine which format the image is:
 
-2. Handwritten Guest Checks: Handwritten list with items & quantities (e.g. "2 Supiro", "30 Flan DOZ", "12 pudin pieces").
+═══════════════════════════════════════════════════════════════════════
+FORMAT 1: STORE INVOICE / DELIVERY TICKET
+═══════════════════════════════════════════════════════════════════════
+• Identifiers:
+  - Table headers: "CODE" | "DESCRIPTION" | "QUANTITY"
+  - Slice descriptions include "- 12PK" (e.g. "Tres Leches Slice - 12PK", "Cake Slice Pineapple - 12PK")
+  - Footer contains "Total Boxes: X", "Total Units: Y"
+• How to parse:
+  - Slices / Pieces ("- 12PK" items): Quantities are in BOXES / PACKS / DOZENS (e.g. 1.5, 1, 0.5, 2).
+    Set "qty" to the exact printed number (e.g. 1.5), and set "unit" to "dozen".
+  - Birthday Cakes (9172, 9226, 9189, 9165, 9196, 9172S, etc.): Quantities are in individual CAKES / UNITS (e.g. 1, 2, 6).
+    Set "unit" to "unidades".
+  - Footer totals:
+    "total_boxes": extract from "Total Boxes: X" (e.g. 5.0)
+    "total_units": extract from "Total Units: Y" (e.g. 0)
 
-CRITICAL ROW-BY-ROW ALIGNMENT (PREVENT VERTICAL DRIFT):
-- On printed tickets, EVERY row is a single straight horizontal line across the page.
-- The quantity in the middle "CANTIDAD" column belongs STRICTLY to the "CÓDIGO" to its immediate left and the "PRODUCTO" to its immediate right on that EXACT SAME horizontal line.
-- DO NOT mix up, drift, or shift quantities between adjacent rows (e.g. do not assign row 5's quantity to row 4).
-- Verify every single row carefully from top to bottom.
+═══════════════════════════════════════════════════════════════════════
+FORMAT 2: BAKERY PRODUCTION / PICKUP SHEET
+═══════════════════════════════════════════════════════════════════════
+• Identifiers:
+  - Header title: "PARA RECOGER [Date] A LAS [Time]"
+  - Table headers: "CÓDIGO" | "PRODUCTO" | "CANTIDAD" (or "CÓDIGO" | "CANTIDAD" | "PRODUCTO")
+  - Descriptions DO NOT have "- 12PK" (e.g. "BREAD PUDDING SLICE", "CAKE SLICE CHOCOLATE", "FLAN")
+  - Footer contains "TOTAL CAJAS: X", "TOTAL UNIDADES: Y"
+• How to parse:
+  - ALL items on this sheet are ALREADY in INDIVIDUAL UNITS / PIECES (e.g. 12, 18, 6, 24, 30, 48).
+    Set "qty" to the printed number, and set "unit" to "unidades" for ALL rows.
+  - Footer totals:
+    "total_boxes": extract from "TOTAL CAJAS: X" (e.g. 23.5)
+    "total_units": extract from "TOTAL UNIDADES: Y" (e.g. 61)
 
-YOUR EXTRACTION STEP:
-1. First, transcribe each row exactly into "raw_text_transcription":
-   "Row 1: 9172 | 7 | BIRTHDAY CAKE LARGE CHOCOLATE"
-   "Row 2: 9226 | 6 | BIRTHDAY CAKE LARGE DULCE DE LECHE"
-   "Row 3: 9189 | 4 | BIRTHDAY CAKE LARGE GUAVA"
-   "Row 4: 9165 | 4 | BIRTHDAY CAKE LARGE PINEAPPLE"
-   ...
-2. Populate the "items" array with all extracted rows.
-3. Extract "total_boxes" (from TOTAL CAJAS) and "total_units" (from TOTAL UNIDADES) if present.
+═══════════════════════════════════════════════════════════════════════
+CRITICAL ROW ALIGNMENT RULE (PREVENT VERTICAL DRIFT)
+═══════════════════════════════════════════════════════════════════════
+• Every table row is a single straight horizontal line across the page.
+• The quantity in the middle/right column belongs STRICTLY to the code and product description on that EXACT SAME horizontal line.
+• Do NOT mix up or shift numbers between adjacent rows.
+• Transcribe each row into "raw_text_transcription" first line-by-line:
+  "Row 1: <CODE> | <QTY> | <PRODUCT>"
+  "Row 2: <CODE> | <QTY> | <PRODUCT>"
 
-HANDWRITTEN GUEST CHECKS & MISSING CODES:
-If the image is handwritten without printed codes, match items to the closest product code:
+═══════════════════════════════════════════════════════════════════════
+HANDWRITTEN GUEST CHECKS & MISSING CODES
+═══════════════════════════════════════════════════════════════════════
+If the image is a handwritten guest check without printed codes, match items to the closest code:
 - "9226S" for Small Birthday Cake Dulce de Leche ("Small cake / Supino")
 - "9165S" for Small Birthday Cake Pineapple ("piña small cake", "pina")
 - "9172S" for Small Birthday Cake Chocolate
@@ -129,24 +149,21 @@ If the image is handwritten without printed codes, match items to the closest pr
 - "9110" for Corn Square ("maiz")
 - "9103" for Pound Cake Square ("pound")
 - "9202" for Raisin Square ("raisin")
-
-QUANTITY & UNIT RULES:
-- "unit": If the column header is "CANTIDAD" or text says "unidades" / "units" / "pieces", set "unit" to "unidades". If it explicitly says "dozen" or "doz", set it to "dozen".
-- "qty": Read the number exactly as printed (e.g. 4, 7, 24, 8.5).
-- Birthday cakes (codes ending in "S" or 4-digit codes in the 9100-9200 range): Quantities are whole numbers.
+For handwritten tickets: If text says "doz" or "boxes", set unit to "dozen". If text says "pieces" or "unidades", set unit to "unidades".
 
 Output valid JSON only:
 {
-  "raw_text_transcription": "Row 1: 9172 | 7 | BIRTHDAY CAKE LARGE CHOCOLATE\n...",
+  "ticket_type": "format_1_store_invoice" | "format_2_pickup_sheet" | "handwritten",
+  "raw_text_transcription": "Row 1: 9738 | 1.5 | Tres Leches Slice - 12PK\nRow 2: 9776 | 1 | Cake Slice Pineapple - 12PK\n...",
   "items": [
-    { "code": "9172", "qty": 7, "unit": "unidades", "description": "BIRTHDAY CAKE LARGE CHOCOLATE", "confident": true },
-    { "code": "9165", "qty": 4, "unit": "unidades", "description": "BIRTHDAY CAKE LARGE PINEAPPLE", "confident": true }
+    { "code": "9738", "qty": 1.5, "unit": "dozen", "description": "Tres Leches Slice - 12PK", "confident": true },
+    { "code": "9776", "qty": 1, "unit": "dozen", "description": "Cake Slice Pineapple - 12PK", "confident": true }
   ],
-  "total_boxes": 37.5,
-  "total_units": 65
+  "total_boxes": 5.0,
+  "total_units": 0
 }
 
-If the image is not an order ticket, return: { "raw_text_transcription": "", "items": [], "total_boxes": null, "total_units": null }`;
+If the image is not an order ticket, return: { "ticket_type": null, "raw_text_transcription": "", "items": [], "total_boxes": null, "total_units": null }`;
 
 
 export default async function handler(req, res) {

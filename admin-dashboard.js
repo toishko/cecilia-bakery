@@ -9455,8 +9455,8 @@ function _noOpenScanReview() {
     const badge = isUncertain ? '<span class="scan-review-badge">⚠</span>' : '';
 
     // Show converted qty and raw ticket value
-    const rawLabel = item.isBirthdayCake
-      ? '' // birthday cakes don't need conversion note
+    const rawLabel = (item.isBirthdayCake || item.convertedQty === item.rawQty)
+      ? '' // birthday cakes or items already matching don't need conversion note
       : `<span class="scan-review-raw">(${item.rawQty} on ticket)</span>`;
 
     html += `<div class="${rowClass}">

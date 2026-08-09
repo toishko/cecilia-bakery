@@ -5528,7 +5528,7 @@ function _driverOpenScanReview() {
 
     const rowClass = isUncertain ? 'scan-review-row uncertain' : 'scan-review-row';
     const badge = isUncertain ? '<span class="scan-review-badge">⚠</span>' : '';
-    const rawLabel = item.isBirthdayCake
+    const rawLabel = (item.isBirthdayCake || item.convertedQty === item.rawQty)
       ? ''
       : `<span class="scan-review-raw">(${item.rawQty} on ticket)</span>`;
 
