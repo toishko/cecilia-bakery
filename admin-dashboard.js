@@ -9415,6 +9415,8 @@ function _noOpenScanReview() {
   const scanData = order && order.scanData;
   if (!overlay || !body || !scanData || scanData.length === 0) return;
 
+  const lang = document.documentElement.lang || 'en';
+
   // Build rows in ticket order
   let html = '';
   let totalItems = 0;
@@ -9459,7 +9461,6 @@ function _noOpenScanReview() {
   });
 
   // Summary
-  const lang = document.documentElement.lang || 'en';
   let summary = lang === 'es'
     ? `${totalItems} producto(s)`
     : `${totalItems} item(s)`;
