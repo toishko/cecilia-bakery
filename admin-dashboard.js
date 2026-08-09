@@ -1761,7 +1761,7 @@ async function loadTodaySnapshot() {
     const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString();
 
     const [dRes, wRes, oRes, driversRes] = await Promise.all([
-      sb.from('driver_orders').select('total_amount, payment_amount, driver_id').gte('submitted_at', todayStart).lte('submitted_at', todayEnd),
+      sb.from('driver_orders').select('total_amount, payment_amount, driver_id, status').gte('submitted_at', todayStart).lte('submitted_at', todayEnd).neq('status', 'archived'),
       sb.from('wholesale_orders').select('subtotal, status').gte('placed_at', todayStart).lte('placed_at', todayEnd),
       sb.from('orders').select('total_amount, delivery_status').eq('source', 'website').gte('created_at', todayStart).lte('created_at', todayEnd),
       sb.from('drivers').select('id').eq('is_active', true)
@@ -2249,7 +2249,7 @@ async function _fetchAndRenderOrderedSheet() {
 
   try {
     // Fetch all three channels in parallel
-    const dQ = sb.from('driver_orders').select('total_amount, payment_amount, payment_status');
+    const dQ = sb.from('driver_orders').select('total_amount, payment_amount, payment_status, status').neq('status', 'archived');
     const wQ = sb.from('wholesale_orders').select('subtotal, status');
     const oQ = sb.from('orders').select('total_amount, delivery_status').eq('source', 'website');
 
@@ -3240,12 +3240,27 @@ async function loadHistoryOrders(reset = false) {
   const dateTo = document.getElementById('filter-date-to')?.value;
   const driverFilter = document.getElementById('filter-driver')?.value;
   const paymentFilter = document.getElementById('filter-payment')?.value;
+  const statusFilter = document.getElementById('filter-status')?.value;
   const searchTerm = document.getElementById('filter-search')?.value?.trim() || '';
 
   if (dateFrom) query = query.gte('submitted_at', dateFrom + 'T00:00:00');
   if (dateTo) query = query.lte('submitted_at', dateTo + 'T23:59:59');
   if (driverFilter) query = query.eq('driver_id', driverFilter);
   if (paymentFilter) query = query.eq('payment_status', paymentFilter);
+
+  // Status filter handling
+  if (statusFilter === 'archived') {
+    query = query.eq('status', 'archived');
+  } else if (statusFilter === 'pending') {
+    query = query.eq('status', 'pending');
+  } else if (statusFilter === 'picked_up') {
+    query = query.eq('status', 'picked_up');
+  } else if (statusFilter === 'all_with_archived') {
+    // Include all statuses including archived
+  } else if (!searchTerm) {
+    // Default (Active & Completed): exclude archived orders unless user performs a search
+    query = query.neq('status', 'archived');
+  }
 
   // Search by order number or business name
   if (searchTerm) {
@@ -3349,10 +3364,13 @@ function renderOrderCards(orders, containerId, showLive = false) {
     const orderNum = order.order_number ? `#${order.order_number}` : '';
     const initials = _getInitials(driverName) || '??';
 
-    // Payment badge variables
+    // Payment / Status badge variables
     let payClass = 'unpaid';
     let payText = lang === 'es' ? 'Sin Pagar' : 'Not Paid';
-    if (order.payment_status === 'paid') {
+    if (order.status === 'archived') {
+      payClass = 'archived';
+      payText = lang === 'es' ? 'Archivado' : 'Archived';
+    } else if (order.payment_status === 'paid') {
       payClass = 'paid';
       payText = lang === 'es' ? 'Pagado' : 'Paid';
     } else if (order.payment_status === 'partial') {
@@ -3816,13 +3834,17 @@ async function renderOrderSheet() {
 
   // Actions
   let actionsHtml = '';
-  if (order.status === 'pending' || order.status === 'sent') {
+  if (order.status === 'archived') {
+    actionsHtml += `<button class="btn-restore" onclick="restoreOrder('${order.id}')" data-en="Restore Order" data-es="Restaurar Pedido" style="grid-column:1/-1">&#8634; ${lang === 'es' ? 'Restaurar Pedido' : 'Restore Order'}</button>`;
+  } else if (order.status === 'pending' || order.status === 'sent') {
     // Fully editable: one "Save Changes" button that saves everything including payment
     actionsHtml += `<button class="btn-save" onclick="saveOrderChanges()" data-en="Save Changes" data-es="Guardar Cambios">${lang === 'es' ? 'Guardar Cambios' : 'Save Changes'}</button>`;
     actionsHtml += `<button class="btn-pickup" onclick="markAsPickedUp()" data-en="Mark as Picked Up" data-es="Marcar Recogido">&#10003; ${lang === 'es' ? 'Marcar Recogido' : 'Mark as Picked Up'}</button>`;
+    actionsHtml += `<button class="btn-archive" onclick="archiveOrder('${order.id}')" data-en="Archive Order" data-es="Archivar Pedido" style="grid-column:1/-1">&#128465; ${lang === 'es' ? 'Archivar Pedido' : 'Archive Order'}</button>`;
   } else {
     // Not fully editable, but payment is ALWAYS editable for any status
     actionsHtml += `<button class="btn-save" onclick="savePaymentOnly()" data-en="Update Payment" data-es="Actualizar Pago">${lang === 'es' ? 'Actualizar Pago' : 'Update Payment'}</button>`;
+    actionsHtml += `<button class="btn-archive" onclick="archiveOrder('${order.id}')" data-en="Archive Order" data-es="Archivar Pedido">&#128465; ${lang === 'es' ? 'Archivar' : 'Archive'}</button>`;
   }
   // Export bar
   actionsHtml += `<div class="export-bar">
@@ -4180,6 +4202,68 @@ window.savePaymentOnly = async function() {
   } catch (e) {
     console.error(e);
     showToast(lang === 'es' ? 'Error actualizando pago' : 'Error updating payment', 'error');
+  }
+};
+
+window.archiveOrder = async function(orderId) {
+  const id = orderId || (detailOrder ? detailOrder.id : null);
+  if (!id) return;
+
+  const orderNum = (detailOrder && detailOrder.id === id && detailOrder.order_number) ? `#${detailOrder.order_number}` : '';
+  const confirmMsg = lang === 'es'
+    ? `¿Estás seguro de que deseas archivar el pedido ${orderNum}? Se ocultará de la lista activa pero podrás restaurarlo en cualquier momento.`
+    : `Are you sure you want to archive order ${orderNum}? It will be hidden from the active list but can be restored anytime.`;
+
+  if (!window.confirm(confirmMsg)) return;
+
+  try {
+    const { error } = await sb.from('driver_orders').update({
+      status: 'archived',
+      created_at: detailOrder?.created_at // touch safe
+    }).eq('id', id);
+
+    if (error) throw error;
+
+    if (detailOrder && detailOrder.id === id) {
+      detailOrder.status = 'archived';
+    }
+
+    showToast(lang === 'es' ? 'Pedido archivado' : 'Order archived', 'success');
+    closeOrderSheet();
+
+    if (currentSection === 'incoming') loadIncomingOrders();
+    if (currentSection === 'history') loadHistoryOrders(true);
+    if (currentSection === 'overview') loadOverview();
+  } catch (e) {
+    console.error('Archive error:', e);
+    showToast(lang === 'es' ? 'Error al archivar el pedido' : 'Error archiving order', 'error');
+  }
+};
+
+window.restoreOrder = async function(orderId) {
+  const id = orderId || (detailOrder ? detailOrder.id : null);
+  if (!id) return;
+
+  try {
+    const { error } = await sb.from('driver_orders').update({
+      status: 'pending'
+    }).eq('id', id);
+
+    if (error) throw error;
+
+    if (detailOrder && detailOrder.id === id) {
+      detailOrder.status = 'pending';
+    }
+
+    showToast(lang === 'es' ? 'Pedido restaurado a pendientes' : 'Order restored to pending', 'success');
+    closeOrderSheet();
+
+    if (currentSection === 'incoming') loadIncomingOrders();
+    if (currentSection === 'history') loadHistoryOrders(true);
+    if (currentSection === 'overview') loadOverview();
+  } catch (e) {
+    console.error('Restore error:', e);
+    showToast(lang === 'es' ? 'Error al restaurar el pedido' : 'Error restoring order', 'error');
   }
 };
 
@@ -11655,17 +11739,27 @@ window.executeBatchAction = async function(action) {
   const bar = document.getElementById('floating-batch-bar');
   const count = window._selectedOrderIds.size;
   
-  // Find paid/pickup buttons to show loader spinner
+  // Find paid/pickup/archive buttons to show loader spinner
   const paidBtn = bar.querySelector('.fbb-btn.paid');
   const pickupBtn = bar.querySelector('.fbb-btn.pickup');
+  const archiveBtn = bar.querySelector('.fbb-btn.archive');
   const cancelBtn = bar.querySelector('.fbb-btn.cancel');
   
   const origPaidText = paidBtn ? paidBtn.innerHTML : '';
   const origPickupText = pickupBtn ? pickupBtn.innerHTML : '';
+  const origArchiveText = archiveBtn ? archiveBtn.innerHTML : '';
+
+  if (action === 'archive') {
+    const confirmMsg = lang === 'es'
+      ? `¿Estás seguro de que deseas archivar ${count} pedidos seleccionados?`
+      : `Are you sure you want to archive ${count} selected orders?`;
+    if (!window.confirm(confirmMsg)) return;
+  }
   
   // Set disabled/loading UI
   if (paidBtn) { paidBtn.disabled = true; if (action === 'paid') paidBtn.innerHTML = '<div class="fbb-loading-spinner"></div>'; }
   if (pickupBtn) { pickupBtn.disabled = true; if (action === 'picked_up') pickupBtn.innerHTML = '<div class="fbb-loading-spinner"></div>'; }
+  if (archiveBtn) { archiveBtn.disabled = true; if (action === 'archive') archiveBtn.innerHTML = '<div class="fbb-loading-spinner"></div>'; }
   if (cancelBtn) cancelBtn.disabled = true;
   
   try {
@@ -11694,6 +11788,8 @@ window.executeBatchAction = async function(action) {
         if (order && !order.confirmed_at) {
           updateData.confirmed_at = now.toISOString();
         }
+      } else if (action === 'archive') {
+        updateData.status = 'archived';
       }
       
       return sb.from('driver_orders').update(updateData).eq('id', id);
@@ -11708,7 +11804,7 @@ window.executeBatchAction = async function(action) {
     }
     
     // Show premium checkmark animation
-    const targetBtn = action === 'paid' ? paidBtn : pickupBtn;
+    const targetBtn = action === 'paid' ? paidBtn : (action === 'picked_up' ? pickupBtn : archiveBtn);
     if (targetBtn) {
       targetBtn.innerHTML = '&#10003;';
     }
@@ -11742,6 +11838,7 @@ window.executeBatchAction = async function(action) {
     // Restore button texts
     if (paidBtn) { paidBtn.disabled = false; paidBtn.innerHTML = origPaidText; }
     if (pickupBtn) { pickupBtn.disabled = false; pickupBtn.innerHTML = origPickupText; }
+    if (archiveBtn) { archiveBtn.disabled = false; archiveBtn.innerHTML = origArchiveText; }
     if (cancelBtn) cancelBtn.disabled = false;
   }
 };

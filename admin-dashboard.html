@@ -693,6 +693,16 @@
               <option value="partial" data-en="Partial" data-es="Parcial">Partial</option>
             </select>
           </div>
+          <div class="filter-field grow">
+            <label data-en="Status" data-es="Estado">Status</label>
+            <select id="filter-status">
+              <option value="" data-en="Active & Completed" data-es="Activos y Completados">Active & Completed</option>
+              <option value="all_with_archived" data-en="All (incl. Archived)" data-es="Todos (incl. Archivados)">All (incl. Archived)</option>
+              <option value="archived" data-en="Archived Only" data-es="Solo Archivados">Archived Only</option>
+              <option value="pending" data-en="Pending" data-es="Pendiente">Pending</option>
+              <option value="picked_up" data-en="Picked Up" data-es="Recogido">Picked Up</option>
+            </select>
+          </div>
         </div>
         <div class="history-filter-row">
           <div class="filter-field grow">
@@ -1422,6 +1432,9 @@ initUpdateBanner();
       </button>
       <button class="fbb-btn pickup" onclick="executeBatchAction('picked_up')">
         <i data-lucide="truck" style="width:14px;height:14px;"></i> <span data-en="Mark Picked Up" data-es="Marcar Recogido">Mark Picked Up</span>
+      </button>
+      <button class="fbb-btn archive" onclick="executeBatchAction('archive')">
+        <i data-lucide="archive" style="width:14px;height:14px;"></i> <span data-en="Archive" data-es="Archivar">Archive</span>
       </button>
     </div>
   </div>

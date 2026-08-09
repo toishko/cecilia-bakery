@@ -484,6 +484,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   z-index: 1;
 }
 .oca-pill.unpaid { color: var(--red); background: rgba(200,16,46,0.15); }
+.oca-pill.archived { color: var(--tx-muted); background: rgba(128,128,128,0.16); }
 
 /* Responsive adjustments for order-card-avatar under narrow viewports / zoom */
 @media (max-width: 520px) {
@@ -776,6 +777,12 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .btn-pickup{background:var(--green);border:none;color:#fff;font-weight:600;letter-spacing:.2px}
 .btn-pickup:hover{opacity:.92}
 .btn-pickup:active{transform:scale(.97)}
+.btn-archive{background:rgba(200,16,46,0.08);border:1.5px solid rgba(200,16,46,0.25);color:var(--red);font-weight:600}
+.btn-archive:hover{background:rgba(200,16,46,0.15);border-color:var(--red)}
+.btn-archive:active{transform:scale(.97)}
+.btn-restore{background:rgba(27,122,74,0.1);border:1.5px solid rgba(27,122,74,0.3);color:var(--green);font-weight:600}
+.btn-restore:hover{background:rgba(27,122,74,0.18);border-color:var(--green)}
+.btn-restore:active{transform:scale(.97)}
 
 /* Edit window timer */
 .edit-window-banner{display:flex;align-items:center;gap:8px;padding:10px 14px;
@@ -3733,6 +3740,14 @@ body.batch-mode-active .bottom-nav {
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
 }
 .fbb-btn.pickup:active {
+  transform: scale(0.96);
+}
+.fbb-btn.archive {
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(71, 85, 105, 0.2);
+}
+.fbb-btn.archive:active {
   transform: scale(0.96);
 }
 .fbb-loading-spinner {
