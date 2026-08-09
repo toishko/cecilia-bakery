@@ -262,10 +262,10 @@ export default async function handler(req, res) {
     let rawContent = null;
     let lastError = '';
 
-    // ── Primary Engine: OpenAI GPT-4o Latest Vision Snapshot (High Detail) ──
+    // ── Primary Engine: OpenAI o1 Reasoning Model (High Detail) ──
     if (openaiKey) {
       try {
-        console.log('Scanning ticket with OpenAI GPT-4o (gpt-4o-2024-11-20, detail: high)...');
+        console.log('Scanning ticket with OpenAI o1 reasoning model (detail: high)...');
         const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -273,15 +273,14 @@ export default async function handler(req, res) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-4o-2024-11-20',
+            model: 'o1',
             messages: [
-              { role: 'system', content: SYSTEM_PROMPT },
               {
                 role: 'user',
                 content: [
                   {
                     type: 'text',
-                    text: 'Read this bakery order ticket image carefully and extract all product codes, quantities, and totals row by row.',
+                    text: SYSTEM_PROMPT + '\n\nRead this bakery order ticket image carefully and extract all product codes, quantities, and totals row by row.',
                   },
                   {
                     type: 'image_url',
@@ -293,9 +292,7 @@ export default async function handler(req, res) {
                 ],
               },
             ],
-            temperature: 0,
-            max_tokens: 3000,
-            response_format: { type: 'json_object' },
+            max_completion_tokens: 5000,
           }),
         });
 
@@ -305,12 +302,58 @@ export default async function handler(req, res) {
           response = oaiRes;
         } else {
           const errText = await oaiRes.text();
-          console.error('OpenAI GPT-4o error:', oaiRes.status, errText);
+          console.error('OpenAI o1 error:', oaiRes.status, errText);
           lastError = errText;
         }
       } catch (oaiErr) {
-        console.error('OpenAI GPT-4o call exception:', oaiErr);
+        console.error('OpenAI o1 call exception:', oaiErr);
         lastError = oaiErr.message;
+      }
+
+      // Fallback to GPT-4o if o1 fails
+      if (!rawContent) {
+        try {
+          console.log('o1 failed or timed out. Falling back to GPT-4o-2024-11-20...');
+          const fallbackRes = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openaiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-2024-11-20',
+              messages: [
+                { role: 'system', content: SYSTEM_PROMPT },
+                {
+                  role: 'user',
+                  content: [
+                    {
+                      type: 'text',
+                      text: 'Read this bakery order ticket image carefully and extract all product codes, quantities, and totals row by row.',
+                    },
+                    {
+                      type: 'image_url',
+                      image_url: {
+                        url: imageUrl,
+                        detail: 'high',
+                      },
+                    },
+                  ],
+                },
+              ],
+              temperature: 0,
+              max_tokens: 3000,
+              response_format: { type: 'json_object' },
+            }),
+          });
+          if (fallbackRes.ok) {
+            const fbData = await fallbackRes.json();
+            rawContent = fbData.choices?.[0]?.message?.content || '{}';
+            response = fallbackRes;
+          }
+        } catch (fbErr) {
+          console.error('GPT-4o fallback exception:', fbErr);
+        }
       }
     }
 
