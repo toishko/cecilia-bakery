@@ -5494,10 +5494,15 @@ async function _driverScanTicketFile(file) {
       const hasMismatch = data.mismatch && data.mismatch.expected !== undefined;
       if (hasMismatch) {
         const m = data.mismatch;
-        const label = m.type === 'total_boxes' ? 'Total Boxes' : 'Total Units';
-        msg += lang === 'es'
-          ? ` ⚠️ ${label}: ticket=${m.expected}, escaneo=${m.computed}`
-          : ` ⚠️ ${label}: ticket=${m.expected}, scan=${m.computed}`;
+        const isBoxes = m.type === 'total_boxes';
+        const diffBoxes = m.diff_boxes !== undefined ? m.diff_boxes : (m.diff || 0);
+        const diffPieces = m.diff_pieces !== undefined ? m.diff_pieces : Math.round(diffBoxes * 12);
+        const sign = diffBoxes > 0 ? '+' : '';
+        const delta = isBoxes
+          ? (lang === 'es' ? ` (${sign}${diffBoxes} caja / ${sign}${diffPieces} pzas vs ticket)` : ` (${sign}${diffBoxes} box / ${sign}${diffPieces} pcs vs ticket)`)
+          : (lang === 'es' ? ` (${sign}${diffBoxes} unids vs ticket)` : ` (${sign}${diffBoxes} units vs ticket)`);
+        const label = isBoxes ? (lang === 'es' ? 'Total Cajas' : 'Total Boxes') : (lang === 'es' ? 'Total Unidades' : 'Total Units');
+        msg += ` ⚠️ ${label}: ${m.computed}${delta}`;
       }
 
       bannerText.textContent = msg;
@@ -5558,10 +5563,15 @@ function updateScanBanner() {
       if (uncertain > 0) msg += lang === 'es' ? `, ${uncertain} por revisar` : `, ${uncertain} to review`;
       if (unmatched > 0) msg += lang === 'es' ? `, ${unmatched} sin coincidencia` : `, ${unmatched} unmatched`;
       if (hasMismatch) {
-        const label = mismatch.type === 'total_boxes' ? 'Total Boxes' : 'Total Units';
-        msg += lang === 'es'
-          ? ` ⚠️ ${label}: ticket=${mismatch.expected}, escaneo=${mismatch.computed}`
-          : ` ⚠️ ${label}: ticket=${mismatch.expected}, scan=${mismatch.computed}`;
+        const isBoxes = mismatch.type === 'total_boxes';
+        const diffBoxes = mismatch.diff_boxes !== undefined ? mismatch.diff_boxes : (mismatch.diff || 0);
+        const diffPieces = mismatch.diff_pieces !== undefined ? mismatch.diff_pieces : Math.round(diffBoxes * 12);
+        const sign = diffBoxes > 0 ? '+' : '';
+        const delta = isBoxes
+          ? (lang === 'es' ? ` (${sign}${diffBoxes} caja / ${sign}${diffPieces} pzas vs ticket)` : ` (${sign}${diffBoxes} box / ${sign}${diffPieces} pcs vs ticket)`)
+          : (lang === 'es' ? ` (${sign}${diffBoxes} unids vs ticket)` : ` (${sign}${diffBoxes} units vs ticket)`);
+        const label = isBoxes ? (lang === 'es' ? 'Total Cajas' : 'Total Boxes') : (lang === 'es' ? 'Total Unidades' : 'Total Units');
+        msg += ` ⚠️ ${label}: ${mismatch.computed}${delta}`;
       }
       bannerText.textContent = msg;
     }
@@ -5582,6 +5592,23 @@ function _driverOpenScanReview() {
 
   let html = '';
   let totalItems = 0, uncertainCount = 0;
+
+  // Discrepancy Alert Banner if totals don't match ticket
+  const mismatch = order.scanMismatch;
+  if (mismatch && mismatch.expected !== undefined) {
+    const isBoxes = mismatch.type === 'total_boxes';
+    const diffBoxes = mismatch.diff_boxes !== undefined ? mismatch.diff_boxes : (mismatch.diff || 0);
+    const diffPieces = mismatch.diff_pieces !== undefined ? mismatch.diff_pieces : Math.round(diffBoxes * 12);
+    const sign = diffBoxes > 0 ? '+' : '';
+    const diffLabel = isBoxes
+      ? (lang === 'es' ? `${sign}${diffBoxes} caja (${sign}${diffPieces} pzas vs ticket)` : `${sign}${diffBoxes} box (${sign}${diffPieces} pcs vs ticket)`)
+      : (lang === 'es' ? `${sign}${diffBoxes} unids vs ticket` : `${sign}${diffBoxes} units vs ticket`);
+
+    html += `<div class="scan-review-mismatch-banner">
+      <span class="scan-review-mismatch-icon">⚠️</span>
+      <span>${lang === 'es' ? 'Diferencia detectada' : 'Difference detected'}: <strong>${diffLabel}</strong> (ticket=${mismatch.expected}, scan=${mismatch.computed})</span>
+    </div>`;
+  }
 
   scanData.forEach(item => {
     if (item.rawQty <= 0 && item.matched) return;

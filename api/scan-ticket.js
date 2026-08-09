@@ -149,7 +149,19 @@ If the image is a handwritten guest check without printed codes, match items to 
 - "9110" for Corn Square ("maiz")
 - "9103" for Pound Cake Square ("pound")
 - "9202" for Raisin Square ("raisin")
-For handwritten tickets: If text says "doz" or "boxes", set unit to "dozen". If text says "pieces" or "unidades", set unit to "unidades".
+═══════════════════════════════════════════════════════════════════════
+MANDATORY MATHEMATICAL SELF-CHECK (DO THIS BEFORE OUTPUTTING JSON):
+═══════════════════════════════════════════════════════════════════════
+1. Total Boxes Check:
+   - For Format 1: Sum the slice/piece box quantities (e.g. 1.5 + 1 + 1 + 1.5 = 5.0).
+   - For Format 2: Sum all slice/piece unit quantities and divide by 12 (e.g. 450 / 12 = 37.5).
+   - Compare your computed sum against "TOTAL CAJAS" or "Total Boxes" on the ticket.
+   - IF THEY DO NOT MATCH (e.g. your sum is 38.0 but ticket says 37.5):
+     Re-examine each slice row carefully to find any misread number (especially 6 misread as 12, or 12 misread as 18 due to row proximity) and correct it so your extracted quantities match the printed total!
+2. Total Units Check:
+   - Sum all birthday cake quantities (codes starting with 9172, 9226, 9189, 9165, 9196, 9172S, etc.).
+   - Compare against "TOTAL UNIDADES" or "Total Units".
+   - If they do not match, re-examine the birthday cake rows to find and correct any misread quantity.
 
 Output valid JSON only:
 {
@@ -463,11 +475,17 @@ export default async function handler(req, res) {
       const roundedTicket = Math.round(ticketTotalBoxes * 10) / 10;
 
       if (roundedComputed !== roundedTicket) {
+        const diffBoxes = Math.round((roundedComputed - roundedTicket) * 10) / 10;
+        const diffPieces = Math.round(diffBoxes * 12);
+        const sign = diffBoxes > 0 ? '+' : '';
         mismatch = {
           type: 'total_boxes',
           expected: roundedTicket,
           computed: roundedComputed,
-          diff: Math.round((roundedComputed - roundedTicket) * 10) / 10,
+          diff: diffBoxes,
+          diff_boxes: diffBoxes,
+          diff_pieces: diffPieces,
+          detail: `${sign}${diffBoxes} box (${sign}${diffPieces} pcs)`,
         };
       }
     }
@@ -478,11 +496,15 @@ export default async function handler(req, res) {
       const roundedComputed = Math.round(computedUnits * 10) / 10;
       const roundedTicket = Math.round(ticketTotalUnits * 10) / 10;
       if (roundedComputed !== roundedTicket) {
+        const diffUnits = Math.round((roundedComputed - roundedTicket) * 10) / 10;
+        const sign = diffUnits > 0 ? '+' : '';
         mismatch = {
           type: 'total_units',
           expected: roundedTicket,
           computed: roundedComputed,
-          diff: Math.round((roundedComputed - roundedTicket) * 10) / 10,
+          diff: diffUnits,
+          diff_units: diffUnits,
+          detail: `${sign}${diffUnits} units`,
         };
       }
     }

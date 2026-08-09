@@ -1889,6 +1889,23 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 
 .scan-review-summary { font-size: 0.78rem; color: var(--tx-muted); font-family: 'Outfit', sans-serif;
   padding-top: 12px; font-weight: 500; text-align: center; }
+.scan-review-mismatch-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: var(--tx);
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+.scan-review-mismatch-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
 
 /* Orders Header Row & Pills */
 .orders-header-row {
