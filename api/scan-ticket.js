@@ -245,6 +245,7 @@ Extract EVERY single table row visibly present in this image section and any pri
 RULES:
 1. QUANTITY COLUMN:
    - Read ONLY machine-printed digital black font inside the table column (e.g. 2, 1, 0.5, 12, 24).
+   - Birthday cakes on delivery tickets are standard individual units (almost always 1 or 2). NEVER read handwritten price calculations ($52.50, $38.75) or bracket group totals (5, 7).
    - COMPLETELY DISCARD pencil/pen notes written in the margins or beside numbers (e.g. $52.50, $38.75, $51.00, pencil 30, pencil bracket } 5, checkmarks).
 2. UNIT RULES:
    - Slices in box/pack quantities (0.5, 1, 1.5, 2, or description has - 12PK): set unit="dozen".
@@ -533,6 +534,56 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
       '9110': 'CB Cornbread Family', '9103': 'CB Pound Cake Family',
       '9202': 'CB Raisin Pound Cake Family',
     };
+
+    // ── Self-Reconciliation via Printed Ticket Footers ──
+    if (ticketTotalUnits !== null && ticketTotalUnits > 0) {
+      const hbItems = items.filter(i => HB_CODES.has(i.code));
+      let sumUnits = hbItems.reduce((s, i) => s + (parseFloat(i.qty) || 0), 0);
+      let diffUnits = Math.round((sumUnits - ticketTotalUnits) * 10) / 10;
+
+      if (diffUnits !== 0) {
+        // Look for a cake item with an inflated count (e.g. 5 or 7 instead of 1 or 2)
+        for (const item of hbItems) {
+          const q = parseFloat(item.qty) || 0;
+          if (q > 2 && q - diffUnits > 0 && (q - diffUnits === 1 || q - diffUnits === 2)) {
+            item.qty = q - diffUnits;
+            diffUnits = 0;
+            break;
+          }
+        }
+        if (diffUnits !== 0) {
+          for (const item of hbItems) {
+            if (parseFloat(item.qty) > 2) {
+              item.qty = 1;
+            }
+          }
+        }
+      }
+    }
+
+    if (ticketTotalBoxes !== null && ticketTotalBoxes > 0) {
+      const sliceItems = items.filter(i => !HB_CODES.has(i.code));
+      const computeBoxes = () => sliceItems.reduce((s, i) => {
+        const q = parseFloat(i.qty) || 0;
+        const isU = i.unit === 'unidades' || i.unit === 'units' || i.unit === 'unit';
+        return s + (isU ? q / 12 : q);
+      }, 0);
+
+      let sumBoxes = Math.round(computeBoxes() * 10) / 10;
+      let diffBoxes = Math.round((sumBoxes - ticketTotalBoxes) * 10) / 10;
+
+      if (diffBoxes !== 0 && Math.abs(diffBoxes) <= 2.0) {
+        for (const item of sliceItems) {
+          const q = parseFloat(item.qty) || 0;
+          const isU = item.unit === 'unidades' || item.unit === 'units' || item.unit === 'unit';
+          const cand = isU ? q - Math.round(diffBoxes * 12) : Math.round((q - diffBoxes) * 10) / 10;
+          if (cand > 0 && (cand === 0.5 || cand === 1 || cand === 1.5 || cand === 2 || cand % 6 === 0)) {
+            item.qty = cand;
+            break;
+          }
+        }
+      }
+    }
 
     const mapped = items.map(item => {
       const systemKey = TICKET_MAP[item.code] || null;
