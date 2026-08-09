@@ -1,6 +1,6 @@
 // Vercel Serverless Function — OCR Ticket Scanner
-// Accepts a base64 image of a printed order ticket, sends it to Google Gemini 1.5 Pro vision,
-// and returns structured JSON of product keys + quantities.
+// Accepts a base64 image of a printed order ticket, sends it to OpenAI GPT-4o vision (detail: high),
+// with fallback to Google Gemini models, and returns structured JSON of product keys + quantities.
 
 // ── Rate limiter ──
 const rateMap = new Map();
@@ -70,17 +70,35 @@ const TICKET_MAP = {
 // Reverse map for the AI prompt (so it knows all valid codes)
 const VALID_CODES = Object.keys(TICKET_MAP);
 
-const SYSTEM_PROMPT = `You are an OCR assistant for a bakery order system. You will receive a photo of a printed paper order ticket or a handwritten guest check.
+const SYSTEM_PROMPT = `You are an expert OCR vision assistant for a bakery order system. You receive a photo of a printed paper order ticket or a handwritten guest check.
 
 THE TICKET LAYOUT:
-1. Printed Tickets: The ticket has a product table with CODE, DESCRIPTION, and QUANTITY / CANTIDAD.
-2. Handwritten Guest Checks: The ticket is a handwritten note listing items (e.g., "2 Supiro", "30 Flan DOZ", "12 pudin pieces") without printed product codes.
+1. Printed Tickets: The table has 3 distinct columns:
+   - Column 1 (Left): "CÓDIGO" (Product Code, e.g. 9172, 9165S, 9745)
+   - Column 2 (Middle): "CANTIDAD" (Quantity, e.g. 7, 4, 24, 30)
+   - Column 3 (Right): "PRODUCTO" (Product Description, e.g. BIRTHDAY CAKE LARGE CHOCOLATE)
+   At the bottom, summary totals may be printed: "TOTAL CAJAS: X", "TOTAL UNIDADES: Y".
 
-YOUR TASK:
-Read EVERY row in the product table or list from top to bottom. It is critical that you do not mix up quantities from adjacent rows. To prevent errors, FIRST transcribe the table exactly as it appears in the image into the \`raw_text_transcription\` field, reading row by row. THEN populate the \`items\` array with the extracted CODE, QUANTITY, and UNIT. Do NOT skip any rows.
+2. Handwritten Guest Checks: Handwritten list with items & quantities (e.g. "2 Supiro", "30 Flan DOZ", "12 pudin pieces").
+
+CRITICAL ROW-BY-ROW ALIGNMENT (PREVENT VERTICAL DRIFT):
+- On printed tickets, EVERY row is a single straight horizontal line across the page.
+- The quantity in the middle "CANTIDAD" column belongs STRICTLY to the "CÓDIGO" to its immediate left and the "PRODUCTO" to its immediate right on that EXACT SAME horizontal line.
+- DO NOT mix up, drift, or shift quantities between adjacent rows (e.g. do not assign row 5's quantity to row 4).
+- Verify every single row carefully from top to bottom.
+
+YOUR EXTRACTION STEP:
+1. First, transcribe each row exactly into "raw_text_transcription":
+   "Row 1: 9172 | 7 | BIRTHDAY CAKE LARGE CHOCOLATE"
+   "Row 2: 9226 | 6 | BIRTHDAY CAKE LARGE DULCE DE LECHE"
+   "Row 3: 9189 | 4 | BIRTHDAY CAKE LARGE GUAVA"
+   "Row 4: 9165 | 4 | BIRTHDAY CAKE LARGE PINEAPPLE"
+   ...
+2. Populate the "items" array with all extracted rows.
+3. Extract "total_boxes" (from TOTAL CAJAS) and "total_units" (from TOTAL UNIDADES) if present.
 
 HANDWRITTEN GUEST CHECKS & MISSING CODES:
-If the image is a handwritten check and does NOT have printed product codes, read the handwritten items and match them to the correct product code from this list:
+If the image is handwritten without printed codes, match items to the closest product code:
 - "9226S" for Small Birthday Cake Dulce de Leche ("Small cake / Supino")
 - "9165S" for Small Birthday Cake Pineapple ("piña small cake", "pina")
 - "9172S" for Small Birthday Cake Chocolate
@@ -113,22 +131,22 @@ If the image is a handwritten check and does NOT have printed product codes, rea
 - "9202" for Raisin Square ("raisin")
 
 QUANTITY & UNIT RULES:
-- "unit": If the column header is "CANTIDAD" or the text contains "cantidad", "unidades", "units", or "pieces", set "unit" to "unidades". If it explicitly says "dozen" or "doz", set it to "dozen". Otherwise, default to "dozen" only if appropriate, but generally "cantidad" implies units.
-- "qty": Read the number exactly as written or printed (e.g. for "8 1/2 cheese cake doz", qty is 8.5 and unit is "dozen". For "36 Dulce choc pieces", qty is 36 and unit is "unidades").
-- Birthday cakes (codes ending in "S" like 9226S, or 4-digit codes in the 9100-9200 range): Quantities are always whole numbers (1, 2, 3...).
+- "unit": If the column header is "CANTIDAD" or text says "unidades" / "units" / "pieces", set "unit" to "unidades". If it explicitly says "dozen" or "doz", set it to "dozen".
+- "qty": Read the number exactly as printed (e.g. 4, 7, 24, 8.5).
+- Birthday cakes (codes ending in "S" or 4-digit codes in the 9100-9200 range): Quantities are whole numbers.
 
-Return ONLY a JSON object (not an array). No markdown, no code fences, no explanation. Format:
+Output valid JSON only:
 {
-  "raw_text_transcription": "Line 1: 9172 | 7 | BIRTHDAY CAKE LARGE CHOCOLATE...",
+  "raw_text_transcription": "Row 1: 9172 | 7 | BIRTHDAY CAKE LARGE CHOCOLATE\n...",
   "items": [
-    { "code": "9745", "qty": 6, "unit": "unidades", "description": "Bread Pudding Slice - 12PK", "confident": true },
-    { "code": "9776", "qty": 0.5, "unit": "dozen", "description": "Cake Slice Pineapple - 12PK", "confident": true }
+    { "code": "9172", "qty": 7, "unit": "unidades", "description": "BIRTHDAY CAKE LARGE CHOCOLATE", "confident": true },
+    { "code": "9165", "qty": 4, "unit": "unidades", "description": "BIRTHDAY CAKE LARGE PINEAPPLE", "confident": true }
   ],
-  "total_boxes": 36.0,
-  "total_units": 40
+  "total_boxes": 37.5,
+  "total_units": 65
 }
 
-If the image is not an order ticket, return: { "items": [], "total_boxes": null, "total_units": null }`;
+If the image is not an order ticket, return: { "raw_text_transcription": "", "items": [], "total_boxes": null, "total_units": null }`;
 
 
 export default async function handler(req, res) {
@@ -137,8 +155,8 @@ export default async function handler(req, res) {
   }
 
   // Origin check (allow bypass for iOS Shortcut client)
-  const origin = req.headers['origin'] || req.headers['referer'] || '';
-  const isShortcut = req.headers['x-client'] === 'shortcut' || req.query.client === 'shortcut';
+  const origin = req.headers?.['origin'] || req.headers?.['referer'] || '';
+  const isShortcut = req.headers?.['x-client'] === 'shortcut' || req.query?.client === 'shortcut';
 
   // Helper to respond with errors safely (redirects on Shortcut to prevent crashes)
   function sendError(message, statusCode = 400) {
@@ -163,10 +181,11 @@ export default async function handler(req, res) {
     return sendError('Too many requests. Please wait a moment.', 429);
   }
 
-  // Validate API key
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
-  if (!apiKey) {
-    console.error('GOOGLE_AI_API_KEY not set');
+  // Validate API keys
+  const openaiKey = process.env.OPENAI_API_KEY;
+  const googleKey = process.env.GOOGLE_AI_API_KEY;
+  if (!openaiKey && !googleKey) {
+    console.error('Neither OPENAI_API_KEY nor GOOGLE_AI_API_KEY is configured');
     return sendError('Scanner not configured on server.', 500);
   }
 
@@ -208,124 +227,172 @@ export default async function handler(req, res) {
         rawBase64 = match[2];
       }
     }
-
-    // Model fallback chain — tries newest first, falls back to most stable
-    const MODELS = [
-      { name: 'gemini-1.5-pro', api: 'v1beta' },
-      { name: 'gemini-2.0-flash', api: 'v1beta' },
-      { name: 'gemini-1.5-flash', api: 'v1beta' },
-    ];
+    const imageUrl = isDataUrl ? image : `data:${mimeType};base64,${rawBase64}`;
 
     let response = null;
+    let rawContent = null;
     let lastError = '';
-    for (const model of MODELS) {
-      const requestBody = JSON.stringify({
-        contents: [{
-          parts: [
-            { text: SYSTEM_PROMPT + '\n\nRead this bakery order ticket and extract all product codes and quantities.' },
-            { inlineData: { mimeType, data: rawBase64 } },
-          ],
-        }],
-        generationConfig: {
-          temperature: 0,
-          maxOutputTokens: 2000,
-        },
-      });
 
-      const url = `https://generativelanguage.googleapis.com/${model.api}/models/${model.name}:generateContent?key=${apiKey}`;
-      response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: requestBody,
-      });
+    // ── Primary Engine: OpenAI GPT-4o (High Detail) ──
+    if (openaiKey) {
+      try {
+        console.log('Scanning ticket with OpenAI GPT-4o (detail: high)...');
+        const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
+              {
+                role: 'user',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'Read this bakery order ticket image carefully and extract all product codes, quantities, and totals row by row.',
+                  },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: imageUrl,
+                      detail: 'high',
+                    },
+                  },
+                ],
+              },
+            ],
+            temperature: 0,
+            max_tokens: 3000,
+            response_format: { type: 'json_object' },
+          }),
+        });
 
-      if (response.ok) break;
-
-      const errText = await response.text();
-      console.error(`Gemini ${model.name} error:`, response.status, errText);
-      lastError = errText;
-
-      // Only break loop immediately on auth/forbidden errors.
-      // Continue to try other models on 404 (model deprecated), 429 (rate limit), or 5xx/503 (server overloaded).
-      if (response.status === 401 || response.status === 403) break;
-      console.log(`Model ${model.name} failed with status ${response.status}, trying next...`);
+        if (oaiRes.ok) {
+          const oaiData = await oaiRes.json();
+          rawContent = oaiData.choices?.[0]?.message?.content || '{}';
+          response = oaiRes;
+        } else {
+          const errText = await oaiRes.text();
+          console.error('OpenAI GPT-4o error:', oaiRes.status, errText);
+          lastError = errText;
+        }
+      } catch (oaiErr) {
+        console.error('OpenAI GPT-4o call exception:', oaiErr);
+        lastError = oaiErr.message;
+      }
     }
 
-    let rawContent = null;
+    // ── Fallback Engine: Google Gemini ──
+    if (!rawContent && googleKey) {
+      console.log('OpenAI failed or not configured. Trying Google Gemini fallback...');
+      const MODELS = [
+        { name: 'gemini-1.5-pro', api: 'v1beta' },
+        { name: 'gemini-2.0-flash', api: 'v1beta' },
+        { name: 'gemini-1.5-flash', api: 'v1beta' },
+      ];
 
-    if (response && response.ok) {
-      const data = await response.json();
-      const parts = data.candidates?.[0]?.content?.parts || [];
-      const textParts = parts.filter(p => p.text && !p.thought);
-      rawContent = textParts.map(p => p.text).join('') || '{}';
-    } else {
-      // Attempt OpenAI fallback (gpt-4o-mini) if Gemini failed or hit quota
-      const openaiKey = process.env.OPENAI_API_KEY;
-      if (openaiKey) {
-        console.log('Gemini failed or rate-limited. Attempting OpenAI gpt-4o-mini fallback...');
+      for (const model of MODELS) {
         try {
-          const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${openaiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'gpt-4o-mini',
-              messages: [
-                {
-                  role: 'user',
-                  content: [
-                    { type: 'text', text: SYSTEM_PROMPT + '\n\nRead this bakery order ticket and extract all product codes and quantities.' },
-                    { type: 'image_url', image_url: { url: isDataUrl ? image : `data:${mimeType};base64,${rawBase64}` } },
-                  ],
-                },
+          const requestBody = JSON.stringify({
+            contents: [{
+              parts: [
+                { text: SYSTEM_PROMPT + '\n\nRead this bakery order ticket carefully and extract all product codes, quantities, and totals row by row.' },
+                { inlineData: { mimeType, data: rawBase64 } },
               ],
+            }],
+            generationConfig: {
               temperature: 0,
-              max_tokens: 2000,
-              response_format: { type: 'json_object' },
-            }),
+              maxOutputTokens: 3000,
+            },
           });
 
-          if (oaiRes.ok) {
-            const oaiData = await oaiRes.json();
-            rawContent = oaiData.choices?.[0]?.message?.content || '{}';
-            response = oaiRes;
+          const url = `https://generativelanguage.googleapis.com/${model.api}/models/${model.name}:generateContent?key=${googleKey}`;
+          const gRes = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: requestBody,
+          });
+
+          if (gRes.ok) {
+            const data = await gRes.json();
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            const textParts = parts.filter(p => p.text && !p.thought);
+            rawContent = textParts.map(p => p.text).join('') || '{}';
+            response = gRes;
+            break;
           } else {
-            const oaiErr = await oaiRes.text();
-            console.error('OpenAI fallback error:', oaiRes.status, oaiErr);
+            const errText = await gRes.text();
+            console.error(`Gemini ${model.name} error:`, gRes.status, errText);
+            lastError = errText;
+            if (gRes.status === 401 || gRes.status === 403) break;
           }
-        } catch (oaiErr) {
-          console.error('OpenAI fallback exception:', oaiErr);
+        } catch (gErr) {
+          console.error(`Gemini ${model.name} exception:`, gErr);
+          lastError = gErr.message;
         }
       }
     }
 
-    if (!response || !response.ok) {
+    // ── Tertiary Fallback: OpenAI GPT-4o-mini ──
+    if (!rawContent && openaiKey) {
+      console.log('Attempting secondary fallback to GPT-4o-mini...');
+      try {
+        const miniRes = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: 'Read this bakery order ticket image and extract all product codes and quantities.' },
+                  { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } },
+                ],
+              },
+            ],
+            temperature: 0,
+            max_tokens: 3000,
+            response_format: { type: 'json_object' },
+          }),
+        });
+        if (miniRes.ok) {
+          const miniData = await miniRes.json();
+          rawContent = miniData.choices?.[0]?.message?.content || '{}';
+          response = miniRes;
+        }
+      } catch (miniErr) {
+        console.error('gpt-4o-mini fallback error:', miniErr);
+      }
+    }
+
+    if (!rawContent) {
       const status = response ? response.status : 502;
-      let googleMessage = '';
+      let errMsg = lastError;
       try {
         const parsed = JSON.parse(lastError);
-        googleMessage = parsed.error?.message || lastError;
-      } catch {
-        googleMessage = lastError;
-      }
-      googleMessage = (googleMessage || '').replace(/key=[^&"'\s]+/gi, 'key=HIDDEN');
+        errMsg = parsed.error?.message || lastError;
+      } catch {}
+      errMsg = (errMsg || '').replace(/key=[^&"'\s]+/gi, 'key=HIDDEN');
 
       const isQuota = status === 429
-        || lastError.includes('RESOURCE_EXHAUSTED')
-        || lastError.toLowerCase().includes('quota exceeded')
-        || lastError.toLowerCase().includes('rate limit');
+        || errMsg.includes('insufficient_quota')
+        || errMsg.includes('RESOURCE_EXHAUSTED')
+        || errMsg.toLowerCase().includes('quota exceeded')
+        || errMsg.toLowerCase().includes('rate limit');
 
       if (isQuota) {
-        return sendError('Scanner rate limit reached (Google AI quota exceeded). Please wait a few minutes.', 429);
+        return sendError('AI scanner rate limit reached or quota exceeded. Please check API quota.', 429);
       }
 
-      if (status === 401 || status === 403) {
-        return sendError('AI scanner auth error: GOOGLE_AI_API_KEY is invalid or unauthorized.', 403);
-      }
-
-      const shortErr = googleMessage.length > 150 ? googleMessage.substring(0, 150) + '...' : googleMessage;
+      const shortErr = errMsg.length > 150 ? errMsg.substring(0, 150) + '...' : errMsg;
       return sendError(`AI scanner service unavailable (${status}: ${shortErr || 'Unknown error'})`, 502);
     }
 
