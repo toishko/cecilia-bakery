@@ -2734,12 +2734,29 @@ function openInsightsCustomSheet() {
   if (startInput) startInput.value = _customInsightsStart;
   if (endInput) endInput.value = _customInsightsEnd;
 
-  overlay.classList.add('open');
+  // Lock background scroll BEFORE animation
+  const scrollY = window.scrollY;
+  document.documentElement.classList.add('scroll-locked');
+  document.body.style.top = `-${scrollY}px`;
+  document.documentElement.dataset.scrollY = scrollY;
+
+  // Wait one frame for reflow to settle, then trigger slide-up animation
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      overlay.classList.add('open');
+    });
+  });
 }
 
 function closeInsightsCustomSheet() {
   const overlay = document.getElementById('insights-custom-overlay');
   if (overlay) overlay.classList.remove('open');
+
+  // Restore background scroll
+  document.documentElement.classList.remove('scroll-locked');
+  const scrollY = parseInt(document.documentElement.dataset.scrollY || '0', 10);
+  document.body.style.top = '';
+  window.scrollTo(0, scrollY);
 }
 
 async function applyCustomPreset(preset) {

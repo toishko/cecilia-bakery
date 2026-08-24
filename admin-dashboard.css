@@ -65,7 +65,11 @@ html.scroll-locked body {
   position: fixed;
   width: 100%;
 }
-html.scroll-locked .bottom-nav{display:none !important}
+html.scroll-locked .bottom-nav,
+html.scroll-locked .action-queue-fab,
+html.scroll-locked .voice-fab {
+  display: none !important;
+}
 h1,h2,h3{font-family:'Cormorant Garamond',serif;font-weight:600}
 :focus-visible{outline:2px solid var(--red);outline-offset:2px;border-radius:var(--r)}
 i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height:1.1em;
@@ -1118,12 +1122,22 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 }
 /* Ordered + Queue sheets: auto-size to content */
 #ordered-sheet-overlay .action-sheet,
-#queue-sheet-overlay .action-sheet,
-#insights-custom-overlay .action-sheet {
+#queue-sheet-overlay .action-sheet {
   max-height: calc((100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 0.88);
   height: auto;
   padding-bottom: 8px;
 }
+#insights-custom-overlay {
+  z-index: 9998;
+}
+#insights-custom-overlay .action-sheet {
+  z-index: 9999;
+  max-height: calc((100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 0.88);
+  height: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Nav action sheet: tight bottom padding (bottom-nav hidden via scroll-lock) */
 #action-sheet-overlay .action-sheet {
   padding-bottom: 8px;
@@ -1138,7 +1152,7 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 
 /* Custom Date Range Modal Styles */
 .insights-custom-modal {
-  padding: 16px 20px 28px !important;
+  padding: 16px 20px calc(28px + env(safe-area-inset-bottom)) !important;
   max-width: 480px;
   margin: 0 auto;
   border-top-left-radius: 24px;
