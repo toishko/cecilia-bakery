@@ -967,19 +967,35 @@
 
       <!-- Premium Hero Header -->
       <div class="insights-hero">
-        <h2 class="insights-hero-title" data-en="Insights" data-es="Estadísticas">Insights</h2>
-        <div class="insights-pills" id="insights-pills">
-          <button class="insights-pill" data-value="today" data-en="Today" data-es="Hoy">Today</button>
-          <button class="insights-pill active" data-value="this_week" data-en="Week" data-es="Sem">Week</button>
-          <button class="insights-pill" data-value="this_month" data-en="Month" data-es="Mes">Month</button>
-          <button class="insights-pill" data-value="all_time" data-en="All" data-es="Todo">All</button>
+        <div class="insights-hero-top">
+          <h2 class="insights-hero-title" data-en="Insights" data-es="Estadísticas">Insights</h2>
+          <div class="insights-pills" id="insights-pills">
+            <button class="insights-pill" data-value="today" data-en="Today" data-es="Hoy">Today</button>
+            <button class="insights-pill" data-value="this_week" data-en="Week" data-es="Sem">Week</button>
+            <button class="insights-pill" data-value="this_month" data-en="Month" data-es="Mes">Month</button>
+            <button class="insights-pill active" data-value="all_time" data-en="All" data-es="Todo">All</button>
+            <button class="insights-pill" id="insights-custom-pill" data-value="custom" data-en="Custom 📅" data-es="Personalizado 📅" title="Choose custom dates">Custom 📅</button>
+          </div>
+        </div>
+        <div class="insights-date-range-badge" id="insights-date-range-badge" onclick="openInsightsCustomSheet()" title="Click to choose custom dates" style="cursor:pointer;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="insights-date-range-icon"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+          <span id="insights-date-range-text">All Time</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;opacity:0.6;margin-left:2px;"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
       </div>
 
       <!-- Revenue Collected Donut -->
       <div class="insights-card insights-card-donut">
-        <h3 class="insights-card-title" data-en="Revenue Collected" data-es="Ingresos Cobrados">Revenue Collected</h3>
-        <p class="insights-card-subtitle" data-en="Gross revenue by channel" data-es="Ingresos por canal">Gross revenue by channel</p>
+        <div class="insights-card-header-row">
+          <div>
+            <h3 class="insights-card-title" data-en="Revenue Collected" data-es="Ingresos Cobrados">Revenue Collected</h3>
+            <p class="insights-card-subtitle" data-en="Gross revenue by channel" data-es="Ingresos por canal">Gross revenue by channel</p>
+          </div>
+          <div class="insights-first-order-chip" id="insights-first-order-chip" style="display:none;">
+            <span class="first-order-chip-icon">🚀</span>
+            <span id="insights-first-order-text"></span>
+          </div>
+        </div>
         <div class="donut-chart-wrap" id="collected-donut-wrap">
           <svg class="donut-chart" viewBox="0 0 160 160" id="collected-donut"></svg>
           <div class="donut-center" id="collected-donut-center">$0</div>
@@ -992,9 +1008,12 @@
         <div class="insights-card-header-row">
           <div>
             <h3 class="insights-card-title" data-en="Top Performers" data-es="Mejores Conductores">Top Performers</h3>
-            <p class="insights-card-subtitle" data-en="Ranked by sales volume" data-es="Por volumen de ventas">Ranked by sales volume</p>
+            <p class="insights-card-subtitle" id="driver-leaderboard-subtitle" data-en="Ranked by sales volume" data-es="Por volumen de ventas">Ranked by sales volume</p>
           </div>
-          <span class="insights-trophy">🏆</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="insights-first-order-chip" id="driver-leaderboard-tag" style="margin-bottom:0;font-size:0.7rem;padding:3px 9px;">All Time</span>
+            <span class="insights-trophy">🏆</span>
+          </div>
         </div>
         <div class="leaderboard-list" id="driver-leaderboard"></div>
       </div>
@@ -1443,6 +1462,52 @@ initUpdateBanner();
       <button class="order-sheet-close" onclick="closeOrderedSheet()">✕</button>
     </div>
     <div id="ordered-sheet-content" class="order-sheet-content"></div>
+  </div>
+</div>
+
+<!-- INSIGHTS CUSTOM DATE RANGE SHEET -->
+<div class="action-sheet-overlay" id="insights-custom-overlay" onclick="closeInsightsCustomSheet()">
+  <div class="action-sheet insights-custom-modal" id="insights-custom-sheet" onclick="event.stopPropagation()">
+    <div class="action-sheet-handle" onclick="closeInsightsCustomSheet()"></div>
+    <div class="order-sheet-header">
+      <div>
+        <h3 class="order-sheet-title" data-en="Select Custom Date Range" data-es="Seleccionar Rango de Fechas">Select Custom Date Range</h3>
+        <p class="ordered-sheet-sub" data-en="Filter sales & insights by custom dates" data-es="Filtrar ventas y estadísticas por fechas personalizadas">Filter sales & insights by custom dates</p>
+      </div>
+      <button class="order-sheet-close" onclick="closeInsightsCustomSheet()">✕</button>
+    </div>
+
+    <!-- Quick Presets -->
+    <div class="custom-range-presets">
+      <button class="custom-preset-btn" onclick="applyCustomPreset(7)" data-en="Last 7 Days" data-es="Últimos 7 días">Last 7 Days</button>
+      <button class="custom-preset-btn" onclick="applyCustomPreset(30)" data-en="Last 30 Days" data-es="Últimos 30 días">Last 30 Days</button>
+      <button class="custom-preset-btn" onclick="applyCustomPreset(90)" data-en="Last 90 Days" data-es="Últimos 90 días">Last 90 Days</button>
+      <button class="custom-preset-btn" onclick="applyCustomPreset('this_year')" data-en="This Year" data-es="Este Año">This Year</button>
+      <button class="custom-preset-btn" onclick="applyCustomPreset('last_year')" data-en="Last Year" data-es="Año Pasado">Last Year</button>
+      <button class="custom-preset-btn" onclick="applyCustomPreset('all_time')" data-en="Since Start" data-es="Desde Inicio">Since Start</button>
+    </div>
+
+    <!-- Inputs -->
+    <div class="custom-range-inputs">
+      <div class="custom-range-field">
+        <label for="insights-custom-start" data-en="Start Date" data-es="Fecha Inicial">Start Date</label>
+        <div class="custom-date-input-wrap">
+          <input type="date" id="insights-custom-start" class="custom-date-input" />
+        </div>
+      </div>
+      <div class="custom-range-field">
+        <label for="insights-custom-end" data-en="End Date" data-es="Fecha Final">End Date</label>
+        <div class="custom-date-input-wrap">
+          <input type="date" id="insights-custom-end" class="custom-date-input" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="custom-range-actions">
+      <button class="custom-apply-btn" onclick="submitCustomDateRange()" data-en="Apply Date Range" data-es="Aplicar Rango de Fechas">Apply Date Range</button>
+      <button class="custom-cancel-btn" onclick="closeInsightsCustomSheet()" data-en="Cancel" data-es="Cancelar">Cancel</button>
+    </div>
   </div>
 </div>
 

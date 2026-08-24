@@ -952,6 +952,10 @@ function applyLang() {
     const text = opt.getAttribute('data-' + lang);
     if (text) opt.textContent = text;
   });
+  if (typeof currentSection !== 'undefined' && currentSection === 'insights') {
+    const activePill = document.querySelector('#insights-pills .insights-pill.active');
+    loadInsights(activePill?.dataset.value || 'all_time');
+  }
 }
 
 /* ═══════════════════════════════════
@@ -2602,13 +2606,215 @@ function _renderDonutLegend(legendId, channels, total) {
   }).join('');
 }
 
+const _MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const _MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const _DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const _DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+let _earliestOrderDateCache = null;
+
+async function getEarliestOrderDate() {
+  if (_earliestOrderDateCache) return _earliestOrderDateCache;
+  if (!sb) return null;
+  try {
+    const [dRes, wRes, oRes] = await Promise.all([
+      sb.from('driver_orders').select('submitted_at').neq('status', 'archived').order('submitted_at', { ascending: true }).limit(1),
+      sb.from('wholesale_orders').select('placed_at').order('placed_at', { ascending: true }).limit(1),
+      sb.from('orders').select('created_at').eq('source', 'website').order('created_at', { ascending: true }).limit(1)
+    ]);
+    
+    const dates = [];
+    if (dRes?.data?.[0]?.submitted_at) dates.push(new Date(dRes.data[0].submitted_at));
+    if (wRes?.data?.[0]?.placed_at) dates.push(new Date(wRes.data[0].placed_at));
+    if (oRes?.data?.[0]?.created_at) dates.push(new Date(oRes.data[0].created_at));
+
+    if (dates.length > 0) {
+      const validDates = dates.filter(d => !isNaN(d.getTime()));
+      if (validDates.length > 0) {
+        _earliestOrderDateCache = new Date(Math.min(...validDates.map(d => d.getTime())));
+        return _earliestOrderDateCache;
+      }
+    }
+  } catch (err) {
+    console.warn('getEarliestOrderDate error:', err);
+  }
+  return null;
+}
+
+function _formatDateRangeLabel(timeframe, earliestDate, customStart, customEnd) {
+  const now = new Date();
+  const isEs = (typeof lang !== 'undefined' && lang === 'es');
+  const months = isEs ? _MONTHS_ES : _MONTHS_EN;
+  const days = isEs ? _DAYS_ES : _DAYS_EN;
+
+  function fmtDate(d) {
+    if (!d || isNaN(d.getTime())) return '';
+    const m = months[d.getMonth()];
+    const day = d.getDate();
+    const yr = d.getFullYear();
+    return isEs ? `${day} de ${m}, ${yr}` : `${m} ${day}, ${yr}`;
+  }
+
+  function fmtShort(d) {
+    if (!d || isNaN(d.getTime())) return '';
+    const m = months[d.getMonth()];
+    const day = d.getDate();
+    return isEs ? `${day} ${m}` : `${m} ${day}`;
+  }
+
+  if (timeframe === 'today') {
+    const dayName = days[now.getDay()];
+    return isEs 
+      ? `Hoy (${dayName}) • ${fmtDate(now)}`
+      : `Today (${dayName}) • ${fmtDate(now)}`;
+  }
+
+  if (timeframe === 'this_week') {
+    const dayOfWeek = now.getDay() || 7;
+    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek + 1);
+    const yr = now.getFullYear();
+    return isEs
+      ? `Esta Semana • ${fmtShort(weekStart)} – ${fmtShort(now)}, ${yr}`
+      : `This Week • ${fmtShort(weekStart)} – ${fmtShort(now)}, ${yr}`;
+  }
+
+  if (timeframe === 'this_month') {
+    const yr = now.getFullYear();
+    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return isEs
+      ? `Este Mes • 1 de ${months[now.getMonth()]} – ${lastDayOfMonth.getDate()} de ${months[now.getMonth()]}, ${yr}`
+      : `This Month • ${months[now.getMonth()]} 1 – ${months[now.getMonth()]} ${lastDayOfMonth.getDate()}, ${yr}`;
+  }
+
+  if (timeframe === 'custom') {
+    if (customStart && customEnd && !isNaN(customStart.getTime()) && !isNaN(customEnd.getTime())) {
+      const diffMs = customEnd.getTime() - customStart.getTime();
+      const diffDays = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1);
+      const daysStr = isEs ? `${diffDays} días` : `${diffDays} days`;
+      return isEs
+        ? `Personalizado • ${fmtDate(customStart)} – ${fmtDate(customEnd)} (${daysStr})`
+        : `Custom • ${fmtDate(customStart)} – ${fmtDate(customEnd)} (${daysStr})`;
+    }
+    return isEs ? `Rango Personalizado` : `Custom Date Range`;
+  }
+
+  if (timeframe === 'all_time' || timeframe === 'all') {
+    if (earliestDate && !isNaN(earliestDate.getTime())) {
+      const diffMs = now.getTime() - earliestDate.getTime();
+      const diffDays = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+      return isEs
+        ? `Todo el Tiempo • Desde el ${fmtDate(earliestDate)} (${diffDays} días)`
+        : `All Time • Since ${fmtDate(earliestDate)} (${diffDays} days)`;
+    }
+    return isEs ? `Todo el Tiempo • Historial Completo` : `All Time • Complete History`;
+  }
+
+  return isEs ? `Historial de Pedidos` : `Order History`;
+}
+
+let _customInsightsStart = null;
+let _customInsightsEnd = null;
+
+function openInsightsCustomSheet() {
+  const overlay = document.getElementById('insights-custom-overlay');
+  const startInput = document.getElementById('insights-custom-start');
+  const endInput = document.getElementById('insights-custom-end');
+  if (!overlay) return;
+
+  const now = new Date();
+  const pad = n => n < 10 ? '0' + n : n;
+  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+  if (!_customInsightsEnd) _customInsightsEnd = todayStr;
+  if (!_customInsightsStart) {
+    const past = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+    _customInsightsStart = `${past.getFullYear()}-${pad(past.getMonth() + 1)}-${pad(past.getDate())}`;
+  }
+
+  if (startInput) startInput.value = _customInsightsStart;
+  if (endInput) endInput.value = _customInsightsEnd;
+
+  overlay.classList.add('open');
+}
+
+function closeInsightsCustomSheet() {
+  const overlay = document.getElementById('insights-custom-overlay');
+  if (overlay) overlay.classList.remove('open');
+}
+
+async function applyCustomPreset(preset) {
+  const now = new Date();
+  const pad = n => n < 10 ? '0' + n : n;
+  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  let startStr = todayStr;
+  let endStr = todayStr;
+
+  if (typeof preset === 'number') {
+    const past = new Date(now.getTime() - (preset * 24 * 60 * 60 * 1000));
+    startStr = `${past.getFullYear()}-${pad(past.getMonth() + 1)}-${pad(past.getDate())}`;
+    endStr = todayStr;
+  } else if (preset === 'this_year') {
+    startStr = `${now.getFullYear()}-01-01`;
+    endStr = todayStr;
+  } else if (preset === 'last_year') {
+    startStr = `${now.getFullYear() - 1}-01-01`;
+    endStr = `${now.getFullYear() - 1}-12-31`;
+  } else if (preset === 'all_time') {
+    const earliest = await getEarliestOrderDate();
+    if (earliest) {
+      startStr = `${earliest.getFullYear()}-${pad(earliest.getMonth() + 1)}-${pad(earliest.getDate())}`;
+    } else {
+      startStr = `${now.getFullYear()}-01-01`;
+    }
+    endStr = todayStr;
+  }
+
+  const startInput = document.getElementById('insights-custom-start');
+  const endInput = document.getElementById('insights-custom-end');
+  if (startInput) startInput.value = startStr;
+  if (endInput) endInput.value = endStr;
+}
+
+function submitCustomDateRange() {
+  const startInput = document.getElementById('insights-custom-start');
+  const endInput = document.getElementById('insights-custom-end');
+  if (!startInput?.value || !endInput?.value) {
+    showToast(lang === 'es' ? 'Por favor selecciona ambas fechas' : 'Please select both start and end dates', 'error');
+    return;
+  }
+
+  if (startInput.value > endInput.value) {
+    showToast(lang === 'es' ? 'La fecha inicial no puede ser posterior a la fecha final' : 'Start date cannot be after end date', 'error');
+    return;
+  }
+
+  _customInsightsStart = startInput.value;
+  _customInsightsEnd = endInput.value;
+
+  closeInsightsCustomSheet();
+
+  document.querySelectorAll('#insights-pills .insights-pill').forEach(p => p.classList.remove('active'));
+  const customPill = document.querySelector('#insights-pills .insights-pill[data-value="custom"]');
+  if (customPill) customPill.classList.add('active');
+
+  loadInsights('custom');
+}
+
+window.openInsightsCustomSheet = openInsightsCustomSheet;
+window.closeInsightsCustomSheet = closeInsightsCustomSheet;
+window.applyCustomPreset = applyCustomPreset;
+window.submitCustomDateRange = submitCustomDateRange;
+
 async function loadInsights(timeframe) {
   if (!timeframe) {
-    const activePill = document.querySelector('.insights-pill.active');
-    timeframe = activePill?.dataset.value || 'this_week';
+    const activePill = document.querySelector('#insights-pills .insights-pill.active') || document.querySelector('.insights-pill.active');
+    timeframe = activePill?.dataset.value || 'all_time';
   }
 
   if (!sb) return;
+
+  // Update dynamic Date Range badge & First Order milestone chip
+  const earliestDatePromise = getEarliestOrderDate();
 
   // Ensure driver names are available for the leaderboard
   if (driversCache.length === 0) await loadDriversCache();
@@ -2638,16 +2844,50 @@ async function loadInsights(timeframe) {
   } else if (timeframe === 'last_month') {
     startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
     endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+  } else if (timeframe === 'custom') {
+    if (_customInsightsStart) {
+      const [sY, sM, sD] = _customInsightsStart.split('-').map(Number);
+      startDate = new Date(sY, sM - 1, sD, 0, 0, 0);
+    }
+    if (_customInsightsEnd) {
+      const [eY, eM, eD] = _customInsightsEnd.split('-').map(Number);
+      endDate = new Date(eY, eM - 1, eD, 23, 59, 59, 999);
+    }
   }
 
   const startDateStr = startDate ? _toLocalISOString(startDate) : null;
   const endDateStr = _toLocalISOString(endDate);
 
   try {
-    const [statsRes, leaderboardRes] = await Promise.all([
+    const [statsRes, leaderboardRes, earliestDate] = await Promise.all([
       sb.rpc('get_admin_dashboard_stats', { p_start_date: startDateStr, p_end_date: endDateStr }),
-      sb.rpc('get_driver_leaderboard', { p_start_date: startDateStr, p_end_date: endDateStr })
+      sb.rpc('get_driver_leaderboard', { p_start_date: startDateStr, p_end_date: endDateStr }),
+      earliestDatePromise
     ]);
+
+    // Update Date Range text badge
+    const rangeTextEl = document.getElementById('insights-date-range-text');
+    if (rangeTextEl) {
+      rangeTextEl.textContent = _formatDateRangeLabel(timeframe, earliestDate, startDate, endDate);
+    }
+
+    // Update First Order milestone chip in Revenue Collected card
+    const firstOrderChip = document.getElementById('insights-first-order-chip');
+    const firstOrderText = document.getElementById('insights-first-order-text');
+    if (firstOrderChip && firstOrderText) {
+      if (earliestDate && !isNaN(earliestDate.getTime())) {
+        const isEs = (typeof lang !== 'undefined' && lang === 'es');
+        const months = isEs ? _MONTHS_ES : _MONTHS_EN;
+        const m = months[earliestDate.getMonth()];
+        const day = earliestDate.getDate();
+        const yr = earliestDate.getFullYear();
+        const formatted = isEs ? `${day} de ${m}, ${yr}` : `${m} ${day}, ${yr}`;
+        firstOrderText.textContent = isEs ? `Primer pedido: ${formatted}` : `First order: ${formatted}`;
+        firstOrderChip.style.display = 'inline-flex';
+      } else {
+        firstOrderChip.style.display = 'none';
+      }
+    }
 
     if (statsRes.error) throw statsRes.error;
     if (leaderboardRes.error) throw leaderboardRes.error;
@@ -2673,11 +2913,105 @@ async function loadInsights(timeframe) {
       lang === 'es' ? 'Cobrado' : 'Collected');
     _renderDonutLegend('collected-donut-legend', collectedChannels, totalCollected);
 
+    // ── Update Leaderboard Timeframe Header & Subtitle ──
+    const isEs = (typeof lang !== 'undefined' && lang === 'es');
+    let tagLabel = '';
+    let subtitleEn = '';
+    let subtitleEs = '';
+    let orderSuffixEn = '';
+    let orderSuffixEs = '';
+
+    if (timeframe === 'today') {
+      tagLabel = isEs ? 'Hoy' : 'Today';
+      subtitleEn = 'Ranked by sales volume • Today';
+      subtitleEs = 'Por volumen de ventas • Hoy';
+      orderSuffixEn = 'today';
+      orderSuffixEs = 'hoy';
+    } else if (timeframe === 'this_week') {
+      tagLabel = isEs ? 'Esta Semana' : 'This Week';
+      subtitleEn = 'Ranked by sales volume • This Week';
+      subtitleEs = 'Por volumen de ventas • Esta Semana';
+      orderSuffixEn = 'this week';
+      orderSuffixEs = 'esta semana';
+    } else if (timeframe === 'this_month') {
+      tagLabel = isEs ? 'Este Mes' : 'This Month';
+      subtitleEn = 'Ranked by sales volume • This Month';
+      subtitleEs = 'Por volumen de ventas • Este Mes';
+      orderSuffixEn = 'this month';
+      orderSuffixEs = 'este mes';
+    } else if (timeframe === 'last_month') {
+      tagLabel = isEs ? 'Mes Pasado' : 'Last Month';
+      subtitleEn = 'Ranked by sales volume • Mes Pasado';
+      subtitleEs = 'Por volumen de ventas • Mes Pasado';
+      orderSuffixEn = 'last month';
+      orderSuffixEs = 'mes pasado';
+    } else if (timeframe === 'custom') {
+      tagLabel = isEs ? 'Personalizado' : 'Custom';
+      const rangeShort = (startDate && endDate)
+        ? `${startDate.toLocaleDateString(isEs ? 'es-ES' : 'en-US', { month:'short', day:'numeric' })} – ${endDate.toLocaleDateString(isEs ? 'es-ES' : 'en-US', { month:'short', day:'numeric' })}`
+        : '';
+      subtitleEn = `Ranked by sales volume • ${rangeShort || 'Custom'}`;
+      subtitleEs = `Por volumen de ventas • ${rangeShort || 'Personalizado'}`;
+      orderSuffixEn = 'in range';
+      orderSuffixEs = 'en rango';
+    } else {
+      tagLabel = isEs ? 'Todo el Tiempo' : 'All Time';
+      subtitleEn = 'Ranked by sales volume • All Time';
+      subtitleEs = 'Por volumen de ventas • Todo el Tiempo';
+      orderSuffixEn = 'total';
+      orderSuffixEs = 'en total';
+    }
+
+    const tagEl = document.getElementById('driver-leaderboard-tag');
+    if (tagEl) {
+      tagEl.textContent = tagLabel;
+      tagEl.setAttribute('data-en', timeframe === 'today' ? 'Today' : timeframe === 'this_week' ? 'This Week' : timeframe === 'this_month' ? 'This Month' : timeframe === 'custom' ? 'Custom' : 'All Time');
+      tagEl.setAttribute('data-es', timeframe === 'today' ? 'Hoy' : timeframe === 'this_week' ? 'Esta Semana' : timeframe === 'this_month' ? 'Este Mes' : timeframe === 'custom' ? 'Personalizado' : 'Todo el Tiempo');
+    }
+    const subEl = document.getElementById('driver-leaderboard-subtitle');
+    if (subEl) {
+      subEl.textContent = isEs ? subtitleEs : subtitleEn;
+      subEl.setAttribute('data-en', subtitleEn);
+      subEl.setAttribute('data-es', subtitleEs);
+    }
+
     // ── Driver Leaderboard ──
     const lbEl = document.getElementById('driver-leaderboard');
     if (lbEl) {
       if (leaderboard.length === 0) {
-        lbEl.innerHTML = `<div class="leaderboard-empty">${lang === 'es' ? 'Sin datos de conductores' : 'No driver data yet'}</div>`;
+        let emptyPrompt = '';
+        if (timeframe === 'today') {
+          emptyPrompt = isEs
+            ? 'No hay entregas de conductores registradas hoy aún.'
+            : 'No driver deliveries recorded today yet.';
+        } else if (timeframe === 'this_week') {
+          emptyPrompt = isEs
+            ? 'No hay entregas de conductores registradas esta semana aún.'
+            : 'No driver deliveries recorded this week yet.';
+        } else if (timeframe === 'this_month') {
+          emptyPrompt = isEs
+            ? 'No hay entregas de conductores registradas este mes aún.'
+            : 'No driver deliveries recorded this month yet.';
+        } else if (timeframe === 'custom') {
+          emptyPrompt = isEs
+            ? 'No hay entregas registradas en las fechas seleccionadas.'
+            : 'No driver deliveries recorded in selected date range.';
+        } else {
+          emptyPrompt = isEs
+            ? 'Sin datos de conductores para este período.'
+            : 'No driver data yet for this period.';
+        }
+
+        const switchBtn = (timeframe !== 'all_time' && timeframe !== 'all')
+          ? `<button class="insights-pill" style="margin-top:10px;display:inline-flex;padding:5px 14px;background:var(--bg-surface);border:1px solid var(--bd);cursor:pointer;font-size:0.75rem;" onclick="const p=document.querySelector('#insights-pills .insights-pill[data-value=all_time]');if(p)p.click()">${isEs ? 'Ver Todo el Tiempo ➔' : 'View All-Time Rankings ➔'}</button>`
+          : '';
+
+        lbEl.innerHTML = `
+          <div class="leaderboard-empty" style="padding:22px 14px;text-align:center;">
+            <div style="font-size:1.5rem;margin-bottom:6px;opacity:0.85;">🚚</div>
+            <div style="font-size:0.85rem;color:var(--tx-muted);margin-bottom:2px;">${emptyPrompt}</div>
+            ${switchBtn}
+          </div>`;
       } else {
         const topAmount = leaderboard[0].amount;
         const avatarClasses = ['gold', 'silver', 'bronze'];
@@ -2687,9 +3021,18 @@ async function loadInsights(timeframe) {
           const championCls = i === 0 ? ' champion' : '';
           const barWidth = topAmount > 0 ? Math.round((d.amount / topAmount) * 100) : 0;
           const barColor = i === 0 ? '#D4A017' : i === 1 ? '#A0A0A0' : i === 2 ? '#CD7F32' : 'var(--tx-muted)';
-          const orderLabel = lang === 'es'
-            ? `${d.order_count} pedido${d.order_count !== 1 ? 's' : ''}`
-            : `${d.order_count} order${d.order_count !== 1 ? 's' : ''}`;
+          
+          let orderLabel = '';
+          if (isEs) {
+            orderLabel = `${d.order_count} pedido${d.order_count !== 1 ? 's' : ''} ${orderSuffixEs}`;
+          } else {
+            if (timeframe === 'all_time' || timeframe === 'all' || !timeframe) {
+              orderLabel = `${d.order_count} total order${d.order_count !== 1 ? 's' : ''}`;
+            } else {
+              orderLabel = `${d.order_count} order${d.order_count !== 1 ? 's' : ''} ${orderSuffixEn}`;
+            }
+          }
+
           return `<div class="leaderboard-row${championCls}">
             <div class="leaderboard-bar" style="width:${barWidth}%;background:${barColor}"></div>
             <div class="leaderboard-avatar ${avatarCls}">${initials}</div>
@@ -2730,6 +3073,15 @@ async function loadAiSpendInsights(timeframe = 'this_week') {
   } else if (timeframe === 'last_month') {
     startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
     endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+  } else if (timeframe === 'custom') {
+    if (_customInsightsStart) {
+      const [sY, sM, sD] = _customInsightsStart.split('-').map(Number);
+      startDate = new Date(sY, sM - 1, sD, 0, 0, 0);
+    }
+    if (_customInsightsEnd) {
+      const [eY, eM, eD] = _customInsightsEnd.split('-').map(Number);
+      endDate = new Date(eY, eM - 1, eD, 23, 59, 59, 999);
+    }
   }
 
   try {
@@ -5806,9 +6158,13 @@ function bootAdminDashboard() {
   });
 
   // ── Insights pill selector ──
-  document.querySelectorAll('.insights-pill').forEach(pill => {
+  document.querySelectorAll('#insights-pills .insights-pill').forEach(pill => {
     pill.addEventListener('click', () => {
-      document.querySelectorAll('.insights-pill').forEach(p => p.classList.remove('active'));
+      if (pill.dataset.value === 'custom') {
+        openInsightsCustomSheet();
+        return;
+      }
+      document.querySelectorAll('#insights-pills .insights-pill').forEach(p => p.classList.remove('active'));
       pill.classList.add('active');
       loadInsights(pill.dataset.value);
     });
