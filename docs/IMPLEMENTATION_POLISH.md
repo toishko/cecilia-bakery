@@ -171,3 +171,199 @@ Run through the complete flow:
 - [x] Fix today-drivers-active null TypeError — element was removed but JS still tried to update it; added null guard. 
 - [x] Insights page defaults to "All" on every navigation — reset pills and call `loadInsights('all_time')` inside `showSection`. Moved `active` class to `all_time` pill in HTML. Bumped cache to v47.
 - [x] Orders nav sheet — blank space + no drag-to-dismiss — added `padding-bottom: 8px` CSS override for `#action-sheet-overlay`; added drag-to-dismiss touch handler `initActionSheetDrag()` (same pattern as ordered/pending sheets: velocity, threshold 60px, GPU translate3d). Bumped cache to v48.
+
+---
+
+## Admin and Driver Display Zoom Resilience
+
+### Goal
+Guarantee resilient, overflow-free mobile rendering on iOS Safari with Display Zoom enabled and large dynamic text across the actively used Admin Dashboard and Driver systems down to 320px viewport width without introducing regressions or unvetted CSS.
+
+---
+
+### Exact Scope
+- `admin-dashboard.html`
+- `admin-dashboard.css`
+- `admin-dashboard.js` (selector and DOM structure validation only)
+- `driver-order.html`
+- `driver-order.css`
+- `driver-order.js` (selector and DOM structure validation only)
+- `docs/IMPLEMENTATION_POLISH.md`
+
+### Explicit Exclusions
+- Customer storefront
+- Menu
+- Checkout
+- Customer account
+- Order confirmation
+- Wholesale registration
+- Wholesale portal
+- Staff portal
+- Product manager
+- Receipts
+- Legal pages
+- Offline page
+- Woosim
+- APIs
+- SQL
+- Databases
+- Authentication
+- Payments
+- Service workers
+- Manifests
+- Environment files
+
+---
+
+### Confirmed Existing Protections (from Commit `9b64199`)
+
+#### Admin Dashboard (`admin-dashboard.css`)
+- **Global Reset & iOS Sizing**: `*, *::before, *::after` includes `box-sizing: border-box`, `word-break: normal`, `overflow-wrap: break-word` (line 34). `body` includes `-webkit-text-size-adjust: 100%`, `text-size-adjust: 100%` (line 39).
+- **Text Truncation Group**: `.oca-name`, `.driver-group-name`, `.driver-name`, `.client-name`, `.product-name`, `.item-title`, `.dash-card-title`, `.order-num-text` enforce `white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; overflow-wrap: normal;` (lines 42–53).
+- **Order Card Avatar Media Queries**: `@media (max-width: 520px)` and `@media (max-width: 360px)` provide responsive padding, avatar scaling (36px), price font sizing, static `.oca-ref` positioning without transform, and flex wrapping on 360px (lines 494–542).
+- **Driver Table Horizontal Scrolling**: `.driver-table-wrap` has `-webkit-overflow-scrolling: touch; overflow-x: auto;` and `.driver-table` has `min-width: 500px;` (lines 891–893).
+- **Insights Pills**: `.insights-pills` has `overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;` and `.insights-pill` has `white-space: nowrap; flex-shrink: 0;` (lines 1350–1356).
+- **Driver Group Settlement Cards**: `@media (max-width: 520px)` and `@media (max-width: 350px)` provide responsive wrapping, avatar scaling, and full-width settle button on extra-narrow viewports (lines 4072–4130).
+- **AI Spend Monitor Grid**: Added in `11a6f61`, `.ai-simple-grid` switches to single column `grid-template-columns: 1fr` at `@media (max-width: 600px)` (lines 4194–4199).
+- **Custom Range Inputs**: Added in `9383a98`, `.custom-range-inputs` switches to single column at `@media (max-width: 440px)` (lines 1194–1198).
+
+#### Driver Order System (`driver-order.css`)
+- **Global Reset & iOS Sizing**: `*, *::before, *::after` includes `box-sizing: border-box`, `word-break: normal`, `overflow-wrap: break-word` (line 33). `body` includes `-webkit-text-size-adjust: 100%`, `text-size-adjust: 100%` (line 39).
+- **Text Truncation Group**: `.client-card-name`, `.client-name`, `.driver-title`, `.driver-name`, `.product-name`, `.order-num`, `.stat-label` enforce `white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; overflow-wrap: normal;` (lines 43–53).
+- **Order Tabs Base Overflow**: `.order-tabs` already possesses `overflow-x: auto; display: flex; gap: 6px;` (line 409) which keeps tabs on a single row.
+- **Insights Pills**: `.insights-pills` has `overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;` and `.insights-pill` has `white-space: nowrap; flex-shrink: 0;` (lines 1906–1934).
+
+---
+
+### Confirmed Missing Protections & Structural Differences
+
+#### Admin Dashboard (`admin-dashboard.css`)
+*Note: The Admin Dashboard layout is already substantially protected from commit `9b64199`. Only minor label-containment safeguards remain:*
+1. **Bottom Navigation Labels**: `.bottom-nav-item` is missing `min-width: 0;`. The label element `.bottom-nav-item > span[data-en]` lacks text containment (`white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block;`). On 320px Display Zoom with Spanish localization (e.g. "Estadísticas"), long label text can expand the flex item. Note: The targeted selector `.bottom-nav-item > span[data-en]` must be used instead of `.bottom-nav-item span` to avoid altering `.bottom-nav-badge` notification counters.
+2. **Insights Date Range Badge**: `.insights-date-range-badge` / `#insights-date-range-text` lacks text containment (`min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;`) when custom date ranges with long date strings are displayed on narrow screens.
+
+#### Driver Order System (`driver-order.css` & `driver-order.js`)
+1. **Order Tabs Resilience**:
+   - While `.order-tabs` already has `overflow-x: auto;`, `.order-tab` and `.order-tab-add` are MISSING `flex-shrink: 0;`. When multiple order tabs exist (Order 1, Order 2, etc.), tabs shrink and compress.
+   - `.order-tabs` is missing momentum scrolling and scrollbar suppression: `-webkit-overflow-scrolling: touch; scrollbar-width: none;` and `.order-tabs::-webkit-scrollbar { display: none; }`.
+   - `.order-tab-add` is missing `white-space: nowrap; flex-shrink: 0;`.
+2. **Driver Bottom Navigation Labels**:
+   - `.bottom-nav-item` is missing `min-width: 0;`.
+   - `.bottom-nav-item > span[data-en]` is missing `white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block;`.
+3. **Driver Order Card Structure Audit & Ref Placement Differences**:
+   - **DOM Structure Comparison**:
+     - In Admin (`admin-dashboard.js`), the order card structure is:
+       `[ .oca-avatar ] -> [ .oca-body ] -> [ .oca-ref ] -> [ .oca-right ]`
+     - In Driver (`driver-order.js`), `renderSingleOcaCard()` places `${refHtml}` **before** `${avatarHtml}`:
+       `[ .oca-ref ] -> [ .oca-avatar ] -> [ .oca-body ] -> [ .oca-right ]`
+     - In Driver batch headers (`renderOrderCard()`), no `.oca-ref` exists, but a `.oca-chevron` is appended:
+       `[ .oca-avatar ] -> [ .oca-body ] -> [ .oca-right ] -> [ .oca-chevron ]`
+     - In Driver direct sales (`renderDriverSaleCard()`), neither avatar nor `.oca-ref` exists:
+       `[ .oca-body ] -> [ .oca-right ]`
+   - **Problem**: In `driver-order.css` (lines 778–789), `.oca-ref` is styled as `position: absolute; left: 50%; transform: translateX(-50%);`. On mobile viewports <= 520px (and especially 320px Display Zoom), this absolute badge directly overlaps customer names in `.oca-body` and prices in `.oca-right`.
+   - **Safety Requirement**: Because Driver renders `${refHtml}` before `.oca-avatar`, directly applying Admin's `position: static` without flex ordering would place `.oca-ref` to the left of the avatar.
+   - **Targeted CSS-Only Solution**:
+     - At `@media (max-width: 520px)`:
+       - `.oca-card`: `padding: 12px 4px; gap: 8px;`
+       - `.oca-card.oca-child`: `padding-left: 20px;` *(preserves visual nesting of child orders inside an expanded batch)*
+       - `.oca-card > .oca-avatar`: `order: 1; width: 36px; height: 36px; font-size: 0.78rem; margin-right: 8px; flex-shrink: 0;`
+       - `.oca-card > .oca-avatar-stack`: `order: 1; margin-right: 8px; flex-shrink: 0;`
+       - `.oca-card > .oca-body`: `order: 2; flex: 1; min-width: 0;`
+       - `.oca-card > .oca-ref`: `order: 3; position: static; transform: none; font-size: 0.76rem; padding: 2px 6px; margin: 0 4px; align-self: center; flex-shrink: 0;`
+       - `.oca-card > .oca-right`: `order: 4; margin-left: auto; flex-shrink: 0;`
+       - `.oca-card > .oca-chevron`: `order: 5; margin-left: 4px; flex-shrink: 0; align-self: center;`
+       - `.oca-card .oca-name`: `font-size: 0.9rem;`
+       - `.oca-card .oca-price`: `font-size: 0.88rem;`
+     - At `@media (max-width: 360px)`:
+       - `.oca-card`: `flex-wrap: wrap; gap: 4px;`
+       - `.oca-card > .oca-body`: `flex: 1 1 calc(100% - 48px);`
+       - `.oca-card > .oca-ref`: `margin-left: 44px; margin-top: 2px; align-self: center;`
+       - `.oca-card > .oca-right`: `margin-left: auto; flex-direction: row; align-items: center; gap: 6px;`
+       - `.oca-card .oca-pill`: `margin-top: 0;`
+     - **Verification across all 5 card types**:
+       1. *Normal `.oca-card` with ref*: Avatar (order 1) -> Body (order 2) -> Ref (order 3) -> Price/Pill (order 4).
+       2. *`.oca-card.oca-child` with ref*: Inherits same order rules cleanly while maintaining its `20px` left indentation.
+       3. *`.oca-card.batch-header`*: Avatar / Avatar Stack (order 1) -> Body (order 2) -> Price/Pill (order 4) -> Chevron (order 5).
+       4. *Direct sale `.oca-card`*: Body (order 2) -> Price/Pill (order 4).
+       5. *Batch-header chevron*: Stays anchored at order 5 on the right.
+
+---
+
+### Separate Minimal JavaScript Proposal (Optional / Requiring Approval)
+
+To completely eliminate the DOM ordering disparity between Admin and Driver:
+- **Proposal**: In `driver-order.js` within `renderSingleOcaCard()`, move `${refHtml}` from before `${avatarHtml}` (line 2144) to immediately after `<div class="oca-body">...</div>` (line 2150).
+- **Benefit**: Aligns Driver’s DOM structure identically with Admin’s `[ .oca-avatar ] -> [ .oca-body ] -> [ .oca-ref ] -> [ .oca-right ]`, removing the need for CSS `order` declarations.
+- **Status**: *Documented for review only. Not part of Phase A or Phase B CSS changes.*
+
+---
+
+### Implementation Phases
+
+#### Phase A — Admin Safeguards (`admin-dashboard.css`)
+- Target Selectors:
+  - `.bottom-nav-item`: Add `min-width: 0;`
+  - `.bottom-nav-item > span[data-en]`: Add `white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block;`
+  - `.insights-date-range-badge`: Add `max-width: 100%; min-width: 0;`
+  - `#insights-date-range-text`: Add `overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`
+
+#### Phase B — Driver Resilience (`driver-order.css`)
+- Target Selectors:
+  - `.order-tabs`: Add `-webkit-overflow-scrolling: touch; scrollbar-width: none;`
+  - `.order-tabs::-webkit-scrollbar`: Add `display: none;`
+  - `.order-tab`: Add `flex-shrink: 0;`
+  - `.order-tab-add`: Add `flex-shrink: 0; white-space: nowrap;`
+  - `.bottom-nav-item`: Add `min-width: 0;`
+  - `.bottom-nav-item > span[data-en]`: Add `white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block;`
+  - `@media (max-width: 520px)`:
+    - `.oca-card`: `padding: 12px 4px; gap: 8px;`
+    - `.oca-card.oca-child`: `padding-left: 20px;`
+    - `.oca-card > .oca-avatar`: `order: 1; width: 36px; height: 36px; font-size: 0.78rem; margin-right: 8px; flex-shrink: 0;`
+    - `.oca-card > .oca-avatar-stack`: `order: 1; margin-right: 8px; flex-shrink: 0;`
+    - `.oca-card > .oca-body`: `order: 2; flex: 1; min-width: 0;`
+    - `.oca-card > .oca-ref`: `order: 3; position: static; transform: none; font-size: 0.76rem; padding: 2px 6px; margin: 0 4px; align-self: center; flex-shrink: 0;`
+    - `.oca-card > .oca-right`: `order: 4; margin-left: auto; flex-shrink: 0;`
+    - `.oca-card > .oca-chevron`: `order: 5; margin-left: 4px; flex-shrink: 0; align-self: center;`
+    - `.oca-card .oca-name`: `font-size: 0.9rem;`
+    - `.oca-card .oca-price`: `font-size: 0.88rem;`
+  - `@media (max-width: 360px)`:
+    - `.oca-card`: `flex-wrap: wrap; gap: 4px;`
+    - `.oca-card > .oca-body`: `flex: 1 1 calc(100% - 48px);`
+    - `.oca-card > .oca-ref`: `margin-left: 44px; margin-top: 2px; align-self: center;`
+    - `.oca-card > .oca-right`: `margin-left: auto; flex-direction: row; align-items: center; gap: 6px;`
+    - `.oca-card .oca-pill`: `margin-top: 0;`
+
+#### Phase C — Optional Maintenance / CSS Deduplication (`driver-order.css`)
+*Note: Strictly deferred until Phase A and Phase B have been implemented, tested, and verified.*
+- Consolidate duplicate blocks in `driver-order.css`:
+  - Lines 879–902 (duplicate of lines 845–869 for `.oca-right`, `.oca-price`, `.oca-pill`, `.oca-edit`)
+  - Lines 911–918 (duplicate of lines 870–877 for dark mode pill overrides)
+
+---
+
+### Minimal Verification Checklist
+1. **Viewport 320px (Simulating iPhone SE / iOS Display Zoom)**:
+   - Admin bottom nav: 5 tabs visible, labels truncated with ellipsis without pushing items off-screen; badges (`.bottom-nav-badge`) display numbers accurately.
+   - Insights custom date range badge stays contained within header.
+   - Driver bottom nav: 5 tabs (including center FAB) aligned evenly with no overflow; labels truncated cleanly.
+   - Driver order tabs: Multiple tabs scroll horizontally smoothly without shrinking or clipping.
+   - Driver order cards (`#all-orders`): `.oca-ref` badges render cleanly between name and price without colliding with customer name or price; cards wrap cleanly on 320px.
+   - Batch header cards: Avatar, batch label, date, total price, and chevron render with correct spacing and alignment.
+   - Direct sale cards: Direct sale label and amount render without avatar or reference artifacts.
+   - Expanded batch child orders remain visibly indented from their batch header.
+2. **Viewport 390px (Standard Mobile Viewport)**:
+   - All cards, pills, avatars, and badges retain balanced spacing and typography.
+   - Expanded batch child orders remain visibly indented from their batch header.
+   - Dark mode contrast and styles remain intact.
+3. **No Regressions on Desktop / Tablet**:
+   - Sidebar layouts and desktop sheets function without alteration.
+4. **Administrator iPhone Verification**:
+   - Final visual confirmation on actual device.
+
+---
+
+### Constraints
+- No changes outside Admin and Driver files.
+- Strictly CSS rules addition; no HTML or JavaScript changes in Phase A or B.
+- Do not duplicate existing rules or break existing functionality from `9b64199`.
+- Preserve the `mobile-layout-resilience` branch intact.
