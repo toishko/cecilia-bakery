@@ -1047,10 +1047,12 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 [data-theme="dark"] .bottom-nav{box-shadow:0 -4px 20px rgba(0,0,0,.3)}
 
 .bottom-nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:2px;flex:1;padding:6px 0;border:none;background:none;cursor:pointer;
+  gap:2px;flex:1;min-width:0;padding:6px 0;border:none;background:none;cursor:pointer;
   color:var(--tx-muted);font-family:'Outfit',sans-serif;font-size:.65rem;
   font-weight:500;letter-spacing:.02em;transition:color .2s;position:relative;
   -webkit-tap-highlight-color:transparent}
+.bottom-nav-item > span[data-en]{white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;max-width:100%;display:block}
 .bottom-nav-item svg{width:22px;height:22px;stroke-width:1.75;
   transition:color .2s,transform .15s}
 .bottom-nav-item:active svg{transform:scale(.88)}
@@ -1335,7 +1337,9 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
 .insights-date-range-badge{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;
   border-radius:10px;background:var(--bg-surface);border:1px solid var(--bd);
   font-family:'Outfit',sans-serif;font-size:.78rem;font-weight:600;color:var(--tx);
-  align-self:flex-start;transition:all .2s ease;box-shadow:0 1px 3px rgba(0,0,0,0.03)}
+  align-self:flex-start;transition:all .2s ease;box-shadow:0 1px 3px rgba(0,0,0,0.03);
+  max-width:100%;min-width:0}
+#insights-date-range-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .insights-date-range-icon{width:14px;height:14px;color:var(--red);flex-shrink:0}
 
 /* First Order Milestone Chip */
