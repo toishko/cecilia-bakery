@@ -491,50 +491,26 @@ window.__adminRefresh = async function () {
 /* ═══════════════════════════════════
    AUTH — CLERK-BASED LOGIN
    ═══════════════════════════════════ */
-/* ═══════════════════════════════════
-   AUTH — CLERK-BASED LOGIN
-   ═══════════════════════════════════ */
-let _clerkLoadPromise = null;
-
-async function ensureClerkReady(timeoutMs = 6000) {
-  if (window.Clerk && window.Clerk.loaded) {
-    return window.Clerk;
-  }
+async function ensureClerkReady(timeoutMs = 10000) {
   const start = Date.now();
-  while (!window.Clerk && (Date.now() - start) < timeoutMs) {
+  while ((Date.now() - start) < timeoutMs) {
+    if (window.Clerk && (window.Clerk.loaded || typeof window.Clerk.mountSignIn === 'function')) {
+      return window.Clerk;
+    }
     await new Promise(r => setTimeout(r, 50));
   }
-  if (!window.Clerk) {
-    throw new Error('Clerk SDK unavailable or failed to load');
-  }
-  if (window.Clerk.loaded) {
+  if (window.Clerk && typeof window.Clerk.mountSignIn === 'function') {
     return window.Clerk;
   }
-  if (!_clerkLoadPromise && typeof window.Clerk.load === 'function') {
-    _clerkLoadPromise = window.Clerk.load().catch(err => {
-      _clerkLoadPromise = null;
-      throw err;
-    });
-  }
-  const remainingMs = Math.max(1000, timeoutMs - (Date.now() - start));
-  const timeoutPromise = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Clerk.load() timed out')), remainingMs)
-  );
-  await Promise.race([_clerkLoadPromise || Promise.resolve(), timeoutPromise]);
-  return window.Clerk;
+  throw new Error('Clerk SDK unavailable or failed to load');
 }
 
 async function mountClerkSignIn() {
   const mount = document.getElementById('clerk-mount-target');
   if (!mount) return;
 
-  // Don't re-mount if iframe/sign-in already rendered
-  if (mount.childElementCount > 0 && !mount.querySelector('.clerk-loading-spinner')) {
-    return;
-  }
-
   // Render immediate feedback spinner
-  if (!mount.querySelector('.clerk-loading-spinner')) {
+  if (!mount.firstElementChild || mount.querySelector('.clerk-loading-spinner')) {
     mount.innerHTML = `
       <div style="padding:28px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
         <div class="clerk-loading-spinner"></div>
@@ -546,7 +522,7 @@ async function mountClerkSignIn() {
   }
 
   try {
-    const clerk = await ensureClerkReady(6000);
+    const clerk = await ensureClerkReady(10000);
     mount.innerHTML = '';
     clerk.mountSignIn(mount, {
       afterSignInUrl: '/admin-dashboard.html',
@@ -592,39 +568,78 @@ async function handleClerkUser(user) {
     const email = user.primaryEmailAddress?.emailAddress || '';
     console.log('[AUTH] Clerk user ID:', user.id, 'Email:', email);
 
-    // ── Unified Profile Lookup ──
+    // ── Profile Lookup ──
     let existingRole = null;
     let profileFound = false;
 
+    // Strategy 1: Look up by clerk_user_id
     try {
-      let query = sb.from('profiles').select('id, role, email, clerk_user_id');
-      if (email) {
-        query = query.or(`clerk_user_id.eq.${user.id},email.ilike.${email}`);
-      } else {
-        query = query.eq('clerk_user_id', user.id);
-      }
+      const { data: p1, error: e1 } = await sb
+        .from('profiles')
+        .select('id, role, email, clerk_user_id')
+        .eq('clerk_user_id', user.id)
+        .maybeSingle();
 
-      const { data: matchedProfiles, error: pErr } = await query;
-      console.log('[AUTH] Profile query result:', JSON.stringify(matchedProfiles), 'Error:', JSON.stringify(pErr));
-
-      if (matchedProfiles && matchedProfiles.length > 0) {
-        const profile = matchedProfiles.find(p => p.clerk_user_id === user.id) || matchedProfiles[0];
-        existingRole = profile.role;
+      console.log('[AUTH] Lookup by clerk_user_id:', JSON.stringify(p1), 'Error:', JSON.stringify(e1));
+      if (p1) {
+        existingRole = p1.role;
         profileFound = true;
-
-        const updates = {};
-        if (!profile.clerk_user_id || profile.clerk_user_id !== user.id) {
-          updates.clerk_user_id = user.id;
-        }
-        if (email && profile.email !== email) {
-          updates.email = email;
-        }
-        if (Object.keys(updates).length > 0) {
-          await sb.from('profiles').update(updates).eq('id', profile.id);
+        if (email && p1.email !== email) {
+          await sb.from('profiles').update({ email }).eq('id', p1.id);
         }
       }
-    } catch (e1) {
-      console.warn('[AUTH] Unified profile lookup exception:', e1);
+    } catch (err1) {
+      console.warn('[AUTH] Lookup 1 exception:', err1);
+    }
+
+    // Strategy 2: Fallback lookup by email
+    if (!profileFound && email) {
+      try {
+        const { data: p2, error: e2 } = await sb
+          .from('profiles')
+          .select('id, role, email, clerk_user_id')
+          .ilike('email', email)
+          .maybeSingle();
+
+        console.log('[AUTH] Lookup by email:', JSON.stringify(p2), 'Error:', JSON.stringify(e2));
+        if (p2) {
+          existingRole = p2.role;
+          profileFound = true;
+          if (!p2.clerk_user_id || p2.clerk_user_id !== user.id) {
+            await sb.from('profiles').update({ clerk_user_id: user.id }).eq('id', p2.id);
+          }
+        }
+      } catch (err2) {
+        console.warn('[AUTH] Lookup 2 exception:', err2);
+      }
+    }
+
+    // Strategy 3: Dump check as final fallback
+    if (!profileFound) {
+      try {
+        const { data: dump } = await sb
+          .from('profiles')
+          .select('id, role, clerk_user_id, email')
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (dump) {
+          const match = dump.find(p =>
+            p.clerk_user_id === user.id ||
+            (p.email && email && p.email.toLowerCase() === email.toLowerCase())
+          );
+          if (match) {
+            existingRole = match.role;
+            profileFound = true;
+            console.log('[AUTH] Found match via dump:', JSON.stringify(match));
+            if (!match.clerk_user_id || match.clerk_user_id !== user.id) {
+              await sb.from('profiles').update({ clerk_user_id: user.id }).eq('id', match.id);
+            }
+          }
+        }
+      } catch (err3) {
+        console.warn('[AUTH] Strategy 3 exception:', err3);
+      }
     }
 
     // ── Create profile if none exists ──
