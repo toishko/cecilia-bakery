@@ -3704,6 +3704,33 @@ i.icon[data-lucide],i.icon>svg,.icon svg{display:inline-block;width:1.1em;height
   box-shadow: 0 4px 12px rgba(200, 16, 46, 0.2);
 }
 
+/* Keep Batch Select reachable under iPhone Display Zoom / enlarged text. */
+@media (max-width: 350px) {
+  #section-incoming .incoming-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  #section-incoming .view-segmented-control {
+    width: 100%;
+    min-width: 0;
+  }
+  #section-incoming .view-segment-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 8px 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #section-incoming #batch-toggle-btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+
 /* ── Interactive Multi-select Checkboxes ── */
 .order-card-avatar {
   position: relative;
@@ -4201,7 +4228,6 @@ body.batch-mode-active .bottom-nav {
     gap: 10px;
   }
 }
-
 
 
 
