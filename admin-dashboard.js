@@ -491,18 +491,20 @@ window.__adminRefresh = async function () {
 /* ═══════════════════════════════════
    AUTH — CLERK-BASED LOGIN
    ═══════════════════════════════════ */
-async function ensureClerkReady(timeoutMs = 10000) {
+async function ensureClerkReady(timeoutMs = 8000) {
   const start = Date.now();
-  while ((Date.now() - start) < timeoutMs) {
-    if (window.Clerk && (window.Clerk.loaded || typeof window.Clerk.mountSignIn === 'function')) {
-      return window.Clerk;
-    }
-    await new Promise(r => setTimeout(r, 50));
+  while ((!window.Clerk || !window.Clerk.load) && (Date.now() - start) < timeoutMs) {
+    await new Promise(r => setTimeout(r, 100));
   }
-  if (window.Clerk && typeof window.Clerk.mountSignIn === 'function') {
-    return window.Clerk;
+  if (!window.Clerk || !window.Clerk.load) {
+    throw new Error('Clerk SDK unavailable or failed to load');
   }
-  throw new Error('Clerk SDK unavailable or failed to load');
+  const remainingMs = Math.max(1000, timeoutMs - (Date.now() - start));
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Clerk.load() timed out')), remainingMs)
+  );
+  await Promise.race([window.Clerk.load(), timeoutPromise]);
+  return window.Clerk;
 }
 
 async function mountClerkSignIn() {
@@ -510,19 +512,17 @@ async function mountClerkSignIn() {
   if (!mount) return;
 
   // Render immediate feedback spinner
-  if (!mount.firstElementChild || mount.querySelector('.clerk-loading-spinner')) {
-    mount.innerHTML = `
-      <div style="padding:28px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
-        <div class="clerk-loading-spinner"></div>
-        <span style="font-size:0.85rem;color:var(--tx-muted);font-family:inherit">
-          ${lang === 'es' ? 'Cargando acceso seguro...' : 'Loading secure sign in...'}
-        </span>
-      </div>
-    `;
-  }
+  mount.innerHTML = `
+    <div style="padding:28px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
+      <div class="clerk-loading-spinner"></div>
+      <span style="font-size:0.85rem;color:var(--tx-muted);font-family:inherit">
+        ${lang === 'es' ? 'Cargando acceso seguro...' : 'Loading secure sign in...'}
+      </span>
+    </div>
+  `;
 
   try {
-    const clerk = await ensureClerkReady(10000);
+    const clerk = await ensureClerkReady(8000);
     mount.innerHTML = '';
     clerk.mountSignIn(mount, {
       afterSignInUrl: '/admin-dashboard.html',
@@ -568,39 +568,81 @@ async function handleClerkUser(user) {
     const email = user.primaryEmailAddress?.emailAddress || '';
     console.log('[AUTH] Clerk user ID:', user.id, 'Email:', email);
 
-    // ── Unified Fast Profile Lookup ──
+    // ── Strategy 1: Look up profile by clerk_user_id ──
     let existingRole = null;
     let profileFound = false;
 
     try {
-      let query = sb.from('profiles').select('id, role, email, clerk_user_id');
-      if (email) {
-        query = query.or(`clerk_user_id.eq.${user.id},email.ilike.${email}`);
-      } else {
-        query = query.eq('clerk_user_id', user.id);
-      }
+      const resp1 = await sb
+        .from('profiles')
+        .select('role, email, clerk_user_id')
+        .eq('clerk_user_id', user.id)
+        .maybeSingle();
 
-      const { data: matchedProfiles, error: pErr } = await query;
-      console.log('[AUTH] Profile query result:', JSON.stringify(matchedProfiles), 'Error:', JSON.stringify(pErr));
+      console.log('[AUTH] Lookup by clerk_user_id:', JSON.stringify(resp1?.data), 'Error:', JSON.stringify(resp1?.error));
 
-      if (matchedProfiles && matchedProfiles.length > 0) {
-        const profile = matchedProfiles.find(p => p.clerk_user_id === user.id) || matchedProfiles[0];
-        existingRole = profile.role;
+      if (resp1?.data) {
+        existingRole = resp1.data.role;
         profileFound = true;
-
-        const updates = {};
-        if (!profile.clerk_user_id || profile.clerk_user_id !== user.id) {
-          updates.clerk_user_id = user.id;
-        }
-        if (email && profile.email !== email) {
-          updates.email = email;
-        }
-        if (Object.keys(updates).length > 0) {
-          sb.from('profiles').update(updates).eq('id', profile.id).then();
+        // Silently update email if needed
+        if (resp1.data.email !== email && email) {
+          await sb.from('profiles').update({ email }).eq('clerk_user_id', user.id);
         }
       }
     } catch (e1) {
-      console.warn('[AUTH] Unified profile lookup exception:', e1);
+      console.warn('[AUTH] Lookup 1 exception:', e1);
+    }
+
+    // ── Strategy 2: Fallback — look up by email ──
+    if (!profileFound && email) {
+      try {
+        const resp2 = await sb
+          .from('profiles')
+          .select('role, clerk_user_id, id')
+          .ilike('email', email)
+          .maybeSingle();
+
+        console.log('[AUTH] Lookup by email:', JSON.stringify(resp2?.data), 'Error:', JSON.stringify(resp2?.error));
+
+        if (resp2?.data) {
+          existingRole = resp2.data.role;
+          profileFound = true;
+          // Link the Clerk user ID to this profile if not already linked
+          if (!resp2.data.clerk_user_id || resp2.data.clerk_user_id !== user.id) {
+            console.log('[AUTH] Linking clerk_user_id to existing profile');
+            await sb.from('profiles').update({ clerk_user_id: user.id }).eq('id', resp2.data.id);
+          }
+        }
+      } catch (e2) {
+        console.warn('[AUTH] Lookup 2 exception:', e2);
+      }
+    }
+
+    // ── Strategy 3: Last resort — fetch ALL profiles and check ──
+    if (!profileFound) {
+      try {
+        const resp3 = await sb
+          .from('profiles')
+          .select('id, role, clerk_user_id, email')
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        console.log('[AUTH] All profiles dump:', JSON.stringify(resp3?.data), 'Error:', JSON.stringify(resp3?.error));
+
+        if (resp3?.data) {
+          const match = resp3.data.find(p =>
+            p.clerk_user_id === user.id ||
+            (p.email && p.email.toLowerCase() === email.toLowerCase())
+          );
+          if (match) {
+            existingRole = match.role;
+            profileFound = true;
+            console.log('[AUTH] Found match via dump:', JSON.stringify(match));
+          }
+        }
+      } catch (e3) {
+        console.warn('[AUTH] Strategy 3 exception:', e3);
+      }
     }
 
     // ── Create profile if none exists ──
@@ -666,7 +708,7 @@ async function handleClerkUser(user) {
 
 async function checkSession() {
   try {
-    const clerk = await ensureClerkReady(6000);
+    const clerk = await ensureClerkReady(8000);
     const user = clerk.user;
     if (user) {
       await handleClerkUser(user);
@@ -801,8 +843,10 @@ async function enterDashboard(user) {
   }
 
   showScreen('dashboard');
+  await loadDriversCache();
+  
+  // Ensure the default or URL-selected section loads its data
   showSection(currentSection);
-  loadDriversCache();
 
   // Listen for hash changes while the app is already open
   window.addEventListener('hashchange', handleUrlParamsAndHash);
