@@ -8,6 +8,7 @@ export const MODEL_RATES = {
   'gpt-4o-mini':        { input: 0.15, output: 0.60  },
 
   // Google Gemini Models (Prices per 1,000,000 tokens)
+  'gemini-2.5-flash':   { input: 0.15, output: 0.60  },
   'gemini-2.0-flash':   { input: 0.10, output: 0.40  },
   'gemini-1.5-flash':   { input: 0.075, output: 0.30 },
   'gemini-1.5-pro':     { input: 1.25, output: 5.00  },

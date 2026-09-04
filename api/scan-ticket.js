@@ -221,12 +221,119 @@ export default async function handler(req, res) {
     let lastError = '';
     let parsed = null;
 
-    // ── Primary Engine: Parallel 5-Strip Slicing OCR (Zero Vertical Drift, ~2-3s) ──
-    // Slices tall dense tables into 5 compact horizontal strips (~5-6 rows each) with vertical overlap.
-    // Each strip is sent in parallel via Promise.all, ensuring zero line bleeding and lightning-fast speed.
-    if (openaiKey) {
+    // ── Primary Engine: Google Gemini Vision OCR (High-accuracy document/table OCR) ──
+    if (googleKey) {
+      console.log('Starting primary camera OCR with Google Gemini...');
+      const GEMINI_MODELS = [
+        { name: 'gemini-2.5-flash', api: 'v1beta' },
+        { name: 'gemini-2.0-flash', api: 'v1beta' },
+        { name: 'gemini-1.5-flash', api: 'v1beta' },
+        { name: 'gemini-1.5-pro', api: 'v1beta' },
+      ];
+
+      for (const model of GEMINI_MODELS) {
+        try {
+          const gStartTime = Date.now();
+          const requestBody = JSON.stringify({
+            contents: [{
+              parts: [
+                { text: SYSTEM_PROMPT + '\n\nRead this bakery order ticket carefully and extract all product codes, quantities, and totals row by row.' },
+                { inlineData: { mimeType, data: rawBase64 } },
+              ],
+            }],
+            generationConfig: {
+              temperature: 0,
+              maxOutputTokens: 3000,
+              responseMimeType: 'application/json',
+            },
+          });
+
+          const url = `https://generativelanguage.googleapis.com/${model.api}/models/${model.name}:generateContent?key=${googleKey}`;
+          const gRes = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: requestBody,
+          });
+
+          const gDuration = Date.now() - gStartTime;
+
+          if (gRes.ok) {
+            const data = await gRes.json();
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            const textParts = parts.filter(p => p.text && !p.thought);
+            const geminiRaw = textParts.map(p => p.text).join('') || '{}';
+
+            let geminiParsed = null;
+            try {
+              let cleaned = geminiRaw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+              const jsonMatch = cleaned.match(/(\{[\s\S]*\})/);
+              if (jsonMatch) cleaned = jsonMatch[1];
+              geminiParsed = JSON.parse(cleaned);
+            } catch (err) {
+              console.error(`Error parsing JSON from Gemini ${model.name}:`, err);
+            }
+
+            const tok = extractGeminiTokens(data);
+            const rawItems = Array.isArray(geminiParsed) ? geminiParsed : (geminiParsed?.items || []);
+            const hasItems = rawItems.length > 0;
+
+            logAiUsage({
+              feature: 'ticket_scanner',
+              callerRole,
+              callerIdentifier,
+              provider: 'google_gemini',
+              model: model.name,
+              callType: 'gemini_primary',
+              inputTokens: tok.inputTokens,
+              outputTokens: tok.outputTokens,
+              totalTokens: tok.totalTokens,
+              executionMs: gDuration,
+              status: hasItems ? 'success' : 'zero_items',
+              isWaste: !hasItems,
+              wasteReason: hasItems ? null : 'gemini_zero_items',
+              metadata: { extracted_items: rawItems.length }
+            });
+
+            if (hasItems) {
+              parsed = geminiParsed;
+              rawContent = geminiRaw;
+              response = gRes;
+              console.log(`Gemini ${model.name} OCR succeeded: extracted ${rawItems.length} items.`);
+              break;
+            }
+          } else {
+            const errText = await gRes.text();
+            console.error(`Gemini ${model.name} error:`, gRes.status, errText);
+            lastError = errText;
+
+            logAiUsage({
+              feature: 'ticket_scanner',
+              callerRole,
+              callerIdentifier,
+              provider: 'google_gemini',
+              model: model.name,
+              callType: 'gemini_primary',
+              executionMs: gDuration,
+              status: 'api_error',
+              isWaste: true,
+              wasteReason: `gemini_error_${gRes.status}`,
+              metadata: { error: errText.slice(0, 150) }
+            });
+
+            if (gRes.status === 401 || gRes.status === 403) break;
+          }
+        } catch (gErr) {
+          console.error(`Gemini ${model.name} exception:`, gErr);
+          lastError = gErr.message;
+        }
+      }
+    }
+
+    // ── Secondary Engine: Parallel 4-Strip Slicing OCR (OpenAI GPT-4o) ──
+    // Slices tall dense tables into horizontal strips (~5-6 rows each) with vertical overlap.
+    if (!parsed && openaiKey) {
       try {
-        console.log('Starting parallel 5-strip split OCR with GPT-4o-2024-11-20...');
+        console.log('Running fallback parallel strip OCR with GPT-4o-2024-11-20...');
         const stripStartTime = Date.now();
         const imageBuffer = Buffer.from(rawBase64, 'base64');
         const meta = await sharp(imageBuffer).metadata();
@@ -316,7 +423,6 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
           const stripDuration = Date.now() - stripStartTime;
           const stripSuccess = merged.length > 0;
 
-          // Log AI usage for 4-strip parallel run
           logAiUsage({
             feature: 'ticket_scanner',
             callerRole,
@@ -331,7 +437,7 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
             status: stripSuccess ? 'success' : 'zero_items',
             isWaste: !stripSuccess,
             wasteReason: stripSuccess ? null : 'strip_slice_zero_items_fallback_triggered',
-            metadata: { slices: sections.length, extracted_items: merged.length }
+            metadata: { slices: sections.length, extracted_items: merged.length, fallback_from: 'gemini' }
           });
 
           if (merged.length > 0) {
@@ -340,16 +446,16 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
               total_boxes: extractedTotalBoxes,
               total_units: extractedTotalUnits,
             };
-            console.log(`Parallel 5-strip OCR succeeded: extracted ${merged.length} items.`);
+            console.log(`Parallel strip OCR fallback succeeded: extracted ${merged.length} items.`);
           }
         }
-      } catch (fiveStripErr) {
-        console.error('5-strip split OCR exception, falling back to single pass:', fiveStripErr);
+      } catch (stripErr) {
+        console.error('Strip split OCR exception, falling back to single pass GPT-4o:', stripErr);
       }
     }
 
-    // ── Secondary Engine: Single-pass OpenAI GPT-4o ──
-    if (!parsed && openaiKey) {
+    // ── Tertiary Engine: Single-pass OpenAI GPT-4o ──
+    if (!parsed && !rawContent && openaiKey) {
       try {
         console.log('Running single-pass GPT-4o-2024-11-20 fallback...');
         const spStartTime = Date.now();
@@ -407,7 +513,7 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
             executionMs: spDuration,
             status: 'success',
             isWaste: false,
-            metadata: { fallback_from: 'strip_slice' }
+            metadata: { fallback_from: 'gemini_and_strip' }
           });
         } else {
           const errText = await oaiRes.text();
@@ -434,93 +540,7 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
       }
     }
 
-    // ── Fallback Engine: Google Gemini ──
-    if (!parsed && !rawContent && googleKey) {
-      console.log('OpenAI failed or not configured. Trying Google Gemini fallback...');
-      const MODELS = [
-        { name: 'gemini-1.5-pro', api: 'v1beta' },
-        { name: 'gemini-2.0-flash', api: 'v1beta' },
-        { name: 'gemini-1.5-flash', api: 'v1beta' },
-      ];
-
-      for (const model of MODELS) {
-        try {
-          const gStartTime = Date.now();
-          const requestBody = JSON.stringify({
-            contents: [{
-              parts: [
-                { text: SYSTEM_PROMPT + '\n\nRead this bakery order ticket carefully and extract all product codes, quantities, and totals row by row.' },
-                { inlineData: { mimeType, data: rawBase64 } },
-              ],
-            }],
-            generationConfig: {
-              temperature: 0,
-              maxOutputTokens: 3000,
-            },
-          });
-
-          const url = `https://generativelanguage.googleapis.com/${model.api}/models/${model.name}:generateContent?key=${googleKey}`;
-          const gRes = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: requestBody,
-          });
-
-          const gDuration = Date.now() - gStartTime;
-
-          if (gRes.ok) {
-            const data = await gRes.json();
-            const parts = data.candidates?.[0]?.content?.parts || [];
-            const textParts = parts.filter(p => p.text && !p.thought);
-            rawContent = textParts.map(p => p.text).join('') || '{}';
-            response = gRes;
-
-            const tok = extractGeminiTokens(data);
-            logAiUsage({
-              feature: 'ticket_scanner',
-              callerRole,
-              callerIdentifier,
-              provider: 'google_gemini',
-              model: model.name,
-              callType: 'gemini_fallback',
-              inputTokens: tok.inputTokens,
-              outputTokens: tok.outputTokens,
-              totalTokens: tok.totalTokens,
-              executionMs: gDuration,
-              status: 'success',
-              isWaste: false,
-              metadata: { fallback_from: 'openai' }
-            });
-            break;
-          } else {
-            const errText = await gRes.text();
-            console.error(`Gemini ${model.name} error:`, gRes.status, errText);
-            lastError = errText;
-
-            logAiUsage({
-              feature: 'ticket_scanner',
-              callerRole,
-              callerIdentifier,
-              provider: 'google_gemini',
-              model: model.name,
-              callType: 'gemini_fallback',
-              executionMs: gDuration,
-              status: 'api_error',
-              isWaste: true,
-              wasteReason: `gemini_error_${gRes.status}`,
-              metadata: { error: errText.slice(0, 150) }
-            });
-
-            if (gRes.status === 401 || gRes.status === 403) break;
-          }
-        } catch (gErr) {
-          console.error(`Gemini ${model.name} exception:`, gErr);
-          lastError = gErr.message;
-        }
-      }
-    }
-
-    // ── Tertiary Fallback: OpenAI GPT-4o-mini ──
+    // ── Quaternary Fallback: OpenAI GPT-4o-mini ──
     if (!parsed && !rawContent && openaiKey) {
       console.log('Attempting secondary fallback to GPT-4o-mini...');
       try {
@@ -570,7 +590,7 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
             executionMs: miniDuration,
             status: 'success',
             isWaste: false,
-            metadata: { fallback_from: 'gemini' }
+            metadata: { fallback_from: 'gpt-4o' }
           });
         }
       } catch (miniErr) {
