@@ -9739,10 +9739,15 @@ function _noProcessScanResult(data) {
     if (rawQty <= 0) return;
 
     // Quantity conversion rules:
-    // 12-pack items (Family Size fam_ & Cornbread / Square cdr_): treated as dozens (0.5 = 6 pcs, 1 = 12 pcs, 2 = 24 pcs)
-    // All other items (Birthday cakes hb_, Slices pz_, Frosting fr_, Tres Leches slices tl*): treated as 1:1 units
-    const isTwelvePack = key && (key.startsWith('fam_') || key.startsWith('cdr_'));
-    const qty = isTwelvePack ? Math.round(rawQty * 12) : Math.round(rawQty);
+    // - Birthday cakes (hb_*), Slices (pz_*), Frosting (fr_*), Tres Leches slices (tl*) are always 1:1 units.
+    // - Family Size (fam_) and Cornbread / Square (cdr_):
+    //   - If the paper ticket explicitly uses dozen/box counts (item.unit === 'dozen' / 'd' and rawQty <= 4): convert to pieces (rawQty * 12).
+    //   - If the paper ticket does NOT say 12PK / is a Pickup sheet (item.unit === 'unidades' / 'u' or rawQty >= 6): treated as individual units (1:1).
+    const isTwelvePackProduct = key && (key.startsWith('fam_') || key.startsWith('cdr_'));
+    const isDozenUnit = item.unit === 'dozen' || item.unit === 'd';
+    const isPieceCount = item.unit === 'unidades' || item.unit === 'u' || rawQty >= 6;
+    const needsTwelveMultiplier = isTwelvePackProduct && isDozenUnit && !isPieceCount;
+    const qty = needsTwelveMultiplier ? Math.round(rawQty * 12) : Math.round(rawQty);
 
     // Set quantity in the order data ONLY
     if (key in order.qty) {
@@ -9783,16 +9788,19 @@ function _noProcessScanResult(data) {
     currentOrder.scanData = data.items.map(item => {
       const key = item.systemKey;
       const rawQty = parseFloat(item.qty) || 0;
-      const isTwelvePack = key && (key.startsWith('fam_') || key.startsWith('cdr_'));
+      const isTwelvePackProduct = key && (key.startsWith('fam_') || key.startsWith('cdr_'));
+      const isDozenUnit = item.unit === 'dozen' || item.unit === 'd';
+      const isPieceCount = item.unit === 'unidades' || item.unit === 'u' || rawQty >= 6;
+      const needsTwelveMultiplier = isTwelvePackProduct && isDozenUnit && !isPieceCount;
       const isBirthdayCake = key && key.startsWith('hb_');
       return {
         code: item.code,
         description: GLOBAL_TICKET_NAME_MAP[item.code] || item.description || item.code,
         rawQty: rawQty,
-        convertedQty: (key && rawQty > 0) ? (isTwelvePack ? Math.round(rawQty * 12) : Math.round(rawQty)) : 0,
+        convertedQty: (key && rawQty > 0) ? (needsTwelveMultiplier ? Math.round(rawQty * 12) : Math.round(rawQty)) : 0,
         confident: item.confident,
         matched: item.matched,
-        isTwelvePack,
+        isTwelvePack: needsTwelveMultiplier,
         isBirthdayCake,
       };
     });

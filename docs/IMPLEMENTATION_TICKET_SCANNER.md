@@ -101,4 +101,6 @@ The AI reads the number exactly as written — no conversion or multiplication.
 - 2026-04-20: **Image preprocessing** — Added Canvas API preprocessing in browser before API call: grayscale conversion, 1.8× contrast curve, downscale to max 2000px. Improves signal-to-noise ratio for OCR.
 - 2026-04-20: **Model switch: GPT-4o → Gemini 2.5 Flash** — GPT-4o consistently misread quantities on adjacent rows (9776/9970 swap). Switched to Google Gemini 2.5 Flash (`gemini-2.5-flash-preview-04-17`) which has purpose-built document/table OCR. Requires `GOOGLE_AI_API_KEY` env var in Vercel. Free tier: 5 RPM, 250K tokens/day (~80+ scans/day).
 - 2026-09-04: **Restored Google Gemini as Primary Camera Engine** — Prioritized Gemini (`gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-1.5-pro`) as the first-choice engine for paper ticket photo scanning, maintaining OpenAI 4-strip slicing and GPT-4o-mini as automated fallback layers.
+- 2026-09-04: **Format-Aware Unit Detection (Pickup Sheets vs Store Invoices)** — On Pickup sheets ("PARA RECOGER") or tickets that do NOT print "- 12PK", all quantities (including Family Size and Cornbread) are already in individual unit/piece counts (1:1). On Store Invoices with printed "- 12PK", Family and Cornbread quantities in box/dozen counts (e.g. 0.5, 1, 2) are converted (×12).
+
 

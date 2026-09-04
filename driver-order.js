@@ -5420,8 +5420,11 @@ async function _driverScanTicketFile(file) {
       const rawQty = parseFloat(item.qty) || 0;
       if (rawQty <= 0) return;
 
-      const isTwelvePack = key && (key.startsWith('fam_') || key.startsWith('cdr_'));
-      const qty = isTwelvePack ? Math.round(rawQty * 12) : Math.round(rawQty);
+      const isTwelvePackProduct = key && (key.startsWith('fam_') || key.startsWith('cdr_'));
+      const isDozenUnit = item.unit === 'dozen' || item.unit === 'd';
+      const isPieceCount = item.unit === 'unidades' || item.unit === 'u' || rawQty >= 6;
+      const needsTwelveMultiplier = isTwelvePackProduct && isDozenUnit && !isPieceCount;
+      const qty = needsTwelveMultiplier ? Math.round(rawQty * 12) : Math.round(rawQty);
 
       if (key in order.qty) {
         order.qty[key] = qty;
@@ -5459,16 +5462,19 @@ async function _driverScanTicketFile(file) {
       currentOrder.scanData = data.items.map(item => {
         const key = item.systemKey;
         const rawQty = parseFloat(item.qty) || 0;
-        const isTwelvePack = key && (key.startsWith('fam_') || key.startsWith('cdr_'));
+        const isTwelvePackProduct = key && (key.startsWith('fam_') || key.startsWith('cdr_'));
+        const isDozenUnit = item.unit === 'dozen' || item.unit === 'd';
+        const isPieceCount = item.unit === 'unidades' || item.unit === 'u' || rawQty >= 6;
+        const needsTwelveMultiplier = isTwelvePackProduct && isDozenUnit && !isPieceCount;
         const isBirthdayCake = key && key.startsWith('hb_');
         return {
           code: item.code,
           description: item.description,
           rawQty,
-          convertedQty: (key && rawQty > 0) ? (isTwelvePack ? Math.round(rawQty * 12) : Math.round(rawQty)) : 0,
+          convertedQty: (key && rawQty > 0) ? (needsTwelveMultiplier ? Math.round(rawQty * 12) : Math.round(rawQty)) : 0,
           confident: item.confident,
           matched: item.matched,
-          isTwelvePack,
+          isTwelvePack: needsTwelveMultiplier,
           isBirthdayCake,
         };
       });

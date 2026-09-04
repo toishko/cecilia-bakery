@@ -91,18 +91,18 @@ function normalizeCode(c) {
 // Uses compact output format but with strong row-grounding hints.
 const SYSTEM_PROMPT = `You are a high-precision OCR engine for bakery order tickets.
 
-PRODUCT CLASSIFICATION & UNIT RULES:
-1. LARGE & SMALL BIRTHDAY CAKES (9226S, 9165S, 9172S, 9189S, 9196S, 9226, 9196, 9165, 9172, 9189):
-   - Treated strictly as whole cake UNITS (1:1).
-   - If order says 1, qty=1. If order says 20, qty=20. Set "unit" to "unidades".
+DETECT TICKET FORMAT:
+1. FORMAT A — PICKUP SHEETS ("PARA RECOGER") OR SHEETS WITHOUT "12PK":
+   - Header typically has "PARA RECOGER", "CÓDIGO|CANTIDAD|PRODUCTO" (or "CANT.").
+   - Product descriptions DO NOT have "- 12PK" (e.g. "Cuatro Leches Family", "Tres Leches Family", "CB Cornbread Family Size", "Bread Pudding Slice").
+   - ALL quantities on this sheet are ALREADY individual unit/piece counts (e.g. 6, 12, 18, 24, 30, 36, 51).
+   - Set "unit" to "unidades" for EVERY row on this ticket.
 
-2. SLICES, PIECES & FROSTED (9158, 9141, 9134, 9776, 9745, 9970, 9752, 9936, 9943, 9769, 9738, 9820, 9969, 9868, 9875):
-   - Treated strictly as piece UNITS (1:1).
-   - If order says 1, qty=1. If order says 6, qty=6. If order says 12, qty=12. Set "unit" to "unidades".
-
-3. FAMILY SIZE & CORNBREAD/SQUARES (9813, 9011, 9110, 9103, 9202):
-   - Treated as 12-PACKS (dozens):
-   - 0.5 = 6 pieces, 1 = 12 pieces, 2 = 24 pieces. Set "unit" to "dozen".
+2. FORMAT B — STORE DELIVERY INVOICES WITH "- 12PK":
+   - Column headers typically "CODE|DESCRIPTION|QUANTITY".
+   - Items explicitly have "- 12PK" printed in the description (e.g. "CB Cornbread Family - 12PK").
+   - Family size & cornbread/squares are in box/dozen counts (0.5, 1, 1.5, 2) → set "unit" to "dozen".
+   - Birthday cakes are in whole units → set "unit" to "unidades".
 
 ROW ALIGNMENT RULE: Each row is one horizontal line. The quantity belongs STRICTLY to the code on that SAME line. Do NOT shift numbers between adjacent rows.
 
@@ -112,12 +112,12 @@ Trace each row line-by-line carefully:
 - 9769 Strawberry Cheesecake: read the number on THIS line only
 - 9936 Red Velvet: read the number on THIS line only
 - 9943 Carrot Cake: read the number on THIS line only
-- 9110 CB Cornbread Family - 12PK: read the number on THIS line only
-- 9103 CB Pound Cake Family - 12PK: read the number on THIS line only
-- 9202 CB Raisin Pound Cake Family - 12PK: read the number on THIS line only
+- 9110 CB Cornbread Family / Family Size: read the number on THIS line only
+- 9103 CB Pound Cake Family: read the number on THIS line only
+- 9202 CB Raisin Pound Cake Family: read the number on THIS line only
 Do NOT copy a number from an adjacent row.
 
-Known codes for handwritten matching:
+Known codes for matching:
 9226S=SmallDulce, 9165S=SmallPina, 9172S=SmallChoco, 9189S=SmallGuava, 9196S=SmallStraw,
 9226=LargeDulce, 9196=LargeStraw, 9165=LargePina, 9172=LargeChoco, 9189=LargeGuava,
 9158=FrChoco, 9141=FrDulce, 9134=FrGuava, 9776=FrPina,
