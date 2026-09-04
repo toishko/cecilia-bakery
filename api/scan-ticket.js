@@ -91,24 +91,30 @@ function normalizeCode(c) {
 // Uses compact output format but with strong row-grounding hints.
 const SYSTEM_PROMPT = `You are a high-precision OCR engine for bakery order tickets.
 
-Determine ticket format:
-FORMAT 1 (Store Invoice): headers "CODE|DESCRIPTION|QUANTITY", items have "- 12PK", footer "Total Boxes/Total Units".
-  Slices: qty in dozens (0.5, 1, 1.5, 2). Set "unit" to "dozen". Cakes: qty in units. Set "unit" to "unidades".
-FORMAT 2 (Pickup Sheet): header "PARA RECOGER", headers "CÓDIGO|CANTIDAD|PRODUCTO", footer "TOTAL CAJAS/TOTAL UNIDADES".
-  ALL quantities are individual pieces (6,12,18,24,30,36,48). Set "unit" to "unidades" for ALL rows.
-HANDWRITTEN: Match items to closest known code.
+PRODUCT CLASSIFICATION & UNIT RULES:
+1. LARGE & SMALL BIRTHDAY CAKES (9226S, 9165S, 9172S, 9189S, 9196S, 9226, 9196, 9165, 9172, 9189):
+   - Treated strictly as whole cake UNITS (1:1).
+   - If order says 1, qty=1. If order says 20, qty=20. Set "unit" to "unidades".
+
+2. SLICES, PIECES & FROSTED (9158, 9141, 9134, 9776, 9745, 9970, 9752, 9936, 9943, 9769, 9738, 9820, 9969, 9868, 9875):
+   - Treated strictly as piece UNITS (1:1).
+   - If order says 1, qty=1. If order says 6, qty=6. If order says 12, qty=12. Set "unit" to "unidades".
+
+3. FAMILY SIZE & CORNBREAD/SQUARES (9813, 9011, 9110, 9103, 9202):
+   - Treated as 12-PACKS (dozens):
+   - 0.5 = 6 pieces, 1 = 12 pieces, 2 = 24 pieces. Set "unit" to "dozen".
 
 ROW ALIGNMENT RULE: Each row is one horizontal line. The quantity belongs STRICTLY to the code on that SAME line. Do NOT shift numbers between adjacent rows.
 
-BOTTOM-ROW GROUNDING (rows 20-30 on pickup sheets require extra care):
-When you reach the lower half of a dense table, SLOW DOWN and trace each line individually:
+BOTTOM-ROW GROUNDING:
+Trace each row line-by-line carefully:
 - 9875 Strawberry Tres Leches: read the number on THIS line only
-- 9769 Strawberry Cheesecake: read the number on THIS line only (often a small number like 6)
+- 9769 Strawberry Cheesecake: read the number on THIS line only
 - 9936 Red Velvet: read the number on THIS line only
 - 9943 Carrot Cake: read the number on THIS line only
-- 9110 CB Cornbread Family: read the number on THIS line only
-- 9103 CB Pound Cake Family: read the number on THIS line only
-- 9202 CB Raisin Pound Cake: read the number on THIS line only
+- 9110 CB Cornbread Family - 12PK: read the number on THIS line only
+- 9103 CB Pound Cake Family - 12PK: read the number on THIS line only
+- 9202 CB Raisin Pound Cake Family - 12PK: read the number on THIS line only
 Do NOT copy a number from an adjacent row.
 
 Known codes for handwritten matching:
@@ -118,11 +124,6 @@ Known codes for handwritten matching:
 9745=BreadPudding, 9970=Chocoflan, 9752=Flan, 9936=RedVelvet, 9943=Carrot, 9769=Cheesecake,
 9738=TresLeches, 9820=CuatroLeches, 9969=HersheyTL, 9868=PinaTL, 9875=StrawTL,
 9813=FamilyTL, 9011=FamilyCL, 9110=Cornbread, 9103=PoundCake, 9202=RaisinPound
-
-SELF-CHECK before output:
-1. Sum non-cake quantities. For Format 2: divide by 12. Must equal printed TOTAL CAJAS/Total Boxes.
-2. Sum cake quantities. Must equal printed TOTAL UNIDADES/Total Units.
-3. If mismatch, re-examine rows and correct misread digits.
 
 Output JSON:
 {
@@ -660,20 +661,20 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
       '9226S': 'Birthday Cake Small Dulce de Leche', '9165S': 'Birthday Cake Small Pineapple',
       '9172S': 'Birthday Cake Small Chocolate', '9189S': 'Birthday Cake Small Guava',
       '9196S': 'Birthday Cake Small Strawberry',
-      '9226': 'Birthday Cake Large Dulce de Leche', '9165': 'Birthday Cake Large Pineapple',
-      '9172': 'Birthday Cake Large Chocolate', '9189': 'Birthday Cake Large Guava',
-      '9196': 'Birthday Cake Large Strawberry',
-      '9158': 'Cake Slice Chocolate - 12PK', '9141': 'Cake Slice Dulce de Leche - 12PK',
-      '9134': 'Cake Slice Guava - 12PK', '9776': 'Cake Slice Pineapple - 12PK',
-      '9745': 'Bread Pudding Slice - 12PK', '9970': 'Chocoflan - 12PK',
-      '9752': 'Flan - 12PK', '9936': 'Red Velvet Slice - 12PK',
-      '9943': 'Carrot Cake Slice - 12PK', '9769': 'Strawberry Cheesecake Slice - 12PK',
-      '9738': 'Tres Leches Slice - 12PK', '9820': 'Cuatro Leches Slice - 12PK',
-      '9969': 'Hershey Tres Leches - 12PK', '9868': 'Pineapple Tres Leches - 12PK',
-      '9875': 'Strawberry Tres Leches - 12PK',
-      '9813': 'Family Tres Leches', '9011': 'Family Cuatro Leches',
-      '9110': 'CB Cornbread Family', '9103': 'CB Pound Cake Family',
-      '9202': 'CB Raisin Pound Cake Family',
+      '9226':  'Birthday Cake Large Dulce de Leche', '9165': 'Birthday Cake Large Pineapple',
+      '9172':  'Birthday Cake Large Chocolate', '9189': 'Birthday Cake Large Guava',
+      '9196':  'Birthday Cake Large Strawberry',
+      '9158':  'Cake Slice Chocolate', '9141': 'Cake Slice Dulce de Leche',
+      '9134':  'Cake Slice Guava', '9776': 'Cake Slice Pineapple',
+      '9745':  'Bread Pudding Slice', '9970': 'Chocoflan Slice',
+      '9752':  'Flan Slice', '9936': 'Red Velvet Cake Slice',
+      '9943':  'Carrot Cake Slice', '9769': 'Strawberry Cheesecake Slice',
+      '9738':  'Tres Leches Slice', '9820': 'Cuatro Leches Slice',
+      '9969':  'Hershey Tres Leches Slice', '9868': 'Pineapple Tres Leches Slice',
+      '9875':  'Strawberry Tres Leches Slice',
+      '9813':  'Family Tres Leches - 12PK', '9011': 'Family Cuatro Leches - 12PK',
+      '9110':  'CB Cornbread Family - 12PK', '9103': 'CB Pound Cake Family - 12PK',
+      '9202':  'CB Raisin Pound Cake Family - 12PK',
     };
 
     // ── Self-Reconciliation via Printed Ticket Footers ──

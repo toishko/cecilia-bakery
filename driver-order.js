@@ -5420,9 +5420,8 @@ async function _driverScanTicketFile(file) {
       const rawQty = parseFloat(item.qty) || 0;
       if (rawQty <= 0) return;
 
-      const isBirthdayCake = key.startsWith('hb_');
-      const isUnidades = item.unit === 'unidades' || item.unit === 'units' || item.unit === 'unit';
-      const qty = (isBirthdayCake || isUnidades) ? rawQty : Math.round(rawQty * 12);
+      const isTwelvePack = key && (key.startsWith('fam_') || key.startsWith('cdr_'));
+      const qty = isTwelvePack ? Math.round(rawQty * 12) : Math.round(rawQty);
 
       if (key in order.qty) {
         order.qty[key] = qty;
@@ -5460,15 +5459,16 @@ async function _driverScanTicketFile(file) {
       currentOrder.scanData = data.items.map(item => {
         const key = item.systemKey;
         const rawQty = parseFloat(item.qty) || 0;
+        const isTwelvePack = key && (key.startsWith('fam_') || key.startsWith('cdr_'));
         const isBirthdayCake = key && key.startsWith('hb_');
-        const isUnidades = item.unit === 'unidades' || item.unit === 'units' || item.unit === 'unit';
         return {
           code: item.code,
           description: item.description,
           rawQty,
-          convertedQty: (key && rawQty > 0) ? ((isBirthdayCake || isUnidades) ? rawQty : Math.round(rawQty * 12)) : 0,
+          convertedQty: (key && rawQty > 0) ? (isTwelvePack ? Math.round(rawQty * 12) : Math.round(rawQty)) : 0,
           confident: item.confident,
           matched: item.matched,
+          isTwelvePack,
           isBirthdayCake,
         };
       });

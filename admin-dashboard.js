@@ -67,26 +67,26 @@ const GLOBAL_TICKET_NAME_MAP = {
   '9165':  'Birthday Cake (Large) - Pineapple',
   '9172':  'Birthday Cake (Large) - Chocolate',
   '9189':  'Birthday Cake (Large) - Guava',
-  '9745':  'Bread Pudding Slice - 12PK',
-  '9158':  'Cake Slice Chocolate - 12PK',
-  '9141':  'Cake Slice Dulce de Leche - 12PK',
-  '9134':  'Cake Slice Guava - 12PK',
-  '9776':  'Cake Slice Pineapple - 12PK',
-  '9970':  'Chocoflan Slice - 12PK',
-  '9752':  'Flan Slice - 12PK',
+  '9745':  'Bread Pudding Slice',
+  '9158':  'Cake Slice Chocolate',
+  '9141':  'Cake Slice Dulce de Leche',
+  '9134':  'Cake Slice Guava',
+  '9776':  'Cake Slice Pineapple',
+  '9970':  'Chocoflan Slice',
+  '9752':  'Flan Slice',
   '9813':  'Tres Leches Family - 12PK',
   '9011':  'Cuatro Leches Family - 12PK',
-  '9738':  'Tres Leches Slice - 12PK',
-  '9820':  'Cuatro Leches Slice - 12PK',
-  '9969':  'Hershey Tres Leches Slice - 12PK',
-  '9868':  'Pineapple Tres Leches Slice - 12PK',
-  '9875':  'Strawberry Tres Leches Slice - 12PK',
-  '9769':  'Strawberry Cheesecake Slice - 12PK',
-  '9936':  'Red Velvet Cake Slice - 12PK',
-  '9943':  'Carrot Cake Slice - 12PK',
-  '9110':  'CB Cornbread Family Sz. - 12PK',
-  '9103':  'CB Pound Cake Family Sz. - 12PK',
-  '9202':  'CB Raisin Pound Cake - Family Sz.-12PK'
+  '9738':  'Tres Leches Slice',
+  '9820':  'Cuatro Leches Slice',
+  '9969':  'Hershey Tres Leches Slice',
+  '9868':  'Pineapple Tres Leches Slice',
+  '9875':  'Strawberry Tres Leches Slice',
+  '9769':  'Strawberry Cheesecake Slice',
+  '9936':  'Red Velvet Cake Slice',
+  '9943':  'Carrot Cake Slice',
+  '9110':  'CB Cornbread Family - 12PK',
+  '9103':  'CB Pound Cake Family - 12PK',
+  '9202':  'CB Raisin Pound Cake Family - 12PK'
 };
 
 /* ── PWA standalone detection — add class for CSS fallback ── */
@@ -9738,12 +9738,11 @@ function _noProcessScanResult(data) {
     const rawQty = parseFloat(item.qty) || 0;
     if (rawQty <= 0) return;
 
-    // Convert ticket qty to individual pieces:
-    // Birthday cakes (hb_*) = 1 on ticket means 1 cake (no conversion)
-    // Everything else = 1 on ticket means 1 dozen (12 pieces), 0.5 = 6 pieces
-    const isBirthdayCake = key.startsWith('hb_');
-    const isUnidades = item.unit === 'unidades' || item.unit === 'units' || item.unit === 'unit';
-    const qty = (isBirthdayCake || isUnidades) ? rawQty : Math.round(rawQty * 12);
+    // Quantity conversion rules:
+    // 12-pack items (Family Size fam_ & Cornbread / Square cdr_): treated as dozens (0.5 = 6 pcs, 1 = 12 pcs, 2 = 24 pcs)
+    // All other items (Birthday cakes hb_, Slices pz_, Frosting fr_, Tres Leches slices tl*): treated as 1:1 units
+    const isTwelvePack = key && (key.startsWith('fam_') || key.startsWith('cdr_'));
+    const qty = isTwelvePack ? Math.round(rawQty * 12) : Math.round(rawQty);
 
     // Set quantity in the order data ONLY
     if (key in order.qty) {
@@ -9784,15 +9783,16 @@ function _noProcessScanResult(data) {
     currentOrder.scanData = data.items.map(item => {
       const key = item.systemKey;
       const rawQty = parseFloat(item.qty) || 0;
+      const isTwelvePack = key && (key.startsWith('fam_') || key.startsWith('cdr_'));
       const isBirthdayCake = key && key.startsWith('hb_');
-      const isUnidades = item.unit === 'unidades' || item.unit === 'units' || item.unit === 'unit';
       return {
         code: item.code,
         description: GLOBAL_TICKET_NAME_MAP[item.code] || item.description || item.code,
         rawQty: rawQty,
-        convertedQty: (key && rawQty > 0) ? ((isBirthdayCake || isUnidades) ? rawQty : Math.round(rawQty * 12)) : 0,
+        convertedQty: (key && rawQty > 0) ? (isTwelvePack ? Math.round(rawQty * 12) : Math.round(rawQty)) : 0,
         confident: item.confident,
         matched: item.matched,
+        isTwelvePack,
         isBirthdayCake,
       };
     });
