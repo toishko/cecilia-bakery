@@ -1526,12 +1526,18 @@ async function submitAllOrders() {
 
   try {
     // ── Fetch driver's prices for price snapshot ──
-    const { data: driverPrices } = await sb
-      .from('driver_prices')
-      .select('product_key, price')
-      .eq('driver_id', currentDriver.id);
-    const priceMap = {};
-    if (driverPrices) driverPrices.forEach(p => priceMap[p.product_key] = parseFloat(p.price));
+    const priceMap = Object.assign({}, driverPriceMap || {});
+    try {
+      const { data: driverPrices } = await sb
+        .from('driver_prices')
+        .select('product_key, price')
+        .eq('driver_id', currentDriver.id);
+      if (driverPrices && driverPrices.length > 0) {
+        driverPrices.forEach(p => priceMap[p.product_key] = parseFloat(p.price));
+      }
+    } catch (pErr) {
+      console.warn('Could not fetch fresh driver prices, falling back to driverPriceMap:', pErr);
+    }
 
     // ── EDIT MODE: update existing order ──
     // Helper: collect items from an order object
@@ -1561,6 +1567,16 @@ async function submitAllOrders() {
       // Update the original order (orders[0])
       const o0 = orders[0];
       const items0 = collectItems(o0);
+      const orderItems = items0.map(it => ({
+        order_id: driverEditOrderId,
+        product_key: it.product_key,
+        product_label: it.product_label,
+        quantity: it.quantity,
+        price_at_order: (priceMap[it.product_key] !== undefined && priceMap[it.product_key] !== null)
+          ? priceMap[it.product_key]
+          : (driverPriceMap[it.product_key] || 0),
+      }));
+      const editTotal = Math.round(orderItems.reduce((sum, it) => sum + it.quantity * it.price_at_order, 0) * 100) / 100;
 
       await sb.from('driver_orders').update({
         business_name: o0.business || null,
@@ -1568,20 +1584,12 @@ async function submitAllOrders() {
         pickup_time: o0.time || null,
         driver_ref: o0.ref || null,
         notes: o0.notes || null,
+        total_amount: editTotal,
       }).eq('id', driverEditOrderId);
 
       await sb.from('driver_order_items').delete().eq('order_id', driverEditOrderId);
-      if (items0.length > 0) {
-        const orderItems = items0.map(it => ({
-          order_id: driverEditOrderId,
-          product_key: it.product_key,
-          product_label: it.product_label,
-          quantity: it.quantity,
-          price_at_order: priceMap[it.product_key] || 0,
-        }));
+      if (orderItems.length > 0) {
         await sb.from('driver_order_items').insert(orderItems);
-        const editTotal = orderItems.reduce((sum, it) => sum + it.quantity * it.price_at_order, 0);
-        await sb.from('driver_orders').update({ total_amount: editTotal }).eq('id', driverEditOrderId);
       }
 
       // Get the batch_id from the original order so new orders join the same batch
@@ -1595,6 +1603,16 @@ async function submitAllOrders() {
         const items = collectItems(o);
         if (items.length === 0) continue;
 
+        const newItems = items.map(it => ({
+          product_key: it.product_key,
+          product_label: it.product_label,
+          quantity: it.quantity,
+          price_at_order: (priceMap[it.product_key] !== undefined && priceMap[it.product_key] !== null)
+            ? priceMap[it.product_key]
+            : (driverPriceMap[it.product_key] || 0),
+        }));
+        const newTotal = Math.round(newItems.reduce((sum, it) => sum + it.quantity * it.price_at_order, 0) * 100) / 100;
+
         const payload = {
           driver_id: currentDriver.id,
           batch_id: editBatchId,
@@ -1605,6 +1623,7 @@ async function submitAllOrders() {
           notes: o.notes || null,
           status: 'pending',
           editable_until: editableUntil,
+          total_amount: newTotal,
         };
 
         let newOrder, newErr;
@@ -1616,16 +1635,11 @@ async function submitAllOrders() {
 
         if (newErr) { console.error('Edit add-order error:', newErr); continue; }
 
-        const newItems = items.map(it => ({
+        const itemsWithId = newItems.map(it => ({
+          ...it,
           order_id: newOrder.id,
-          product_key: it.product_key,
-          product_label: it.product_label,
-          quantity: it.quantity,
-          price_at_order: priceMap[it.product_key] || 0,
         }));
-        await sb.from('driver_order_items').insert(newItems);
-        const newTotal = newItems.reduce((sum, it) => sum + it.quantity * it.price_at_order, 0);
-        await sb.from('driver_orders').update({ total_amount: newTotal }).eq('id', newOrder.id);
+        await sb.from('driver_order_items').insert(itemsWithId);
       }
 
       closeSummary();
@@ -1662,7 +1676,18 @@ async function submitAllOrders() {
 
       if (items.length === 0) continue;
 
-      // Build order payload
+      // Calculate items and total upfront
+      const orderItems = items.map(it => ({
+        product_key: it.product_key,
+        product_label: it.product_label,
+        quantity: it.quantity,
+        price_at_order: (priceMap[it.product_key] !== undefined && priceMap[it.product_key] !== null)
+          ? priceMap[it.product_key]
+          : (driverPriceMap[it.product_key] || 0),
+      }));
+      const orderTotal = Math.round(orderItems.reduce((sum, it) => sum + it.quantity * it.price_at_order, 0) * 100) / 100;
+
+      // Build order payload with total_amount included immediately
       const orderPayload = {
         driver_id: currentDriver.id,
         batch_id: batchId,
@@ -1673,6 +1698,7 @@ async function submitAllOrders() {
         notes: o.notes || null,
         status: 'pending',
         editable_until: editableUntil,
+        total_amount: orderTotal,
       };
 
       // Insert order (fallback: retry without batch_id if column doesn't exist)
@@ -1698,24 +1724,17 @@ async function submitAllOrders() {
         throw orderErr;
       }
 
-      // Insert items with price snapshot
-      const orderItems = items.map(it => ({
+      // Insert items with order_id snapshot
+      const orderItemsWithId = orderItems.map(it => ({
+        ...it,
         order_id: orderData.id,
-        product_key: it.product_key,
-        product_label: it.product_label,
-        quantity: it.quantity,
-        price_at_order: priceMap[it.product_key] || 0,
       }));
 
-      const { error: itemsErr } = await sb.from('driver_order_items').insert(orderItems);
+      const { error: itemsErr } = await sb.from('driver_order_items').insert(orderItemsWithId);
       if (itemsErr) {
         console.error(`Order ${i + 1} items insert error:`, itemsErr);
         throw itemsErr;
       }
-
-      // Calculate and set total_amount on the order
-      const orderTotal = orderItems.reduce((sum, it) => sum + it.quantity * it.price_at_order, 0);
-      await sb.from('driver_orders').update({ total_amount: orderTotal }).eq('id', orderData.id);
 
       // Push notification handled by admin dashboard realtime subscription
       // (no manual trigger needed — prevents double notification)
