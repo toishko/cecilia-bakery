@@ -4094,9 +4094,137 @@ body.batch-mode-active .bottom-nav {
 }
 .dgo-row {
   border-bottom: 1px dashed var(--bd);
+  transition: background 0.15s ease, padding 0.2s ease;
 }
 .dgo-row:last-child {
   border-bottom: none;
+}
+
+/* ── Driver Grouped Batch Selection Styles ── */
+.driver-group-chk-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 4px;
+  margin-right: 4px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+.driver-group-chk-wrap:hover {
+  background: rgba(200, 16, 46, 0.08);
+}
+.driver-group-chk-wrap input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.driver-group-chk-wrap .chk-box {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--bd);
+  border-radius: 6px;
+  background: var(--bg-card);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  cursor: pointer;
+}
+.driver-group-chk-wrap .chk-box::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 6px;
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0);
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.driver-group-chk-wrap input:checked + .chk-box {
+  background: var(--red);
+  border-color: var(--red);
+  transform: scale(1.05);
+}
+.driver-group-chk-wrap input:checked + .chk-box::after {
+  transform: rotate(45deg) scale(1);
+}
+.driver-group-chk-wrap .chk-box.indeterminate {
+  background: var(--red) !important;
+  border-color: var(--red) !important;
+  transform: scale(1.05);
+}
+.driver-group-chk-wrap .chk-box.indeterminate::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 7px !important;
+  left: 4px !important;
+  width: 8px !important;
+  height: 2px !important;
+  background: #fff !important;
+  border: none !important;
+  transform: scale(1) !important;
+  border-radius: 1px !important;
+}
+
+.driver-sel-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: rgba(200, 16, 46, 0.12);
+  color: var(--red);
+  border: 1px solid rgba(200, 16, 46, 0.25);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.btn-driver-batch-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--bg-surface);
+  color: var(--tx);
+  border: 1px solid var(--bd);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.btn-driver-batch-chip:hover {
+  border-color: var(--red);
+  color: var(--red);
+  background: rgba(200, 16, 46, 0.05);
+}
+.btn-driver-batch-chip.active {
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
+  box-shadow: 0 2px 8px rgba(200, 16, 46, 0.2);
+}
+
+.dgo-row.batch-selectable {
+  padding-left: 44px !important;
+  padding-right: 12px !important;
+  cursor: pointer;
+  position: relative;
+  border-radius: 10px !important;
+  margin: 4px 0 !important;
+}
+.dgo-row.batch-selectable .batch-card-chk-wrap {
+  left: 12px !important;
+}
+.dgo-row.selected {
+  background: rgba(200, 16, 46, 0.06) !important;
+  border: 1px solid rgba(200, 16, 46, 0.2) !important;
 }
 
 /* Responsive Driver Group Cards under Narrow Viewports / Zoom */

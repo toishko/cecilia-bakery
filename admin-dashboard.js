@@ -12118,11 +12118,6 @@ window._selectedOrderIds = new Set();
 window.setIncomingViewMode = function(mode) {
   window._incomingViewMode = mode;
   
-  // Reset batch mode if active
-  if (window._batchMode) {
-    exitBatchMode();
-  }
-  
   // Segmented control UI classes
   const stdBtn = document.getElementById('view-mode-standard');
   const grpBtn = document.getElementById('view-mode-grouped');
@@ -12135,9 +12130,12 @@ window.setIncomingViewMode = function(mode) {
   if (stdList) stdList.style.display = mode === 'standard' ? 'block' : 'none';
   if (grpList) grpList.style.display = mode === 'grouped' ? 'block' : 'none';
   
-  // Hide/Show batch toggle button (only available in standard list view)
+  // Keep batch toggle button visible in both modes
   const batchBtn = document.getElementById('batch-toggle-btn');
-  if (batchBtn) batchBtn.style.display = mode === 'standard' ? 'inline-flex' : 'none';
+  if (batchBtn) {
+    batchBtn.style.display = 'inline-flex';
+    batchBtn.classList.toggle('active', !!window._batchMode);
+  }
   
   if (mode === 'grouped') {
     renderDriverGroupedOrders();
@@ -12165,7 +12163,11 @@ window.toggleBatchMode = function() {
   
   // Refresh rendering
   if (currentSection === 'incoming') {
-    renderIncomingOrders();
+    if (window._incomingViewMode === 'grouped') {
+      renderDriverGroupedOrders();
+    } else {
+      renderIncomingOrders();
+    }
   } else if (currentSection === 'history') {
     renderOrderCards(historyOrders, 'history-orders-list');
   }
@@ -12178,10 +12180,24 @@ window.toggleBatchSelection = function(orderId, cardEl) {
   
   if (window._selectedOrderIds.has(orderId)) {
     window._selectedOrderIds.delete(orderId);
-    if (cardEl) cardEl.classList.remove('selected');
+    if (cardEl) {
+      cardEl.classList.remove('selected');
+      const chk = cardEl.querySelector('.batch-card-chk-wrap input');
+      if (chk) chk.checked = false;
+    }
   } else {
     window._selectedOrderIds.add(orderId);
-    if (cardEl) cardEl.classList.add('selected');
+    if (cardEl) {
+      cardEl.classList.add('selected');
+      const chk = cardEl.querySelector('.batch-card-chk-wrap input');
+      if (chk) chk.checked = true;
+    }
+  }
+  
+  if (window._incomingViewMode === 'grouped' && currentSection === 'incoming') {
+    if (typeof window._syncDriverGroupHeaders === 'function') {
+      window._syncDriverGroupHeaders();
+    }
   }
   
   updateFloatingActionBar();
@@ -12197,20 +12213,26 @@ window.updateFloatingActionBar = function() {
     return;
   }
   
-  // Sum selected order totals
+  // Sum selected order totals and track distinct drivers
   let totalSum = 0;
   const allOrders = [...(incomingOrders || []), ...(historyOrders || [])];
+  const driverSet = new Set();
   
   window._selectedOrderIds.forEach(id => {
     const o = allOrders.find(x => x.id === id);
     if (o) {
       totalSum += parseFloat(o.total_amount || 0);
+      if (o.driver_id) driverSet.add(o.driver_id);
     }
   });
   
-  const countText = lang === 'es'
+  let countText = lang === 'es'
     ? `${count} ${count !== 1 ? 'pedidos' : 'pedido'}`
     : `${count} ${count !== 1 ? 'orders' : 'order'}`;
+    
+  if (driverSet.size > 1) {
+    countText += lang === 'es' ? ` · ${driverSet.size} cond.` : ` · ${driverSet.size} drivers`;
+  }
     
   const countEl = document.getElementById('fbb-count');
   const totalEl = document.getElementById('fbb-total');
@@ -12236,7 +12258,11 @@ window.exitBatchMode = function() {
   if (bar) bar.classList.remove('open');
   
   if (currentSection === 'incoming') {
-    renderIncomingOrders();
+    if (window._incomingViewMode === 'grouped') {
+      renderDriverGroupedOrders();
+    } else {
+      renderIncomingOrders();
+    }
   } else if (currentSection === 'history') {
     renderOrderCards(historyOrders, 'history-orders-list');
   }
@@ -12359,6 +12385,7 @@ window.renderDriverGroupedOrders = function() {
   const container = document.getElementById('incoming-orders-grouped-list');
   if (!container) return;
   
+  const isBatchMode = !!window._batchMode;
   const activeFilter = document.querySelector('#driver-orders-filter .insights-pill.active')?.dataset.filter || 'all';
   let filtered = [...incomingOrders];
 
@@ -12405,6 +12432,16 @@ window.renderDriverGroupedOrders = function() {
     const totalOrders = orders.length;
     const unpaidOrders = orders.filter(o => o.payment_status !== 'paid').length;
     
+    // Selection state for this driver
+    const selectedOrders = orders.filter(o => window._selectedOrderIds && window._selectedOrderIds.has(o.id));
+    const selectedCount = selectedOrders.length;
+    const isAllSelected = totalOrders > 0 && selectedCount === totalOrders;
+    const isPartialSelected = selectedCount > 0 && !isAllSelected;
+    
+    // Check if all unpaid orders are selected
+    const unpaidList = orders.filter(o => o.payment_status !== 'paid');
+    const isAllUnpaidSelected = unpaidList.length > 0 && unpaidList.every(o => window._selectedOrderIds && window._selectedOrderIds.has(o.id));
+    
     // Sum outstanding balance for unpaid / partial orders
     let driverBalance = 0;
     orders.forEach(o => {
@@ -12424,6 +12461,29 @@ window.renderDriverGroupedOrders = function() {
     const cardId = `group-card-${driverId}`;
     const wasExpanded = window._expandedGroupCards && window._expandedGroupCards.has(cardId);
     const cardClass = wasExpanded ? 'driver-group-card expanded' : 'driver-group-card';
+    
+    // Header selection UI
+    let masterChkHtml = '';
+    let unpaidChipHtml = '';
+    if (isBatchMode) {
+      masterChkHtml = `
+        <div class="driver-group-chk-wrap" onclick="event.stopPropagation(); toggleDriverGroupSelection('${driverId}')" title="${lang === 'es' ? 'Seleccionar todos' : 'Select all'}">
+          <input type="checkbox" id="chk-driver-${driverId}" ${isAllSelected ? 'checked' : ''}>
+          <span class="chk-box ${isPartialSelected ? 'indeterminate' : ''}"></span>
+        </div>`;
+        
+      if (unpaidOrders > 0) {
+        unpaidChipHtml = `
+          <button class="btn-driver-batch-chip ${isAllUnpaidSelected ? 'active' : ''}" onclick="event.stopPropagation(); toggleDriverUnpaidSelection('${driverId}')" title="${lang === 'es' ? 'Seleccionar sin pagar' : 'Select unpaid orders'}">
+            <i data-lucide="check-circle-2" style="width:12px;height:12px;"></i>
+            <span>${lang === 'es' ? `Sin pagar (${unpaidOrders})` : `Unpaid (${unpaidOrders})`}</span>
+          </button>`;
+      }
+    }
+    
+    const selPillHtml = (isBatchMode && selectedCount > 0)
+      ? `<span class="driver-sel-pill">${selectedCount}/${totalOrders}</span>`
+      : '';
     
     // Settle button
     let settleBtnHtml = '';
@@ -12457,8 +12517,23 @@ window.renderDriverGroupedOrders = function() {
       };
       const statusLabel = statusLabels[o.status] || o.status;
       
+      const isSelected = window._selectedOrderIds && window._selectedOrderIds.has(o.id);
+      const selectableClass = isBatchMode ? ' batch-selectable' : '';
+      const selectedClass = (isBatchMode && isSelected) ? ' selected' : '';
+      const clickHandler = isBatchMode 
+        ? `toggleBatchSelection('${o.id}', this)` 
+        : `openOrderSheet('${o.id}')`;
+      
+      const chkHtml = isBatchMode 
+        ? `<div class="batch-card-chk-wrap" onclick="event.stopPropagation(); toggleBatchSelection('${o.id}', this.closest('.dgo-row'))">
+             <input type="checkbox" ${isSelected ? 'checked' : ''} tabindex="-1">
+             <span class="chk-box"></span>
+           </div>`
+        : '';
+      
       childrenHtml += `
-        <div class="order-card-avatar dgo-row" onclick="openOrderSheet('${o.id}')" style="box-shadow:none; border:none; border-bottom:1px dashed var(--bd); margin:0; padding:12px 0; border-radius:0; background:transparent;">
+        <div class="order-card-avatar dgo-row${selectableClass}${selectedClass}" onclick="${clickHandler}" data-order-id="${o.id}" data-driver-id="${driverId}" style="box-shadow:none; border:none; border-bottom:1px dashed var(--bd); margin:0; padding:12px 0; border-radius:0; background:transparent;">
+          ${chkHtml}
           <div class="oca-body" style="padding-left:0;">
             <div class="oca-name" style="font-size:0.86rem; font-weight:600;">${oNum ? oNum + ' • ' : ''}${statusLabel}</div>
             <div class="oca-time">${oTime}</div>
@@ -12472,14 +12547,19 @@ window.renderDriverGroupedOrders = function() {
     });
     
     html += `
-      <div class="${cardClass}" id="${cardId}">
+      <div class="${cardClass}" id="${cardId}" data-driver-id="${driverId}">
         <div class="driver-group-header" onclick="toggleDriverGroupCard('${cardId}')">
+          ${masterChkHtml}
           <div class="driver-group-avatar">${initials}</div>
           <div class="driver-group-info">
-            <span class="driver-group-name">${driverName}</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="driver-group-name">${driverName}</span>
+              ${selPillHtml}
+            </div>
             <span class="driver-group-sub">${orderText}</span>
           </div>
           <div class="driver-group-settle-wrap">
+            ${unpaidChipHtml}
             <div class="driver-group-balance">
               <span class="driver-group-bal-val">${balanceText}</span>
               <span class="driver-group-bal-lbl">${lang === 'es' ? 'Adeudado' : 'Outstanding'}</span>
@@ -12498,6 +12578,124 @@ window.renderDriverGroupedOrders = function() {
   
   container.innerHTML = html;
   if (window.lucide) window.lucide.createIcons();
+};
+
+window._syncDriverGroupHeaders = function() {
+  const container = document.getElementById('incoming-orders-grouped-list');
+  if (!container || !window._batchMode) return;
+  
+  const cards = container.querySelectorAll('.driver-group-card');
+  cards.forEach(card => {
+    const driverId = card.dataset.driverId;
+    if (!driverId) return;
+    
+    const rows = card.querySelectorAll('.dgo-row');
+    const totalCount = rows.length;
+    let selectedCount = 0;
+    
+    rows.forEach(row => {
+      const orderId = row.dataset.orderId;
+      const isSelected = window._selectedOrderIds && window._selectedOrderIds.has(orderId);
+      row.classList.toggle('selected', isSelected);
+      const rowChk = row.querySelector('.batch-card-chk-wrap input');
+      if (rowChk) rowChk.checked = isSelected;
+      if (isSelected) selectedCount++;
+    });
+    
+    // Master checkbox update
+    const masterChk = card.querySelector(`.driver-group-chk-wrap input`);
+    const chkBox = card.querySelector(`.driver-group-chk-wrap .chk-box`);
+    if (masterChk && chkBox) {
+      if (totalCount > 0 && selectedCount === totalCount) {
+        masterChk.checked = true;
+        chkBox.classList.remove('indeterminate');
+      } else if (selectedCount > 0) {
+        masterChk.checked = false;
+        chkBox.classList.add('indeterminate');
+      } else {
+        masterChk.checked = false;
+        chkBox.classList.remove('indeterminate');
+      }
+    }
+    
+    // Selection pill update
+    let selPill = card.querySelector('.driver-sel-pill');
+    if (selectedCount > 0) {
+      if (!selPill) {
+        selPill = document.createElement('span');
+        selPill.className = 'driver-sel-pill';
+        const nameContainer = card.querySelector('.driver-group-info > div');
+        if (nameContainer) nameContainer.appendChild(selPill);
+      }
+      if (selPill) selPill.textContent = `${selectedCount}/${totalCount}`;
+    } else if (selPill) {
+      selPill.remove();
+    }
+  });
+};
+
+window.toggleDriverGroupSelection = function(driverId) {
+  if (!window._selectedOrderIds) window._selectedOrderIds = new Set();
+  
+  const activeFilter = document.querySelector('#driver-orders-filter .insights-pill.active')?.dataset.filter || 'all';
+  let filtered = [...incomingOrders];
+  const todayStr = getTodayStr();
+
+  if (activeFilter === 'today') {
+    filtered = filtered.filter(o => (o.submitted_at || '').startsWith(todayStr));
+  } else if (activeFilter === 'unpaid') {
+    filtered = filtered.filter(o => o.payment_status === 'not_paid');
+  } else if (activeFilter === 'partial') {
+    filtered = filtered.filter(o => o.payment_status === 'partial');
+  }
+
+  const driverOrders = filtered.filter(o => (o.driver_id || 'unknown') === driverId);
+  if (driverOrders.length === 0) return;
+  
+  const allSelected = driverOrders.every(o => window._selectedOrderIds.has(o.id));
+  
+  driverOrders.forEach(o => {
+    if (allSelected) {
+      window._selectedOrderIds.delete(o.id);
+    } else {
+      window._selectedOrderIds.add(o.id);
+    }
+  });
+  
+  window._syncDriverGroupHeaders();
+  updateFloatingActionBar();
+};
+
+window.toggleDriverUnpaidSelection = function(driverId) {
+  if (!window._selectedOrderIds) window._selectedOrderIds = new Set();
+  
+  const activeFilter = document.querySelector('#driver-orders-filter .insights-pill.active')?.dataset.filter || 'all';
+  let filtered = [...incomingOrders];
+  const todayStr = getTodayStr();
+
+  if (activeFilter === 'today') {
+    filtered = filtered.filter(o => (o.submitted_at || '').startsWith(todayStr));
+  } else if (activeFilter === 'unpaid') {
+    filtered = filtered.filter(o => o.payment_status === 'not_paid');
+  } else if (activeFilter === 'partial') {
+    filtered = filtered.filter(o => o.payment_status === 'partial');
+  }
+
+  const unpaidOrders = filtered.filter(o => (o.driver_id || 'unknown') === driverId && o.payment_status !== 'paid');
+  if (unpaidOrders.length === 0) return;
+  
+  const allUnpaidSelected = unpaidOrders.every(o => window._selectedOrderIds.has(o.id));
+  
+  unpaidOrders.forEach(o => {
+    if (allUnpaidSelected) {
+      window._selectedOrderIds.delete(o.id);
+    } else {
+      window._selectedOrderIds.add(o.id);
+    }
+  });
+  
+  window._syncDriverGroupHeaders();
+  updateFloatingActionBar();
 };
 
 window.toggleDriverGroupCard = function(cardId) {
