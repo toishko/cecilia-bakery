@@ -67,23 +67,23 @@ const GLOBAL_TICKET_NAME_MAP = {
   '9165':  'Birthday Cake (Large) - Pineapple',
   '9172':  'Birthday Cake (Large) - Chocolate',
   '9189':  'Birthday Cake (Large) - Guava',
-  '9745':  'Bread Pudding Slice',
-  '9158':  'Cake Slice Chocolate',
-  '9141':  'Cake Slice Dulce de Leche',
-  '9134':  'Cake Slice Guava',
-  '9776':  'Cake Slice Pineapple',
-  '9970':  'Chocoflan Slice',
-  '9752':  'Flan Slice',
+  '9745':  'Bread Pudding Slice - 12PK',
+  '9158':  'Cake Slice Chocolate - 12PK',
+  '9141':  'Cake Slice Dulce de Leche - 12PK',
+  '9134':  'Cake Slice Guava - 12PK',
+  '9776':  'Cake Slice Pineapple - 12PK',
+  '9970':  'Chocoflan Slice - 12PK',
+  '9752':  'Flan Slice - 12PK',
   '9813':  'Tres Leches Family - 12PK',
   '9011':  'Cuatro Leches Family - 12PK',
-  '9738':  'Tres Leches Slice',
-  '9820':  'Cuatro Leches Slice',
-  '9969':  'Hershey Tres Leches Slice',
-  '9868':  'Pineapple Tres Leches Slice',
-  '9875':  'Strawberry Tres Leches Slice',
-  '9769':  'Strawberry Cheesecake Slice',
-  '9936':  'Red Velvet Cake Slice',
-  '9943':  'Carrot Cake Slice',
+  '9738':  'Tres Leches Slice - 12PK',
+  '9820':  'Cuatro Leches Slice - 12PK',
+  '9969':  'Hershey Tres Leches Slice - 12PK',
+  '9868':  'Pineapple Tres Leches Slice - 12PK',
+  '9875':  'Strawberry Tres Leches Slice - 12PK',
+  '9769':  'Strawberry Cheesecake Slice - 12PK',
+  '9936':  'Red Velvet Cake Slice - 12PK',
+  '9943':  'Carrot Cake Slice - 12PK',
   '9110':  'CB Cornbread Family - 12PK',
   '9103':  'CB Pound Cake Family - 12PK',
   '9202':  'CB Raisin Pound Cake Family - 12PK'
@@ -9739,14 +9739,16 @@ function _noProcessScanResult(data) {
     if (rawQty <= 0) return;
 
     // Quantity conversion rules:
-    // - Birthday cakes (hb_*), Slices (pz_*), Frosting (fr_*), Tres Leches slices (tl*) are always 1:1 units.
-    // - Family Size (fam_) and Cornbread / Square (cdr_):
-    //   - If the paper ticket explicitly uses dozen/box counts (item.unit === 'dozen' / 'd' and rawQty <= 4): convert to pieces (rawQty * 12).
-    //   - If the paper ticket does NOT say 12PK / is a Pickup sheet (item.unit === 'unidades' / 'u' or rawQty >= 6): treated as individual units (1:1).
-    const isTwelvePackProduct = key && (key.startsWith('fam_') || key.startsWith('cdr_'));
-    const isDozenUnit = item.unit === 'dozen' || item.unit === 'd';
+    // - Birthday cakes (hb_*) are strictly whole cakes (1:1).
+    // - All 12PK products (cake slices, frosted, pieces, tres leches, family size, cornbread/squares):
+    //   - If unit is 'dozen' / 'd' (or rawQty < 6 on a 12PK sheet): convert to units (rawQty * 12). E.g. 0.5 = 6 units, 1 = 12 units.
+    //   - If unit is 'unidades' / 'u' (e.g. on Pickup sheets without 12PK or rawQty >= 6): already individual units (1:1).
+    const isBirthdayCake = key && key.startsWith('hb_');
+    const isExplicitTwelvePk = (item.description && /12\s*pk/i.test(item.description)) ||
+                              (GLOBAL_TICKET_NAME_MAP[item.code] && /12\s*pk/i.test(GLOBAL_TICKET_NAME_MAP[item.code]));
+    const isDozenUnit = item.unit === 'dozen' || item.unit === 'd' || isExplicitTwelvePk;
     const isPieceCount = item.unit === 'unidades' || item.unit === 'u' || rawQty >= 6;
-    const needsTwelveMultiplier = isTwelvePackProduct && isDozenUnit && !isPieceCount;
+    const needsTwelveMultiplier = !isBirthdayCake && isDozenUnit && !isPieceCount;
     const qty = needsTwelveMultiplier ? Math.round(rawQty * 12) : Math.round(rawQty);
 
     // Set quantity in the order data ONLY
@@ -9788,11 +9790,12 @@ function _noProcessScanResult(data) {
     currentOrder.scanData = data.items.map(item => {
       const key = item.systemKey;
       const rawQty = parseFloat(item.qty) || 0;
-      const isTwelvePackProduct = key && (key.startsWith('fam_') || key.startsWith('cdr_'));
-      const isDozenUnit = item.unit === 'dozen' || item.unit === 'd';
-      const isPieceCount = item.unit === 'unidades' || item.unit === 'u' || rawQty >= 6;
-      const needsTwelveMultiplier = isTwelvePackProduct && isDozenUnit && !isPieceCount;
       const isBirthdayCake = key && key.startsWith('hb_');
+      const isExplicitTwelvePk = (item.description && /12\s*pk/i.test(item.description)) ||
+                                (GLOBAL_TICKET_NAME_MAP[item.code] && /12\s*pk/i.test(GLOBAL_TICKET_NAME_MAP[item.code]));
+      const isDozenUnit = item.unit === 'dozen' || item.unit === 'd' || isExplicitTwelvePk;
+      const isPieceCount = item.unit === 'unidades' || item.unit === 'u' || rawQty >= 6;
+      const needsTwelveMultiplier = !isBirthdayCake && isDozenUnit && !isPieceCount;
       return {
         code: item.code,
         description: GLOBAL_TICKET_NAME_MAP[item.code] || item.description || item.code,

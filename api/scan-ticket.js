@@ -100,9 +100,9 @@ DETECT TICKET FORMAT:
 
 2. FORMAT B — STORE DELIVERY INVOICES WITH "- 12PK":
    - Column headers typically "CODE|DESCRIPTION|QUANTITY".
-   - Items explicitly have "- 12PK" printed in the description (e.g. "CB Cornbread Family - 12PK").
-   - Family size & cornbread/squares are in box/dozen counts (0.5, 1, 1.5, 2) → set "unit" to "dozen".
-   - Birthday cakes are in whole units → set "unit" to "unidades".
+   - Items explicitly have "- 12PK" printed in the description (e.g. "Cake Slice Pineapple - 12PK", "CB Cornbread Family - 12PK").
+   - ALL 12PK items (cake slices, frosted, pieces, tres leches slices, family size, cornbread/squares) are in box/dozen counts (0.5 = 6 units, 1 = 12 units, 1.5 = 18 units, 2 = 24 units) → set "unit" to "dozen".
+   - Only Birthday cakes (9226S, 9165S, 9172S, 9189S, 9196S, 9226, 9196, 9165, 9172, 9189) are whole cakes (1, 2, 3...) → set "unit" to "unidades".
 
 ROW ALIGNMENT RULE: Each row is one horizontal line. The quantity belongs STRICTLY to the code on that SAME line. Do NOT shift numbers between adjacent rows.
 
@@ -680,14 +680,14 @@ Output JSON: {"items": [{"code": "9172", "qty": 2, "unit": "unidades"}], "total_
       '9226':  'Birthday Cake Large Dulce de Leche', '9165': 'Birthday Cake Large Pineapple',
       '9172':  'Birthday Cake Large Chocolate', '9189': 'Birthday Cake Large Guava',
       '9196':  'Birthday Cake Large Strawberry',
-      '9158':  'Cake Slice Chocolate', '9141': 'Cake Slice Dulce de Leche',
-      '9134':  'Cake Slice Guava', '9776': 'Cake Slice Pineapple',
-      '9745':  'Bread Pudding Slice', '9970': 'Chocoflan Slice',
-      '9752':  'Flan Slice', '9936': 'Red Velvet Cake Slice',
-      '9943':  'Carrot Cake Slice', '9769': 'Strawberry Cheesecake Slice',
-      '9738':  'Tres Leches Slice', '9820': 'Cuatro Leches Slice',
-      '9969':  'Hershey Tres Leches Slice', '9868': 'Pineapple Tres Leches Slice',
-      '9875':  'Strawberry Tres Leches Slice',
+      '9158':  'Cake Slice Chocolate - 12PK', '9141': 'Cake Slice Dulce de Leche - 12PK',
+      '9134':  'Cake Slice Guava - 12PK', '9776': 'Cake Slice Pineapple - 12PK',
+      '9745':  'Bread Pudding Slice - 12PK', '9970': 'Chocoflan Slice - 12PK',
+      '9752':  'Flan Slice - 12PK', '9936': 'Red Velvet Cake Slice - 12PK',
+      '9943':  'Carrot Cake Slice - 12PK', '9769': 'Strawberry Cheesecake Slice - 12PK',
+      '9738':  'Tres Leches Slice - 12PK', '9820': 'Cuatro Leches Slice - 12PK',
+      '9969':  'Hershey Tres Leches Slice - 12PK', '9868': 'Pineapple Tres Leches Slice - 12PK',
+      '9875':  'Strawberry Tres Leches Slice - 12PK',
       '9813':  'Family Tres Leches - 12PK', '9011': 'Family Cuatro Leches - 12PK',
       '9110':  'CB Cornbread Family - 12PK', '9103': 'CB Pound Cake Family - 12PK',
       '9202':  'CB Raisin Pound Cake Family - 12PK',

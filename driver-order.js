@@ -5439,10 +5439,11 @@ async function _driverScanTicketFile(file) {
       const rawQty = parseFloat(item.qty) || 0;
       if (rawQty <= 0) return;
 
-      const isTwelvePackProduct = key && (key.startsWith('fam_') || key.startsWith('cdr_'));
-      const isDozenUnit = item.unit === 'dozen' || item.unit === 'd';
+      const isBirthdayCake = key && key.startsWith('hb_');
+      const isExplicitTwelvePk = item.description && /12\s*pk/i.test(item.description);
+      const isDozenUnit = item.unit === 'dozen' || item.unit === 'd' || isExplicitTwelvePk;
       const isPieceCount = item.unit === 'unidades' || item.unit === 'u' || rawQty >= 6;
-      const needsTwelveMultiplier = isTwelvePackProduct && isDozenUnit && !isPieceCount;
+      const needsTwelveMultiplier = !isBirthdayCake && isDozenUnit && !isPieceCount;
       const qty = needsTwelveMultiplier ? Math.round(rawQty * 12) : Math.round(rawQty);
 
       if (key in order.qty) {
@@ -5481,11 +5482,11 @@ async function _driverScanTicketFile(file) {
       currentOrder.scanData = data.items.map(item => {
         const key = item.systemKey;
         const rawQty = parseFloat(item.qty) || 0;
-        const isTwelvePackProduct = key && (key.startsWith('fam_') || key.startsWith('cdr_'));
-        const isDozenUnit = item.unit === 'dozen' || item.unit === 'd';
-        const isPieceCount = item.unit === 'unidades' || item.unit === 'u' || rawQty >= 6;
-        const needsTwelveMultiplier = isTwelvePackProduct && isDozenUnit && !isPieceCount;
         const isBirthdayCake = key && key.startsWith('hb_');
+        const isExplicitTwelvePk = item.description && /12\s*pk/i.test(item.description);
+        const isDozenUnit = item.unit === 'dozen' || item.unit === 'd' || isExplicitTwelvePk;
+        const isPieceCount = item.unit === 'unidades' || item.unit === 'u' || rawQty >= 6;
+        const needsTwelveMultiplier = !isBirthdayCake && isDozenUnit && !isPieceCount;
         return {
           code: item.code,
           description: item.description,

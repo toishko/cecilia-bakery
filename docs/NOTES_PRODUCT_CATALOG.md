@@ -139,23 +139,23 @@
 | 9165 | Birthday Cake (Large) - Pineapple | `hb_b_pina` | HB Big | ✅ |
 | 9172 | Birthday Cake (Large) - Chocolate | `hb_b_choco` | HB Big | ✅ |
 | 9189 | Birthday Cake (Large) - Guava | `hb_b_guava` | HB Big | ✅ |
-| 9745 | Bread Pudding Slice | `pz_pudin` | Pieces | ✅ |
-| 9158 | Cake Slice Chocolate | `fr_choco` | Frosted | ✅ |
-| 9141 | Cake Slice Dulce de Leche | `fr_dulce` | Frosted | ✅ |
-| 9134 | Cake Slice Guava | `fr_guava` | Frosted | ✅ |
-| 9776 | Cake Slice Pineapple | `fr_pina` | Frosted | ✅ |
-| 9970 | Chocoflan Slice | `pz_chocoflan` | Pieces | ✅ |
-| 9752 | Flan Slice | `pz_flan` | Pieces | ✅ |
+| 9745 | Bread Pudding Slice - 12PK | `pz_pudin` | Pieces | ✅ |
+| 9158 | Cake Slice Chocolate - 12PK | `fr_choco` | Frosted | ✅ |
+| 9141 | Cake Slice Dulce de Leche - 12PK | `fr_dulce` | Frosted | ✅ |
+| 9134 | Cake Slice Guava - 12PK | `fr_guava` | Frosted | ✅ |
+| 9776 | Cake Slice Pineapple - 12PK | `fr_pina` | Frosted | ✅ |
+| 9970 | Chocoflan Slice - 12PK | `pz_chocoflan` | Pieces | ✅ |
+| 9752 | Flan Slice - 12PK | `pz_flan` | Pieces | ✅ |
 | 9813 | Tres Leches Family - 12PK | `fam_tl` | Family | ✅ |
 | 9011 | Cuatro Leches Family - 12PK | `fam_cl` | Family | ✅ |
-| 9738 | Tres Leches Slice | `tl` | Tres Leche | ✅ |
-| 9820 | Cuatro Leches Slice | `cuatro_leche` | Tres Leche | ✅ |
-| 9969 | Hershey Tres Leches Slice | `tl_hershey` | Tres Leche | ✅ |
-| 9868 | Pineapple Tres Leches Slice | `tl_pina` | Tres Leche | ✅ |
-| 9875 | Strawberry Tres Leches Slice | `tl_straw` | Tres Leche | ✅ |
-| 9769 | Strawberry Cheesecake Slice | `pz_cheese` | Pieces | ✅ |
-| 9936 | Red Velvet Cake Slice | `pz_rv` | Pieces | ✅ |
-| 9943 | Carrot Cake Slice | `pz_carrot` | Pieces | ✅ |
+| 9738 | Tres Leches Slice - 12PK | `tl` | Tres Leche | ✅ |
+| 9820 | Cuatro Leches Slice - 12PK | `cuatro_leche` | Tres Leche | ✅ |
+| 9969 | Hershey Tres Leches Slice - 12PK | `tl_hershey` | Tres Leche | ✅ |
+| 9868 | Pineapple Tres Leches Slice - 12PK | `tl_pina` | Tres Leche | ✅ |
+| 9875 | Strawberry Tres Leches Slice - 12PK | `tl_straw` | Tres Leche | ✅ |
+| 9769 | Strawberry Cheesecake Slice - 12PK | `pz_cheese` | Pieces | ✅ |
+| 9936 | Red Velvet Cake Slice - 12PK | `pz_rv` | Pieces | ✅ |
+| 9943 | Carrot Cake Slice - 12PK | `pz_carrot` | Pieces | ✅ |
 | 9110 | CB Cornbread Family - 12PK | `cdr_maiz` | Square | ✅ |
 | 9103 | CB Pound Cake Family - 12PK | `cdr_pound` | Square | ✅ |
 | 9202 | CB Raisin Pound Cake Family - 12PK | `cdr_raisin` | Square | ✅ |
@@ -171,16 +171,15 @@
 - Standard/frosted/pieces items have base key + `_nt` variant
 - **Always confirm new ticket code mappings with the user before using them in production**
 
-### Quantity Rules (Updated 2026-09-04)
+### Quantity Rules (Updated 2026-09-12)
 
 | Product Type | Ticket Qty Meaning | Valid Values | Example |
 |---|---|---|---|
-| **Birthday Cakes** (Small & Large: `hb_*`) | Each number = 1 whole cake (1:1 unit) | Whole numbers: 1, 2, 3... 20 | "1" = 1 cake, "20" = 20 cakes |
-| **Slices, Pieces & Frosted** (`pz_*`, `fr_*`, `tl*`, `cuatro_leche`) | Each number = 1 individual piece (1:1 unit) | Whole numbers: 1, 6, 12, 18, 24... | "6" = 6 slices, "12" = 12 slices |
-| **Family Size Leche** (`fam_*`) | 12-Pack (dozens) | 0.5 increments: 0.5, 1, 1.5, 2... | "0.5" = 6 pcs, "1" = 12 pcs, "2" = 24 pcs |
-| **Square / Cornbread / Pound** (`cdr_*`) | 12-Pack (dozens) | 0.5 increments: 0.5, 1, 1.5, 2... | "0.5" = 6 pcs, "1" = 12 pcs, "2" = 24 pcs |
+| **Birthday Cakes** (Small & Large: `hb_*`) | Strictly 1:1 whole cake units | Whole numbers: 1, 2, 3... 20 | "1" = 1 cake, "20" = 20 cakes |
+| **All 12PK Products** (Cake Slices, Pieces, Frosted, Tres Leches, Family Size, Square/Cornbread) | Dozens (12-packs) when on 12PK ticket | 0.5 increments: 0.5, 1, 1.5, 2... | "0.5" = 6 pcs, "1" = 12 pcs, "2" = 24 pcs |
+| **Pickup Sheets without 12PK** | Individual piece counts (1:1) | Whole numbers: 6, 12, 18, 24... | "6" = 6 pcs, "12" = 12 pcs |
 
-- Slices, frosting, and birthday cakes are strictly 1:1 units.
-- Only Family Size and Cornbread / Square items are converted from 12-packs (×12).
+- Any item with "12PK" in description or unit="dozen" is multiplied by 12 (e.g. Cake Slice Pineapple with 0.5 -> 6 units).
+- Birthday cakes are always whole units (never multiplied by 12).
 
 
