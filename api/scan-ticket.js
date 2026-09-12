@@ -204,18 +204,35 @@ export default async function handler(req, res) {
       return sendError('Invalid image data. The Shortcut sent the text label instead of the actual photo variable.', 400);
     }
 
-    // Extract raw base64 and mime type
-    const isDataUrl = image.startsWith('data:image/');
+    // Extract and sanitize raw base64 and mime type
+    let cleanImage = (typeof image === 'string') ? image.trim() : '';
     let mimeType = 'image/jpeg';
-    let rawBase64 = image;
-    if (isDataUrl) {
-      const match = image.match(/^data:(image\/\w+);base64,(.+)$/);
-      if (match) {
-        mimeType = match[1];
-        rawBase64 = match[2];
+    let rawBase64 = cleanImage;
+
+    if (cleanImage.startsWith('data:')) {
+      const commaIdx = cleanImage.indexOf(',');
+      if (commaIdx !== -1) {
+        const header = cleanImage.substring(0, commaIdx);
+        const mimeMatch = header.match(/^data:([^;]+);base64/i);
+        if (mimeMatch) {
+          mimeType = mimeMatch[1];
+        }
+        rawBase64 = cleanImage.substring(commaIdx + 1);
       }
     }
-    const imageUrl = isDataUrl ? image : `data:${mimeType};base64,${rawBase64}`;
+
+    // Sanitize base64 string for strict APIs (e.g. Google Gemini inlineData)
+    // 1. Decode URL encoding if present (%2B, %2F, %3D)
+    if (rawBase64.includes('%')) {
+      try {
+        rawBase64 = decodeURIComponent(rawBase64);
+      } catch {}
+    }
+
+    // 2. Strip line breaks (\r, \n), tabs, and convert spaces back to '+'
+    rawBase64 = rawBase64.replace(/[\r\n\t]/g, '').replace(/\s+/g, '+');
+
+    const imageUrl = `data:${mimeType};base64,${rawBase64}`;
 
     let response = null;
     let rawContent = null;
@@ -227,9 +244,8 @@ export default async function handler(req, res) {
       console.log('Starting primary camera OCR with Google Gemini...');
       const GEMINI_MODELS = [
         { name: 'gemini-2.5-flash', api: 'v1beta' },
-        { name: 'gemini-2.0-flash', api: 'v1beta' },
-        { name: 'gemini-1.5-flash', api: 'v1beta' },
-        { name: 'gemini-1.5-pro', api: 'v1beta' },
+        { name: 'gemini-2.5-flash-lite', api: 'v1beta' },
+        { name: 'gemini-2.5-pro', api: 'v1beta' },
       ];
 
       for (const model of GEMINI_MODELS) {
