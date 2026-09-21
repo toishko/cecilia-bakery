@@ -4853,6 +4853,7 @@
         .from('driver_orders')
         .select('*, items:driver_order_items(*)')
         .eq('driver_id', driverId)
+        .neq('status', 'archived')
         .order('pickup_date', { ascending: false });
 
       if (error) throw error;

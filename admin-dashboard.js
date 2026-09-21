@@ -3896,7 +3896,7 @@ const PRODUCT_CAT = {};
 (function() {
   const cats = {
     redondo: { en:'Round', es:'Redondo', keys:['pina','guava','dulce'] },
-    plain:   { en:'Plain', es:'Plain', keys:['plain','raisin','pudin'] },
+    plain:   { en:'Plain', es:'Plain', keys:['plain','raisin','pudin','b2b_5a627b8b-1fa8-4dd1-8ff7-28b74e3ff9ff'] },
     tresleche:{ en:'Tres Leche', es:'Tres Leche', keys:['tl','tl_hershey','cuatro_leche','tl_straw','tl_pina'] },
     piezas:  { en:'Pieces', es:'Piezas', keys:['pz_rv','pz_carrot','pz_cheese','pz_pudin','pz_pina','pz_guava','pz_chocoflan','pz_flan'] },
     frostin: { en:'Frosted Pieces', es:'Piezas Frostin', keys:['fr_guava','fr_pina','fr_dulce','fr_choco'] },
@@ -4204,7 +4204,8 @@ async function renderOrderSheet() {
     // Build product options grouped by category, excluding items already in order
     const existingKeys = new Set(detailItems.map(it => it.product_key));
     let optionsHtml = `<option value="" disabled selected>${lang === 'es' ? '— Seleccionar producto —' : '— Select product —'}</option>`;
-    ADMIN_PRODUCTS.forEach(sec => {
+    const catalogProducts = _cachedAugmentedProducts || ADMIN_PRODUCTS;
+    catalogProducts.forEach(sec => {
       const available = sec.items.filter(p => !existingKeys.has(p.key));
       if (available.length > 0) {
         const sectionLabel = lang === 'es' ? sec.sectionEs : sec.section;
@@ -4271,12 +4272,40 @@ async function renderOrderSheet() {
   });
   
   html += '</div>';
+
+  // Add Any Return Product (allows crediting any product like Marcado even if not on this ticket)
+  const allCatalogProducts = (_cachedAugmentedProducts || ADMIN_PRODUCTS);
+  let returnOptionsHtml = `<option value="" disabled selected>${lang === 'es' ? '— Agregar otro producto a devolución —' : '— Add other return product —'}</option>`;
+  allCatalogProducts.forEach(sec => {
+    if (sec.items && sec.items.length > 0) {
+      const sectionLabel = lang === 'es' ? sec.sectionEs : sec.section;
+      returnOptionsHtml += `<optgroup label="${_esc(sectionLabel)}">`;
+      sec.items.forEach(p => {
+        const pLabel = lang === 'es' ? p.es : p.en;
+        returnOptionsHtml += `<option value="${_esc(p.key)}" data-label="${_esc(pLabel)}">${_esc(pLabel)}</option>`;
+      });
+      returnOptionsHtml += '</optgroup>';
+    }
+  });
+
+  html += `<div style="display:flex;gap:8px;margin-bottom:12px;padding-top:10px;border-top:1px dashed var(--bd);align-items:center;">
+    <select id="add-return-product-select" class="add-item-select" style="flex:1;font-size:0.82rem;padding:6px 8px;">${returnOptionsHtml}</select>
+    <button type="button" class="btn-pickup" style="padding:6px 12px;font-size:0.8rem;white-space:nowrap;" onclick="window._addCustomReturnProduct()">
+      ${lang === 'es' ? '+ Agregar' : '+ Add'}
+    </button>
+  </div>`;
+
   html += '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--bd)">';
   html += '<span style="font-weight:700;font-size:.9rem">Total Credit</span>';
   html += '<span id="total-credit" style="font-weight:700;font-size:.95rem;color:#0a7a0a">$0.00</span></div>';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">';
   html += '<span style="font-weight:700;font-size:.95rem">Adjusted Total</span>';
   html += '<span id="adjusted-total" style="font-weight:700;font-size:1.05rem;color:var(--red)">' + formatCurrency(grandTotal) + '</span></div>';
+  html += `<div style="margin-top:10px;text-align:right;">
+    <button type="button" class="btn-save" style="padding:6px 14px;font-size:0.82rem;" onclick="window._applyReturnCreditToOrder()">
+      ${lang === 'es' ? 'Aplicar Crédito al Total' : 'Apply Credit to Total'}
+    </button>
+  </div>`;
   html += '</div></div>';
 
   // Payment status — ALWAYS editable regardless of order age
@@ -4368,6 +4397,113 @@ window._calcReturnCredit = function() {
   if (adjEl) {
     var adjusted = (window._currentGrandTotal || 0) - totalCredit;
     adjEl.textContent = formatCurrency(Math.max(0, adjusted));
+  }
+};
+
+window._addCustomReturnProduct = function() {
+  const select = document.getElementById('add-return-product-select');
+  if (!select || !select.value) return;
+
+  const key = select.value;
+  const label = select.options[select.selectedIndex].getAttribute('data-label') || key;
+  const creditMap = window._currentCreditMap || {};
+  const creditVal = (creditMap[key] && parseFloat(creditMap[key]) > 0)
+    ? parseFloat(creditMap[key])
+    : (driverPriceMap[key] ? parseFloat(driverPriceMap[key]) : 0);
+
+  // Check if item already exists in return grid
+  const existingInput = document.querySelector(`.return-qty-input[data-key="${key}"]`);
+  if (existingInput) {
+    existingInput.value = (parseInt(existingInput.value) || 0) + 1;
+    existingInput.focus();
+    window._calcReturnCredit();
+    return;
+  }
+
+  // Append new row into returns-grid
+  const grid = document.getElementById('returns-grid');
+  if (!grid) return;
+
+  const labelEl = document.createElement('div');
+  labelEl.style.cssText = 'font-size:.85rem;color:var(--tx);font-weight:600;';
+  labelEl.textContent = label;
+
+  const inputEl = document.createElement('input');
+  inputEl.type = 'number';
+  inputEl.className = 'return-qty-input';
+  inputEl.dataset.key = key;
+  inputEl.dataset.credit = creditVal;
+  inputEl.value = '1';
+  inputEl.min = '0';
+  inputEl.style.cssText = 'width:100%;padding:6px;border-radius:6px;border:1px solid var(--bd);text-align:center;font-size:.85rem;background:var(--bg-input);color:var(--tx)';
+  inputEl.oninput = window._calcReturnCredit;
+
+  const creditEl = document.createElement('div');
+  creditEl.className = 'return-line-credit';
+  creditEl.dataset.key = key;
+  creditEl.style.cssText = 'font-size:.85rem;text-align:right;color:var(--tx-faint)';
+  creditEl.textContent = '$' + (1 * parseFloat(creditVal)).toFixed(2);
+
+  grid.appendChild(labelEl);
+  grid.appendChild(inputEl);
+  grid.appendChild(creditEl);
+
+  window._calcReturnCredit();
+};
+
+window._applyReturnCreditToOrder = async function() {
+  if (!detailOrder) return;
+  var totalCredit = 0;
+  var returnNotes = [];
+  document.querySelectorAll('.return-qty-input').forEach(function(inp) {
+    var qty = parseInt(inp.value) || 0;
+    if (qty > 0) {
+      var creditPer = parseFloat(inp.dataset.credit) || 0;
+      totalCredit += qty * creditPer;
+      var label = inp.previousElementSibling ? inp.previousElementSibling.textContent.trim() : inp.dataset.key;
+      returnNotes.push(qty + 'x ' + label + ' (-$' + (qty * creditPer).toFixed(2) + ')');
+    }
+  });
+
+  if (totalCredit <= 0) {
+    showToast(lang === 'es' ? 'Ingresa una cantidad a devolver primero' : 'Enter return quantity first', 'warning');
+    return;
+  }
+
+  const currentTotal = parseFloat(detailOrder.total_amount || 0);
+  const newTotal = Math.max(0, Math.round((currentTotal - totalCredit) * 100) / 100);
+
+  const confirmMsg = lang === 'es'
+    ? `¿Aplicar $${totalCredit.toFixed(2)} de crédito? El total del pedido cambiará de $${currentTotal.toFixed(2)} a $${newTotal.toFixed(2)}.`
+    : `Apply $${totalCredit.toFixed(2)} credit? Order total will change from $${currentTotal.toFixed(2)} to $${newTotal.toFixed(2)}.`;
+
+  if (!window.confirm(confirmMsg)) return;
+
+  try {
+    const noteText = '[Crédito Devolución: ' + returnNotes.join(', ') + ']';
+    const updatedNotes = detailOrder.notes ? (detailOrder.notes + '\n' + noteText) : noteText;
+    const updatePayload = {
+      total_amount: newTotal,
+      notes: updatedNotes
+    };
+    if (detailOrder.payment_status === 'paid') {
+      updatePayload.payment_amount = newTotal;
+      detailOrder.payment_amount = newTotal;
+    }
+
+    const { error } = await sb.from('driver_orders').update(updatePayload).eq('id', detailOrder.id);
+    if (error) throw error;
+
+    detailOrder.total_amount = newTotal;
+    detailOrder.notes = updatedNotes;
+    showToast(lang === 'es' ? 'Crédito aplicado exitosamente' : 'Credit applied successfully', 'success');
+    await renderOrderSheet();
+    if (currentSection === 'incoming') loadIncomingOrders();
+    if (currentSection === 'history') loadHistoryOrders(true);
+    if (currentSection === 'overview') loadOverview();
+  } catch (e) {
+    console.error('Apply credit error:', e);
+    showToast(lang === 'es' ? 'Error al aplicar crédito' : 'Error applying credit', 'error');
   }
 };
 
@@ -4690,15 +4826,20 @@ window.archiveOrder = async function(orderId) {
   if (!window.confirm(confirmMsg)) return;
 
   try {
-    const { error } = await sb.from('driver_orders').update({
+    const archivePayload = {
       status: 'archived',
+      payment_status: 'paid',
+      payment_amount: detailOrder?.total_amount || 0,
       created_at: detailOrder?.created_at // touch safe
-    }).eq('id', id);
+    };
+    const { error } = await sb.from('driver_orders').update(archivePayload).eq('id', id);
 
     if (error) throw error;
 
     if (detailOrder && detailOrder.id === id) {
       detailOrder.status = 'archived';
+      detailOrder.payment_status = 'paid';
+      detailOrder.payment_amount = detailOrder.total_amount || 0;
     }
 
     showToast(lang === 'es' ? 'Pedido archivado' : 'Order archived', 'success');
@@ -4719,13 +4860,17 @@ window.restoreOrder = async function(orderId) {
 
   try {
     const { error } = await sb.from('driver_orders').update({
-      status: 'pending'
+      status: 'pending',
+      payment_status: 'not_paid',
+      payment_amount: 0
     }).eq('id', id);
 
     if (error) throw error;
 
     if (detailOrder && detailOrder.id === id) {
       detailOrder.status = 'pending';
+      detailOrder.payment_status = 'not_paid';
+      detailOrder.payment_amount = 0;
     }
 
     showToast(lang === 'es' ? 'Pedido restaurado a pendientes' : 'Order restored to pending', 'success');
@@ -5217,6 +5362,8 @@ const ADMIN_PRODUCTS = [
     { key: 'raisin_nt', en: 'Raisin (NT)', es: 'Pasas (ST)' },
     { key: 'pudin', en: 'Pudin', es: 'Pudín' },
     { key: 'pudin_nt', en: 'Pudin (NT)', es: 'Pudín (ST)' },
+    { key: 'b2b_5a627b8b-1fa8-4dd1-8ff7-28b74e3ff9ff', en: 'Marcado', es: 'Marcado' },
+    { key: 'b2b_5a627b8b-1fa8-4dd1-8ff7-28b74e3ff9ff_nt', en: 'Marcado (NT)', es: 'Marcado (ST)' },
   ]},
   { section: 'Tres Leche', sectionEs: 'Tres Leche', items: [
     { key: 'tl', en: 'Tres Leche', es: 'Tres Leche' },
@@ -5398,6 +5545,7 @@ async function loadDriverList() {
     // Compute outstanding balance per driver
     const { data: orders } = await sb.from('driver_orders')
       .select('driver_id, total_amount, payment_amount, payment_status')
+      .neq('status', 'archived')
       .in('payment_status', ['not_paid', 'partial']);
 
     const balanceMap = {};
@@ -5910,8 +6058,9 @@ window.showDriverProfile = async function(driverId) {
   let recentOrders = [];
 
   if (allOrders) {
-    recentOrders = allOrders.slice(0, 3);
-    allOrders.forEach(o => {
+    const activeOrders = allOrders.filter(o => o.status !== 'archived');
+    recentOrders = activeOrders.slice(0, 3);
+    activeOrders.forEach(o => {
       const t = parseFloat(o.total_amount || 0);
       const c = parseFloat(o.payment_amount || 0);
       gross += t;
@@ -11266,6 +11415,7 @@ async function loadDriverCompilerChecklist(driverId) {
       .from('driver_orders')
       .select('*, items:driver_order_items(*)')
       .eq('driver_id', driverId)
+      .neq('status', 'archived')
       .order('pickup_date', { ascending: false });
 
     if (error) throw error;

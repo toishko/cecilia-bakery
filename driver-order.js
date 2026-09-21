@@ -716,6 +716,7 @@ let PRODUCTS = {
       { key: 'plain', en: 'Plain', es: 'Plain' },
       { key: 'raisin', en: 'Raisin', es: 'Pasas' },
       { key: 'pudin', en: 'Pudin', es: 'Pudín' },
+      { key: 'b2b_5a627b8b-1fa8-4dd1-8ff7-28b74e3ff9ff', en: 'Marcado', es: 'Marcado' },
     ]
   },
   tresleche: {
@@ -1929,6 +1930,7 @@ async function loadDriverBalance() {
       .from('driver_orders')
       .select('id, total_amount, payment_status, payment_amount, business_name, pickup_date, created_at')
       .eq('driver_id', currentDriver.id)
+      .neq('status', 'archived')
       .in('payment_status', ['not_paid', 'partial']);
 
     if (error) { console.error('Balance load error:', error); return; }
@@ -1979,6 +1981,7 @@ async function loadRecentOrders() {
       .from('driver_orders')
       .select('*, driver_order_items(*)')
       .eq('driver_id', currentDriver.id)
+      .neq('status', 'archived')
       .order('created_at', { ascending: false })
       .limit(10);
 
@@ -2038,6 +2041,7 @@ async function loadMyOrders() {
       .from('driver_orders')
       .select('*, driver_order_items(*)')
       .eq('driver_id', currentDriver.id)
+      .neq('status', 'archived')
       .order('created_at', { ascending: false });
 
     if (error) { console.error('My orders error:', error); return; }
