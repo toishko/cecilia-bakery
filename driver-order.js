@@ -301,7 +301,7 @@ function startLockoutTimer() {
   tick();
 }
 
-function enterDashboard() {
+async function enterDashboard() {
   applyLang();
   document.getElementById('welcome-name').textContent =
     (lang === 'es' ? 'Bienvenido, ' : 'Welcome, ') + currentDriver.name;
@@ -323,12 +323,9 @@ function enterDashboard() {
   }
   // Phase 9: sync language from Supabase
   syncLangFromSupabase();
-  // NOTE: Driver products are hardcoded and separate from the customer-facing
-  // menu products in the Supabase `products` table. Do NOT load from DB here.
-  // The driver catalog includes items like Redondo, Happy Birthday BIG/SMALL,
-  // Frosted Pieces, Family Size, etc. that don't exist in the menu products table.
-  // Load driver prices for summary display
-  loadDriverPriceMap();
+  // Load B2B dynamic products into PRODUCTS catalog and load driver prices
+  await loadDriverProducts();
+  await loadDriverPriceMap();
   // Load overview analytics for all drivers
   loadDriverClients();
   loadOverviewDashboard();
@@ -826,7 +823,8 @@ function getTodayStr() {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
-function initOrderForm() {
+async function initOrderForm() {
+  await loadDriverProducts();
   if (orders.length === 0) orders.push(createBlankOrder());
   activeOrderIdx = 0;
   renderOrderTabs();
@@ -1158,8 +1156,9 @@ function buildProductSections() {
       // Render as standard rows — split Inside/Top into separate sub-rows
       sec.items.forEach(item => {
         if (hiddenProducts.has(item.key)) return;
-        const hasInside = item.cols.includes('inside');
-        const hasTop = item.cols.includes('top');
+        const cols = item.cols || ['inside', 'inside_nt', 'top', 'top_nt'];
+        const hasInside = cols.includes('inside');
+        const hasTop = cols.includes('top');
 
         if (hasInside) {
           const insideLabel = hasTop
@@ -1251,11 +1250,17 @@ const _DRIVER_TAG_MAP = {
   'Family Size': 'familiar', 'Familiar': 'familiar',
 };
 
+let _INITIAL_PRODUCTS_CLONE = null;
+
 async function loadDriverProducts() {
-  // The hardcoded PRODUCTS catalog above uses canonical keys (e.g. hb_s_pina,
-  // pz_pina, fr_pina) that match driver_prices exactly.
-  // B2B products use 'b2b_{uuid}' keys that NEVER collide with hardcoded keys.
+  if (!sb) return;
   _log('Driver: merging B2B products into hardcoded catalog');
+
+  if (!_INITIAL_PRODUCTS_CLONE) {
+    _INITIAL_PRODUCTS_CLONE = JSON.parse(JSON.stringify(PRODUCTS));
+  }
+  // Reset PRODUCTS from canonical template to cleanly handle restocks, edits, deletions
+  PRODUCTS = JSON.parse(JSON.stringify(_INITIAL_PRODUCTS_CLONE));
 
   try {
     const { data: b2bRowsRaw } = await sb.from('b2b_products')
@@ -1303,7 +1308,7 @@ async function loadDriverProducts() {
             PRODUCTS[slug] = {
               en: row.tag_en || 'Other',
               es: row.tag_es || row.tag_en || 'Otro',
-              type: 'standard',
+              type: row.type === 'redondo' ? 'redondo' : 'standard',
               items: []
             };
             sectionNameSets[slug] = new Set();
@@ -1311,12 +1316,15 @@ async function loadDriverProducts() {
           targetSec = PRODUCTS[slug];
         }
 
-        // Append — all B2B products default to standard type
-        targetSec.items.push({
+        const newItem = {
           key: row.product_key,
           en: row.name_en,
           es: row.name_es || row.name_en,
-        });
+        };
+        if (targetSec.type === 'redondo' || row.type === 'redondo') {
+          newItem.cols = ['inside', 'inside_nt', 'top', 'top_nt'];
+        }
+        targetSec.items.push(newItem);
         existingKeys.add(row.product_key);
       });
     }
@@ -2883,6 +2891,9 @@ async function loadTodaysSales() {
    SALES — UI
    ═══════════════════════════════════ */
 async function initSalesSection() {
+  // Ensure B2B products are loaded
+  await loadDriverProducts();
+
   // Ensure prices are loaded
   if (Object.keys(driverPriceMap).length === 0) {
     await loadDriverPriceMap();
