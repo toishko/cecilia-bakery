@@ -7,8 +7,11 @@ export const MODEL_RATES = {
   'gpt-4o':             { input: 2.50, output: 10.00 },
   'gpt-4o-mini':        { input: 0.15, output: 0.60  },
 
-  // Google Gemini Models (Prices per 1,000,000 tokens)
-  'gemini-2.5-flash':   { input: 0.15, output: 0.60  },
+  // Google Gemini Models (Prices per 1,000,000 tokens, paid tier; ai.google.dev/gemini-api/docs/pricing,
+  // checked 2026-10-10). Output includes thinking tokens; audio input has its own rate.
+  'gemini-2.5-flash-lite': { input: 0.10, audio: 0.30, output: 0.40 },
+  'gemini-2.5-flash':   { input: 0.30, audio: 1.00, output: 2.50 },
+  'gemini-2.5-pro':     { input: 1.25, output: 10.00 },
   'gemini-2.0-flash':   { input: 0.10, output: 0.40  },
   'gemini-1.5-flash':   { input: 0.075, output: 0.30 },
   'gemini-1.5-pro':     { input: 1.25, output: 5.00  },
@@ -24,7 +27,7 @@ export const MODEL_RATES = {
  * @param {number} outputTokens - Number of completion/output tokens
  * @returns {number} Cost in USD rounded to 6 decimal places (e.g. 0.002450)
  */
-export function calculateAiCost(model, inputTokens = 0, outputTokens = 0) {
+export function calculateAiCost(model, inputTokens = 0, outputTokens = 0, audioInputTokens = 0) {
   const normModel = (model || '').toLowerCase().trim();
   let rates = MODEL_RATES[normModel];
 
@@ -46,7 +49,10 @@ export function calculateAiCost(model, inputTokens = 0, outputTokens = 0) {
     rates = MODEL_RATES['default'];
   }
 
-  const inCost = (Number(inputTokens || 0) / 1_000_000) * rates.input;
+  // Audio tokens are part of inputTokens; they're priced at the audio rate where the model has one.
+  const audio = Math.min(Number(audioInputTokens || 0), Number(inputTokens || 0));
+  const inCost = ((Number(inputTokens || 0) - audio) / 1_000_000) * rates.input
+    + (audio / 1_000_000) * (rates.audio ?? rates.input);
   const outCost = (Number(outputTokens || 0) / 1_000_000) * rates.output;
   return Number((inCost + outCost).toFixed(6));
 }
@@ -68,9 +74,13 @@ export function extractOpenAiTokens(data) {
 export function extractGeminiTokens(data) {
   const usage = data?.usageMetadata || {};
   const inputTokens = Number(usage.promptTokenCount || 0);
-  const outputTokens = Number(usage.candidatesTokenCount || 0);
+  // Gemini 2.5 models think before answering; those tokens are billed as output but counted apart.
+  const outputTokens = Number(usage.candidatesTokenCount || 0) + Number(usage.thoughtsTokenCount || 0);
   const totalTokens = Number(usage.totalTokenCount || (inputTokens + outputTokens));
-  return { inputTokens, outputTokens, totalTokens };
+  const audioInputTokens = (usage.promptTokensDetails || [])
+    .filter(d => d.modality === 'AUDIO')
+    .reduce((n, d) => n + Number(d.tokenCount || 0), 0);
+  return { inputTokens, outputTokens, totalTokens, audioInputTokens };
 }
 
 /**
@@ -87,6 +97,7 @@ export async function logAiUsage({
   inputTokens = 0,
   outputTokens = 0,
   totalTokens = 0,
+  audioInputTokens = 0, // the audio part of inputTokens (Gemini voice orders)
   estimatedCostUsd = null,
   executionMs = 0,
   status = 'success',   // 'success' | 'zero_items' | 'api_error' | 'fallback_triggered'
@@ -100,7 +111,7 @@ export async function logAiUsage({
 
     const calcCost = estimatedCostUsd !== null 
       ? Number(estimatedCostUsd) 
-      : calculateAiCost(model, inputTokens, outputTokens);
+      : calculateAiCost(model, inputTokens, outputTokens, audioInputTokens);
 
     const payload = {
       feature: feature || 'unknown',
@@ -117,7 +128,10 @@ export async function logAiUsage({
       status: status,
       is_waste: Boolean(isWaste),
       waste_reason: wasteReason || null,
-      metadata: metadata && typeof metadata === 'object' ? metadata : {}
+      metadata: {
+        ...(metadata && typeof metadata === 'object' ? metadata : {}),
+        ...(audioInputTokens ? { audio_input_tokens: Number(audioInputTokens) } : {})
+      }
     };
 
     const res = await fetch(`${supabaseUrl}/rest/v1/ai_usage_logs`, {

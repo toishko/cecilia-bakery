@@ -31,9 +31,13 @@ function isRateLimited(ip) {
 
 // ── Origin check ──
 const ALLOWED = ['ceciliabakery.com', 'www.ceciliabakery.com', 'localhost', '127.0.0.1', '.vercel.app'];
+// More allowed sites from the server's settings, comma-separated (the preview address on the VPS, 2026-10-10);
+// empty entries are dropped, since every origin includes ''.
+const EXTRA_ORIGINS = (process.env.EXTRA_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+
 function isOriginAllowed(origin) {
   if (!origin) return false;
-  return ALLOWED.some(a => origin.includes(a));
+  return [...ALLOWED, ...EXTRA_ORIGINS].some(a => origin.includes(a));
 }
 
 // ── Build the system prompt ──
@@ -204,17 +208,18 @@ export default async function handler(req, res) {
   try {
     const systemPrompt = buildSystemPrompt(products, currentOrder, conversationHistory);
 
-    // Model fallback chain — tries newest first
+    // Model fallback chain: the cheaper Flash-Lite first, then Flash. 2.0-flash and the 1.5 models were
+    // retired by Google (404 "no longer available", seen in ai_usage_logs 2026-09), so every voice order
+    // fell to OpenAI, which gets no audio (2026-10-10).
     const MODELS = [
-      { name: 'gemini-2.0-flash', api: 'v1beta' },
-      { name: 'gemini-1.5-flash', api: 'v1beta' },
-      { name: 'gemini-1.5-pro', api: 'v1beta' },
+      { name: 'gemini-2.5-flash-lite', api: 'v1beta' },
+      { name: 'gemini-2.5-flash', api: 'v1beta' },
     ];
 
     let response = null;
     let lastError = '';
     let usedProvider = 'google_gemini';
-    let usedModel = 'gemini-2.0-flash';
+    let usedModel = 'gemini-2.5-flash-lite';
     let usedTokens = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
 
     for (const model of MODELS) {
@@ -371,6 +376,7 @@ export default async function handler(req, res) {
         inputTokens: usedTokens.inputTokens,
         outputTokens: usedTokens.outputTokens,
         totalTokens: usedTokens.totalTokens,
+        audioInputTokens: usedTokens.audioInputTokens || 0,
         executionMs: Date.now() - startOverallTime,
         status: 'parse_error',
         isWaste: true,
@@ -406,6 +412,7 @@ export default async function handler(req, res) {
       inputTokens: usedTokens.inputTokens,
       outputTokens: usedTokens.outputTokens,
       totalTokens: usedTokens.totalTokens,
+      audioInputTokens: usedTokens.audioInputTokens || 0,
       executionMs: Date.now() - startOverallTime,
       status: isWaste ? 'zero_items' : 'success',
       isWaste,

@@ -13,9 +13,13 @@ const ALLOWED_ORIGINS = [
   '.vercel.app',
 ];
 
+// More allowed sites from the server's settings, comma-separated (the preview address on the VPS, 2026-10-10);
+// empty entries are dropped, since every origin includes ''.
+const EXTRA_ORIGINS = (process.env.EXTRA_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+
 function isOriginAllowed(origin) {
   if (!origin) return false;
-  return ALLOWED_ORIGINS.some(allowed => origin.includes(allowed));
+  return [...ALLOWED_ORIGINS, ...EXTRA_ORIGINS].some(allowed => origin.includes(allowed));
 }
 
 // ── In-memory rate limiter ──

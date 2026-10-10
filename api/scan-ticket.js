@@ -5,6 +5,20 @@
 import sharp from 'sharp';
 import { logAiUsage, extractOpenAiTokens, extractGeminiTokens, calculateAiCost } from './lib/ai-logger.js';
 
+// The image's type from its first bytes (JPEG, PNG, WebP, HEIC/HEIF), or null when it isn't one of those.
+export function imageTypeOf(b) {
+  if (b.length < 12) return null;
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
+  if (b[0] === 0x89 && b.toString('latin1', 1, 4) === 'PNG') return 'image/png';
+  if (b.toString('latin1', 0, 4) === 'RIFF' && b.toString('latin1', 8, 12) === 'WEBP') return 'image/webp';
+  if (b.toString('latin1', 4, 8) === 'ftyp') {
+    const brand = b.toString('latin1', 8, 12);
+    if (['heic', 'heix', 'hevc', 'hevx'].includes(brand)) return 'image/heic';
+    if (['mif1', 'msf1', 'heif'].includes(brand)) return 'image/heif';
+  }
+  return null;
+}
+
 // ── Vercel Function config ──
 export const maxDuration = 60;
 
@@ -26,9 +40,13 @@ function isRateLimited(ip) {
 
 // ── Origin check ──
 const ALLOWED = ['ceciliabakery.com', 'www.ceciliabakery.com', 'localhost', '127.0.0.1', '.vercel.app'];
+// More allowed sites from the server's settings, comma-separated (the preview address on the VPS, 2026-10-10);
+// empty entries are dropped, since every origin includes ''.
+const EXTRA_ORIGINS = (process.env.EXTRA_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+
 function isOriginAllowed(origin) {
   if (!origin) return false;
-  return ALLOWED.some(a => origin.includes(a));
+  return [...ALLOWED, ...EXTRA_ORIGINS].some(a => origin.includes(a));
 }
 
 // ── Ticket Code → System Product Key mapping ──
@@ -232,6 +250,16 @@ export default async function handler(req, res) {
     // 2. Strip line breaks (\r, \n), tabs, and convert spaces back to '+'
     rawBase64 = rawBase64.replace(/[\r\n\t]/g, '').replace(/\s+/g, '+');
 
+    // 3. Decode on the server and encode again: whatever form the photo arrives in (the iPhone Shortcut's
+    //    failed Gemini's strict check on every model, 2026-09/10), Gemini gets plain base64 and the file's
+    //    real type. Buffer skips characters that aren't base64 and reads the URL-safe alphabet too.
+    const imageBytes = Buffer.from(rawBase64.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+    if (imageBytes.length < 100) {
+      return sendError('Invalid image data. The photo could not be read.', 400);
+    }
+    rawBase64 = imageBytes.toString('base64');
+    mimeType = imageTypeOf(imageBytes) || mimeType;
+
     const imageUrl = `data:${mimeType};base64,${rawBase64}`;
 
     let response = null;
@@ -304,6 +332,7 @@ export default async function handler(req, res) {
               inputTokens: tok.inputTokens,
               outputTokens: tok.outputTokens,
               totalTokens: tok.totalTokens,
+              audioInputTokens: tok.audioInputTokens || 0,
               executionMs: gDuration,
               status: hasItems ? 'success' : 'zero_items',
               isWaste: !hasItems,
