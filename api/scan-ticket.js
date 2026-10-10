@@ -270,9 +270,11 @@ export default async function handler(req, res) {
     // ── Primary Engine: Google Gemini Vision OCR (High-accuracy document/table OCR) ──
     if (googleKey) {
       console.log('Starting primary camera OCR with Google Gemini...');
+      // Flash-Lite first: on 2026-10-09 (ai_usage_logs) 2.5-flash spent ~13 s and returned no items on 11 of
+      // 13 scans, then Flash-Lite read the same ticket in ~3 s. Flash and Pro stay as the fallbacks.
       const GEMINI_MODELS = [
-        { name: 'gemini-2.5-flash', api: 'v1beta' },
         { name: 'gemini-2.5-flash-lite', api: 'v1beta' },
+        { name: 'gemini-2.5-flash', api: 'v1beta' },
         { name: 'gemini-2.5-pro', api: 'v1beta' },
       ];
 
