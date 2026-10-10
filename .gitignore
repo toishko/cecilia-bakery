@@ -20,3 +20,6 @@ supabase/.temp/
 .vercel
 .env*.local
 .env*
+
+# The VPS build (vps/build-api.mjs)
+vps/.out/
