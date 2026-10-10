@@ -161,7 +161,7 @@ export async function unsubscribeFromPush(sb, userType, userId) {
  * @param {object} [old_record] — the old record (for UPDATEs)
  */
 export async function triggerPushNotification(type, table, record, old_record) {
-  const SUPABASE_URL = 'https://dykztphptnytbihpavpa.supabase.co';
+  const SUPABASE_URL = 'https://db.ceciliabakery.com';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
   try {
     const res = await fetch(SUPABASE_URL + '/functions/v1/send-push-notification', {

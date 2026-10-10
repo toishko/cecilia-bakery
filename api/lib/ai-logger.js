@@ -95,7 +95,7 @@ export async function logAiUsage({
   metadata = {}
 }) {
   try {
-    const supabaseUrl = process.env.SUPABASE_URL || 'https://dykztphptnytbihpavpa.supabase.co';
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://db.ceciliabakery.com';
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5a3p0cGhwdG55dGJpaHBhdnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4OTY4NzksImV4cCI6MjA4OTQ3Mjg3OX0.jinnkmJj5tjYmMXPEx0FsbE8qHKU2j6kvv5HyczWr4w';
 
     const calcCost = estimatedCostUsd !== null 
