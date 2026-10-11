@@ -429,7 +429,7 @@ async function showSection(name) {
     // Smart default: If there are no today's orders, but there are unpaid orders, default to Unpaid!
     await loadIncomingOrders();
     const todayStr = getTodayStr();
-    const hasToday = incomingOrders.some(o => (o.submitted_at || '').startsWith(todayStr));
+    const hasToday = incomingOrders.some(o => localDateStr(o.submitted_at) === todayStr);
     const hasUnpaid = incomingOrders.some(o => o.payment_status === 'not_paid');
     
     let targetFilter = 'today';
@@ -1718,7 +1718,7 @@ async function updateOnlineOrderStatus(orderId, newStatus) {
 async function setEstimatedPickupTime(orderId, timeValue) {
   if (!sb || !timeValue) return;
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayStr(); // the bakery's date, not UTC's (after 8 pm UTC is already tomorrow)
   const fullDateTime = new Date(today + 'T' + timeValue).toISOString();
 
   try {
@@ -3609,7 +3609,7 @@ function renderIncomingOrders() {
   // Update tab badges dynamically
   const todayStr = getTodayStr();
   const allCount = incomingOrders.length;
-  const todayCount = incomingOrders.filter(o => (o.submitted_at || '').startsWith(todayStr)).length;
+  const todayCount = incomingOrders.filter(o => localDateStr(o.submitted_at) === todayStr).length;
   const unpaidCount = incomingOrders.filter(o => o.payment_status === 'not_paid').length;
   const partialCount = incomingOrders.filter(o => o.payment_status === 'partial').length;
 
@@ -3619,7 +3619,7 @@ function renderIncomingOrders() {
   _updateTabBadge('badge-incoming-partial', partialCount);
 
   if (activeFilter === 'today') {
-    filtered = filtered.filter(o => (o.submitted_at || '').startsWith(todayStr));
+    filtered = filtered.filter(o => localDateStr(o.submitted_at) === todayStr);
   } else if (activeFilter === 'unpaid') {
     filtered = filtered.filter(o => o.payment_status === 'not_paid');
   } else if (activeFilter === 'partial') {
@@ -6161,6 +6161,15 @@ window.openOrderDetail = async function(orderId) {
    ═══════════════════════════════════ */
 function getTodayStr() {
   const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// A stored time's date on this device's clock (the bakery's), for comparing with getTodayStr().
+// The database sends times in UTC, so slicing the text gives tomorrow's date after 8 pm Eastern.
+function localDateStr(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d)) return '';
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
@@ -12545,7 +12554,7 @@ window.renderDriverGroupedOrders = function() {
   // Update tab badges dynamically (same logic as standard render)
   const todayStr = getTodayStr();
   const allCount = incomingOrders.length;
-  const todayCount = incomingOrders.filter(o => (o.submitted_at || '').startsWith(todayStr)).length;
+  const todayCount = incomingOrders.filter(o => localDateStr(o.submitted_at) === todayStr).length;
   const unpaidCount = incomingOrders.filter(o => o.payment_status === 'not_paid').length;
   const partialCount = incomingOrders.filter(o => o.payment_status === 'partial').length;
 
@@ -12555,7 +12564,7 @@ window.renderDriverGroupedOrders = function() {
   _updateTabBadge('badge-incoming-partial', partialCount);
 
   if (activeFilter === 'today') {
-    filtered = filtered.filter(o => (o.submitted_at || '').startsWith(todayStr));
+    filtered = filtered.filter(o => localDateStr(o.submitted_at) === todayStr);
   } else if (activeFilter === 'unpaid') {
     filtered = filtered.filter(o => o.payment_status === 'not_paid');
   } else if (activeFilter === 'partial') {
@@ -12795,7 +12804,7 @@ window.toggleDriverGroupSelection = function(driverId) {
   const todayStr = getTodayStr();
 
   if (activeFilter === 'today') {
-    filtered = filtered.filter(o => (o.submitted_at || '').startsWith(todayStr));
+    filtered = filtered.filter(o => localDateStr(o.submitted_at) === todayStr);
   } else if (activeFilter === 'unpaid') {
     filtered = filtered.filter(o => o.payment_status === 'not_paid');
   } else if (activeFilter === 'partial') {
@@ -12827,7 +12836,7 @@ window.toggleDriverUnpaidSelection = function(driverId) {
   const todayStr = getTodayStr();
 
   if (activeFilter === 'today') {
-    filtered = filtered.filter(o => (o.submitted_at || '').startsWith(todayStr));
+    filtered = filtered.filter(o => localDateStr(o.submitted_at) === todayStr);
   } else if (activeFilter === 'unpaid') {
     filtered = filtered.filter(o => o.payment_status === 'not_paid');
   } else if (activeFilter === 'partial') {
@@ -12877,7 +12886,7 @@ window.settleDriverOrders = async function(driverId, btnEl) {
     const todayStr = getTodayStr();
 
     if (activeFilter === 'today') {
-      filtered = filtered.filter(o => (o.submitted_at || '').startsWith(todayStr));
+      filtered = filtered.filter(o => localDateStr(o.submitted_at) === todayStr);
     } else if (activeFilter === 'unpaid') {
       filtered = filtered.filter(o => o.payment_status === 'not_paid');
     } else if (activeFilter === 'partial') {
