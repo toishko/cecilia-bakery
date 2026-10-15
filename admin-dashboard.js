@@ -997,10 +997,45 @@ function changeSize(delta) {
 /* ═══════════════════════════════════
    DRIVERS CACHE
    ═══════════════════════════════════ */
-async function loadDriversCache() {
+// A failed read used to leave driversCache empty until the app was closed, so every
+// order showed "Unknown" while the orders kept refreshing. Now each load tries three
+// times, a failure never empties a good list, and ensureDriversFor() loads again
+// whenever an order names a driver the list doesn't have.
+let _driversLoading = null;
+let _driversTriedAt = 0;
+
+function loadDriversCache() {
+  if (!_driversLoading) {
+    _driversLoading = _fetchDrivers().finally(() => { _driversLoading = null; });
+  }
+  return _driversLoading;
+}
+
+async function _fetchDrivers() {
+  _driversTriedAt = Date.now();
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const { data, error } = await sb.from('drivers').select('id, name, code, scanner_enabled, is_active').order('name');
+      if (error) throw error;
+      driversCache = data || [];
+      _fillDriverFilter();
+      return true;
+    } catch (e) {
+      console.error(`Drivers cache error (try ${attempt} of 3):`, e);
+      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1000));
+    }
+  }
+  return false;
+}
+
+// Every order's driver_id points at a real driver, so a missing one means the list is stale.
+async function ensureDriversFor(orders) {
+  const missing = (orders || []).some(o => o.driver_id && !driversCache.some(d => d.id === o.driver_id));
+  if (missing && Date.now() - _driversTriedAt > 30 * 1000) await loadDriversCache();
+}
+
+function _fillDriverFilter() {
   try {
-    const { data } = await sb.from('drivers').select('id, name, code, scanner_enabled, is_active').order('name');
-    driversCache = data || [];
     // Populate driver filter dropdown
     const select = document.getElementById('filter-driver');
     if (select && driversCache.length) {
@@ -1022,7 +1057,7 @@ async function loadDriversCache() {
         select.appendChild(opt);
       });
     }
-  } catch (e) { console.error('Drivers cache error:', e); }
+  } catch (e) { console.error('Driver filter error:', e); }
 }
 
 function getDriverName(driverId) {
@@ -1182,6 +1217,7 @@ async function silentRefreshOrders() {
       .order('submitted_at', { ascending: false });
 
     if (error || !data) return;
+    await ensureDriversFor(data);
 
     // On first run, just seed the known IDs
     if (_lastKnownOrderIds.size === 0) {
@@ -3584,6 +3620,7 @@ async function loadIncomingOrders() {
       .order('submitted_at', { ascending: false });
 
     if (!error && data) {
+      await ensureDriversFor(data);
       incomingOrders = data;
       updateIncomingBadge();
       renderIncomingOrders();
