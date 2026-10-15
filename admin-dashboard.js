@@ -997,8 +997,8 @@ function changeSize(delta) {
 /* ═══════════════════════════════════
    DRIVERS CACHE
    ═══════════════════════════════════ */
-// A failed read used to leave driversCache empty until the app was closed, so every
-// order showed "Unknown" while the orders kept refreshing. Now each load tries three
+// A failed or empty read used to leave driversCache empty until the app was closed, so
+// every order showed "Unknown" while the orders kept refreshing. Now each load tries three
 // times, a failure never empties a good list, and ensureDriversFor() loads again
 // whenever an order names a driver the list doesn't have.
 let _driversLoading = null;
@@ -1017,7 +1017,9 @@ async function _fetchDrivers() {
     try {
       const { data, error } = await sb.from('drivers').select('id, name, code, scanner_enabled, is_active').order('name');
       if (error) throw error;
-      driversCache = data || [];
+      // The bakery always has drivers, so an empty answer is a failed read, not news.
+      if (!data || data.length === 0) throw new Error('empty driver list');
+      driversCache = data;
       _fillDriverFilter();
       return true;
     } catch (e) {
