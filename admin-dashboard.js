@@ -4240,24 +4240,27 @@ async function renderOrderSheet() {
 
   // Add Item button (only when editable)
   if (isEditable) {
-    // Build product options grouped by category, excluding items already in order
+    // Build product options grouped by category. Products already on the order stay in the list
+    // (marked), so adding one adds to its line: hiding them left only the No Ticket twin to pick
     const existingKeys = new Set(detailItems.map(it => it.product_key));
+    const onOrderTag = lang === 'es' ? ' · en el pedido' : ' · on order';
     let optionsHtml = `<option value="" disabled selected>${lang === 'es' ? '— Seleccionar producto —' : '— Select product —'}</option>`;
     const catalogProducts = _cachedAugmentedProducts || ADMIN_PRODUCTS;
     catalogProducts.forEach(sec => {
-      const available = sec.items.filter(p => !existingKeys.has(p.key));
-      if (available.length > 0) {
+      if (sec.items.length > 0) {
         const sectionLabel = lang === 'es' ? sec.sectionEs : sec.section;
         optionsHtml += `<optgroup label="${_esc(sectionLabel)}">`;
-        available.forEach(p => {
+        sec.items.forEach(p => {
           const pLabel = lang === 'es' ? p.es : p.en;
-          optionsHtml += `<option value="${_esc(p.key)}" data-label="${_esc(pLabel)}">${_esc(pLabel)}</option>`;
+          const tag = existingKeys.has(p.key) ? onOrderTag : '';
+          optionsHtml += `<option value="${_esc(p.key)}" data-label="${_esc(pLabel)}">${_esc(pLabel + tag)}</option>`;
         });
         optionsHtml += '</optgroup>';
       }
     });
     html += `<div class="add-item-row">
       <select id="add-item-select" class="add-item-select">${optionsHtml}</select>
+      <input type="number" id="add-item-qty" class="add-item-qty" value="1" min="1" inputmode="numeric" aria-label="${lang === 'es' ? 'Cantidad' : 'Quantity'}">
       <button class="add-item-btn" onclick="addItemToOrder()">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         ${lang === 'es' ? 'Agregar' : 'Add'}
@@ -4617,18 +4620,66 @@ window.addItemToOrder = async function() {
   const productKey = select.value;
   const selectedOption = select.options[select.selectedIndex];
   const productLabel = selectedOption.dataset.label || productKey;
+  const qtyInput = document.getElementById('add-item-qty');
+  const addQty = parseInt(qtyInput && qtyInput.value, 10);
+  if (!(addQty > 0)) {
+    showToast(lang === 'es' ? 'Escribe una cantidad mayor que 0' : 'Enter a quantity above 0', 'error');
+    return;
+  }
 
-  // Look up driver price for this product
-  let price = 0;
+  // Already on the order: add to that line instead of a second line
+  const existing = detailItems.find(it => it.product_key === productKey);
+  if (existing) {
+    const current = existing.adjusted_quantity !== null && existing.adjusted_quantity !== undefined
+      ? existing.adjusted_quantity : existing.quantity;
+    const newQty = current + addQty;
+    existing.adjusted_quantity = newQty;
+    if (existing._isNew) {
+      existing.adjustment_note = `(${lang === 'es' ? 'añadido por admin' : 'added by admin'})`;
+    } else {
+      const diff = newQty - existing.quantity;
+      existing.adjustment_note = diff === 0 ? null
+        : `(${diff > 0 ? '+' : ''}${diff} ${lang === 'es' ? 'añadido por admin' : 'added by admin'})`;
+    }
+    existing.adjusted_at = new Date().toISOString();
+    await renderOrderSheet();
+    showToast(`${productLabel}: ${current} → ${newQty}`, 'success');
+    return;
+  }
+
+  // Look up the driver's price for this product; a failed read is never taken as $0
+  let price = null;
   if (detailOrder && detailOrder.driver_id) {
-    try {
-      const { data } = await sb.from('driver_prices')
-        .select('price')
-        .eq('driver_id', detailOrder.driver_id)
-        .eq('product_key', productKey)
-        .maybeSingle();
-      if (data) price = parseFloat(data.price) || 0;
-    } catch (e) { console.warn('Price lookup failed:', e); }
+    let readOk = false;
+    for (let attempt = 1; attempt <= 3 && !readOk; attempt++) {
+      try {
+        const { data, error } = await sb.from('driver_prices')
+          .select('price')
+          .eq('driver_id', detailOrder.driver_id)
+          .eq('product_key', productKey)
+          .maybeSingle();
+        if (error) throw error;
+        readOk = true;
+        if (data) price = parseFloat(data.price);
+      } catch (e) {
+        console.warn(`Price lookup failed (try ${attempt}):`, e);
+        if (attempt < 3) await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+    if (!readOk) {
+      showToast(lang === 'es'
+        ? `No se pudo leer el precio de ${productLabel}. Revisa la conexión y prueba otra vez.`
+        : `Couldn't read the price for ${productLabel}. Check the connection and try again.`, 'error');
+      return;
+    }
+  }
+  if (!(price > 0)) {
+    const driverName = getDriverName(detailOrder.driver_id) || (lang === 'es' ? 'Este conductor' : 'This driver');
+    const msg = lang === 'es'
+      ? `${driverName} no tiene precio para ${productLabel} (está en $0, o sea que no lo lleva).\n\n¿Agregarlo a $0 de todos modos?`
+      : `${driverName} has no price for ${productLabel} ($0 means they don't take it).\n\nAdd it at $0 anyway?`;
+    if (!window.confirm(msg)) return;
+    price = 0;
   }
 
   // Add to detailItems (no id = new item, will be inserted on save)
@@ -4638,7 +4689,7 @@ window.addItemToOrder = async function() {
     product_key: productKey,
     product_label: productLabel,
     quantity: 0,
-    adjusted_quantity: 1,
+    adjusted_quantity: addQty,
     adjustment_note: `(${lang === 'es' ? 'añadido por admin' : 'added by admin'})`,
     adjusted_at: new Date().toISOString(),
     price_at_order: price,
@@ -4646,7 +4697,7 @@ window.addItemToOrder = async function() {
   });
 
   await renderOrderSheet();
-  showToast(`${productLabel} ${lang === 'es' ? 'agregado' : 'added'}`, 'success');
+  showToast(`${productLabel} × ${addQty} ${lang === 'es' ? 'agregado' : 'added'}`, 'success');
 };
 
 window.setPaymentStatus = async function(status) {
