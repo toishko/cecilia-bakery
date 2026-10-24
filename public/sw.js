@@ -3,9 +3,24 @@
 //  Network-first + Offline Fallback + Push Notifications
 // ═══════════════════════════════════
 
-const CACHE_VERSION = 'v89';                      // bump on each release
+const CACHE_VERSION = 'v91';                      // bump on each release
 const CACHE_NAME = `cecilia-cache-${CACHE_VERSION}`;
 const OFFLINE_URL = '/offline.html';
+
+// ── WHAT GETS SAVED: the site's own files and the libraries and fonts it loads ──
+// Everything else goes straight to the network and is never saved: sign-in (Clerk, Google), the
+// database on any address (matched by path), Toisko's systems and the site's own live answers.
+// Saved sign-in replies were handed back when the connection dropped, so sign-in could stall.
+const LIBRARY_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net', 'unpkg.com'];
+const DATABASE_PATH = /^\/(rest|auth|storage|realtime|functions|graphql)\/v1\//;
+
+function keepsCopy(url) {
+  if (DATABASE_PATH.test(url.pathname)) return false;
+  if (url.origin === self.location.origin) {
+    return !url.pathname.startsWith('/api/') && url.pathname !== '/version.json';
+  }
+  return LIBRARY_HOSTS.includes(url.hostname);
+}
 
 // ── INSTALL: pre-cache offline page + immediately activate ──
 self.addEventListener('install', (event) => {
@@ -22,11 +37,11 @@ self.addEventListener('message', e => {
   }
 });
 
-// ── ACTIVATE: delete old caches + claim clients ──
+// ── ACTIVATE: delete old caches (keeping this version's, with the offline page) + claim clients ──
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.map(k => caches.delete(k)))
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
@@ -58,6 +73,7 @@ self.addEventListener('fetch', (event) => {
 
   if (event.request.method !== 'GET') return;
   if (!url.protocol.startsWith('http')) return;
+  if (!keepsCopy(url)) return;
 
   event.respondWith(
     fetch(event.request)
