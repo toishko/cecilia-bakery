@@ -27,7 +27,6 @@ const ALLOWED_ORIGINS = [
   'www.ceciliabakery.com',
   'localhost',
   '127.0.0.1',
-  '.vercel.app', // preview deployments
 ];
 
 // More allowed sites from the server's settings, comma-separated (the preview address on the VPS, 2026-10-10);

@@ -204,6 +204,8 @@ async function runFunction(name, req, res, url) {
 }
 
 export const server = http.createServer((req, res) => {
+  // HTTPS only for two years, as Vercel sent it (browsers that saw Vercel's still hold it); no subdomains.
+  res.setHeader('strict-transport-security', 'max-age=63072000');
   const url = new URL(req.url, 'http://localhost');
   const m = url.pathname.match(/^\/api\/([^/]+?)\/?$/);
   if (m) return void runFunction(m[1], req, res, url);

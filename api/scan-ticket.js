@@ -39,7 +39,7 @@ function isRateLimited(ip) {
 }
 
 // ── Origin check ──
-const ALLOWED = ['ceciliabakery.com', 'www.ceciliabakery.com', 'localhost', '127.0.0.1', '.vercel.app'];
+const ALLOWED = ['ceciliabakery.com', 'www.ceciliabakery.com', 'localhost', '127.0.0.1'];
 // More allowed sites from the server's settings, comma-separated (the preview address on the VPS, 2026-10-10);
 // empty entries are dropped, since every origin includes ''.
 const EXTRA_ORIGINS = (process.env.EXTRA_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
