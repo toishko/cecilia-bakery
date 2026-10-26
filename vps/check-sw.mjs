@@ -85,7 +85,8 @@ for (const [url, what] of kept) {
 const alone = [
   ['https://robust-wildcat-76.clerk.accounts.dev/v1/client?__clerk_db_jwt=x', "Clerk's sign-in reply (the test setup)"],
   ['https://robust-wildcat-76.clerk.accounts.dev/npm/@clerk/clerk-js@4.73.14/dist/clerk.browser.js', "Clerk's sign-in box"],
-  ['https://clerk.ceciliabakery.com/v1/client', "Clerk's sign-in reply (a future production setup)"],
+  ['https://clerk.ceciliabakery.com/v1/client', "Clerk's sign-in reply (the production setup)"],
+  ['https://clerk.ceciliabakery.com/npm/@clerk/clerk-js@4.73.14/dist/clerk.browser.js', "Clerk's sign-in box (the production setup)"],
   ['https://accounts.google.com/gsi/client', 'Google sign-in'],
   ['https://db.ceciliabakery.com/rest/v1/profiles?select=role', 'the database'],
   ['https://db.ceciliabakery.com/storage/v1/object/public/product-images/a.jpg', "the database's files"],
