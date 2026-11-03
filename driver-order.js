@@ -151,8 +151,15 @@ function showSection(name) {
   const mobileLogo = document.getElementById('mobile-logo');
   const headerBackBtn = document.getElementById('header-back-btn');
 
+  // Leaving the form ends an edit, or the next new order would replace the order being edited
+  if (name !== 'new-order' && driverEditOrderId) {
+    driverEditOrderId = null;
+    driverEditOrderObj = null;
+    orders = [];
+  }
+
   if (name === 'new-order') {
-    initOrderForm();
+    _orderFormReady = initOrderForm();
     footer.style.display = 'flex';
     saleFooter.style.display = 'none';
     document.body.classList.add('immersive-mode');
@@ -822,6 +829,8 @@ function getTodayStr() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
+
+let _orderFormReady = Promise.resolve();
 
 async function initOrderForm() {
   await loadDriverProducts();
@@ -2575,8 +2584,11 @@ window.editOrder = async function (orderId) {
     driverEditOrderId = orderId;
     driverEditOrderObj = order;
 
-    // Switch to order form
+    // Switch to order form, and wait for it: it rebuilds itself from orders[0] once the products load
+    orders = [];
     showSection('new-order');
+    await _orderFormReady;
+    if (driverEditOrderId !== orderId) return; // the driver left while it loaded
 
     // Pre-fill header fields (use correct IDs matching the form)
     document.getElementById('field-business').value = order.business_name || '';
@@ -2594,6 +2606,8 @@ window.editOrder = async function (orderId) {
     // Set quantities from saved items
     const items = order.driver_order_items || [];
     items.forEach(item => {
+      // Kept on the order even when the driver has hidden this product from their form
+      orders[0].qty[item.product_key] = item.quantity;
       const input = document.querySelector(`.qty-input[data-key="${item.product_key}"]`);
       if (input) {
         input.value = item.quantity;
@@ -2603,6 +2617,7 @@ window.editOrder = async function (orderId) {
 
     // Save populated data into orders[0] so saveFormToOrder captures it
     saveFormToOrder(0);
+    orders[0].notes = order.notes || '';
 
     // Update footer count
     updateFooterCount();
